@@ -1,0 +1,40 @@
+local Toggle = Instance.new("TextButton", Instance.new("ScreenGui", game.CoreGui))
+Toggle.Size, Toggle.Position, Toggle.Text = UDim2.new(0,120,0,40), UDim2.new(0.5,-60,0.1,0), "TIMING: OFF"
+Toggle.BackgroundColor3 = Color3.new(1,0,0)
+
+local Active = false
+Toggle.MouseButton1Click:Connect(function()
+    Active = not Active
+    Toggle.Text = Active and "TIMING: ON" or "TIMING: OFF"
+    Toggle.BackgroundColor3 = Active and Color3.new(0,1,0) or Color3.new(1,0,0)
+end)
+
+task.spawn(function()
+    local VIM = game:GetService("VirtualInputManager")
+    
+    -- Menggunakan Heartbeat agar deteksi timing sangat akurat
+    game:GetService("RunService").Heartbeat:Connect(function()
+        if Active then
+            -- Cari BlockPart yang bergerak (indikator timing)
+            local indicator = workspace:FindFirstChild("BlockPart", true)
+            -- Cari Area sebagai patokan posisi
+            local area = workspace.Areas:FindFirstChild("KickReady")
+            
+            if indicator and area then
+                -- Hitung jarak horizontal (X dan Z) saja kalau tingginya gak ngaruh
+                local currentPos = Vector3.new(indicator.Position.X, 0, indicator.Position.Z)
+                local targetPos = Vector3.new(area.Position.X, 0, area.Position.Z)
+                local distance = (currentPos - targetPos).Magnitude
+                
+                -- LOGIKA TIMING: 
+                -- Ganti angka 5 di bawah ini dengan jarak saat indikator di posisi 'PERFECT'
+                -- Kalau kamu bilang 'pas jauh', berarti angkanya harus agak besar.
+                if distance > 4.8 and distance < 5.2 then 
+                    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    task.wait(0.5) -- Jeda biar gak klik dua kali di satu putaran timing
+                end
+            end
+        end
+    end)
+end)
