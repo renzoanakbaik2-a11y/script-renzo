@@ -1,0 +1,47 @@
+-- Script Auto Kick dengan Menu On/Off
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+
+-- Setup UI Sederhana
+ScreenGui.Parent = game.CoreGui
+ToggleButton.Parent = ScreenGui
+ToggleButton.Size = UDim2.new(0, 150, 0, 50)
+ToggleButton.Position = UDim2.new(0.5, -75, 0.1, 0) -- Di tengah atas layar
+ToggleButton.Text = "Auto Kick: OFF"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+
+local _G = {Enabled = false}
+
+-- Fungsi On/Off saat tombol diklik
+ToggleButton.MouseButton1Click:Connect(function()
+    _G.Enabled = not _G.Enabled
+    if _G.Enabled then
+        ToggleButton.Text = "Auto Kick: ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        ToggleButton.Text = "Auto Kick: OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    end
+end)
+
+-- Loop Utama Script
+task.spawn(function()
+    while task.wait() do
+        if _G.Enabled then
+            local area = workspace.Areas:FindFirstChild("KickReady")
+            local player = game.Players.LocalPlayer
+            
+            if area and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (player.Character.HumanoidRootPart.Position - area.Position).Magnitude
+                
+                -- Jika kamu di zona aman (jarak < 15)
+                if dist < 15 then
+                    local vim = game:GetService("VirtualInputManager")
+                    vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                    vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    task.wait(0.1) -- Jeda dikit biar gak lag
+                end
+            end
+        end
+    end
+end)
