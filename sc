@@ -3,13 +3,11 @@ local tempat_keluar_peluru = senjata.Muzzle
 local jarak_maksimal = 50
 local saklar_aktif = false
 
--- Menerima sinyal ON/OFF dari tombol player
 game.ReplicatedStorage.SinyalAutoAim.OnServerEvent:Connect(function(player, status_baru)
     saklar_aktif = status_baru
 end)
 
 while true do
-    -- Cek dulu apakah tombolnya lagi ON? Kalau iya, baru jalanin auto aim
     if saklar_aktif == true then
         local target_terdekat = nil
         local jarak_terpendek = jarak_maksimal
@@ -46,3 +44,22 @@ while true do
 
     task.wait(0.2) 
 end
+
+local tombol = script.Parent
+local status = false
+
+local function saatDiklik()
+    status = not status
+    
+    if status == true then
+        tombol.Text = "AUTO AIM: ON"
+        tombol.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        game.ReplicatedStorage.SinyalAutoAim:FireServer(true)
+    else
+        tombol.Text = "AUTO AIM: OFF"
+        tombol.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        game.ReplicatedStorage.SinyalAutoAim:FireServer(false)
+    end
+end
+
+tombol.MouseButton1Click:Connect(saatDiklik)
