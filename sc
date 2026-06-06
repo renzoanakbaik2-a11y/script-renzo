@@ -1,65 +1,67 @@
-local senjata = script.Parent
-local tempat_keluar_peluru = senjata.Muzzle
-local jarak_maksimal = 50
-local saklar_aktif = false
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
-game.ReplicatedStorage.SinyalAutoAim.OnServerEvent:Connect(function(player, status_baru)
-    saklar_aktif = status_baru
-end)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AutoAimMenu"
+ScreenGui.Parent = CoreGui
 
-while true do
-    if saklar_aktif == true then
-        local target_terdekat = nil
-        local jarak_terpendek = jarak_maksimal
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 200, 0, 60)
+MainFrame.Position = UDim2.new(0.5, -100, 0.4, -30)
+MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MainFrame.BorderSizePixel = 2
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
 
-        for _, objek in pairs(game.Workspace:GetChildren()) do
-            if objek:FindFirstChild("Humanoid") and objek.Name == "Zombie" then
-                local jarak = (senjata.Position - objek.HumanoidRootPart.Position).Magnitude
-                
-                if jarak < jarak_terpendek then
-                    jarak_terpendek = jarak
-                    target_terdekat = objek 
-                end
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(1, -10, 1, -10)
+ToggleButton.Position = UDim2.new(0, 5, 0, 5)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+ToggleButton.Text = "AUTO AIM: OFF"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextSize = 18
+ToggleButton.Parent = MainFrame
+
+local _G = _G or {}
+_G.AutoAimActive = false
+
+local function getClosestZombie()
+    local closestTarget = nil
+    local shortestDistance = 50
+
+    for _, obj in pairs(workspace:GetChildren()) do
+        if obj:FindFirstChild("Humanoid") and obj.Name == "Zombie" and obj:FindFirstChild("HumanoidRootPart") then
+            local distance = (LocalPlayer.Character.HumanoidRootPart.Position - obj.HumanoidRootPart.Position).Magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                closestTarget = obj
             end
         end
+    end
+    return closestTarget
+end
 
-        if target_terdekat then
-            local posisi_musuh = target_terdekat.HumanoidRootPart.Position
-            
-            senjata.CFrame = CFrame.new(senjata.Position, posisi_musuh)
-            
-            local peluru = Instance.new("Part")
-            peluru.Size = Vector3.new(0.5, 0.5, 2)
-            peluru.Color = Color3.fromRGB(255, 255, 0)
-            peluru.CFrame = tempat_keluar_peluru.CFrame
-            peluru.Parent = game.Workspace
-            
-            local kecepatan = Instance.new("BodyVelocity")
-            kecepatan.Velocity = senjata.CFrame.LookVector * 100
-            kecepatan.Parent = peluru
-            
-            game.Debris:AddItem(peluru, 2)
+ToggleButton.MouseButton1Click:Connect(function()
+    _G.AutoAimActive = not _G.AutoAimActive
+    if _G.AutoAimActive then
+        ToggleButton.Text = "AUTO AIM: ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        ToggleButton.Text = "AUTO AIM: OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if _G.AutoAimActive and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local target = getClosestZombie()
+        if target then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.HumanoidRootPart.Position)
         end
     end
-
-    task.wait(0.2) 
-end
-
-local tombol = script.Parent
-local status = false
-
-local function saatDiklik()
-    status = not status
-    
-    if status == true then
-        tombol.Text = "AUTO AIM: ON"
-        tombol.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        game.ReplicatedStorage.SinyalAutoAim:FireServer(true)
-    else
-        tombol.Text = "AUTO AIM: OFF"
-        tombol.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-        game.ReplicatedStorage.SinyalAutoAim:FireServer(false)
-    end
-end
-
-tombol.MouseButton1Click:Connect(saatDiklik)
+end)
