@@ -1,90 +1,52 @@
--- [[ GURITA HUB V4.0 - CINEMATIC SKY & FLAT WORLD ]] --
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("COACH PRIVATE EXECUTOR", "Midnight")
 
 local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
-local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
--- 1. PROTEKSI (Biar Ezra & Awan tetep aman)
-local function IsProtected(v)
-    if v:IsDescendantOf(lp.Character) then return true end
-    if v:IsA("Sky") or v:IsA("Clouds") or v:IsA("Atmosphere") then return true end
-    return false
-end
+local AutoAimAktif = false 
+local BatasJarak = 200 
 
--- 2. FLAT COLOR (Mode Paling Enteng)
-local function ApplyFlat(v)
-    if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsProtected(v) then
-        pcall(function()
-            v.Material = Enum.Material.Plastic
-            v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, child in pairs(v:GetChildren()) do
-                if child:IsA("Texture") or child:IsA("Decal") then
-                    child:Destroy()
+local Tab = Window:NewTab("Main Hack")
+local Section = Tab:NewSection("Combat Features")
+
+Section:NewToggle("Auto Aim & Shoot", "Mengunci & menembak kepala musuh otomatis", function(state)
+    AutoAimAktif = state 
+end)
+
+local function dapatkanTargetTerdekat()
+    local targetTerdekat = nil
+    local jarakTerdekat = BatasJarak
+
+    for _, objek in pairs(workspace:GetChildren()) do
+        if objek:IsA("Model") and objek ~= LocalPlayer.Character then
+            local kepala = objek:FindFirstChild("Head")
+            local humanoid = objek:FindFirstChildOfClass("Humanoid")
+            
+            if kepala and humanoid and humanoid.Health > 0 then
+                local jarak = (LocalPlayer.Character.HumanoidRootPart.Position - kepala.Position).Magnitude
+                
+                if jarak < jarakTerdekat then
+                    jarakTerdekat = jarak
+                    targetTerdekat = objek
                 end
             end
-        end)
+        end
     end
+    return targetTerdekat
 end
 
--- 3. SHADER-STYLE SKY (Bagus tapi GAK BERAT)
-local function SetCinematicSky()
-    -- Bersihkan langit lama
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("Sky") or v:IsA("Atmosphere") then v:Destroy() end
-    end
-
-    -- Skybox HD Cerah
-    local Sky = Instance.new("Sky", Lighting)
-    Sky.SkyboxBk = "rbxassetid://151165214"
-    Sky.SkyboxDn = "rbxassetid://151165191"
-    Sky.SkyboxFt = "rbxassetid://151165224"
-    Sky.SkyboxLf = "rbxassetid://151165231"
-    Sky.SkyboxRt = "rbxassetid://151165274"
-    Sky.SkyboxUp = "rbxassetid://151165281"
-    Sky.SunAngularSize = 15
-
-    -- Awan ala Shader (Volumetric Clouds)
-    local terrain = workspace:FindFirstChildOfClass("Terrain")
-    if terrain then
-        local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds", terrain)
-        clouds.Enabled = true
-        clouds.Cover = 0.6    -- Awan lumayan banyak
-        clouds.Density = 0.4  -- Gak terlalu padet biar gak leg
-        clouds.Color = Color3.new(1, 1, 1)
-    end
-
-    -- Atmosphere biar efek cahayanya kayak Shaders
-    local atmo = Instance.new("Atmosphere", Lighting)
-    atmo.Density = 0.25
-    atmo.Offset = 0.1
-    atmo.Color = Color3.fromRGB(190, 190, 190)
-    atmo.Decay = Color3.fromRGB(100, 100, 100)
-    atmo.Glare = 0.1
-    atmo.Haze = 0.5 -- Efek kabut tipis cinematic
-    
-    Lighting.ClockTime = 14
-    Lighting.Brightness = 2.5
-    Lighting.ExposureCompensation = 0.2
-end
-
--- 4. RUNNER (Anti-Lag System)
-task.spawn(function()
-    SetCinematicSky()
-    
-    local d = workspace:GetDescendants()
-    for i = 1, #d do 
-        ApplyFlat(d[i]) 
-        -- Jeda per 200 part biar gak kaget CPU-nya
-        if i % 200 == 0 then task.wait() end 
+RunService.RenderStepped:Connect(function()
+    if AutoAimAktif == true and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local target = dapatkanTargetTerdekat()
+        
+        if target then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Head.Position)
+            VirtualUser:Button1Down(Vector2.new(0, 0), Camera.CFrame)
+            task.wait(0.05)
+        end
     end
 end)
-
--- Delay 2 detik buat part baru biar gak tarik FPS pas jalan
-workspace.DescendantAdded:Connect(function(v)
-    task.delay(2, function()
-        ApplyFlat(v)
-    end)
-end)
-
-print("Gurita V4.0: Cinematic Sky & No Lag!")
