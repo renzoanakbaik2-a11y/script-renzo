@@ -1,0 +1,53 @@
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+
+-- Tombol untuk mengaktifkan/matikan X-Ray (Ganti Enum.KeyCode.X jika ingin tombol lain)
+local XRAY_KEY = Enum.KeyCode.X
+local xrayActive = false
+local originalTransparencies = {}
+
+local function toggleXRay()
+    xrayActive = not xrayActive
+    local localPlayer = Players.LocalPlayer
+    
+    -- Ambil semua objek fisik di dalam game
+    for _, object in pairs(Workspace:GetDescendants()) do
+        if object:IsA("BasePart") then
+            -- Pastikan objek bukan bagian dari tubuh karakter kita sendiri
+            if not localPlayer.Character or not object:IsDescendantOf(localPlayer.Character) then
+                if xrayActive then
+                    -- Simpan transparansi asli objek sebelum diubah
+                    if not originalTransparencies[object] then
+                        originalTransparencies[object] = object.Transparency
+                    end
+                    -- Ubah objek menjadi transparan (X-Ray Aktif)
+                    object.Transparency = 0.7
+                else
+                    -- Kembalikan ke visual semula saat X-Ray Mati
+                    if originalTransparencies[object] then
+                        object.Transparency = originalTransparencies[object]
+                    else
+                        object.Transparency = 0
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Deteksi saat tombol ditekan
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end -- Abaikan jika pemain sedang mengetik di kolom chat
+    
+    if input.KeyCode == XRAY_KEY then
+        toggleXRay()
+    end
+end)
+
+-- Notifikasi di pojok kanan bawah bahwa script berhasil masuk ke game
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "X-Ray Script",
+    Text = "Tekan tombol X untuk aktif/nonaktif!",
+    Duration = 5
+})
