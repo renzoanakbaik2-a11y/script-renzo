@@ -153,7 +153,7 @@ task.spawn(function()
 			end
 			
 			if foundFruit then
-				NotifText.Text = "BERHASIL KETEMU: " + foundFruit -- Diperbaiki untuk aman
+				NotifText.Text = "BERHASIL KETEMU: " .. tostring(foundFruit)
 				if not lastFound then
 					lastFound = true
 					playFruitSound()
@@ -280,7 +280,7 @@ TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = TopBar
 
 local CloseButton = Instance.new("TextButton")
-CloseButton.Size = Instance.new("TextButton") and UDim2.new(0, 30, 0, 30) or UDim2.new(0, 30, 0, 30)
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
 CloseButton.Position = UDim2.new(0.85, 0, 0.15, 0)
 CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseButton.Text = "X"
