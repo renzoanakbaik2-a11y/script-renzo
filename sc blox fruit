@@ -1,5 +1,4 @@
--- Jalankan script ini menggunakan Executor Roblox (Delta, Hydrogen, Synapse, dll.)
-
+-- Jalankan script ini menggunakan Executor Roblox
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
@@ -11,30 +10,27 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- Nama file untuk Auto Save Setting
 local FileName = "BloxFruitsHubSettings.json"
 
--- Pengaturan Default & Status Fitur (Posisi Notif di-reset ke 50/Tengah)
 local Settings = {
 	FruitNotifier = true,
 	AutoJoinEnabled = true,
-	SelectedTeam = "Pirates", -- Pilihan: "Pirates" atau "Marines"
+	SelectedTeam = "Pirates",
 	FpsBoost = false,
 	CustomSoundEnabled = false,
-	SoundId = "", -- ID Audio Roblox
-	FlightSpeed = 150,      -- Kecepatan terbang mulus
-	FlyHeight = 5,          -- Ketinggian terbang (Maksimal 10)
+	SoundId = "",
+	FlightSpeed = 150,
+	FlyHeight = 5,
 	AutoTeleportFruit = false, 
 	AutoFlyChest = false,     
 	AutoFlyPlayer = false,    
 	TargetPlayerName = "",     
-	-- Pengaturan Posisi Notifikasi di-reset ke 50 (Tengah-tengah)
-	NotifOffsetX = 50,      -- 50 = Tengah-tengah
-	NotifOffsetY = 50       -- 50 = Tengah-tengah
+	NotifOffsetX = 50,
+	NotifOffsetY = 50
 }
 
--- Fungsi Load Settings
-local function loadSettings()
+-- Safe Load Settings
+pcall(function()
 	if readfile and pcall(readfile, FileName) then
 		local success, data = pcall(function()
 			return HttpService:JSONDecode(readfile(FileName))
@@ -45,28 +41,26 @@ local function loadSettings()
 			end
 		end
 	end
-end
+end)
 
-loadSettings()
-
--- Paksa reset posisi ke 50 jika nilainya masih nyangkut di bawah atau belum diatur pas
 if Settings.NotifOffsetX < 0 or Settings.NotifOffsetX > 100 then Settings.NotifOffsetX = 50 end
 if Settings.NotifOffsetY < 0 or Settings.NotifOffsetY > 100 then Settings.NotifOffsetY = 50 end
 
--- Fungsi Save Settings
+-- Safe Save Settings
 local function saveSettings()
-	if writefile then
-		local success, encoded = pcall(function()
-			return HttpService:JSONEncode(Settings)
-		end)
-		if success then
-			writefile(FileName, encoded)
+	pcall(function()
+		if writefile then
+			local success, encoded = pcall(function()
+				return HttpService:JSONEncode(Settings)
+			end)
+			if success then
+				writefile(FileName, encoded)
+			end
 		end
-	end
+	end)
 end
 saveSettings()
 
--- 1. ScreenGui Utama (Aman dari CoreGui Protect)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsHub"
 ScreenGui.ResetOnSpawn = false
@@ -84,11 +78,10 @@ pcall(function()
 	end
 end)
 
-if not ScreenGui.Parent or ScreenGui.Parent == nil then
+if not ScreenGui.Parent then
 	ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Notifikasi Buah di Layar dengan Posisi Dinamis (0 s/d 100, 50 = Tengah-tengah)
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 340, 0, 45)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -97,9 +90,7 @@ NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
 
 local function updateNotifPosition()
-	local scaleX = Settings.NotifOffsetX / 100
-	local scaleY = Settings.NotifOffsetY / 100
-	NotifFrame.Position = UDim2.new(scaleX, 0, scaleY, 0)
+	NotifFrame.Position = UDim2.new(Settings.NotifOffsetX / 100, 0, Settings.NotifOffsetY / 100, 0)
 end
 updateNotifPosition()
 
@@ -114,7 +105,9 @@ UIStroke.Parent = NotifFrame
 task.spawn(function()
 	while true do
 		for i = 0, 1, 0.01 do
-			UIStroke.Color = Color3.fromHSV(i, 1, 1)
+			pcall(function()
+				UIStroke.Color = Color3.fromHSV(i, 1, 1)
+			end)
 			task.wait(0.05)
 		end
 	end
@@ -128,7 +121,6 @@ NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 11, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
--- Fungsi Suara Notifikasi Buah
 local function playFruitSound()
 	if Settings.CustomSoundEnabled and Settings.SoundId ~= "" then
 		pcall(function()
@@ -146,9 +138,6 @@ local function playFruitSound()
 	end
 end
 
--- ==========================================
--- FUNGSI DASAR KARAKTER & TERBANG
--- ==========================================
 local function getCharacterRootPart()
 	local character = LocalPlayer.Character
 	if character then
@@ -158,68 +147,55 @@ local function getCharacterRootPart()
 end
 
 local function smoothFlyTo(targetCFrame)
-	local rootPart = getCharacterRootPart()
-	if not rootPart then return end
+	pcall(function()
+		local rootPart = getCharacterRootPart()
+		if not rootPart then return end
 
-	local currentSpeed = Settings.FlightSpeed
-	if currentSpeed > 1000 then currentSpeed = 1000 end
-	if currentSpeed < 20 then currentSpeed = 20 end
+		local currentSpeed = math.clamp(Settings.FlightSpeed, 20, 1000)
+		local currentHeight = math.clamp(Settings.FlyHeight, 0, 10)
+		local adjustedTargetCFrame = targetCFrame + Vector3.new(0, currentHeight, 0)
 
-	local currentHeight = Settings.FlyHeight
-	if currentHeight > 10 then currentHeight = 10 end
-	if currentHeight < 0 then currentHeight = 0 end
+		local distance = (rootPart.Position - adjustedTargetCFrame.Position).Magnitude
+		local duration = distance / currentSpeed
+		if duration < 0.05 then return end
 
-	local adjustedTargetCFrame = targetCFrame + Vector3.new(0, currentHeight, 0)
-
-	local distance = (rootPart.Position - adjustedTargetCFrame.Position).Magnitude
-	local duration = distance / currentSpeed
-	if duration < 0.05 then return end
-
-	local character = LocalPlayer.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	
-	if humanoid then
-		humanoid.PlatformStand = true
-	end
-
-	local bodyVelocity = Instance.new("BodyVelocity")
-	bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-	bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-	bodyVelocity.Parent = rootPart
-
-	local bodyGyro = Instance.new("BodyGyro")
-	bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-	bodyGyro.CFrame = rootPart.CFrame
-	bodyGyro.Parent = rootPart
-
-	Camera.CameraType = Enum.CameraType.Custom
-
-	local startTime = tick()
-	local startCFrame = rootPart.CFrame
-
-	while tick() - startTime < duration do
-		if not rootPart or not character or not character.Parent then break end
-		local alpha = math.clamp((tick() - startTime) / duration, 0, 1)
-		local smoothAlpha = alpha * (2 - alpha)
+		local character = LocalPlayer.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		
-		rootPart.CFrame = startCFrame:Lerp(adjustedTargetCFrame, smoothAlpha)
+		if humanoid then humanoid.PlatformStand = true end
+
+		local bodyVelocity = Instance.new("BodyVelocity")
+		bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+		bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+		bodyVelocity.Parent = rootPart
+
+		local bodyGyro = Instance.new("BodyGyro")
+		bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
 		bodyGyro.CFrame = rootPart.CFrame
-		RunService.RenderStepped:Wait()
-	end
+		bodyGyro.Parent = rootPart
 
-	rootPart.CFrame = adjustedTargetCFrame
+		local startTime = tick()
+		local startCFrame = rootPart.CFrame
 
-	if bodyVelocity then bodyVelocity:Destroy() end
-	if bodyGyro then bodyGyro:Destroy() end
+		while tick() - startTime < duration do
+			if not rootPart or not character or not character.Parent then break end
+			local alpha = math.clamp((tick() - startTime) / duration, 0, 1)
+			local smoothAlpha = alpha * (2 - alpha)
+			
+			rootPart.CFrame = startCFrame:Lerp(adjustedTargetCFrame, smoothAlpha)
+			bodyGyro.CFrame = rootPart.CFrame
+			RunService.RenderStepped:Wait()
+		end
 
-	if humanoid then
-		humanoid.PlatformStand = false
-	end
+		rootPart.CFrame = adjustedTargetCFrame
+		if bodyVelocity then bodyVelocity:Destroy() end
+		if bodyGyro then bodyGyro:Destroy() end
+		if humanoid then humanoid.PlatformStand = false end
+	end)
 end
 
--- ==========================================
--- SISTEM CHEST (DENGAN MEMORI ANTI-STUCK)
--- ==========================================
+local DeadChests = {}
+
 local function getPositionOfObj(obj)
 	if obj:IsA("BasePart") then
 		return obj.Position
@@ -231,19 +207,19 @@ local function getPositionOfObj(obj)
 	return nil
 end
 
-local DeadChests = {}
-
 local function getChestIslands()
 	local allChests = {}
-	for _, obj in ipairs(Workspace:GetDescendants()) do
-		local nameLower = obj.Name:lower()
-		if (nameLower:find("chest") or nameLower:find("peti") or nameLower:find("treasure")) and not DeadChests[obj] then
-			local pos = getPositionOfObj(obj)
-			if pos then
-				table.insert(allChests, {Object = obj, Position = pos})
+	pcall(function()
+		for _, obj in ipairs(Workspace:GetDescendants()) do
+			local nameLower = obj.Name:lower()
+			if (nameLower:find("chest") or nameLower:find("peti") or nameLower:find("treasure")) and not DeadChests[obj] then
+				local pos = getPositionOfObj(obj)
+				if pos then
+					table.insert(allChests, {Object = obj, Position = pos})
+				end
 			end
 		end
-	end
+	end)
 
 	local islands = {}
 	for _, chest in ipairs(allChests) do
@@ -256,139 +232,111 @@ local function getChestIslands()
 			end
 		end
 		if not placed then
-			table.insert(islands, {
-				Center = chest.Position,
-				Chests = {chest}
-			})
+			table.insert(islands, { Center = chest.Position, Chests = {chest} })
 		end
 	end
 	return islands
 end
 
--- ==========================================
--- BACKGROUND SYSTEM
--- ==========================================
+-- Background Task Loop
 task.spawn(function()
 	local lastCount = 0
 	while task.wait(1.5) do
-		if Settings.FruitNotifier then
-			local fruitList = {}
-			local targetFruitHandle = nil
+		pcall(function()
+			if Settings.FruitNotifier then
+				local fruitList = {}
+				local targetFruitHandle = nil
 
-			for _, obj in ipairs(Workspace:GetChildren()) do
-				if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-					table.insert(fruitList, obj.Name)
-					if not targetFruitHandle then
-						targetFruitHandle = obj.Handle
+				for _, obj in ipairs(Workspace:GetChildren()) do
+					if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
+						table.insert(fruitList, obj.Name)
+						if not targetFruitHandle then
+							targetFruitHandle = obj.Handle
+						end
 					end
 				end
-			end
-			
-			local currentCount = #fruitList
-			if currentCount > 0 then
-				local combinedNames = table.concat(fruitList, ", ")
-				NotifText.Text = "KETEMU (" .. currentCount .. "): "Equivalence & " .. combinedNames
-				if currentCount > lastCount then
-					playFruitSound()
-				end
-				lastCount = currentCount
-
-				if Settings.AutoTeleportFruit and targetFruitHandle then
-					local rootPart = getCharacterRootPart()
-					if rootPart and (rootPart.Position - targetFruitHandle.Position).Magnitude > 15 then
-						smoothFlyTo(targetFruitHandle.CFrame)
-					end
-				end
-			else
-				NotifText.Text = "Status: Mencari Buah di Map (Kosong)..."
-				lastCount = 0
-			end
-		end
-
-		if Settings.AutoFlyChest then
-			local rootPart = getCharacterRootPart()
-			if rootPart then
-				local islands = getChestIslands()
 				
-				for i = #islands, 1, -1 do
-					local validChests = {}
-					for _, cData in ipairs(islands[i].Chests) do
-						if cData.Object and cData.Object.Parent then
-							table.insert(validChests, cData)
+				local currentCount = #fruitList
+				if currentCount > 0 then
+					NotifText.Text = "KETEMU (" .. currentCount .. "): " .. table.concat(fruitList, ", ")
+					if currentCount > lastCount then
+						playFruitSound()
+					end
+					lastCount = currentCount
+
+					if Settings.AutoTeleportFruit and targetFruitHandle then
+						local rootPart = getCharacterRootPart()
+						if rootPart and (rootPart.Position - targetFruitHandle.Position).Magnitude > 15 then
+							smoothFlyTo(targetFruitHandle.CFrame)
 						end
 					end
-					islands[i].Chests = validChests
-					if #islands[i].Chests == 0 then
-						table.remove(islands, i)
-					end
-				end
-
-				if #islands > 0 then
-					table.sort(islands, function(a, b)
-						return (rootPart.Position - a.Center).Magnitude < (rootPart.Position - b.Center).Magnitude
-					end)
-
-					local currentIsland = islands[1]
-					if currentIsland and #currentIsland.Chests > 0 then
-						table.sort(currentIsland.Chests, function(a, b)
-							return (rootPart.Position - a.Position).Magnitude < (rootPart.Position - b.Position).Magnitude
-						end)
-
-						local targetChestData = currentIsland.Chests[1]
-						local targetChest = targetChestData.Object
-						local targetPos = getPositionOfObj(targetChest)
-						
-						if targetPos then
-							smoothFlyTo(CFrame.new(targetPos))
-							task.wait(0.3)
-							DeadChests[targetChest] = true
-						end
-					end
+				else
+					NotifText.Text = "Status: Mencari Buah di Map (Kosong)..."
+					lastCount = 0
 				end
 			end
-		end
 
-		if Settings.AutoFlyPlayer then
-			task.wait(2)
-			local targetPlayer = nil
-
-			if Settings.TargetPlayerName ~= "" then
-				for _, p in ipairs(Players:GetPlayers()) do
-					if p ~= LocalPlayer and string.find(p.Name:lower(), Settings.TargetPlayerName:lower()) then
-						targetPlayer = p
-						break
-					end
-				end
-			else
-				local shortestDist = math.huge
+			if Settings.AutoFlyChest then
 				local rootPart = getCharacterRootPart()
 				if rootPart then
-					for _, p in ipairs(Players:GetPlayers()) do
-						if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-							local dist = (rootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
-							if dist < shortestDist then
-								shortestDist = dist
-								targetPlayer = p
+					local islands = getChestIslands()
+					if #islands > 0 then
+						table.sort(islands, function(a, b)
+							return (rootPart.Position - a.Center).Magnitude < (rootPart.Position - b.Center).Magnitude
+						end)
+
+						local currentIsland = islands[1]
+						if currentIsland and #currentIsland.Chests > 0 then
+							local targetChestData = currentIsland.Chests[1]
+							local targetChest = targetChestData.Object
+							local targetPos = getPositionOfObj(targetChest)
+							
+							if targetPos then
+								smoothFlyTo(CFrame.new(targetPos))
+								task.wait(0.3)
+								DeadChests[targetChest] = true
 							end
 						end
 					end
 				end
 			end
 
-			if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-				local rootPart = getCharacterRootPart()
-				if rootPart then
+			if Settings.AutoFlyPlayer then
+				task.wait(2)
+				local targetPlayer = nil
+
+				if Settings.TargetPlayerName ~= "" then
+					for _, p in ipairs(Players:GetPlayers()) do
+						if p ~= LocalPlayer and string.find(p.Name:lower(), Settings.TargetPlayerName:lower()) then
+							targetPlayer = p
+							break
+						end
+					end
+				else
+					local shortestDist = math.huge
+					local rootPart = getCharacterRootPart()
+					if rootPart then
+						for _, p in ipairs(Players:GetPlayers()) do
+							if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+								local dist = (rootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+								if dist < shortestDist then
+									shortestDist = dist
+									targetPlayer = p
+								end
+							end
+						end
+					end
+				end
+
+				if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
 					smoothFlyTo(targetPlayer.Character.HumanoidRootPart.CFrame)
 					task.wait(1.5)
 				end
 			end
-		end
+		end)
 	end
 end)
 
--- ==========================================
--- AUTO JOIN TEAM
--- ==========================================
 local function joinTeam()
 	if not Settings.AutoJoinEnabled then return end
 	pcall(function()
@@ -404,35 +352,34 @@ LocalPlayer.CharacterAdded:Connect(function()
 	task.wait(2)
 	joinTeam()
 end)
+
 task.spawn(function()
 	task.wait(1)
 	joinTeam()
 end)
 
--- ==========================================
--- FPS BOOST FUNCTION
--- ==========================================
 local function applyFpsBoost(state)
-	if state then
-		Lighting.GlobalShadows = false
-		Lighting.FogEnd = 999999
-		for _, v in ipairs(Workspace:GetDescendants()) do
-			if v:IsA("BasePart") then
-				v.Material = Enum.Material.SmoothPlastic
-				v.Reflectance = 0
-			elseif v:IsA("Decal") or v:IsA("Texture") then
-				v.Transparency = 1
+	pcall(function()
+		if state then
+			Lighting.GlobalShadows = false
+			Lighting.FogEnd = 999999
+			for _, v in ipairs(Workspace:GetDescendants()) do
+				if v:IsA("BasePart") then
+					v.Material = Enum.Material.SmoothPlastic
+					v.Reflectance = 0
+				elseif v:IsA("Decal") or v:IsA("Texture") then
+					v.Transparency = 1
+				end
 			end
+		else
+			Lighting.GlobalShadows = true
 		end
-	else
-		Lighting.GlobalShadows = true
-	end
+	end)
 end
+
 if Settings.FpsBoost then applyFpsBoost(true) end
 
--- ==========================================
--- TAMPILAN UI MENU UTAMA
--- ==========================================
+-- UI Menu Pembuatan Tombol
 local OpenButton = Instance.new("TextButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
 OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
@@ -548,10 +495,6 @@ local function createAutoToggle(posY, text, settingKey, callback)
 	return btn
 end
 
--- ==========================================
--- KONTEN MENU UTAMA
--- ==========================================
-
 -- 1. AUTO JOIN TIM
 createSectionHeader(10, "--- 1. AUTO JOIN TIM ---")
 local TeamConfigBtn = Instance.new("TextButton")
@@ -612,25 +555,15 @@ end)
 
 createAutoToggle(235, "Custom Sound Buah", "CustomSoundEnabled", nil)
 
--- 3. POSISI NOTIFIKASI (0 s/d 100, 50 = Tengah)
+-- 3. POSISI NOTIFIKASI
 createSectionHeader(285, "--- 3. POSISI NOTIFIKASI (0-100, 50=Tengah) ---")
-local NotifPosLabel = Instance.new("TextLabel")
-NotifPosLabel.Size = UDim2.new(0.9, 0, 0, 20)
-NotifPosLabel.Position = UDim2.new(0.05, 0, 0, 310)
-NotifPosLabel.BackgroundTransparency = 1
-NotifPosLabel.Text = "Atur Posisi (X: 0=Kiri, 50=Tengah, 100=Kanan)"
-NotifPosLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-NotifPosLabel.TextSize, NotifPosLabel.Font = 10, Enum.Font.Gotham
-NotifPosLabel.TextXAlignment = Enum.TextXAlignment.Left
-NotifPosLabel.Parent = Container
-
 local NotifXBox = Instance.new("TextBox")
 NotifXBox.Size = UDim2.new(0.43, 0, 0, 35)
 NotifXBox.Position = UDim2.new(0.05, 0, 0, 335)
 NotifXBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 NotifXBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifXBox.Text = tostring(Settings.NotifOffsetX)
-NotifXBox.PlaceholderText = "X (0 s/d 100)"
+NotifXBox.PlaceholderText = "X (0-100)"
 NotifXBox.TextSize, NotifXBox.Font = 10, Enum.Font.Gotham
 NotifXBox.Parent = Container
 
@@ -642,10 +575,8 @@ NotifXBox.FocusLost:Connect(function(enterPressed)
 	if enterPressed then
 		local num = tonumber(NotifXBox.Text)
 		if num then
-			if num > 100 then num = 100 end
-			if num < 0 then num = 0 end
-			Settings.NotifOffsetX = num
-			NotifXBox.Text = tostring(num)
+			Settings.NotifOffsetX = math.clamp(num, 0, 100)
+			NotifXBox.Text = tostring(Settings.NotifOffsetX)
 			updateNotifPosition()
 			saveSettings()
 		end
@@ -658,7 +589,7 @@ NotifYBox.Position = UDim2.new(0.52, 0, 0, 335)
 NotifYBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 NotifYBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifYBox.Text = tostring(Settings.NotifOffsetY)
-NotifYBox.PlaceholderText = "Y (0 s/d 100)"
+NotifYBox.PlaceholderText = "Y (0-100)"
 NotifYBox.TextSize, NotifYBox.Font = 10, Enum.Font.Gotham
 NotifYBox.Parent = Container
 
@@ -670,10 +601,8 @@ NotifYBox.FocusLost:Connect(function(enterPressed)
 	if enterPressed then
 		local num = tonumber(NotifYBox.Text)
 		if num then
-			if num > 100 then num = 100 end
-			if num < 0 then num = 0 end
-			Settings.NotifOffsetY = num
-			NotifYBox.Text = tostring(num)
+			Settings.NotifOffsetY = math.clamp(num, 0, 100)
+			NotifYBox.Text = tostring(Settings.NotifOffsetY)
 			updateNotifPosition()
 			saveSettings()
 		end
@@ -682,23 +611,13 @@ end)
 
 -- 4. KECEPATAN & KETINGGIAN TERBANG
 createSectionHeader(385, "--- 4. KECEPATAN & KETINGGIAN TERBANG ---")
-local SpeedLabel = Instance.new("TextLabel")
-SpeedLabel.Size = UDim2.new(0.9, 0, 0, 20)
-SpeedLabel.Position = UDim2.new(0.05, 0, 0, 410)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Text = "Kecepatan Terbang (20 - 1000):"
-SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-SpeedLabel.TextSize, SpeedLabel.Font = 10, Enum.Font.Gotham
-SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
-SpeedLabel.Parent = Container
-
 local SpeedTextBox = Instance.new("TextBox")
 SpeedTextBox.Size = UDim2.new(0.9, 0, 0, 35)
 SpeedTextBox.Position = UDim2.new(0.05, 0, 0, 435)
 SpeedTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 SpeedTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedTextBox.Text = tostring(Settings.FlightSpeed)
-SpeedTextBox.PlaceholderText = "Ketik Speed (Misal: 150)"
+SpeedTextBox.PlaceholderText = "Speed (20 - 1000)"
 SpeedTextBox.TextSize, SpeedTextBox.Font = 11, Enum.Font.Gotham
 SpeedTextBox.Parent = Container
 
@@ -710,24 +629,12 @@ SpeedTextBox.FocusLost:Connect(function(enterPressed)
 	if enterPressed then
 		local num = tonumber(SpeedTextBox.Text)
 		if num then
-			if num > 1000 then num = 1000 end
-			if num < 20 then num = 20 end
-			Settings.FlightSpeed = num
-			SpeedTextBox.Text = tostring(num)
+			Settings.FlightSpeed = math.clamp(num, 20, 1000)
+			SpeedTextBox.Text = tostring(Settings.FlightSpeed)
 			saveSettings()
 		end
 	end
 end)
-
-local HeightLabel = Instance.new("TextLabel")
-HeightLabel.Size = UDim2.new(0.9, 0, 0, 20)
-HeightLabel.Position = UDim2.new(0.05, 0, 0, 480)
-HeightLabel.BackgroundTransparency = 1
-HeightLabel.Text = "Ketinggian Terbang (0 - 10):"
-HeightLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-HeightLabel.TextSize, HeightLabel.Font = 10, Enum.Font.Gotham
-HeightLabel.TextXAlignment = Enum.TextXAlignment.Left
-HeightLabel.Parent = Container
 
 local HeightTextBox = Instance.new("TextBox")
 HeightTextBox.Size = UDim2.new(0.9, 0, 0, 35)
@@ -735,7 +642,7 @@ HeightTextBox.Position = UDim2.new(0.05, 0, 0, 505)
 HeightTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 HeightTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 HeightTextBox.Text = tostring(Settings.FlyHeight)
-HeightTextBox.PlaceholderText = "Ketinggian maximal 10 (Misal: 5)"
+HeightTextBox.PlaceholderText = "Height (0 - 10)"
 HeightTextBox.TextSize, HeightTextBox.Font = 11, Enum.Font.Gotham
 HeightTextBox.Parent = Container
 
@@ -747,16 +654,14 @@ HeightTextBox.FocusLost:Connect(function(enterPressed)
 	if enterPressed then
 		local num = tonumber(HeightTextBox.Text)
 		if num then
-			if num > 10 then num = 10 end
-			if num < 0 then num = 0 end
-			Settings.FlyHeight = num
-			HeightTextBox.Text = tostring(num)
+			Settings.FlyHeight = math.clamp(num, 0, 10)
+			HeightTextBox.Text = tostring(Settings.FlyHeight)
 			saveSettings()
 		end
 	end
 end)
 
--- 5. TARGET PLAYER (DENGAN INFORMASI LEVEL)
+-- 5. TARGET PLAYER
 createSectionHeader(555, "--- 5. TARGET PLAYER ---")
 local TargetStatusLabel = Instance.new("TextLabel")
 TargetStatusLabel.Size = UDim2.new(0.9, 0, 0, 20)
@@ -806,48 +711,49 @@ ResetTargetBtn.MouseButton1Click:Connect(function()
 end)
 
 local function refreshPlayerList()
-	for _, child in ipairs(PlayerListScroll:GetChildren()) do
-		if child:IsA("TextButton") then
-			child:Destroy()
+	pcall(function()
+		for _, child in ipairs(PlayerListScroll:GetChildren()) do
+			if child:IsA("TextButton") then
+				child:Destroy()
+			end
 		end
-	end
 
-	local players = Players:GetPlayers()
-	PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, #players * 34)
+		local players = Players:GetPlayers()
+		PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, #players * 34)
 
-	for _, p in ipairs(players) do
-		if p ~= LocalPlayer then
-			local pBtn = Instance.new("TextButton")
-			pBtn.Size = UDim2.new(1, -6, 0, 30)
-			pBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
-			pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-			
-			-- Mengambil Level player secara aman dari DataFolder atau leaderstats game Blox Fruits
-			local playerLevel = "???"
-			pcall(function()
-				if p:FindFirstChild("DataFolder") and p.DataFolder:FindFirstChild("Level") then
-					playerLevel = tostring(p.DataFolder.Level.Value)
-				elseif p:FindFirstChild("leaderstats") and p:FindFirstChild("leaderstats"):FindFirstChild("Level") then
-					playerLevel = tostring(p.leaderstats.Level.Value)
-				end
-			end)
+		for _, p in ipairs(players) do
+			if p ~= LocalPlayer then
+				local pBtn = Instance.new("TextButton")
+				pBtn.Size = UDim2.new(1, -6, 0, 30)
+				pBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+				pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+				
+				local playerLevel = "???"
+				pcall(function()
+					if p:FindFirstChild("DataFolder") and p.DataFolder:FindFirstChild("Level") then
+						playerLevel = tostring(p.DataFolder.Level.Value)
+					elseif p:FindFirstChild("leaderstats") and p:FindFirstChild("leaderstats"):FindFirstChild("Level") then
+						playerLevel = tostring(p.leaderstats.Level.Value)
+					end
+				end)
 
-			pBtn.Text = "  👤 " .. p.Name .. " | Lvl: " .. playerLevel
-			pBtn.TextSize, pBtn.Font = 10, Enum.Font.Gotham
-			pBtn.TextXAlignment = Enum.TextXAlignment.Left
-			pBtn.Parent = PlayerListScroll
+				pBtn.Text = "  👤 " .. p.Name .. " | Lvl: " .. playerLevel
+				pBtn.TextSize, pBtn.Font = 10, Enum.Font.Gotham
+				pBtn.TextXAlignment = Enum.TextXAlignment.Left
+				pBtn.Parent = PlayerListScroll
 
-			local pBtnCorner = Instance.new("UICorner")
-			pBtnCorner.CornerRadius = UDim.new(0, 4)
-			pBtnCorner.Parent = pBtn
+				local pBtnCorner = Instance.new("UICorner")
+				pBtnCorner.CornerRadius = UDim.new(0, 4)
+				pBtnCorner.Parent = pBtn
 
-			pBtn.MouseButton1Click:Connect(function()
-				Settings.TargetPlayerName = p.Name
-				TargetStatusLabel.Text = "Target Aktif: " .. p.Name
-				saveSettings()
-			end)
+				pBtn.MouseButton1Click:Connect(function()
+					Settings.TargetPlayerName = p.Name
+					TargetStatusLabel.Text = "Target Aktif: " .. p.Name
+					saveSettings()
+				end)
+			end
 		end
-	end
+	end)
 end
 
 Players.PlayerAdded:Connect(refreshPlayerList)
@@ -863,9 +769,6 @@ createAutoToggle(940, "FPS Boost", "FpsBoost", function(val)
 	applyFpsBoost(val)
 end)
 
--- ==========================================
--- TOMBOL BUKA/TUTUP MENU UTAMA
--- ==========================================
 local menuVisible = false 
 local function toggleMenu()
 	menuVisible = not menuVisible
