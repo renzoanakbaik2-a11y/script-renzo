@@ -1,4 +1,4 @@
--- [[ GURITA HUB V21.0 - ULTIMATE FIX HOP & COLLECT ]] --
+-- [[ GURITA HUB V22.0 - FIXED UI BUTTONS & ULTIMATE HOP/COLLECT ]] --
 
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -9,14 +9,14 @@ local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
-local SEARCH_DELAY = 6
+local SEARCH_DELAY = 5
 
 -- NAMA FILE CONFIGURASI PERMANEN
-local CONFIG_FILE = "GuritaHub_v21_Config.json"
+local CONFIG_FILE = "GuritaHub_v22_Config.json"
 
 -- PENGATURAN DEFAULT
 local config = {
-	autoHopActive = true,
+	autoHopActive = false,
 	autoCollectActive = true,
 	autoJoinTeamActive = false,
 	selectedTeam = "Pirates"
@@ -61,11 +61,11 @@ end
 -- FUNGSI AUTO JOIN TIM
 -- ==========================================================
 local function autoSelectTeam()
-	if not config.autoJoinTeamActive then return end
 	local re = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 	if re then
 		pcall(function()
 			re:InvokeServer("SetTeam", config.selectedTeam)
+			print("[Team] Berhasil bergabung ke tim: " .. config.selectedTeam)
 		end)
 	end
 end
@@ -109,7 +109,7 @@ Stroke.Thickness = 2
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Position = UDim2.new(0, 0, 0, 5)
-Title.Text = "GURITA HUB V21.0\nBLOX FRUITS MANAGER"
+Title.Text = "GURITA HUB V22.0\nBLOX FRUITS MANAGER"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 11
 Title.BackgroundTransparency = 1
@@ -147,21 +147,18 @@ TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
 ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
--- Aksi Buka/Tutup Menu
 ToggleMenuBtn.MouseButton1Down:Connect(function()
 	Main.Visible = not Main.Visible
 end)
 
 -- ==========================================================
--- PENCARIAN & AUTO COLLECT BUAH DIPERLUAS
+-- FUNGSI PENCARIAN & AUTO COLLECT BUAH SENSITIF
 -- ==========================================================
 local function findFruit()
-	-- Pencarian mendalam di seluruh isi Workspace untuk mendeteksi buah spawn
 	for _, obj in ipairs(Workspace:GetChildren()) do
 		if obj.Name:find("Fruit") or obj.Name:find("BloxFruit") then
 			return obj
 		end
-		-- Cek jika ada handle di dalam objek
 		if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
 			return obj
 		end
@@ -173,25 +170,26 @@ local function moveToFruit(fruitObj)
 	pcall(function()
 		local targetPart = fruitObj:FindFirstChild("Handle") or fruitObj:FindFirstChildWhichIsA("BasePart") or fruitObj
 		if targetPart and targetPart:IsA("BasePart") then
-			task.wait(0.5)
+			task.wait(0.3)
 			local char = player.Character or player.CharacterAdded:Wait()
 			local rootPart = char:WaitForChild("HumanoidRootPart", 3)
 			
 			if rootPart then
 				rootPart.CFrame = targetPart.CFrame + Vector3.new(0, 2, 0)
-				print("[SUKSES] Karakter berhasil mendatangi buah: " .. fruitObj.Name)
+				print("[SUKSES] Karakter mendatangi buah: " .. fruitObj.Name)
+				sendNotification("Auto Collect", "Berhasil mengambil buah: " .. fruitObj.Name, 5)
 			end
 		end
 	end)
 end
 
 -- ==========================================================
--- LOGIKA SERVER HOP AMAN (BYPASS DELTA RESTRICTION)
+-- LOGIKA SERVER HOP AMAN (DELTA COMPATIBLE)
 -- ==========================================================
 local function hopToNewServer()
 	if not config.autoHopActive then return end
 	
-	print("[Blox Fruits] Menjalankan Server Hop Aman...")
+	print("[Blox Fruits] Mencari server publik alternatif...")
 	local success, site = pcall(function()
 		return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"))
 	end)
@@ -208,9 +206,8 @@ local function hopToNewServer()
 
 		if #servers > 0 then
 			local targetServer = servers[math.random(1, #servers)]
-			print("[Blox Fruits] Berpindah ke server lain...")
+			print("[Blox Fruits] Berpindah ke server ID: " .. targetServer)
 			
-			-- Menggunakan metode teleport standar aman delta
 			local tpSuccess = pcall(function()
 				TeleportService:TeleportToPlaceInstance(placeId, targetServer, player)
 			end)
@@ -224,7 +221,6 @@ local function hopToNewServer()
 			TeleportService:Teleport(placeId, player)
 		end
 	else
-		-- Jika API publik gagal dibaca executor, langsung paksa ganti server via Teleport standar
 		print("[Blox Fruits] Menggunakan metode hop alternatif...")
 		task.wait(SEARCH_DELAY)
 		TeleportService:Teleport(placeId, player)
@@ -233,7 +229,7 @@ end
 
 local function startMainLoop()
 	task.spawn(function()
-		task.wait(4)
+		task.wait(3)
 
 		if not config.autoHopActive then return end
 
@@ -243,7 +239,7 @@ local function startMainLoop()
 			print("[ADA BUAH] Ditemukan: " .. detectedFruit.Name)
 			print("Auto Hop Dimatikan. Mengambil buah...")
 			print("========================================")
-			sendNotification("Gurita Hub V21", "Ada Buah: " .. detectedFruit.Name .. "!", 6)
+			sendNotification("Gurita Hub V22", "Ada Buah: " .. detectedFruit.Name .. "!", 6)
 			
 			config.autoHopActive = false
 			saveConfig()
@@ -257,7 +253,7 @@ local function startMainLoop()
 			return
 		else
 			print("[TIDAK ADA BUAH] Melakukan hop server...")
-			sendNotification("Gurita Hub V21", "Tidak ada buah, mencari server...", 3)
+			sendNotification("Gurita Hub V22", "Tidak ada buah, mencari server...", 3)
 		end
 
 		if config.autoHopActive then
@@ -267,7 +263,7 @@ local function startMainLoop()
 end
 
 -- ==========================================================
--- KONTROL TOMBOL MENU
+-- KONTROL TOMBOL INTERAKTIF MENU
 -- ==========================================================
 ToggleHopBtn.MouseButton1Click:Connect(function()
 	config.autoHopActive = not config.autoHopActive
@@ -312,7 +308,11 @@ ToggleJoinTeam.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Eksekusi Utama
+-- Eksekusi Utama Saat Script Dijalankan
+if config.autoJoinTeamActive then
+	autoSelectTeam()
+end
+
 if config.autoHopActive then
 	startMainLoop()
 end
