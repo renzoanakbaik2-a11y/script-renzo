@@ -1,39 +1,25 @@
--- [[ GURITA HUB V5.5 - NOTIF EGG SPANN GH EDITION ]] --
+-- [[ GURITA HUB V6.0 - ULTIMATE BLOX FRUITS FRUIT FINDER ]] --
 
--- Layanan yang dibutuhkan
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
-local Lighting = game:GetService("Lighting")
-local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 local SEARCH_DELAY = 5 
 
--- VARIABEL GLOBAL UNTUK FITUR ESP & NOTIF
-_G.HuntingMode = true
-_G.NotifMode = true
-
-local NotifHistory = {}
-local NotifQuery = {}
-
--- Daftar Target Item/Buah/Egg
-local SuperRare = {"hydra", "no my egg", "los bunitox", "baskito", "churrito", "hopilikalika", "quackini", "harp"}
-local NormalTargets = {"tralala", "eggdin", "easter", "sahur", "sky egg", "buntto egg"}
-
--- NAMA FILE UNTUK MENYIMPAN SETTINGAN SECARA PERMANEN DI EXECUTOR
-local CONFIG_FILE = "BloxFruits_AutoHop_Config.json"
+-- NAMA FILE UNTUK SAVE SETTING OTOMATIS
+local CONFIG_FILE = "GuritaHub_Final_Config.json"
 
 -- PENGATURAN DEFAULT
 local config = {
 	autoHopActive = false,
-	selectedTeam = "Pirates"
+	selectedTeam = "Pirates" -- Pilihan: "Pirates" (Bajak Laut) atau "Marines" (Marinir)
 }
 
--- LOAD CONFIGURASI DARI FILE EXECUTOR
+-- LOAD CONFIGURASI DARI EXECUTOR (Agar Permanen)
 if writefile and readfile and isfile then
 	if isfile(CONFIG_FILE) then
 		local success, decoded = pcall(function()
@@ -55,170 +41,123 @@ local function saveConfig()
 	end
 end
 
--- Cek TeleportData agar status tetap terbawa saat hop server
+-- Cek TeleportData agar status tetap sinkron saat pindah server
 local teleportData = TeleportService:GetLocalPlayerTeleportData()
 if teleportData and type(teleportData) == "table" and teleportData.autoHop ~= nil then
 	config.autoHopActive = teleportData.autoHop
 end
 
--- 1. PROTEKSI
-local function isProtected(v)
-	if v:IsDescendantOf(lp.Character) then return true end
-	if v:IsA("Sky") or v:IsA("Clouds") or v:IsA("Atmosphere") then return true end
-	return false
-end
-
--- 2. LIGHTING & OPTIMIZE (SOFT)
-local function SmoothOptimize()
-	task.spawn(function()
-		settings().Rendering.QualityLevel = 1
-		lighting.GlobalShadows = false
-		lighting.Brightness = 1
-		lighting.Ambient = Color3.fromRGB(130, 130, 130)
-		lighting.OutdoorAmbient = Color3.fromRGB(130, 130, 130)
-		for _, v in pairs(workspace:GetDescendants()) do
-			if i % 300 == 0 then task.wait() end
-			if v:IsA("BasePart") then v.Material = Enum.Material.Plastic; v.Reflectance = 0
-			elseif v:IsA("Decal") or v:IsA("Texture") then v:Destroy() end
-		end
-	end)
-end
-
--- 3. NOTIF SYSTEM (POPUP + SOUND)
-local function ShowPopup(objName)
-	task.spawn(function()
-		local sg = Instance.new("ScreenGui", player:WaitForChild("PlayerGui")); sg.Name = "GuritaNotif"; sg.ResetOnSpawn = false
-		local f = Instance.new("Frame", sg)
-		f.Size = UDim2.new(0, 280, 0, 50); f.Position = UDim2.new(0.5, -140, -0.1, 0)
-		f.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Instance.new("UICorner", f)
-		local s = Instance.new("UIStroke", f); s.Color = Color3.fromRGB(0, 170, 255); s.Thickness = 2
-
-		local t = Instance.new("TextLabel", f)
-		t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1,1,1)
-		t.Text = "RARE SPANN: " .. objName:upper(); t.Font = "GothamBlack"; t.TextSize = 14
-
-		local snd = Instance.new("Sound", workspace)
-		snd.SoundId = "rbxassetid://4500662766"; snd.Volume = 0.7; snd.Play()
-
-		f:TweenPosition(UDim2.new(0.5, -140, 0.05, 0), "Out", "Back", 0.5)
-		task.wait(3.5)
-		f:TweenPosition(UDim2.new(0.5, -140, -0.1, 0), "In", "Quad", 0.5)
-		task.wait(0.6); sg:Destroy(); snd:Destroy()
-	end)
-end
-
--- Runner Antrian Notif
-task.spawn(function()
-	while true do
-		if #NotifQueue > 0 then
-			local nextObj = table.remove(NotifQueue, 1)
-			ShowPopup(nextObj)
-			task.wait(4.5)
-		end
-		task.wait(0.5)
+-- ==========================================================
+-- FUNGSI AUTO JOIN TIM & SKIP MENU BAWAH/ASLI GAME
+-- ==========================================================
+local function autoSelectTeam()
+	print("[Blox Fruits] Melewati menu asli & otomatis memilih tim: " .. config.selectedTeam)
+	local re = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+	if re then
+		pcall(function()
+			re:InvokeServer("SetTeam", config.selectedTeam)
+		end)
 	end
-end)
-
--- 4. ESP LOGIC
-local function PasangESP(obj)
-	if not _G.HuntingMode or obj:FindFirstChild("GuritaTag") then return end
-	task.spawn(function()
-		task.wait(1.5)
-		local name = obj.Name:lower()
-		if name == "part" or name == "model" then return end
-		local pos = (obj:IsA("Model") and obj.PrimaryPart and obj.PrimaryPart.Position or (obj:IsA("BasePart") and obj.Position))
-		if not pos or pos.Y < 100 then return end
-
-		local tipe = nil
-		for _, r in pairs(SuperRare) do if name:find(r) then tipe = "rare"; break end end
-		if not tipe then
-			for _, e in pairs(NormalTargets) do if name:find(e) then tipe = "normal"; break end end
-		end
-		if not tipe then return end
-
-		if tipe == "rare" and _G.NotifMode and not NotifHistory[obj.Name] then
-			NotifHistory[obj.Name] = true
-			table.insert(NotifQueue, obj.Name)
-		end
-
-		local col = (tipe == "rare" and Color3.new(1, 0, 0) or Color3.fromRGB(0, 170, 255))
-		local b = Instance.new("BillboardGui", obj)
-		b.Name = "GuritaTag"; b.Size = UDim2.new(0, 180, 0, 45); b.AlwaysOnTop = true; b.MaxDistance = math.huge
-
-		local t = Instance.new("TextLabel", b)
-		t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = col
-		t.Font = "GothamBlack"; t.TextSize = 12; t.TextStrokeTransparency = 0.3
-
-		while obj and obj.Parent and _G.HuntingMode do
-			local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-			if hrp then t.Text = obj.Name:upper() .. "\n[" .. math.floor((hrp.Position - pos).Magnitude) .. "m]" end
-			task.wait(2)
-		end
-		if b then b:Destroy() end
-	end)
 end
 
 -- ==========================================================
--- MENU GUI & AUTO JOIN TIM
+-- TAMPILAN GUI MENU UTAMA (CANTIK, ADA TOMBOL BUKA/TUTUP)
 -- ==========================================================
+if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
+	player.PlayerGui.GuritaHubGUI:Destroy()
+end
+
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.Name = "BloxFruitsAutoHopGUI"
+screenGui.Name = "GuritaHubGUI"
 screenGui.ResetOnSpawn = false
 
-local Toggle = Instance.new("TextButton", screenGui)
-Toggle.Size = UDim2.new(0, 80, 0, 40); Toggle.Position = UDim2.new(0, 15, 0.45, 0)
-Toggle.BackgroundTransparency = 1; Toggle.Text = "G H"; Toggle.TextColor3 = Color3.fromRGB(0, 170, 255)
-Toggle.Font = "GothamBlack"; Toggle.TextSize = 32
+-- Tombol Buka/Tutup Menu di Layar
+local ToggleMenuBtn = Instance.new("TextButton", screenGui)
+ToggleMenuBtn.Size = UDim2.new(0, 90, 0, 40)
+ToggleMenuBtn.Position = UDim2.new(0, 20, 0.4, 0)
+ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleMenuBtn.Text = "MENU ≡"
+ToggleMenuBtn.TextColor3 = Color3.fromRGB(0, 220, 255)
+ToggleMenuBtn.Font = Enum.Font.GothamBlack
+ToggleMenuBtn.TextSize = 13
+Instance.new("UICorner", ToggleMenuBtn)
+local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
+ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
+ToggleMenuStroke.Thickness = 2
 
+-- Frame Utama Menu
 local Main = Instance.new("Frame", screenGui)
-Main.Size = UDim2.new(0, 250, 0, 240); Main.Position = UDim2.new(0.5, -125, 0.5, -120)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10); Main.Visible = false; Instance.new("UICorner", Main)
-local Stroke = Instance.new("UIStroke", Main); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 2
+Main.Size = UDim2.new(0, 240, 0, 230)
+Main.Position = UDim2.new(0.5, -120, 0.5, -115)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Main.Visible = true
+Instance.new("UICorner", Main)
+local Stroke = Instance.new("UIStroke", Main)
+Stroke.Color = Color3.fromRGB(0, 170, 255)
+Stroke.Thickness = 2
 
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 60); Title.Position = UDim2.new(0,0,0,10)
-Title.Text = "GURITA HUB\nEGG HUNT NOTIF EGG SPANN GH"
-Title.Font = "GothamBlack"; Title.TextSize = 13; Title.BackgroundTransparency = 1
+Title.Size = UDim2.new(1, 0, 0, 45)
+Title.Position = UDim2.new(0, 0, 0, 5)
+Title.Text = "GURITA HUB\nFRUIT FINDER & AUTO HOP"
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 11
+Title.BackgroundTransparency = 1
 Title.TextColor3 = Color3.fromRGB(0, 170, 255)
 
+-- Fungsi Pembuat Tombol di dalam Menu
 local function CreateBtn(pos)
 	local b = Instance.new("TextButton", Main)
-	b.Size = UDim2.new(0, 210, 0, 50); b.Position = pos; b.Font = "GothamBlack"; b.TextSize = 13
-	b.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", b)
-	local s = Instance.new("UIStroke", b); s.Color = Color3.fromRGB(0, 170, 255); s.Thickness = 1.2
+	b.Size = UDim2.new(0, 200, 0, 38)
+	b.Position = pos
+	b.Font = Enum.Font.GothamBlack
+	b.TextSize = 12
+	b.TextColor3 = Color3.new(1, 1, 1)
+	Instance.new("UICorner", b)
+	local s = Instance.new("UIStroke", b)
+	s.Color = Color3.fromRGB(0, 170, 255)
+	s.Thickness = 1.2
 	return b
 end
 
-local BtnESP = CreateBtn(UDim2.new(0, 20, 0, 80))
-local BtnNotif = CreateBtn(UDim2.new(0, 20, 0, 150))
+local ToggleHopBtn = CreateBtn(UDim2.new(0, 20, 0, 55))
+local TeamBtn      = CreateBtn(UDim2.new(0, 20, 0, 105))
+local RejoinTeamBtn = CreateBtn(UDim2.new(0, 20, 0, 155))
 
-local function UpdateUI()
-	BtnESP.Text = "ESP EGG: " .. (_G.HuntingMode and "ON" or "OFF")
-	BtnESP.BackgroundColor3 = _G.HuntingMode and Color3.fromRGB(0, 80, 0) or Color3.fromRGB(80, 0, 0)
-	BtnNotif.Text = "NOTIF SPAWN: " .. (_G.NotifMode and "ON" or "OFF")
-	BtnNotif.BackgroundColor3 = _G.NotifMode and Color3.fromRGB(0, 80, 0) or Color3.fromRGB(80, 0, 0)
-end
-UpdateUI()
+-- Status Tampilan Tombol Awal
+ToggleHopBtn.Text = config.autoHopActive and "Auto Hop: ON" or "Auto Hop: OFF"
+ToggleHopBtn.BackgroundColor3 = config.autoHopActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
-Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
-BtnESP.MouseButton1Down:Connect(function()
-	_G.HuntingMode = not _G.HuntingMode; UpdateUI()
-	if _G.HuntingMode then for _,v in pairs(workspace:GetDescendants()) do PasangESP(v) end end
+TeamBtn.Text = "Tim: " .. config.selectedTeam
+TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+
+RejoinTeamBtn.Text = "Paksa Pilih Tim Ini"
+RejoinTeamBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
+
+-- Aksi Tombol Buka/Tutup Menu
+ToggleMenuBtn.MouseButton1Down:Connect(function()
+	Main.Visible = not Main.Visible
 end)
-BtnNotif.MouseButton1Down:Connect(function() _G.NotifMode = not _G.NotifMode; UpdateUI() end)
 
--- ==========================================================
--- AUTO SELECT TEAM
--- ==========================================================
-local function autoSelectTeam()
-	local re = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-	if re then
-		pcall(function() re:InvokeServer("SetTeam", config.selectedTeam) end)
+-- Aksi Tombol Ganti Tim (Pirates / Marines)
+TeamBtn.MouseButton1Click:Connect(function()
+	if config.selectedTeam == "Pirates" then
+		config.selectedTeam = "Marines"
+	else
+		config.selectedTeam = "Pirates"
 	end
-end
+	TeamBtn.Text = "Tim: " .. config.selectedTeam
+	saveConfig()
+	autoSelectTeam()
+end)
+
+-- Aksi Tombol Paksa Pilih Tim Manual
+RejoinTeamBtn.MouseButton1Click:Connect(function()
+	autoSelectTeam()
+end)
 
 -- ==========================================================
--- FUNGSI PENCARIAN BUAH & AUTO HOP
+-- PENCARIAN BUAH & LOGIKA AUTO HOP
 -- ==========================================================
 local function findFruit()
 	for _, obj in ipairs(Workspace:GetChildren()) do
@@ -232,23 +171,32 @@ end
 local function startFruitSearch()
 	if not config.autoHopActive then return end
 
-	print("[Blox Fruits] Masuk ke server, merapikan tim...")
-	task.wait(2)
+	print("[Blox Fruits] Masuk server baru, melewati menu tim & merapikan posisi...")
+	task.wait(1.5)
 	autoSelectTeam()
-	task.wait(2)
+	task.wait(1.5)
 
 	local detectedFruit = findFruit()
 	if detectedFruit then
-		print("[SUKSES] Buah ditemukan di server ini!")
+		-- JIKA ADA BUAH: Diam, Auto Hop dimatikan, Teleport ke dekat buah
+		print("[SUKSES] Buah ditemukan: " .. detectedFruit.Name .. "! Auto Hop dihentikan agar Anda bisa mengambilnya.")
 		config.autoHopActive = false
 		saveConfig()
-		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and detectedFruit:FindFirstChild("Handle") then
-			player.Character.HumanoidRootPart.CFrame = detectedFruit.Handle.CFrame + Vector3.new(0, 5, 0)
+		
+		ToggleHopBtn.Text = "Buah Ketemu! (OFF)"
+		ToggleHopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
+		
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local handle = detectedFruit:FindFirstChild("Handle") or detectedFruit:FindFirstChildWhichIsA("BasePart")
+			if handle then
+				player.Character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 5, 0)
+			end
 		end
 		return
 	end
 
-	print("[Blox Fruits] Buah tidak ada. Melakukan Auto Hop...")
+	-- JIKA TIDAK ADA BUAH: Lanjut Hop ke Server Lain
+	print("[Blox Fruits] Tidak ada buah di server ini. Mencari server lain...")
 	local success, result = pcall(function()
 		local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
 		return HttpService:JSONDecode(game:HttpGet(url))
@@ -275,13 +223,27 @@ local function startFruitSearch()
 	end
 end
 
--- Jalankan ESP dan Handler Awal
-SmoothOptimize()
-for _, d in ipairs(workspace:GetDescendants()) do PasangESP(d) end
-workspace.DescendantAdded:Connect(function(v) PasangESP(v) end)
+-- Aksi Tombol On/Off Auto Hop
+ToggleHopBtn.MouseButton1Click:Connect(function()
+	config.autoHopActive = not config.autoHopActive
+	saveConfig()
+	
+	if config.autoHopActive then
+		ToggleHopBtn.Text = "Auto Hop: ON"
+		ToggleHopBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+		startFruitSearch()
+	else
+		ToggleHopBtn.Text = "Auto Hop: OFF"
+		ToggleHopBtn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+	end
+end)
 
+-- Eksekusi awal saat script dijalankan
 if config.autoHopActive then
 	task.spawn(function() startFruitSearch() end)
 else
-	task.spawn(function() task.wait(2); autoSelectTeam() end)
+	task.spawn(function()
+		task.wait(1.5)
+		autoSelectTeam()
+	end)
 end
