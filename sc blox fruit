@@ -1,4 +1,4 @@
--- [[ GURITA HUB - FINAL FIXED SCRIPT ]] --
+-- [[ GURITA HUB - FIXED ERROR SCRIPT ]] --
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,14 +10,12 @@ local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 local lastState = "UNKNOWN"
 
--- PENGATURAN DEFAULT
 local config = {
 	autoJoinTeamActive = false,
 	selectedTeam = "Pirates",
 	fastModeActive = false
 }
 
--- CONFIG SAVE
 local configFileName = "GuritaHub_BloxFruits_Clean.json"
 
 local function saveConfig()
@@ -43,9 +41,6 @@ end
 
 loadConfig()
 
--- ==========================================================
--- FUNGSI MODE CEPAT (OPTIMASI GRAFIK)
--- ==========================================================
 local function applyFastMode(state)
 	pcall(function()
 		if state then
@@ -72,9 +67,6 @@ if config.fastModeActive then
 	end)
 end
 
--- ==========================================================
--- BERSIHKAN GUI LAMA
--- ==========================================================
 pcall(function()
 	if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
 		player.PlayerGui.GuritaHubGUI:Destroy()
@@ -84,9 +76,6 @@ pcall(function()
 	end
 end)
 
--- ==========================================================
--- NOTIFIKASI KUSTOM (HANYA INI YANG ADA EFEK RAINBOW)
--- ==========================================================
 local notificationGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 notificationGui.Name = "GuritaHubTopNotification"
 notificationGui.ResetOnSpawn = false
@@ -119,9 +108,6 @@ local function showTopNotification(text, duration)
 	end)
 end
 
--- ==========================================================
--- FUNGSI AUTO JOIN TIM
--- ==========================================================
 local function autoSelectTeam()
 	if not config.autoJoinTeamActive then return end
 	if player.Team and player.Team.Name == config.selectedTeam then return end
@@ -143,18 +129,13 @@ task.spawn(function()
 	end
 end)
 
--- ==========================================================
--- DETEKSI BUAH AKURAT (FILTER NAMA PALSU)
--- ==========================================================
 local function checkFruit()
 	local foundFruitName = nil
 	
 	for _, obj in ipairs(Workspace:GetChildren()) do
-		-- Pastikan objek adalah buah asli (harus berupa Model/Tool dan memiliki Handle atau struktur buah)
 		if obj:IsA("Model") or obj:IsA("Tool") then
 			local name = obj.Name
-			-- Cek spesifik nama buah asli Blox Fruits, hindari kata "Fruit" generik/palsu
-			if (name:lower().:find("fruit") or name:lower().:find("bloxfruit")) and name ~= "Fruit" then
+			if (name:lower():find("fruit") or name:lower():find("bloxfruit")) and name ~= "Fruit" then
 				foundFruitName = name
 				break
 			end
@@ -180,14 +161,10 @@ task.spawn(function()
 	end
 end)
 
--- ==========================================================
--- TAMPILAN MENU UTAMA (WARNA BIRU BIASA, TIDAK RAINBOW)
--- ==========================================================
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "GuritaHubGUI"
 screenGui.ResetOnSpawn = false
 
--- Tombol Buka/Tutup Menu
 local ToggleMenuBtn = Instance.new("TextButton", screenGui)
 ToggleMenuBtn.Size = UDim2.new(0, 85, 0, 40)
 ToggleMenuBtn.Position = UDim2.new(0, 20, 0.4, 0)
@@ -201,7 +178,6 @@ local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
 ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
 ToggleMenuStroke.Thickness = 2
 
--- Frame Utama Menu
 local Main = Instance.new("Frame", screenGui)
 Main.Size = UDim2.new(0, 240, 0, 220)
 Main.Position = UDim2.new(0.5, -120, 0.5, -110)
@@ -248,9 +224,6 @@ ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(4
 ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
 ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
--- ==========================================================
--- EFEK RAINBOW HANYA BERLAKU PADA NOTIFIKASI DI ATAS
--- ==========================================================
 RunService.RenderStepped:Connect(function()
 	local hue = tick() % 5 / 5
 	local rainbowColor = Color3.fromHSV(hue, 1, 1)
