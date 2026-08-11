@@ -63,11 +63,11 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- FITUR 1: NOTIFIKASI BUAH ATAS (ANIMASI DARI 75% KE 100% / MENTOK ATAS PAS JOIN)
+-- FITUR 1: NOTIFIKASI BUAH ATAS (DENGAN ANIMASI DARI 75 KE 100 DI AWAL JOIN)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 320, 0, 50)
--- Posisi awal pas baru join berada di 75% layar (agak ke bawah)
+-- Posisi awal tepat pas baru join berada di 75% layar (di bawah)
 NotifFrame.Position = UDim2.new(0.5, -160, 0.75, 0)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 NotifFrame.BorderSizePixel = 0
@@ -99,7 +99,8 @@ NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
--- Jalankan Animasi pas baru join: dari 75% bergerak naik ke 100% mentok atas (Scale Y = 0)
+-- MENJALANKAN ANIMASI TEPAT PAS AWAL JOIN: 
+-- Dari posisi 75% di bawah, ditarik mulus ke 100% (mentok paling atas layar / Y = 0)
 TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 	Position = UDim2.new(0.5, -160, 0, 0)
 }):Play()
@@ -394,7 +395,7 @@ TextCorner.Parent = SoundTextBox
 
 SoundTextBox.FocusLost:Connect(function(enterPressed)
 	if enterPressed then
-		Settings.SoundId = SoundTextBox.Text
+        Settings.SoundId = SoundTextBox.Text
 		saveSettings()
 	end
 end)
