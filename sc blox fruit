@@ -1,46 +1,21 @@
--- [[ GURITA HUB - FIXED ERROR SCRIPT ]] --
+-- [[ GURITA HUB - STANDALONE SAFE SCRIPT ]] --
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local lastState = "UNKNOWN"
 
-local config = {
-	autoJoinTeamActive = false,
-	selectedTeam = "Pirates",
-	fastModeActive = false
-}
+local autoJoinActive = false
+local selectedTeam = "Pirates"
+local fastModeActive = false
 
-local configFileName = "GuritaHub_BloxFruits_Clean.json"
-
-local function saveConfig()
-	pcall(function()
-		if writefile then
-			writefile(configFileName, HttpService:JSONEncode(config))
-		end
-	end)
-end
-
-local function loadConfig()
-	pcall(function()
-		if readfile and isfile and isfile(configFileName) then
-			local data = HttpService:JSONDecode(readfile(configFileName))
-			if type(data) == "table" then
-				for k, v in pairs(data) do
-					config[k] = v
-				end
-			end
-		end
-	end)
-end
-
-loadConfig()
-
+-- ==========================================================
+-- FUNGSI MODE CEPAT
+-- ==========================================================
 local function applyFastMode(state)
 	pcall(function()
 		if state then
@@ -60,13 +35,9 @@ local function applyFastMode(state)
 	end)
 end
 
-if config.fastModeActive then
-	task.spawn(function()
-		task.wait(1)
-		applyFastMode(true)
-	end)
-end
-
+-- ==========================================================
+-- BERSIHKAN GUI LAMA
+-- ==========================================================
 pcall(function()
 	if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
 		player.PlayerGui.GuritaHubGUI:Destroy()
@@ -76,6 +47,9 @@ pcall(function()
 	end
 end)
 
+-- ==========================================================
+-- NOTIFIKASI ATAS (RAINBOW STROKE)
+-- ==========================================================
 local notificationGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 notificationGui.Name = "GuritaHubTopNotification"
 notificationGui.ResetOnSpawn = false
@@ -108,15 +82,18 @@ local function showTopNotification(text, duration)
 	end)
 end
 
+-- ==========================================================
+-- AUTO JOIN TEAM
+-- ==========================================================
 local function autoSelectTeam()
-	if not config.autoJoinTeamActive then return end
-	if player.Team and player.Team.Name == config.selectedTeam then return end
+	if not autoJoinActive then return end
+	if player.Team and player.Team.Name == selectedTeam then return end
 
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	local commF = remotes and remotes:FindFirstChild("CommF_")
 	if commF then
 		pcall(function()
-			commF:InvokeServer("SetTeam", config.selectedTeam)
+			commF:InvokeServer("SetTeam", selectedTeam)
 		end)
 	end
 end
@@ -129,9 +106,11 @@ task.spawn(function()
 	end
 end)
 
+-- ==========================================================
+-- DETEKSI BUAH AKURAT
+-- ==========================================================
 local function checkFruit()
 	local foundFruitName = nil
-	
 	for _, obj in ipairs(Workspace:GetChildren()) do
 		if obj:IsA("Model") or obj:IsA("Tool") then
 			local name = obj.Name
@@ -161,6 +140,9 @@ task.spawn(function()
 	end
 end)
 
+-- ==========================================================
+-- MENU UTAMA (WARNA BIRU)
+-- ==========================================================
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "GuritaHubGUI"
 screenGui.ResetOnSpawn = false
@@ -215,14 +197,14 @@ local TeamBtn        = CreateBtn(UDim2.new(0, 20, 0, 55))
 local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 98))
 local ToggleFastMode = CreateBtn(UDim2.new(0, 20, 0, 141))
 
-TeamBtn.Text = "Tim: " .. config.selectedTeam
+TeamBtn.Text = "Tim: " .. selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 
-ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
-ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+ToggleJoinTeam.Text = "Auto Join Team: OFF"
+ToggleJoinTeam.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 
-ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
-ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+ToggleFastMode.Text = "Mode Cepat: OFF"
+ToggleFastMode.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 
 RunService.RenderStepped:Connect(function()
 	local hue = tick() % 5 / 5
@@ -238,34 +220,31 @@ ToggleMenuBtn.MouseButton1Down:Connect(function()
 end)
 
 TeamBtn.MouseButton1Click:Connect(function()
-	if config.selectedTeam == "Pirates" then
-		config.selectedTeam = "Marines"
+	if selectedTeam == "Pirates" then
+		selectedTeam = "Marines"
 	else
-		config.selectedTeam = "Pirates"
+		selectedTeam = "Pirates"
 	end
-	TeamBtn.Text = "Tim: " .. config.selectedTeam
-	saveConfig()
-	if config.autoJoinTeamActive then
+	TeamBtn.Text = "Tim: " .. selectedTeam
+	if autoJoinActive then
 		autoSelectTeam()
 	end
 end)
 
 ToggleJoinTeam.MouseButton1Click:Connect(function()
-	config.autoJoinTeamActive = not config.autoJoinTeamActive
-	ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
-	ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-	saveConfig()
-	
-	if config.autoJoinTeamActive then
+	autoJoinActive = not autoJoinActive
+	ToggleJoinTeam.Text = autoJoinActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
+	ToggleJoinTeam.BackgroundColor3 = autoJoinActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+	if autoJoinActive then
 		autoSelectTeam()
 	end
 end)
 
 ToggleFastMode.MouseButton1Click:Connect(function()
-	config.fastModeActive = not config.fastModeActive
-	ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
-	ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-	saveConfig()
-	
-	applyFastMode(config.fastModeActive)
+	fastModeActive = not fastModeActive
+	ToggleFastMode.Text = fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
+	ToggleFastMode.BackgroundColor3 = fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+	applyFastMode(fastModeActive)
 end)
+
+print("Gurita Hub Berhasil Dijalankan!")
