@@ -1,4 +1,4 @@
--- [[ GURITA HUB - OPTIMIZED AUTO JOIN & SMART FRUIT NOTIFICATION ]] --
+-- [[ GURITA HUB - FULL FINAL MODULE ]] --
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,7 +8,6 @@ local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local lastState = "UNKNOWN"
-local hasJoinedTeam = false -- Penanda agar auto join tim tidak spam terus-menerus
 
 -- PENGATURAN DEFAULT
 local config = {
@@ -54,27 +53,32 @@ local function sendNotification(title, text, duration)
 end
 
 -- ==========================================================
--- FUNGSI AUTO JOIN TIM (HANYA SEKALI SAAT MASUK/HOP SERVER)
+-- FUNGSI AUTO JOIN TIM (ANTI-SPAM & CEK STATUS TIM)
 -- ==========================================================
 local function autoSelectTeam()
-	if not config.autoJoinTeamActive or hasJoinedTeam then return end
+	if not config.autoJoinTeamActive then return end
 	
+	-- Kalau player sudah benar-benar masuk ke tim yang dipilih, STOP! Jangan kirim request lagi.
+	if player.Team and player.Team.Name == config.selectedTeam then
+		return 
+	end
+
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	if remotes then
 		local commF = remotes:FindFirstChild("CommF_")
 		if commF then
 			pcall(function()
 				commF:InvokeServer("SetTeam", config.selectedTeam)
-				hasJoinedTeam = true -- Kunci agar tidak dikirim berulang-ulang kali
 			end)
 		end
 	end
 end
 
--- Cek otomatis pas pertama kali script jalan / habis hop server
+-- Looping pengaman santai (cek setiap 10 detik agar tidak spam/berat)
 task.spawn(function()
-	task.wait(2) -- Beri waktu sebentar untuk loading game
-	autoSelectTeam()
+	while task.wait(10) do
+		pcall(autoSelectTeam)
+	end
 end)
 
 -- ==========================================================
@@ -136,7 +140,7 @@ local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
 ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
 ToggleMenuStroke.Thickness = 2
 
--- Frame Utama Menu (Visible = false agar tidak mengganggu layar)
+-- Frame Utama Menu (Visible = false agar tidak mengganggu layar saat di-execute)
 local Main = Instance.new("Frame", screenGui)
 Main.Size = UDim2.new(0, 240, 0, 180)
 Main.Position = UDim2.new(0.5, -120, 0.5, -90)
@@ -191,7 +195,6 @@ TeamBtn.MouseButton1Click:Connect(function()
 	end
 	TeamBtn.Text = "Tim: " .. config.selectedTeam
 	saveConfig()
-	hasJoinedTeam = false -- Reset status supaya mau nge-request tim baru jika diganti
 	if config.autoJoinTeamActive then
 		autoSelectTeam()
 	end
@@ -204,7 +207,6 @@ ToggleJoinTeam.MouseButton1Click:Connect(function()
 	saveConfig()
 	
 	if config.autoJoinTeamActive then
-		hasJoinedTeam = false
 		autoSelectTeam()
 	end
 end)
