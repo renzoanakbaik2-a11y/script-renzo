@@ -21,11 +21,12 @@ local Settings = {
 	FpsBoost = false,
 	CustomSoundEnabled = false,
 	SoundId = "", -- ID Audio Roblox
-	FlightSpeed = 350, -- Kecepatan terbang (Maksimal 1000)
+	FlightSpeed = 150,      -- Kecepatan terbang mulus
+	FlyHeight = 5,          -- Ketinggian terbang di atas target/objek (Maksimal 10)
 	AutoTeleportFruit = false, -- Auto terbang ke buah
 	AutoFlyChest = false,     -- Auto terbang ke semua chest/peti
 	AutoFlyPlayer = false,    -- Auto terbang ke player (ON/OFF)
-	TargetPlayerName = ""     -- Target nama player spesifik (kosongkan jika ingin terdekat)
+	TargetPlayerName = ""     -- Target nama player spesifik (kosongkan = otomatis player terdekat)
 }
 
 -- Fungsi Load Settings
@@ -120,7 +121,7 @@ end
 
 
 -- ==========================================
--- FUNGSI DASAR KARAKTER & TERBANG (KREDIT KAMERA DIAM & PULIH SETELAH SAMPAI)
+-- FUNGSI DASAR KARAKTER & TERBANG MULUS DENGAN KAMERA STABIL
 -- ==========================================
 local function getCharacterRootPart()
 	local character = LocalPlayer.Character
@@ -130,16 +131,24 @@ local function getCharacterRootPart()
 	return nil
 end
 
--- Fungsi Terbang Mulus: Kamera Terkunci di Posisi Awal, Baru Normal Lagi Setelah Sampai
+-- Terbang Mulus dengan Kamera Stabil (Mode Custom)
 local function smoothFlyTo(targetCFrame)
 	local rootPart = getCharacterRootPart()
 	if not rootPart then return end
 
 	local currentSpeed = Settings.FlightSpeed
 	if currentSpeed > 1000 then currentSpeed = 1000 end
-	if currentSpeed < 50 then currentSpeed = 50 end
+	if currentSpeed < 20 then currentSpeed = 20 end
 
-	local distance = (rootPart.Position - targetCFrame.Position).Magnitude
+	-- Batasi ketinggian maksimal 10
+	local currentHeight = Settings.FlyHeight
+	if currentHeight > 10 then currentHeight = 10 end
+	if currentHeight < 0 then currentHeight = 0 end
+
+	-- Tambahkan ketinggian (FlyHeight) ke posisi tujuan
+	local adjustedTargetCFrame = targetCFrame + Vector3.new(0, currentHeight, 0)
+
+	local distance = (rootPart.Position - adjustedTargetCFrame.Position).Magnitude
 	local duration = distance / currentSpeed
 	if duration < 0.05 then return end
 
@@ -148,28 +157,14 @@ local function smoothFlyTo(targetCFrame)
 		humanoid.PlatformStand = true
 	end
 
-	-- Simpan posisi & orientasi kamera tepat sebelum terbang agar tidak gerak/liar
-	local savedCameraCFrame = Camera.CFrame
-	Camera.CameraType = Enum.CameraType.Scriptable
-
-	-- Lock posisi kamera agar diam total selama perjalanan
-	local camLockConnection = game:GetService("RunService").RenderStepped:Connect(function()
-		Camera.CFrame = savedCameraCFrame
-	end)
+	Camera.CameraType = Enum.CameraType.Custom
 
 	local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-	local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
+	local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = adjustedTargetCFrame})
 	
 	tween:Play()
 	tween.Completed:Wait()
 
-	-- Lepaskan kunci kamera setelah sampai di tujuan
-	if camLockConnection then
-		camLockConnection:Disconnect()
-	end
-
-	-- Kembalikan kamera ke mode normal (Custom)
-	Camera.CameraType = Enum.CameraType.Custom
 	if humanoid then
 		humanoid.PlatformStand = false
 	end
@@ -177,7 +172,7 @@ end
 
 
 -- ==========================================
--- BACKGROUND SYSTEM (SCANNER BUAH, CHEST, PLAYER DENGAN DELAY)
+-- BACKGROUND SYSTEM (SCANNER BUAH, CHEST, PLAYER)
 -- ==========================================
 task.spawn(function()
 	local lastCount = 0
@@ -227,7 +222,7 @@ task.spawn(function()
 					local rootPart = getCharacterRootPart()
 					if rootPart then
 						smoothFlyTo(obj.CFrame)
-						task.wait(0.1)
+						task.wait(0.2)
 					end
 				end
 			end
@@ -236,12 +231,11 @@ task.spawn(function()
 			end
 		end
 
-		-- 3. Auto Terbang ke Player (Dengan Delay, Nama Spesifik atau Terdekat)
+		-- 3. Auto Terbang ke Player
 		if Settings.AutoFlyPlayer then
-			task.wait(3) -- Delay sebelum mengeksekusi perpindahan ke player agar tidak langsung ngebut
+			task.wait(3)
 			local targetPlayer = nil
 
-			-- Cek apakah user mengisi target nama player di settings
 			if Settings.TargetPlayerName ~= "" then
 				for _, p in ipairs(Players:GetPlayers()) do
 					if p ~= LocalPlayer and string.find(p.Name:lower(), Settings.TargetPlayerName:lower()) then
@@ -250,7 +244,6 @@ task.spawn(function()
 					end
 				end
 			else
-				-- Jika kosong, pilih player terdekat
 				local shortestDist = math.huge
 				local rootPart = getCharacterRootPart()
 				if rootPart then
@@ -266,11 +259,10 @@ task.spawn(function()
 				end
 			end
 
-			-- Jika target ditemukan, terbang ke player tersebut
 			if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
 				local rootPart = getCharacterRootPart()
 				if rootPart then
-					smoothFlyTo(targetPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0))
+					smoothFlyTo(targetPlayer.Character.HumanoidRootPart.CFrame)
 					task.wait(2)
 				end
 			end
@@ -326,7 +318,7 @@ if Settings.FpsBoost then applyFpsBoost(true) end
 
 
 -- ==========================================
--- TAMPILAN UI MENU UTAMA (GAYA SPEED HUB X)
+-- TAMPILAN UI MENU UTAMA
 -- ==========================================
 local OpenButton = Instance.new("TextButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -346,7 +338,6 @@ OpenStroke.Color = Color3.fromRGB(0, 200, 255)
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
--- Frame Utama Hub
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 480, 0, 340)
 MainFrame.Position = UDim2.new(0.5, -240, 0.5, -170)
@@ -364,7 +355,6 @@ MainStroke.Color = Color3.fromRGB(0, 170, 255)
 MainStroke.Thickness = 2
 MainStroke.Parent = MainFrame
 
--- Topbar Hub Ala Speed Hub X
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 35)
 TopBar.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
@@ -394,7 +384,6 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 6)
 CloseCorner.Parent = CloseButton
 
--- Sidebar Menu Kiri (Tab Selector)
 local Sidebar = Instance.new("ScrollingFrame")
 Sidebar.Size = UDim2.new(0, 130, 1, -35)
 Sidebar.Position = UDim2.new(0, 0, 0, 35)
@@ -404,21 +393,19 @@ Sidebar.CanvasSize = UDim2.new(0, 0, 0, 250)
 Sidebar.ScrollBarThickness = 3
 Sidebar.Parent = MainFrame
 
--- Container Konten Kanan (Tempat Menu Berubah)
 local Container = Instance.new("Frame")
 Container.Size = UDim2.new(1, -130, 1, -35)
 Container.Position = UDim2.new(0, 130, 0, 35)
 Container.BackgroundTransparency = 1
 Container.Parent = MainFrame
 
--- Fungsi Membuat Halaman Tab
 local pages = {}
 local function createTabPage(name)
 	local page = Instance.new("ScrollingFrame")
 	page.Size = UDim2.new(1, 0, 1, 0)
 	page.BackgroundTransparency = 1
 	page.Visible = false
-	page.CanvasSize = UDim2.new(0, 0, 0, 450)
+	page.CanvasSize = UDim2.new(0, 0, 0, 550)
 	page.ScrollBarThickness = 4
 	page.Parent = Container
 	pages[name] = page
@@ -431,7 +418,6 @@ local function switchTab(name)
 	end
 end
 
--- Tombol Tab di Sidebar
 local function createTabButton(posY, tabName, displayName)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(0.9, 0, 0, 35)
@@ -452,12 +438,10 @@ local function createTabButton(posY, tabName, displayName)
 	end)
 end
 
--- Buat Tab Halaman
 local PageHome = createTabPage("Home")
 local PageAuto = createTabPage("Automatically")
 local PageConfig = createTabPage("Configuration")
 
--- Hubungkan Tombol Sidebar
 createTabButton(10, "Home", "Home")
 createTabButton(50, "Automatically", "Automatically")
 createTabButton(90, "Configuration", "Settings")
@@ -469,10 +453,10 @@ switchTab("Home")
 -- ISI KONTEN: HALAMAN HOME
 -- ==========================================
 local homeLabel = Instance.new("TextLabel")
-homeLabel.Size = UDim2.new(0.9, 0, 0, 120)
+homeLabel.Size = UDim2.new(0.9, 0, 0, 130)
 homeLabel.Position = UDim2.new(0.05, 0, 0.05, 0)
 homeLabel.BackgroundTransparency = 1
-homeLabel.Text = "Selamat datang di BloxFruits Hub!\nGunakan menu di sebelah kiri untuk mengatur:\n\n1. **Settings**: Kecepatan terbang, Tim, & Target Nama Player.\n2. **Automatically**: Menyalakan fitur otomatis (Terbang ke Buah, Chest, & Player)."
+homeLabel.Text = "Selamat datang di BloxFruits Hub!\nGunakan menu di sebelah kiri untuk mengatur:\n\n1. **Automatically**: Menyalakan fitur otomatis (Terbang ke Buah, Chest, & Player).\n2. **Settings**: Kecepatan terbang, Ketinggian (max 10), Tim, & Target Nama Player."
 homeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 homeLabel.TextSize, homeLabel.Font = 11, Enum.Font.Gotham
 homeLabel.TextWrapped = true
@@ -481,126 +465,7 @@ homeLabel.Parent = PageHome
 
 
 -- ==========================================
--- ISI KONTEN: HALAMAN CONFIGURATION / SETTINGS
--- ==========================================
-local function createConfigLabel(posY, text)
-	local lbl = Instance.new("TextLabel")
-	lbl.Size = UDim2.new(0.9, 0, 0, 20)
-	lbl.Position = UDim2.new(0.05, 0, 0, posY)
-	lbl.BackgroundTransparency = 1
-	lbl.Text = text
-	lbl.TextColor3 = Color3.fromRGB(0, 200, 255)
-	lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
-	lbl.TextXAlignment = Enum.TextXAlignment.Left
-	lbl.Parent = PageConfig
-	return lbl
-end
-
-createConfigLabel(15, "1. ATUR KECEPATAN TERBANG (Max 1000):")
-
-local SpeedTextBox = Instance.new("TextBox")
-SpeedTextBox.Size = UDim2.new(0.9, 0, 0, 35)
-SpeedTextBox.Position = UDim2.new(0.05, 0, 0, 40)
-SpeedTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
-SpeedTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedTextBox.Text = tostring(Settings.FlightSpeed)
-SpeedTextBox.PlaceholderText = "Ketik Speed (Misal: 350 / Max 1000)"
-SpeedTextBox.TextSize, SpeedTextBox.Font = 11, Enum.Font.Gotham
-SpeedTextBox.Parent = PageConfig
-
-local stbCorner = Instance.new("UICorner")
-stbCorner.CornerRadius = UDim.new(0, 6)
-stbCorner.Parent = SpeedTextBox
-
-SpeedTextBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		local num = tonumber(SpeedTextBox.Text)
-		if num then
-			if num > 1000 then num = 1000 end
-			if num < 50 then num = 50 end
-			Settings.FlightSpeed = num
-			SpeedTextBox.Text = tostring(num)
-			saveSettings()
-		end
-	end
-end)
-
-createConfigLabel(90, "2. PILIHAN TIM (Pirates / Marines):")
-
-local TeamConfigBtn = Instance.new("TextButton")
-TeamConfigBtn.Size = UDim2.new(0.9, 0, 0, 35)
-TeamConfigBtn.Position = UDim2.new(0.05, 0, 0, 115)
-TeamConfigBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
-TeamConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TeamConfigBtn.Text = "Tim Saat Ini: [ " .. Settings.SelectedTeam .. " ]"
-TeamConfigBtn.TextSize, TeamConfigBtn.Font = 11, Enum.Font.GothamBold
-TeamConfigBtn.Parent = PageConfig
-
-local tcbCorner = Instance.new("UICorner")
-tcbCorner.CornerRadius = UDim.new(0, 6)
-tcbCorner.Parent = TeamConfigBtn
-
-TeamConfigBtn.MouseButton1Click:Connect(function()
-	if Settings.SelectedTeam == "Pirates" then
-		Settings.SelectedTeam = "Marines"
-		TeamConfigBtn.Text = "Tim Saat Ini: [ Marines ]"
-	else
-		Settings.SelectedTeam = "Pirates"
-		TeamConfigBtn.Text = "Tim Saat Ini: [ Pirates ]"
-	end
-	joinTeam()
-	saveSettings()
-end)
-
-createConfigLabel(165, "3. TARGET NAMA PLAYER (Kosong = Terdekat):")
-
-local PlayerTargetTextBox = Instance.new("TextBox")
-PlayerTargetTextBox.Size = UDim2.new(0.9, 0, 0, 35)
-PlayerTargetTextBox.Position = UDim2.new(0.05, 0, 0, 190)
-PlayerTargetTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
-PlayerTargetTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-PlayerTargetTextBox.Text = Settings.TargetPlayerName
-PlayerTargetTextBox.PlaceholderText = "Ketik Nama Player (Contoh: Zeno / Kosongkan)"
-PlayerTargetTextBox.TextSize, PlayerTargetTextBox.Font = 11, Enum.Font.Gotham
-PlayerTargetTextBox.Parent = PageConfig
-
-local ptCorner = Instance.new("UICorner")
-ptCorner.CornerRadius = UDim.new(0, 6)
-ptCorner.Parent = PlayerTargetTextBox
-
-PlayerTargetTextBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		Settings.TargetPlayerName = PlayerTargetTextBox.Text
-		saveSettings()
-	end
-end)
-
-createConfigLabel(240, "4. KODE AUDIO NOTIFIKASI BUAH:")
-
-local SoundTextBox = Instance.new("TextBox")
-SoundTextBox.Size = UDim2.new(0.9, 0, 0, 35)
-SoundTextBox.Position = UDim2.new(0.05, 0, 0, 265)
-SoundTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
-SoundTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SoundTextBox.Text = Settings.SoundId
-SoundTextBox.PlaceholderText = "Masukkan Sound ID Roblox..."
-SoundTextBox.TextSize, SoundTextBox.Font = 11, Enum.Font.Gotham
-SoundTextBox.Parent = PageConfig
-
-local st2Corner = Instance.new("UICorner")
-st2Corner.CornerRadius = UDim.new(0, 6)
-st2Corner.Parent = SoundTextBox
-
-SoundTextBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		Settings.SoundId = SoundTextBox.Text
-		saveSettings()
-	end
-end)
-
-
--- ==========================================
--- ISI KONTEN: HALAMAN AUTOMATICALLY (ON/OFF)
+-- ISI KONTEN: HALAMAN AUTOMATICALLY (ON/OFF) - DILETAKKAN DI ATAS
 -- ==========================================
 local function createAutoToggle(posY, text, settingKey, callback)
 	local btn = Instance.new("TextButton")
@@ -630,23 +495,167 @@ local function createAutoToggle(posY, text, settingKey, callback)
 	return btn
 end
 
-createAutoToggle(15, "Fruit Notifier & Text", "FruitNotifier", function(val)
+createAutoToggle(15, "Auto Terbang ke Buah", "AutoTeleportFruit", nil)
+createAutoToggle(60, "Auto Collect All Chest", "AutoFlyChest", nil)
+createAutoToggle(105, "Auto Terbang ke Player (Auto)", "AutoFlyPlayer", nil)
+createAutoToggle(150, "Fruit Notifier & Text", "FruitNotifier", function(val)
 	NotifFrame.Visible = val
 end)
-
-createAutoToggle(60, "Auto Join Team", "AutoJoinEnabled", function()
+createAutoToggle(195, "Auto Join Team", "AutoJoinEnabled", function()
 	joinTeam()
 end)
-
-createAutoToggle(105, "FPS Boost", "FpsBoost", function(val)
+createAutoToggle(240, "FPS Boost", "FpsBoost", function(val)
 	applyFpsBoost(val)
 end)
+createAutoToggle(285, "Sound Notif Buah", "CustomSoundEnabled", nil)
 
-createAutoToggle(150, "Sound Notif Buah", "CustomSoundEnabled", nil)
 
-createAutoToggle(210, "Auto Terbang ke Buah", "AutoTeleportFruit", nil)
-createAutoToggle(255, "Auto Collect All Chest", "AutoFlyChest", nil)
-createAutoToggle(300, "Auto Terbang ke Player (Auto)", "AutoFlyPlayer", nil)
+-- ==========================================
+-- ISI KONTEN: HALAMAN CONFIGURATION / SETTINGS
+-- ==========================================
+local function createConfigLabel(posY, text)
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(0.9, 0, 0, 20)
+	lbl.Position = UDim2.new(0.05, 0, 0, posY)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = text
+	lbl.TextColor3 = Color3.fromRGB(0, 200, 255)
+	lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = PageConfig
+	return lbl
+end
+
+createConfigLabel(15, "1. ATUR KECEPATAN TERBANG (Saran: 150-350):")
+
+local SpeedTextBox = Instance.new("TextBox")
+SpeedTextBox.Size = UDim2.new(0.9, 0, 0, 35)
+SpeedTextBox.Position = UDim2.new(0.05, 0, 0, 40)
+SpeedTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+SpeedTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedTextBox.Text = tostring(Settings.FlightSpeed)
+SpeedTextBox.PlaceholderText = "Ketik Speed (Misal: 150)"
+SpeedTextBox.TextSize, SpeedTextBox.Font = 11, Enum.Font.Gotham
+SpeedTextBox.Parent = PageConfig
+
+local stbCorner = Instance.new("UICorner")
+stbCorner.CornerRadius = UDim.new(0, 6)
+stbCorner.Parent = SpeedTextBox
+
+SpeedTextBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		local num = tonumber(SpeedTextBox.Text)
+		if num then
+			if num > 1000 then num = 1000 end
+			if num < 20 then num = 20 end
+			Settings.FlightSpeed = num
+			SpeedTextBox.Text = tostring(num)
+			saveSettings()
+		end
+	end
+end)
+
+createConfigLabel(90, "2. KETINGGIAN (Ketinggian Maximal 10):")
+
+local HeightTextBox = Instance.new("TextBox")
+HeightTextBox.Size = UDim2.new(0.9, 0, 0, 35)
+HeightTextBox.Position = UDim2.new(0.05, 0, 0, 115)
+HeightTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+HeightTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeightTextBox.Text = tostring(Settings.FlyHeight)
+HeightTextBox.PlaceholderText = "Ketinggian maximal 10 (Misal: 5)"
+HeightTextBox.TextSize, HeightTextBox.Font = 11, Enum.Font.Gotham
+HeightTextBox.Parent = PageConfig
+
+local htbCorner = Instance.new("UICorner")
+htbCorner.CornerRadius = UDim.new(0, 6)
+htbCorner.Parent = HeightTextBox
+
+HeightTextBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		local num = tonumber(HeightTextBox.Text)
+		if num then
+			if num > 10 then num = 10 end
+			if num < 0 then num = 0 end
+			Settings.FlyHeight = num
+			HeightTextBox.Text = tostring(num)
+			saveSettings()
+		end
+	end
+end)
+
+createConfigLabel(165, "3. PILIHAN TIM (Pirates / Marines):")
+
+local TeamConfigBtn = Instance.new("TextButton")
+TeamConfigBtn.Size = UDim2.new(0.9, 0, 0, 35)
+TeamConfigBtn.Position = UDim2.new(0.05, 0, 0, 190)
+TeamConfigBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+TeamConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeamConfigBtn.Text = "Tim Saat Ini: [ " .. Settings.SelectedTeam .. " ]"
+TeamConfigBtn.TextSize, TeamConfigBtn.Font = 11, Enum.Font.GothamBold
+TeamConfigBtn.Parent = PageConfig
+
+local tcbCorner = Instance.new("UICorner")
+tcbCorner.CornerRadius = UDim.new(0, 6)
+tcbCorner.Parent = TeamConfigBtn
+
+TeamConfigBtn.MouseButton1Click:Connect(function()
+	if Settings.SelectedTeam == "Pirates" then
+		Settings.SelectedTeam = "Marines"
+		TeamConfigBtn.Text = "Tim Saat Ini: [ Marines ]"
+	else
+		Settings.SelectedTeam = "Pirates"
+		TeamConfigBtn.Text = "Tim Saat Ini: [ Pirates ]"
+	end
+	joinTeam()
+	saveSettings()
+end)
+
+createConfigLabel(240, "4. TARGET NAMA PLAYER (Kosong = Terdekat):")
+
+local PlayerTargetTextBox = Instance.new("TextBox")
+PlayerTargetTextBox.Size = UDim2.new(0.9, 0, 0, 35)
+PlayerTargetTextBox.Position = UDim2.new(0.05, 0, 0, 265)
+PlayerTargetTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+PlayerTargetTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerTargetTextBox.Text = Settings.TargetPlayerName
+PlayerTargetTextBox.PlaceholderText = "Ketik Nama Player (Contoh: Zeno / Kosongkan)"
+PlayerTargetTextBox.TextSize, PlayerTargetTextBox.Font = 11, Enum.Font.Gotham
+PlayerTargetTextBox.Parent = PageConfig
+
+local ptCorner = Instance.new("UICorner")
+ptCorner.CornerRadius = UDim.new(0, 6)
+ptCorner.Parent = PlayerTargetTextBox
+
+PlayerTargetTextBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		Settings.TargetPlayerName = PlayerTargetTextBox.Text
+		saveSettings()
+	end
+end)
+
+createConfigLabel(315, "5. KODE AUDIO NOTIFIKASI BUAH:")
+
+local SoundTextBox = Instance.new("TextBox")
+SoundTextBox.Size = UDim2.new(0.9, 0, 0, 35)
+SoundTextBox.Position = UDim2.new(0.05, 0, 0, 340)
+SoundTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+SoundTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SoundTextBox.Text = Settings.SoundId
+SoundTextBox.PlaceholderText = "Masukkan Sound ID Roblox..."
+SoundTextBox.TextSize, SoundTextBox.Font = 11, Enum.Font.Gotham
+SoundTextBox.Parent = PageConfig
+
+local st2Corner = Instance.new("UICorner")
+st2Corner.CornerRadius = UDim.new(0, 6)
+st2Corner.Parent = SoundTextBox
+
+SoundTextBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		Settings.SoundId = SoundTextBox.Text
+		saveSettings()
+	end
+end)
 
 
 -- ==========================================
