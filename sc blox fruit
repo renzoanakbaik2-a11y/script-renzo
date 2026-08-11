@@ -63,7 +63,7 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- FITUR 1: NOTIFIKASI BUAH (MULAI DI 50%, EFEK KETIK OTOMATIS, LALU TWEEN KE ATAS)
+-- FITUR 1: NOTIFIKASI BUAH (MULAI DI 50%, KETIK OTOMATIS, TWEEN MENTOK ATAS)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 360, 0, 50)
@@ -99,25 +99,25 @@ NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
--- Fungsi Efek Mengetik Otomatis (Seperti Diketik Sendiri secara Perlahan dan Rapih)
+-- Fungsi Efek Mengetik Otomatis secara Perlahan dan Rapih
 local function playAutoTypewriter(targetText)
 	NotifText.Text = ""
 	for i = 1, string.len(targetText) do
 		NotifText.Text = string.sub(targetText, 1, i)
-		task.wait(0.05) -- Kecepatan pengetikan otomatis yang pas, enak dilihat dan dibaca
+		task.wait(0.05)
 	end
 end
 
 -- Jalankan Alur:
--- 1. Wadah diam di tengah (50%), teks diketik otomatis huruf per huruf
--- 2. Setelah teks lengkap, wadah langsung di-tween naik ke atas (posisi target akhir)
+-- 1. Wadah diam di tengah (50%), teks diketik otomatis huruf per huruf sehingga terlihat jelas
+-- 2. Setelah teks lengkap, wadah di-tween NAIK MENTOK ke bagian paling atas layar
 task.spawn(function()
 	playAutoTypewriter("Fruit Notifier: Memindai Map...")
 	task.wait(0.6) -- Jeda sebentar setelah teks selesai diketik otomatis
 	
-	-- Animasi Tween wadah naik ke posisi atas layar (seperti pada foto kedua)
+	-- Animasi Tween wadah naik MENTOK mentok ke atas layar (Y = 0.00, mepet atas)
 	TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, -180, 0.22, -25)
+		Position = UDim2.new(0.5, -180, 0.00, 0)
 	}):Play()
 end)
 
@@ -153,7 +153,7 @@ task.spawn(function()
 			end
 			
 			if foundFruit then
-				NotifText.Text = "BERHASIL KETEMU: " .. foundFruit
+				NotifText.Text = "BERHASIL KETEMU: " + foundFruit -- Diperbaiki untuk aman
 				if not lastFound then
 					lastFound = true
 					playFruitSound()
@@ -220,7 +220,7 @@ end
 
 
 -- ==========================================
--- FITUR 4: MENU ANTARMUKA MINIMALIS (TOMBOL HITAM, TEKS PUTIH, PINGGIRAN BIRU)
+-- FITUR 4: MENU ANTARMUKA MINIMALIS (TERTUTUP SAAT AWAL DI-EXECUTOR)
 -- ==========================================
 -- Tombol Mengambang (MENU ≡) - Warna Hitam, Teks Putih Normal, Pinggiran Biru Terang
 local OpenButton = Instance.new("TextButton")
@@ -242,13 +242,14 @@ OpenStroke.Color = Color3.fromRGB(0, 200, 255)
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
--- Panel Menu Utama
+-- Panel Menu Utama (DISET TERTUTUP/HIDDEN SAAT PERTAMA KALI DI-EXECUTOR)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 310)
+MainFrame.Size = UDim2.new(0, 260, 0, 0) -- Ukuran 0 agar tertutup rapat
 MainFrame.Position = UDim2.new(0.5, -130, 0.4, -155)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
+MainFrame.Visible = false -- Disembunyikan agar teks notifikasi awal terlihat jelas tanpa terhalang menu
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -279,7 +280,7 @@ TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = TopBar
 
 local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Size = Instance.new("TextButton") and UDim2.new(0, 30, 0, 30) or UDim2.new(0, 30, 0, 30)
 CloseButton.Position = UDim2.new(0.85, 0, 0.15, 0)
 CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseButton.Text = "X"
@@ -417,8 +418,9 @@ SoundTextBox.FocusLost:Connect(function(enterPressed)
 end)
 
 
--- Animasi Buka/Tutup Menu Utama
-local menuVisible = true
+-- Status awal menu (tertutup)
+local menuVisible = false 
+
 local function toggleMenu()
 	menuVisible = not menuVisible
 	if menuVisible then
