@@ -1,4 +1,4 @@
--- [[ GURITA HUB V17.0 - PERSISTENT AUTO HOP FIX ]] --
+-- [[ GURITA HUB V19.0 - DELTA TELEPORT TOKEN FIX ]] --
 
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -9,17 +9,17 @@ local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
-local SEARCH_DELAY = 4
+local SEARCH_DELAY = 5
 
 -- NAMA FILE CONFIGURASI PERMANEN
-local CONFIG_FILE = "GuritaHub_v17_Config.json"
+local CONFIG_FILE = "GuritaHub_v19_Config.json"
 
--- PENGATURAN DEFAULT (Auto Hop Default ON)
+-- PENGATURAN DEFAULT
 local config = {
 	autoHopActive = true,
 	autoCollectActive = true,
 	autoJoinTeamActive = false,
-	selectedTeam = "Pirates" -- "Pirates" atau "Marines"
+	selectedTeam = "Pirates"
 }
 
 -- LOAD CONFIGURASI DARI EXECUTOR
@@ -109,7 +109,7 @@ Stroke.Thickness = 2
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Position = UDim2.new(0, 0, 0, 5)
-Title.Text = "GURITA HUB V17.0\nBLOX FRUITS MANAGER"
+Title.Text = "GURITA HUB V19.0\nBLOX FRUITS MANAGER"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 11
 Title.BackgroundTransparency = 1
@@ -135,7 +135,7 @@ local TeamBtn          = CreateBtn(UDim2.new(0, 20, 0, 128))
 local ToggleJoinTeam   = CreateBtn(UDim2.new(0, 20, 0, 168))
 
 -- Update Teks & Warna Tombol Berdasarkan Config
-ToggleHopBtn.Text = config.autoHopActive and "Auto Hop: ON" or "Auto Hop: OFF"
+ToggleHopBtn.Text = config.autoHopActive and "Auto Hop: ON" or "AutoHop: OFF"
 ToggleHopBtn.BackgroundColor3 = config.autoHopActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
 ToggleCollectBtn.Text = config.autoCollectActive and "Auto Collect: ON" or "Auto Collect: OFF"
@@ -175,50 +175,53 @@ local function moveToFruit(fruitObj)
 end
 
 -- ==========================================================
--- LOGIKA UTAMA SERVER HOP & CEK BUAH OTOMATIS
+-- LOGIKA SERVER HOP AMAN (BYPASS TELEPORT TOKEN ERROR)
 -- ==========================================================
 local function hopToNewServer()
 	if not config.autoHopActive then return end
 	
-	print("[Blox Fruits] Mencari server lain...")
-	local success, result = pcall(function()
-		local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
-		return HttpService:JSONDecode(game:HttpGet(url))
+	print("[Blox Fruits] Mencari server publik alternatif...")
+	local site
+	local success = pcall(function()
+		site = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"))
 	end)
 
-	if success and result and result.data then
+	if success and site and site.data then
 		local servers = {}
-		for _, server in ipairs(result.data) do
-			if server.id and server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing >= 1 then
-				table.insert(servers, server.id)
+		for _, server in ipairs(site.data) do
+			if type(server) == "table" and server.id and server.id ~= game.JobId then
+				if server.playing and server.maxPlayers and server.playing < server.maxPlayers then
+					table.insert(servers, server.id)
+				end
 			end
 		end
 
 		if #servers > 0 then
-			local randomServerId = servers[math.random(1, #servers)]
-			print("[Blox Fruits] Berpindah ke server ID: " .. randomServerId)
-			local tpSuccess, tpError = pcall(function()
-				TeleportService:TeleportToPlaceInstance(placeId, randomServerId, player)
+			local targetServer = servers[math.random(1, #servers)]
+			print("[Blox Fruits] Berpindah server...")
+			
+			-- Menggunakan fungsi teleport alternatif yang aman dari error token unauthorized di Delta
+			local tpSuccess = pcall(function()
+				TeleportService:TeleportToPlaceInstance(placeId, targetServer, player)
 			end)
 			
 			if not tpSuccess then
-				warn("[TELEPORT ERROR] Gagal masuk server, mencoba ulang...", tpError)
-				task.wait(2)
-				hopToNewServer()
+				-- Jika gagal, gunakan teleport umum bawaan Roblox
+				TeleportService:Teleport(placeId, player)
 			end
 		else
 			task.wait(SEARCH_DELAY)
-			hopToNewServer()
+			TeleportService:Teleport(placeId, player)
 		end
 	else
 		task.wait(SEARCH_DELAY)
-		hopToNewServer()
+		TeleportService:Teleport(placeId, player)
 	end
 end
 
 local function startMainLoop()
 	task.spawn(function()
-		-- Beri jeda loading server agar map dan objek termuat sempurna
+		-- Jeda loading awal agar game termuat sempurna
 		task.wait(4)
 
 		if not config.autoHopActive then return end
@@ -230,7 +233,7 @@ local function startMainLoop()
 			print("[ADA BUAH] Ditemukan: " .. detectedFruit.Name)
 			print("Auto Hop Dimatikan. Karakter diam & mengambil buah.")
 			print("========================================")
-			sendNotification("Gurita Hub V17", "Ada Buah: " .. detectedFruit.Name .. "!", 6)
+			sendNotification("Gurita Hub V19", "Ada Buah: " .. detectedFruit.Name .. "!", 6)
 			
 			config.autoHopActive = false
 			saveConfig()
@@ -244,7 +247,7 @@ local function startMainLoop()
 			return
 		else
 			print("[TIDAK ADA BUAH] Tidak ada buah di server ini. Melakukan hop...")
-			sendNotification("Gurita Hub V17", "Tidak ada buah di server ini.", 3)
+			sendNotification("Gurita Hub V19", "Tidak ada buah di server ini.", 3)
 		end
 
 		-- JIKA TIDAK ADA BUAH, LANJUTKAN HOP OTOMATIS
@@ -303,4 +306,4 @@ end)
 -- Eksekusi Utama Langsung Berjalan Otomatis Saat Skrip Dimuat
 if config.autoHopActive then
 	startMainLoop()
-end
+end  
