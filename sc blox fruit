@@ -1,18 +1,46 @@
--- [[ GURITA HUB - SMART TEAM & FRUIT MODULE ]] --
+-- [[ GURITA HUB - OPTIMIZED AUTO JOIN & SMART FRUIT NOTIFICATION ]] --
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
-local lastFruitName = nil
+local lastState = "UNKNOWN"
+local hasJoinedTeam = false -- Penanda agar auto join tim tidak spam terus-menerus
 
 -- PENGATURAN DEFAULT
 local config = {
 	autoJoinTeamActive = false,
 	selectedTeam = "Pirates"
 }
+
+-- FOLDER & FILE PENYIMPANAN SETTING (CONFIG SAVE)
+local configFileName = "GuritaHub_BloxFruits_Config.json"
+
+local function saveConfig()
+	pcall(function()
+		if writefile then
+			writefile(configFileName, HttpService:JSONEncode(config))
+		end
+	end)
+end
+
+local function loadConfig()
+	pcall(function()
+		if readfile and isfile and isfile(configFileName) then
+			local data = HttpService:JSONDecode(readfile(configFileName))
+			if type(data) == "table" then
+				for k, v in pairs(data) do
+					config[k] = v
+				end
+			end
+		end
+	end)
+end
+
+loadConfig()
 
 -- FUNGSI NOTIFIKASI
 local function sendNotification(title, text, duration)
@@ -26,52 +54,53 @@ local function sendNotification(title, text, duration)
 end
 
 -- ==========================================================
--- FUNGSI AUTO JOIN TIM (DIPERBAIKI & DIPASTIKAN JALAN)
+-- FUNGSI AUTO JOIN TIM (HANYA SEKALI SAAT MASUK/HOP SERVER)
 -- ==========================================================
 local function autoSelectTeam()
+	if not config.autoJoinTeamActive or hasJoinedTeam then return end
+	
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	if remotes then
 		local commF = remotes:FindFirstChild("CommF_")
 		if commF then
 			pcall(function()
 				commF:InvokeServer("SetTeam", config.selectedTeam)
+				hasJoinedTeam = true -- Kunci agar tidak dikirim berulang-ulang kali
 			end)
 		end
 	end
 end
 
--- Looping otomatis untuk memastikan tim langsung terpilih jika aktif
+-- Cek otomatis pas pertama kali script jalan / habis hop server
 task.spawn(function()
-	while true do
-		if config.autoJoinTeamActive then
-			autoSelectTeam()
-		end
-		task.wait(2)
-	end
+	task.wait(2) -- Beri waktu sebentar untuk loading game
+	autoSelectTeam()
 end)
 
 -- ==========================================================
--- SISTEM DETEKSI BUAH ANTI-SPAM
+-- SISTEM DETEKSI BUAH LENGKAP (ADA & KOSONG DENGAN NAMA)
 -- ==========================================================
 local function checkFruit()
-	local foundFruit = nil
+	local foundFruitObj = nil
+	local foundFruitName = ""
 	
 	for _, obj in ipairs(Workspace:GetChildren()) do
 		if obj.Name:find("Fruit") or obj.Name:find("BloxFruit") or (obj:IsA("Tool") and obj:FindFirstChild("Handle")) then
-			foundFruit = obj.Name
+			foundFruitObj = obj
+			foundFruitName = obj.Name
 			break
 		end
 	end
 
-	if foundFruit then
-		if lastFruitName ~= foundFruit then
-			lastFruitName = foundFruit
-			sendNotification("Gurita Hub", "Buah ditemukan: " .. foundFruit, 5)
+	if foundFruitObj then
+		if lastState ~= foundFruitName then
+			lastState = foundFruitName
+			sendNotification("Gurita Hub", "Buah Ada: " .. foundFruitName, 5)
 		end
 	else
-		if lastFruitName ~= nil then
-			sendNotification("Gurita Hub", "Buah tidak ada lagi (Kosong).", 5)
-			lastFruitName = nil
+		if lastState ~= "NONE" then
+			sendNotification("Gurita Hub", "Buah Tidak Ada (Kosong)", 5)
+			lastState = "NONE"
 		end
 	end
 end
@@ -107,7 +136,7 @@ local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
 ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
 ToggleMenuStroke.Thickness = 2
 
--- Frame Utama Menu (Visible = false agar tidak langsung mengganggu)
+-- Frame Utama Menu (Visible = false agar tidak mengganggu layar)
 local Main = Instance.new("Frame", screenGui)
 Main.Size = UDim2.new(0, 240, 0, 180)
 Main.Position = UDim2.new(0.5, -120, 0.5, -90)
@@ -161,6 +190,8 @@ TeamBtn.MouseButton1Click:Connect(function()
 		config.selectedTeam = "Pirates"
 	end
 	TeamBtn.Text = "Tim: " .. config.selectedTeam
+	saveConfig()
+	hasJoinedTeam = false -- Reset status supaya mau nge-request tim baru jika diganti
 	if config.autoJoinTeamActive then
 		autoSelectTeam()
 	end
@@ -170,8 +201,10 @@ ToggleJoinTeam.MouseButton1Click:Connect(function()
 	config.autoJoinTeamActive = not config.autoJoinTeamActive
 	ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
 	ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+	saveConfig()
 	
 	if config.autoJoinTeamActive then
+		hasJoinedTeam = false
 		autoSelectTeam()
 	end
 end)
