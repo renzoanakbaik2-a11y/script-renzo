@@ -14,7 +14,7 @@ local Camera = Workspace.CurrentCamera
 -- Nama file untuk Auto Save Setting
 local FileName = "BloxFruitsHubSettings.json"
 
--- Pengaturan Default & Status Fitur
+-- Pengaturan Default & Status Fitur (Posisi Notif di-reset ke 50/Tengah)
 local Settings = {
 	FruitNotifier = true,
 	AutoJoinEnabled = true,
@@ -28,9 +28,9 @@ local Settings = {
 	AutoFlyChest = false,     
 	AutoFlyPlayer = false,    
 	TargetPlayerName = "",     
-	-- Pengaturan Posisi Notifikasi (X & Y Offset - Skala Persen Layar -100 s/d 100)
-	NotifOffsetX = 0,       -- -100 = Kiri Mentok, 100 = Kanan Mentok, 0 = Tengah
-	NotifOffsetY = -80      -- -100 = Bawah Mentok, 100 = Atas Mentok, 0 = Tengah
+	-- Pengaturan Posisi Notifikasi di-reset ke 50 (Tengah-tengah)
+	NotifOffsetX = 50,      -- 50 = Tengah-tengah
+	NotifOffsetY = 50       -- 50 = Tengah-tengah
 }
 
 -- Fungsi Load Settings
@@ -47,6 +47,12 @@ local function loadSettings()
 	end
 end
 
+loadSettings()
+
+-- Paksa reset posisi ke 50 jika nilainya masih nyangkut di bawah atau belum diatur pas
+if Settings.NotifOffsetX < 0 or Settings.NotifOffsetX > 100 then Settings.NotifOffsetX = 50 end
+if Settings.NotifOffsetY < 0 or Settings.NotifOffsetY > 100 then Settings.NotifOffsetY = 50 end
+
 -- Fungsi Save Settings
 local function saveSettings()
 	if writefile then
@@ -58,8 +64,7 @@ local function saveSettings()
 		end
 	end
 end
-
-loadSettings()
+saveSettings()
 
 -- 1. ScreenGui Utama (Aman dari CoreGui Protect)
 local ScreenGui = Instance.new("ScreenGui")
@@ -83,7 +88,7 @@ if not ScreenGui.Parent or ScreenGui.Parent == nil then
 	ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Notifikasi Buah di Layar dengan Posisi Dinamis (Persentase Layar -100 sampai 100)
+-- Notifikasi Buah di Layar dengan Posisi Dinamis (0 s/d 100, 50 = Tengah-tengah)
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 340, 0, 45)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -92,9 +97,8 @@ NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
 
 local function updateNotifPosition()
-	-- Mengubah nilai -100 s/d 100 menjadi skala persentase layar (0.0 s/d 1.0)
-	local scaleX = 0.5 + (Settings.NotifOffsetX / 100) * 0.45
-	local scaleY = 0.5 + (Settings.NotifOffsetY / 100) * 0.45
+	local scaleX = Settings.NotifOffsetX / 100
+	local scaleY = Settings.NotifOffsetY / 100
 	NotifFrame.Position = UDim2.new(scaleX, 0, scaleY, 0)
 end
 updateNotifPosition()
@@ -214,7 +218,7 @@ local function smoothFlyTo(targetCFrame)
 end
 
 -- ==========================================
--- SISTEM CHEST
+-- SISTEM CHEST (DENGAN MEMORI ANTI-STUCK)
 -- ==========================================
 local function getPositionOfObj(obj)
 	if obj:IsA("BasePart") then
@@ -227,11 +231,13 @@ local function getPositionOfObj(obj)
 	return nil
 end
 
+local DeadChests = {}
+
 local function getChestIslands()
 	local allChests = {}
 	for _, obj in ipairs(Workspace:GetDescendants()) do
 		local nameLower = obj.Name:lower()
-		if nameLower:find("chest") or nameLower:find("peti") or nameLower:find("treasure") then
+		if (nameLower:find("chest") or nameLower:find("peti") or nameLower:find("treasure")) and not DeadChests[obj] then
 			local pos = getPositionOfObj(obj)
 			if pos then
 				table.insert(allChests, {Object = obj, Position = pos})
@@ -281,7 +287,7 @@ task.spawn(function()
 			local currentCount = #fruitList
 			if currentCount > 0 then
 				local combinedNames = table.concat(fruitList, ", ")
-				NotifText.Text = "KETEMU (" .. currentCount .. "): " .. combinedNames
+				NotifText.Text = "KETEMU (" .. currentCount .. "): "Equivalence & " .. combinedNames
 				if currentCount > lastCount then
 					playFruitSound()
 				end
@@ -328,11 +334,14 @@ task.spawn(function()
 							return (rootPart.Position - a.Position).Magnitude < (rootPart.Position - b.Position).Magnitude
 						end)
 
-						local targetChest = currentIsland.Chests[1].Object
+						local targetChestData = currentIsland.Chests[1]
+						local targetChest = targetChestData.Object
 						local targetPos = getPositionOfObj(targetChest)
+						
 						if targetPos then
 							smoothFlyTo(CFrame.new(targetPos))
-							task.wait(0.1)
+							task.wait(0.3)
+							DeadChests[targetChest] = true
 						end
 					end
 				end
@@ -422,7 +431,7 @@ end
 if Settings.FpsBoost then applyFpsBoost(true) end
 
 -- ==========================================
--- TAMPILAN UI MENU UTAMA (GABUNG JADI 1 TAB)
+-- TAMPILAN UI MENU UTAMA
 -- ==========================================
 local OpenButton = Instance.new("TextButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -490,12 +499,11 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 6)
 CloseCorner.Parent = CloseButton
 
--- Container Utama (Tanpa Sidebar, Langsung Scrollable)
 local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 950)
+Container.CanvasSize = UDim2.new(0, 0, 0, 980)
 Container.ScrollBarThickness = 4
 Container.Parent = MainFrame
 
@@ -541,7 +549,7 @@ local function createAutoToggle(posY, text, settingKey, callback)
 end
 
 -- ==========================================
--- KONTEN MENU UTAMA (DIGABUNG & SEDERHANA)
+-- KONTEN MENU UTAMA
 -- ==========================================
 
 -- 1. AUTO JOIN TIM
@@ -604,13 +612,13 @@ end)
 
 createAutoToggle(235, "Custom Sound Buah", "CustomSoundEnabled", nil)
 
--- 3. POSISI NOTIFIKASI (-100 s/d 100)
-createSectionHeader(285, "--- 3. POSISI NOTIFIKASI (-100 s/d 100) ---")
+-- 3. POSISI NOTIFIKASI (0 s/d 100, 50 = Tengah)
+createSectionHeader(285, "--- 3. POSISI NOTIFIKASI (0-100, 50=Tengah) ---")
 local NotifPosLabel = Instance.new("TextLabel")
 NotifPosLabel.Size = UDim2.new(0.9, 0, 0, 20)
 NotifPosLabel.Position = UDim2.new(0.05, 0, 0, 310)
 NotifPosLabel.BackgroundTransparency = 1
-NotifPosLabel.Text = "Atur Posisi (Kiri/Kanan & Atas/Bawah):"
+NotifPosLabel.Text = "Atur Posisi (X: 0=Kiri, 50=Tengah, 100=Kanan)"
 NotifPosLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 NotifPosLabel.TextSize, NotifPosLabel.Font = 10, Enum.Font.Gotham
 NotifPosLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -622,7 +630,7 @@ NotifXBox.Position = UDim2.new(0.05, 0, 0, 335)
 NotifXBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 NotifXBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifXBox.Text = tostring(Settings.NotifOffsetX)
-NotifXBox.PlaceholderText = "X (-100 s/d 100)"
+NotifXBox.PlaceholderText = "X (0 s/d 100)"
 NotifXBox.TextSize, NotifXBox.Font = 10, Enum.Font.Gotham
 NotifXBox.Parent = Container
 
@@ -635,7 +643,7 @@ NotifXBox.FocusLost:Connect(function(enterPressed)
 		local num = tonumber(NotifXBox.Text)
 		if num then
 			if num > 100 then num = 100 end
-			if num < -100 then num = -100 end
+			if num < 0 then num = 0 end
 			Settings.NotifOffsetX = num
 			NotifXBox.Text = tostring(num)
 			updateNotifPosition()
@@ -650,7 +658,7 @@ NotifYBox.Position = UDim2.new(0.52, 0, 0, 335)
 NotifYBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 NotifYBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifYBox.Text = tostring(Settings.NotifOffsetY)
-NotifYBox.PlaceholderText = "Y (-100 s/d 100)"
+NotifYBox.PlaceholderText = "Y (0 s/d 100)"
 NotifYBox.TextSize, NotifYBox.Font = 10, Enum.Font.Gotham
 NotifYBox.Parent = Container
 
@@ -663,7 +671,7 @@ NotifYBox.FocusLost:Connect(function(enterPressed)
 		local num = tonumber(NotifYBox.Text)
 		if num then
 			if num > 100 then num = 100 end
-			if num < -100 then num = -100 end
+			if num < 0 then num = 0 end
 			Settings.NotifOffsetY = num
 			NotifYBox.Text = tostring(num)
 			updateNotifPosition()
@@ -748,7 +756,7 @@ HeightTextBox.FocusLost:Connect(function(enterPressed)
 	end
 end)
 
--- 5. TARGET PLAYER
+-- 5. TARGET PLAYER (DENGAN INFORMASI LEVEL)
 createSectionHeader(555, "--- 5. TARGET PLAYER ---")
 local TargetStatusLabel = Instance.new("TextLabel")
 TargetStatusLabel.Size = UDim2.new(0.9, 0, 0, 20)
@@ -813,7 +821,18 @@ local function refreshPlayerList()
 			pBtn.Size = UDim2.new(1, -6, 0, 30)
 			pBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
 			pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-			pBtn.Text = "  👤 " .. p.Name .. " (" .. p.DisplayName .. ")"
+			
+			-- Mengambil Level player secara aman dari DataFolder atau leaderstats game Blox Fruits
+			local playerLevel = "???"
+			pcall(function()
+				if p:FindFirstChild("DataFolder") and p.DataFolder:FindFirstChild("Level") then
+					playerLevel = tostring(p.DataFolder.Level.Value)
+				elseif p:FindFirstChild("leaderstats") and p:FindFirstChild("leaderstats"):FindFirstChild("Level") then
+					playerLevel = tostring(p.leaderstats.Level.Value)
+				end
+			end)
+
+			pBtn.Text = "  👤 " .. p.Name .. " | Lvl: " .. playerLevel
 			pBtn.TextSize, pBtn.Font = 10, Enum.Font.Gotham
 			pBtn.TextXAlignment = Enum.TextXAlignment.Left
 			pBtn.Parent = PlayerListScroll
