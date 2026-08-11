@@ -1,24 +1,24 @@
--- [[ GURITA HUB V11.0 - STABLE FIXED BLOX FRUITS ]] --
+-- [[ GURITA HUB V15.0 - AUTO NOTIF & ERROR 773 FIX ]] --
 
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 local SEARCH_DELAY = 4
 
--- NAMA FILE UNTUK SAVE SETTING PERMANEN
-local CONFIG_FILE = "GuritaHub_v11_Config.json"
+-- NAMA FILE CONFIGURASI PERMANEN
+local CONFIG_FILE = "GuritaHub_v15_Config.json"
 
 -- PENGATURAN DEFAULT
 local config = {
 	autoHopActive = false,
-	fruitFinderActive = true,
 	autoCollectActive = true,
-	autoJoinTeamActive = true,
+	autoJoinTeamActive = false,
 	selectedTeam = "Pirates" -- "Pirates" atau "Marines"
 }
 
@@ -45,7 +45,20 @@ local function saveConfig()
 end
 
 -- ==========================================================
--- FUNGSI AUTO JOIN TIM (MANDIRI)
+-- FUNGSI NOTIFIKASI DI LAYAR (ROBLOX NOTIFICATION)
+-- ==========================================================
+local function sendNotification(title, text, duration)
+	pcall(function()
+		StarterGui:SetCore("SendNotification", {
+			Title = title,
+			Text = text,
+			Duration = duration or 3
+		})
+	end)
+end
+
+-- ==========================================================
+-- FUNGSI AUTO JOIN TIM
 -- ==========================================================
 local function autoSelectTeam()
 	if not config.autoJoinTeamActive then return end
@@ -84,8 +97,8 @@ ToggleMenuStroke.Thickness = 2
 
 -- Frame Utama Menu
 local Main = Instance.new("Frame", screenGui)
-Main.Size = UDim2.new(0, 240, 0, 275)
-Main.Position = UDim2.new(0.5, -120, 0.5, -137)
+Main.Size = UDim2.new(0, 240, 0, 245)
+Main.Position = UDim2.new(0.5, -120, 0.5, -122)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Visible = true
 Instance.new("UICorner", Main)
@@ -96,7 +109,7 @@ Stroke.Thickness = 2
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Position = UDim2.new(0, 0, 0, 5)
-Title.Text = "GURITA HUB V11.0\nBLOX FRUITS MANAGER"
+Title.Text = "GURITA HUB V15.0\nBLOX FRUITS MANAGER"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 11
 Title.BackgroundTransparency = 1
@@ -117,17 +130,13 @@ local function CreateBtn(pos)
 end
 
 local ToggleHopBtn     = CreateBtn(UDim2.new(0, 20, 0, 48))
-local ToggleFinderBtn  = CreateBtn(UDim2.new(0, 20, 0, 88))
-local ToggleCollectBtn = CreateBtn(UDim2.new(0, 20, 0, 128))
-local TeamBtn          = CreateBtn(UDim2.new(0, 20, 0, 168))
-local ToggleJoinTeam   = CreateBtn(UDim2.new(0, 20, 0, 208))
+local ToggleCollectBtn = CreateBtn(UDim2.new(0, 20, 0, 88))
+local TeamBtn          = CreateBtn(UDim2.new(0, 20, 0, 128))
+local ToggleJoinTeam   = CreateBtn(UDim2.new(0, 20, 0, 168))
 
 -- Update Teks & Warna Tombol Berdasarkan Config
 ToggleHopBtn.Text = config.autoHopActive and "Auto Hop: ON" or "Auto Hop: OFF"
 ToggleHopBtn.BackgroundColor3 = config.autoHopActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-
-ToggleFinderBtn.Text = config.fruitFinderActive and "Fruit Finder: ON" or "Fruit Finder: OFF"
-ToggleFinderBtn.BackgroundColor3 = config.fruitFinderActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
 ToggleCollectBtn.Text = config.autoCollectActive and "Auto Collect: ON" or "Auto Collect: OFF"
 ToggleCollectBtn.BackgroundColor3 = config.autoCollectActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
@@ -159,19 +168,19 @@ local function moveToFruit(fruitObj)
 	pcall(function()
 		local handle = fruitObj:FindFirstChild("Handle") or fruitObj:FindFirstChildWhichIsA("BasePart")
 		if handle and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			player.Character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 4, 0)
-			print("[SUKSES] Karakter mendatangi buah: " .. fruitObj.Name)
+			player.Character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
+			print("[SUKSES] Karakter mendatangi posisi buah: " + fruitObj.Name)
 		end
 	end)
 end
 
 -- ==========================================================
--- LOGIKA UTAMA SERVER HOP
+-- LOGIKA UTAMA SERVER HOP (ANTI ERROR 773 & SERVER MATI)
 -- ==========================================================
 local function hopToNewServer()
 	if not config.autoHopActive then return end
 	
-	print("[Blox Fruits] Mencari server lain...")
+	print("[Blox Fruits] Mencari server aktif yang aman...")
 	local success, result = pcall(function()
 		local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
 		return HttpService:JSONDecode(game:HttpGet(url))
@@ -180,16 +189,32 @@ local function hopToNewServer()
 	if success and result and result.data then
 		local servers = {}
 		for _, server in ipairs(result.data) do
-			if server.id and server.id ~= game.JobId and server.playing < server.maxPlayers then
+			-- Filter ketat untuk menghindari server restricted / mati / error 773
+			if server.id and server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing >= 2 then
 				table.insert(servers, server.id)
+			end
+		end
+
+		if #servers == 0 then
+			for _, server in ipairs(result.data) do
+				if server.id and server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing > 0 then
+					table.insert(servers, server.id)
+				end
 			end
 		end
 
 		if #servers > 0 then
 			local randomServerId = servers[math.random(1, #servers)]
-			pcall(function()
+			-- Pcall aman untuk mencegah crash jika terjadi Error 773 / Restricted
+			local tpSuccess, tpError = pcall(function()
 				TeleportService:TeleportToPlaceInstance(placeId, randomServerId, player)
 			end)
+			
+			if not tpSuccess then
+				warn("[TELEPORT ERROR] Gagal masuk server, mencoba server lain...", tpError)
+				task.wait(2)
+				hopToNewServer()
+			end
 		else
 			task.wait(SEARCH_DELAY)
 			hopToNewServer()
@@ -202,39 +227,46 @@ end
 
 local function startMainLoop()
 	task.spawn(function()
-		-- Beri waktu jeda server loading awal
-		task.wait(3)
-		autoSelectTeam()
+		-- Jeda loading awal masuk server
+		task.wait(4)
 
-		-- Cek apakah Auto Hop masih menyala
 		if not config.autoHopActive then return end
 
-		-- 1. Cek buah terlebih dahulu di server ini (baik buah baru maupun lama)
-		if config.fruitFinderActive then
-			local detectedFruit = findFruit()
-			if detectedFruit then
-				print("========================================")
-				print("[SUKSES] Buah Ditemukan di Server Ini: " .. detectedFruit.Name)
-				print("Auto Hop Dibatalkan. Karakter diam & mendatangi buah.")
-				print("========================================")
-				
-				-- Matikan Auto Hop agar tetap diam di server ini
-				config.autoHopActive = false
-				saveConfig()
-				
-				ToggleHopBtn.Text = "Auto Hop: OFF (Buah Ketemu)"
-				ToggleHopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
-				
-				if config.autoCollectActive then
-					moveToFruit(detectedFruit)
-				end
-				return
-			end
+		-- Cek jika masuk server mati / pemain kosong
+		if #Players:GetPlayers() <= 1 then
+			print("[PERINGATAN] Server sepi/mati terdeteksi. Hop ulang...")
+			hopToNewServer()
+			return
 		end
 
-		-- 2. Jika tidak ada buah sama sekali, jalankan hop server
+		-- CEK BUAH OTOMATIS & NOTIFIKASI LANGSUNG JALAN
+		local detectedFruit = findFruit()
+		if detectedFruit then
+			-- NOTIFIKASI KALO ADA BUAH
+			print("========================================")
+			print("[ADA BUAH] Ditemukan: " .. detectedFruit.Name)
+			print("Auto Hop Dimatikan. Karakter diam & mendatangi buah.")
+			print("========================================")
+			sendNotification("Gurita Hub V15", "Ada Buah: " .. detectedFruit.Name .. "!", 5)
+			
+			config.autoHopActive = false
+			saveConfig()
+			
+			ToggleHopBtn.Text = "Auto Hop: OFF (Buah Ketemu)"
+			ToggleHopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
+			
+			if config.autoCollectActive then
+				moveToFruit(detectedFruit)
+			end
+			return
+		else
+			-- NOTIFIKASI KALO TIDAK ADA BUAH
+			print("[TIDAK ADA BUAH] Server ini kosong buah. Melakukan hop...")
+			sendNotification("Gurita Hub V15", "Tidak ada buah di server ini.", 3)
+		end
+
+		-- LANJUTKAN HOP JIKA TIDAK ADA BUAH
 		if config.autoHopActive then
-			print("[Blox Fruits] Tidak ada buah di server ini. Berpindah server...")
 			hopToNewServer()
 		end
 	end)
@@ -255,13 +287,6 @@ ToggleHopBtn.MouseButton1Click:Connect(function()
 		ToggleHopBtn.Text = "Auto Hop: OFF"
 		ToggleHopBtn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 	end
-end)
-
-ToggleFinderBtn.MouseButton1Click:Connect(function()
-	config.fruitFinderActive = not config.fruitFinderActive
-	saveConfig()
-	ToggleFinderBtn.Text = config.fruitFinderActive and "Fruit Finder: ON" or "Fruit Finder: OFF"
-	ToggleFinderBtn.BackgroundColor3 = config.fruitFinderActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 end)
 
 ToggleCollectBtn.MouseButton1Click:Connect(function()
@@ -287,14 +312,13 @@ ToggleJoinTeam.MouseButton1Click:Connect(function()
 	saveConfig()
 	ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
 	ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+	
+	if config.autoJoinTeamActive then
+		autoSelectTeam()
+	end
 end)
 
 -- Eksekusi Awal Saat Script Dijalankan
 if config.autoHopActive then
 	startMainLoop()
-else
-	task.spawn(function()
-		task.wait(1.5)
-		autoSelectTeam()
-	end)
 end
