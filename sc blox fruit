@@ -1,4 +1,4 @@
--- [[ GURITA HUB - ULTRA LIGHTWEIGHT OPTIMIZATION MODULE ]] --
+-- [[ GURITA HUB - BLOX FRUITS (FIXED, RAINBOW STROKE, FAST MODE & SPECIFIC FRUIT) ]] --
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,13 +10,15 @@ local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 local lastState = "UNKNOWN"
 
+-- PENGATURAN DEFAULT
 local config = {
 	autoJoinTeamActive = false,
 	selectedTeam = "Pirates",
 	fastModeActive = false
 }
 
-local configFileName = "GuritaHub_BloxFruits_Config.json"
+-- CONFIG SAVE
+local configFileName = "GuritaHub_BloxFruits_Final.json"
 
 local function saveConfig()
 	pcall(function()
@@ -42,38 +44,48 @@ end
 loadConfig()
 
 -- ==========================================================
--- FUNGSI ULTRA LIGHTWEIGHT (SANGAT RINGAN UNTUK RAM 4GB)
+-- FUNGSI MODE CEPAT (OPTIMASI GRAFIK)
 -- ==========================================================
 local function applyFastMode(state)
 	pcall(function()
 		if state then
-			-- Matikan efek grafis berat & hapus partikel tidak penting untuk menghemat RAM/CPU
 			for _, v in ipairs(Workspace:GetDescendants()) do
 				if v:IsA("BasePart") then
 					v.Material = Enum.Material.SmoothPlastic
 					v.Reflectance = 0
-				elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") then
-					v.Enabled = false
+				elseif v:IsA("Decal") or v:IsA("Texture") then
+					v.Transparency = 1
 				end
 			end
 			Lighting.GlobalShadows = false
-			Lighting.Brightness = 1
-			Lighting.FogEnd = 999999
-			
-			settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+			Lighting.FogEnd = 9999
 		else
 			Lighting.GlobalShadows = true
-			settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
 		end
 	end)
 end
 
 if config.fastModeActive then
-	applyFastMode(true)
+	task.spawn(function()
+		task.wait(1)
+		applyFastMode(true)
+	end)
 end
 
 -- ==========================================================
--- SISTEM NOTIFIKASI KUSTOM
+-- BERSIHKAN GUI LAMA SUPAYA TIDAK DUPLIKAT
+-- ==========================================================
+pcall(function()
+	if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
+		player.PlayerGui.GuritaHubGUI:Destroy()
+	end
+	if player.PlayerGui:FindFirstChild("GuritaHubTopNotification") then
+		player.PlayerGui.GuritaHubTopNotification:Destroy()
+	end
+end)
+
+-- ==========================================================
+-- SISTEM NOTIFIKASI KUSTOM (POSISI 75% & NAMA BUAH SPESIFIK)
 -- ==========================================================
 local notificationGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 notificationGui.Name = "GuritaHubTopNotification"
@@ -101,7 +113,6 @@ local function showTopNotification(text, duration)
 	pcall(function()
 		NotifText.Text = text
 		NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, 75), "Out", "Quad", 0.3, true)
-		
 		task.delay(duration or 5, function()
 			NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, -60), "In", "Quad", 0.3, true)
 		end)
@@ -109,40 +120,34 @@ local function showTopNotification(text, duration)
 end
 
 -- ==========================================================
--- FUNGSI AUTO JOIN TIM (DIOPTIMALKAN, CEK TIAP 15 DETIK)
+-- FUNGSI AUTO JOIN TIM
 -- ==========================================================
 local function autoSelectTeam()
 	if not config.autoJoinTeamActive then return end
-	
-	if player.Team and player.Team.Name == config.selectedTeam then
-		return 
-	end
+	if player.Team and player.Team.Name == config.selectedTeam then return end
 
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-	if remotes then
-		local commF = remotes:FindFirstChild("CommF_")
-		if commF then
-			pcall(function()
-				commF:InvokeServer("SetTeam", config.selectedTeam)
-			end)
-		end
+	local commF = remotes and remotes:FindFirstChild("CommF_")
+	if commF then
+		pcall(function()
+			commF:InvokeServer("SetTeam", config.selectedTeam)
+		end)
 	end
 end
 
 task.spawn(function()
-	task.wait(1) 
+	task.wait(1.5)
 	autoSelectTeam()
-	while task.wait(15) do -- Diperlama jadi 15 detik agar CPU tidak bekerja berat
+	while task.wait(5) do
 		pcall(autoSelectTeam)
 	end
 end)
 
 -- ==========================================================
--- SISTEM DETEKSI BUAH (DIOPTIMALKAN TIAP 8 DETIK)
+-- SISTEM DETEKSI NAMA BUAH SPESIFIK & KOSONG
 -- ==========================================================
 local function checkFruit()
 	local foundFruitName = nil
-	
 	for _, obj in ipairs(Workspace:GetChildren()) do
 		if obj.Name:find("Fruit") or obj.Name:find("BloxFruit") or (obj:IsA("Tool") and obj:FindFirstChild("Handle")) then
 			foundFruitName = obj.Name
@@ -164,24 +169,21 @@ local function checkFruit()
 end
 
 task.spawn(function()
-	while task.wait(8) do -- Diperlama ke 8 detik agar RAM 4GB tidak lag saat scan
+	while task.wait(5) do
 		pcall(checkFruit)
 	end
 end)
 
 -- ==========================================================
--- TAMPILAN GUI MENU UTAMA & EFEK RAINBOW STROKE
+-- TAMPILAN GUI MENU UTAMA & EFEK RAINBOW PINGGIRAN (STROKE)
 -- ==========================================================
-if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
-	player.PlayerGui.GuritaHubGUI:Destroy()
-end
-
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "GuritaHubGUI"
 screenGui.ResetOnSpawn = false
 
 local rainbowStrokes = {}
 
+-- Tombol Buka/Tutup Menu (Ikon Garis Tiga ≡)
 local ToggleMenuBtn = Instance.new("TextButton", screenGui)
 ToggleMenuBtn.Size = UDim2.new(0, 85, 0, 40)
 ToggleMenuBtn.Position = UDim2.new(0, 20, 0.4, 0)
@@ -195,6 +197,7 @@ local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
 ToggleMenuStroke.Thickness = 2
 table.insert(rainbowStrokes, ToggleMenuStroke)
 
+-- Frame Utama Menu
 local Main = Instance.new("Frame", screenGui)
 Main.Size = UDim2.new(0, 240, 0, 220)
 Main.Position = UDim2.new(0.5, -120, 0.5, -110)
@@ -219,7 +222,6 @@ local function CreateBtn(pos)
 	b.Size = UDim2.new(0, 200, 0, 34)
 	b.Position = pos
 	b.Font = Enum.Font.GothamBlack
-	b.TextSize.TextSize = 12
 	b.TextSize = 12
 	b.TextColor3 = Color3.new(1, 1, 1)
 	Instance.new("UICorner", b)
@@ -242,9 +244,10 @@ ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(4
 ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
 ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
+-- Masukkan juga pinggiran notifikasi ke dalam efek rainbow
 table.insert(rainbowStrokes, NotifStroke)
 
--- Looping animasi rainbow dibatasi dan dioptimalkan agar tidak bikin patah-patah
+-- Looping animasi warna pelangi untuk seluruh pinggiran (Stroke)
 RunService.RenderStepped:Connect(function()
 	local hue = tick() % 5 / 5
 	local rainbowColor = Color3.fromHSV(hue, 1, 1)
