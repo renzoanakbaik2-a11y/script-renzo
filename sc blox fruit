@@ -63,11 +63,11 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- FITUR 1: NOTIFIKASI BUAH ATAS (DENGAN ANIMASI NAIK & RAINBOW STROKE KHUSUS)
+-- FITUR 1: NOTIFIKASI BUAH ATAS (MENTOK ATAS DENGAN ANIMASI DARI 75%)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 320, 0, 50)
--- Posisi awal di tengah (Y = 0.75 / 75%)
+-- Posisi awal di tengah bawah layar (Y = 0.75 / 75%)
 NotifFrame.Position = UDim2.new(0.5, -160, 0.75, 0)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 NotifFrame.BorderSizePixel = 0
@@ -99,9 +99,9 @@ NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
--- Jalankan Animasi Posisi dari 75 ke Atas (Y = 0.02)
+-- Jalankan Animasi Posisi dari 75% mentok ke paling atas layar (Y = 0)
 TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-	Position = UDim2.new(0.5, -160, 0.02, 0)
+	Position = UDim2.new(0.5, -160, 0, 0)
 }):Play()
 
 -- Fungsi Memutar Musik Notifikasi Buah
@@ -203,15 +203,15 @@ end
 
 
 -- ==========================================
--- FITUR 4: MENU ANTARMUKA MINIMALIS (BIRU TERANG & GARIS TEPI BIRU TERANG)
+-- FITUR 4: MENU ANTARMUKA MINIMALIS (TOMBOL HITAM, PINGGIRAN & BACAAN BIRU)
 -- ==========================================
--- Tombol Mengambang (MENU ≡)
+-- Tombol Mengambang (MENU ≡) - Warna Hitam dengan Teks Biru Terang & Garis Tepi Biru
 local OpenButton = Instance.new("TextButton")
 OpenButton.Size = UDim2.new(0, 55, 0, 55)
 OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
-OpenButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255) -- Biru Terang
+OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20) -- Hitam Elegan
 OpenButton.Text = "MENU ≡"
-OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.TextColor3 = Color3.fromRGB(0, 200, 255) -- Warna Biru Terang pada Bacaan Tombol Buka Menu
 OpenButton.TextSize, OpenButton.Font = 11, Enum.Font.GothamBold
 OpenButton.Parent = ScreenGui
 
@@ -219,7 +219,7 @@ local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(0, 12)
 OpenCorner.Parent = OpenButton
 
--- Garis Tepi Biru Terang pada Tombol Mengambang
+-- Garis Tepi Biru Terang pada Tombol Mengambang Hitam
 local OpenStroke = Instance.new("UIStroke")
 OpenStroke.Color = Color3.fromRGB(0, 200, 255)
 OpenStroke.Thickness = 2
@@ -256,7 +256,7 @@ TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.05, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "Blox Fruits Hub"
-TitleLabel.TextColor3 = Color3.fromRGB(0, 200, 255) -- Warna Biru Terang pada Bacaan Menu
+TitleLabel.TextColor3 = Color3.fromRGB(0, 200, 255) -- Warna Biru Terang pada Bacaan Judul Menu
 TitleLabel.TextSize, TitleLabel.Font = 14, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = TopBar
