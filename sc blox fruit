@@ -150,11 +150,11 @@ local function checkFruit()
 	local foundFruitName = nil
 	
 	for _, obj in ipairs(Workspace:GetChildren()) do
-		-- Pastikan objek adalah buah asli (biasanya Model atau Tool dengan nama spesifik buah)
+		-- Pastikan objek adalah buah asli (harus berupa Model/Tool dan memiliki Handle atau struktur buah)
 		if obj:IsA("Model") or obj:IsA("Tool") then
 			local name = obj.Name
-			-- Cek apakah mengandung kata Fruit tapi bukan sekadar kata "Fruit" mentah
-			if (name:lower():find("fruit") or name:lower():find("bloxfruit")) and name ~= "Fruit" then
+			-- Cek spesifik nama buah asli Blox Fruits, hindari kata "Fruit" generik/palsu
+			if (name:lower().:find("fruit") or name:lower().:find("bloxfruit")) and name ~= "Fruit" then
 				foundFruitName = name
 				break
 			end
@@ -181,7 +181,7 @@ task.spawn(function()
 end)
 
 -- ==========================================================
--- TAMPILAN MENU UTAMA (TIDAK ADA RAINBOW, WARNA BIRU BIASA)
+-- TAMPILAN MENU UTAMA (WARNA BIRU BIASA, TIDAK RAINBOW)
 -- ==========================================================
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "GuritaHubGUI"
@@ -198,7 +198,7 @@ ToggleMenuBtn.Font = Enum.Font.GothamBlack
 ToggleMenuBtn.TextSize = 13
 Instance.new("UICorner", ToggleMenuBtn)
 local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
-ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255) -- Warna biru tetap, tidak rainbow
+ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
 ToggleMenuStroke.Thickness = 2
 
 -- Frame Utama Menu
@@ -209,7 +209,7 @@ Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Visible = false 
 Instance.new("UICorner", Main)
 local Stroke = Instance.new("UIStroke", Main)
-Stroke.Color = Color3.fromRGB(0, 170, 255) -- Warna biru tetap, tidak rainbow
+Stroke.Color = Color3.fromRGB(0, 170, 255)
 Stroke.Thickness = 2
 
 local Title = Instance.new("TextLabel", Main)
@@ -230,7 +230,7 @@ local function CreateBtn(pos)
 	b.TextColor3 = Color3.new(1, 1, 1)
 	Instance.new("UICorner", b)
 	local s = Instance.new("UIStroke", b)
-	s.Color = Color3.fromRGB(0, 170, 255) -- Warna biru tetap
+	s.Color = Color3.fromRGB(0, 170, 255)
 	s.Thickness = 1.2
 	return b
 end
