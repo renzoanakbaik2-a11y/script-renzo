@@ -1,8 +1,9 @@
--- [[ GURITA HUB - FULL FINAL MODULE (FIXED & OPTIMIZED) ]] --
+-- [[ GURITA HUB - RAINBOW STROKE MODULE ]] --
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
@@ -41,7 +42,7 @@ end
 loadConfig()
 
 -- ==========================================================
--- SISTEM NOTIFIKASI KUSTOM (POSISI 75% PAS & WARNA TEMA MENU)
+-- SISTEM NOTIFIKASI KUSTOM (POSISI 75% & NAMA BUAH SPESIFIK)
 -- ==========================================================
 local notificationGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 notificationGui.Name = "GuritaHubTopNotification"
@@ -49,15 +50,12 @@ notificationGui.ResetOnSpawn = false
 
 local NotifFrame = Instance.new("Frame", notificationGui)
 NotifFrame.Size = UDim2.new(0, 300, 0, 45)
--- Posisi disesuaikan jadi tidak terlalu mentok ke atas (75% / Y = 75)
 NotifFrame.Position = UDim2.new(0.5, -150, 0, -60) 
 NotifFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 NotifFrame.BorderSizePixel = 0
 Instance.new("UICorner", NotifFrame).CornerRadius = UDim.new(0, 8)
 
--- Warna garis tepi disamakan persis dengan menu utama (biru terang)
 local NotifStroke = Instance.new("UIStroke", NotifFrame)
-NotifStroke.Color = Color3.fromRGB(0, 170, 255)
 NotifStroke.Thickness = 2
 
 local NotifText = Instance.new("TextLabel", NotifFrame)
@@ -71,7 +69,6 @@ NotifText.Text = ""
 local function showTopNotification(text, duration)
 	pcall(function()
 		NotifText.Text = text
-		-- Diturunkan ke posisi Y = 75 agar pas dan tidak terlalu mentok atas
 		NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, 75), "Out", "Quad", 0.3, true)
 		
 		task.delay(duration or 5, function()
@@ -81,7 +78,7 @@ local function showTopNotification(text, duration)
 end
 
 -- ==========================================================
--- FUNGSI AUTO JOIN TIM (DI-FIX AGAR TIDAK ADA DELAY)
+-- FUNGSI AUTO JOIN TIM (TANPA DELAY & ANTI-SPAM)
 -- ==========================================================
 local function autoSelectTeam()
 	if not config.autoJoinTeamActive then return end
@@ -101,7 +98,6 @@ local function autoSelectTeam()
 	end
 end
 
--- Dipercepat agar langsung eksekusi begitu game siap tanpa delay lama
 task.spawn(function()
 	task.wait(1) 
 	autoSelectTeam()
@@ -111,24 +107,22 @@ task.spawn(function()
 end)
 
 -- ==========================================================
--- SISTEM DETEKSI BUAH (ADA & KOSONG)
+-- SISTEM DETEKSI NAMA BUAH SPESIFIK & KOSONG
 -- ==========================================================
 local function checkFruit()
-	local foundFruitObj = nil
-	local foundFruitName = ""
+	local foundFruitName = nil
 	
 	for _, obj in ipairs(Workspace:GetChildren()) do
 		if obj.Name:find("Fruit") or obj.Name:find("BloxFruit") or (obj:IsA("Tool") and obj:FindFirstChild("Handle")) then
-			foundFruitObj = obj
 			foundFruitName = obj.Name
 			break
 		end
 	end
 
-	if foundFruitObj then
+	if foundFruitName then
 		if lastState ~= foundFruitName then
 			lastState = foundFruitName
-			showTopNotification("Buah Ada: " .. foundFruitName, 5)
+			showTopNotification("Buah Ditemukan: " .. foundFruitName, 5)
 		end
 	else
 		if lastState ~= "NONE" then
@@ -145,7 +139,7 @@ task.spawn(function()
 end)
 
 -- ==========================================================
--- TAMPILAN GUI MENU UTAMA
+-- TAMPILAN GUI MENU UTAMA & EFEK RAINBOW STROKE (PINGGIRAN SAJA)
 -- ==========================================================
 if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
 	player.PlayerGui.GuritaHubGUI:Destroy()
@@ -154,6 +148,9 @@ end
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "GuritaHubGUI"
 screenGui.ResetOnSpawn = false
+
+-- List untuk menampung semua bagian pinggir (Stroke) yang akan diberi efek rainbow
+local rainbowStrokes = {}
 
 -- Tombol Buka/Tutup Menu (Ikon Garis Tiga ≡)
 local ToggleMenuBtn = Instance.new("TextButton", screenGui)
@@ -166,8 +163,8 @@ ToggleMenuBtn.Font = Enum.Font.GothamBlack
 ToggleMenuBtn.TextSize = 13
 Instance.new("UICorner", ToggleMenuBtn)
 local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
-ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
 ToggleMenuStroke.Thickness = 2
+table.insert(rainbowStrokes, ToggleMenuStroke)
 
 -- Frame Utama Menu (Visible = false saat pertama kali di-execute)
 local Main = Instance.new("Frame", screenGui)
@@ -177,8 +174,8 @@ Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Visible = false 
 Instance.new("UICorner", Main)
 local Stroke = Instance.new("UIStroke", Main)
-Stroke.Color = Color3.fromRGB(0, 170, 255)
 Stroke.Thickness = 2
+table.insert(rainbowStrokes, Stroke)
 
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
@@ -197,20 +194,35 @@ local function CreateBtn(pos)
 	b.TextSize = 12
 	b.TextColor3 = Color3.new(1, 1, 1)
 	Instance.new("UICorner", b)
-	local s = Instance.new("UIStroke", b)
-	s.Color = Color3.fromRGB(0, 170, 255)
+	local s = Instance.new("UIStroke", s or b)
 	s.Thickness = 1.2
+	table.insert(rainbowStrokes, s)
 	return b
 end
 
 local TeamBtn        = CreateBtn(UDim2.new(0, 20, 0, 55))
 local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 105))
 
+-- Tambahkan pinggiran notifikasi ke dalam efek rainbow juga
+table.insert(rainbowStrokes, NotifStroke)
+
 TeamBtn.Text = "Tim: " .. config.selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 
 ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
 ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+
+-- Looping animasi warna pelangi khusus untuk pinggiran (Stroke)
+RunService.RenderStepped:Connect(function()
+	local hue = tick() % 5 / 5
+	local rainbowColor = Color3.fromHSV(hue, 1, 1)
+	
+	for _, stroke in ipairs(rainbowStrokes) do
+		if stroke and stroke.Parent then
+			stroke.Color = rainbowColor
+		end
+	end
+end)
 
 ToggleMenuBtn.MouseButton1Down:Connect(function()
 	Main.Visible = not Main.Visible
