@@ -1,4 +1,4 @@
--- [[ GURITA HUB V15.0 - AUTO NOTIF & ERROR 773 FIX ]] --
+-- [[ GURITA HUB V17.0 - PERSISTENT AUTO HOP FIX ]] --
 
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -12,11 +12,11 @@ local placeId = game.PlaceId
 local SEARCH_DELAY = 4
 
 -- NAMA FILE CONFIGURASI PERMANEN
-local CONFIG_FILE = "GuritaHub_v15_Config.json"
+local CONFIG_FILE = "GuritaHub_v17_Config.json"
 
--- PENGATURAN DEFAULT
+-- PENGATURAN DEFAULT (Auto Hop Default ON)
 local config = {
-	autoHopActive = false,
+	autoHopActive = true,
 	autoCollectActive = true,
 	autoJoinTeamActive = false,
 	selectedTeam = "Pirates" -- "Pirates" atau "Marines"
@@ -45,7 +45,7 @@ local function saveConfig()
 end
 
 -- ==========================================================
--- FUNGSI NOTIFIKASI DI LAYAR (ROBLOX NOTIFICATION)
+-- FUNGSI NOTIFIKASI DI LAYAR
 -- ==========================================================
 local function sendNotification(title, text, duration)
 	pcall(function()
@@ -109,7 +109,7 @@ Stroke.Thickness = 2
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Position = UDim2.new(0, 0, 0, 5)
-Title.Text = "GURITA HUB V15.0\nBLOX FRUITS MANAGER"
+Title.Text = "GURITA HUB V17.0\nBLOX FRUITS MANAGER"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 11
 Title.BackgroundTransparency = 1
@@ -169,18 +169,18 @@ local function moveToFruit(fruitObj)
 		local handle = fruitObj:FindFirstChild("Handle") or fruitObj:FindFirstChildWhichIsA("BasePart")
 		if handle and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 			player.Character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
-			print("[SUKSES] Karakter mendatangi posisi buah: " + fruitObj.Name)
+			print("[SUKSES] Karakter mendatangi posisi buah: " .. fruitObj.Name)
 		end
 	end)
 end
 
 -- ==========================================================
--- LOGIKA UTAMA SERVER HOP (ANTI ERROR 773 & SERVER MATI)
+-- LOGIKA UTAMA SERVER HOP & CEK BUAH OTOMATIS
 -- ==========================================================
 local function hopToNewServer()
 	if not config.autoHopActive then return end
 	
-	print("[Blox Fruits] Mencari server aktif yang aman...")
+	print("[Blox Fruits] Mencari server lain...")
 	local success, result = pcall(function()
 		local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
 		return HttpService:JSONDecode(game:HttpGet(url))
@@ -189,29 +189,20 @@ local function hopToNewServer()
 	if success and result and result.data then
 		local servers = {}
 		for _, server in ipairs(result.data) do
-			-- Filter ketat untuk menghindari server restricted / mati / error 773
-			if server.id and server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing >= 2 then
+			if server.id and server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing >= 1 then
 				table.insert(servers, server.id)
-			end
-		end
-
-		if #servers == 0 then
-			for _, server in ipairs(result.data) do
-				if server.id and server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing > 0 then
-					table.insert(servers, server.id)
-				end
 			end
 		end
 
 		if #servers > 0 then
 			local randomServerId = servers[math.random(1, #servers)]
-			-- Pcall aman untuk mencegah crash jika terjadi Error 773 / Restricted
+			print("[Blox Fruits] Berpindah ke server ID: " .. randomServerId)
 			local tpSuccess, tpError = pcall(function()
 				TeleportService:TeleportToPlaceInstance(placeId, randomServerId, player)
 			end)
 			
 			if not tpSuccess then
-				warn("[TELEPORT ERROR] Gagal masuk server, mencoba server lain...", tpError)
+				warn("[TELEPORT ERROR] Gagal masuk server, mencoba ulang...", tpError)
 				task.wait(2)
 				hopToNewServer()
 			end
@@ -227,27 +218,19 @@ end
 
 local function startMainLoop()
 	task.spawn(function()
-		-- Jeda loading awal masuk server
+		-- Beri jeda loading server agar map dan objek termuat sempurna
 		task.wait(4)
 
 		if not config.autoHopActive then return end
 
-		-- Cek jika masuk server mati / pemain kosong
-		if #Players:GetPlayers() <= 1 then
-			print("[PERINGATAN] Server sepi/mati terdeteksi. Hop ulang...")
-			hopToNewServer()
-			return
-		end
-
-		-- CEK BUAH OTOMATIS & NOTIFIKASI LANGSUNG JALAN
+		-- CEK BUAH DI SERVER & KIRIM NOTIFIKASI
 		local detectedFruit = findFruit()
 		if detectedFruit then
-			-- NOTIFIKASI KALO ADA BUAH
 			print("========================================")
 			print("[ADA BUAH] Ditemukan: " .. detectedFruit.Name)
-			print("Auto Hop Dimatikan. Karakter diam & mendatangi buah.")
+			print("Auto Hop Dimatikan. Karakter diam & mengambil buah.")
 			print("========================================")
-			sendNotification("Gurita Hub V15", "Ada Buah: " .. detectedFruit.Name .. "!", 5)
+			sendNotification("Gurita Hub V17", "Ada Buah: " .. detectedFruit.Name .. "!", 6)
 			
 			config.autoHopActive = false
 			saveConfig()
@@ -260,12 +243,11 @@ local function startMainLoop()
 			end
 			return
 		else
-			-- NOTIFIKASI KALO TIDAK ADA BUAH
-			print("[TIDAK ADA BUAH] Server ini kosong buah. Melakukan hop...")
-			sendNotification("Gurita Hub V15", "Tidak ada buah di server ini.", 3)
+			print("[TIDAK ADA BUAH] Tidak ada buah di server ini. Melakukan hop...")
+			sendNotification("Gurita Hub V17", "Tidak ada buah di server ini.", 3)
 		end
 
-		-- LANJUTKAN HOP JIKA TIDAK ADA BUAH
+		-- JIKA TIDAK ADA BUAH, LANJUTKAN HOP OTOMATIS
 		if config.autoHopActive then
 			hopToNewServer()
 		end
@@ -318,7 +300,7 @@ ToggleJoinTeam.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Eksekusi Awal Saat Script Dijalankan
+-- Eksekusi Utama Langsung Berjalan Otomatis Saat Skrip Dimuat
 if config.autoHopActive then
 	startMainLoop()
 end
