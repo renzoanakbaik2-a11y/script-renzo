@@ -63,7 +63,7 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- FITUR 1: NOTIFIKASI BUAH (POSISI DI 50%, TEKS ACAK LALU TWEEN KE 75%)
+-- FITUR 1: NOTIFIKASI BUAH (MULAI DI 50%, TEKS ACAK CEPAT, LALU TWEEN NAIK KE ATAS)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 360, 0, 50)
@@ -115,7 +115,7 @@ local function playFastScramble(targetText)
 			scrambled = scrambled .. char
 		end
 		NotifText.Text = scrambled
-		task.wait(0.02) -- Dibuat cepat
+		task.wait(0.02)
 	end
 	
 	-- Tahap 2: Menyusun huruf aslinya satu per satu secara cepat
@@ -125,20 +125,20 @@ local function playFastScramble(targetText)
 			current = current .. string.sub(pool, math.random(1, #pool), math.random(1, #pool))
 		end
 		NotifText.Text = current
-		task.wait(0.015) -- Dibuat agak cepat agar responsif
+		task.wait(0.015)
 	end
 	
 	NotifText.Text = targetText
 end
 
--- Jalankan animasi: Teks acak di tengah (50%), setelah selesai langsung ditween ke posisi 75%
+-- Jalankan animasi: Teks acak di tengah (50%), setelah selesai langsung ditween NAIK ke atas (25%)
 task.spawn(function()
 	playFastScramble("Fruit Notifier: Memindai Map...")
 	task.wait(0.5) -- Jeda sebentar setelah teks tersusun rapi
 	
-	-- Animasi Tween wadah dari posisi 50% ke posisi 75% layar
+	-- Animasi Tween wadah NAIK ke atas layar (Y = 0.25 atau 25% dari atas)
 	TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, -180, 0.75, -25) -- Posisi Y dipindah ke 75%
+		Position = UDim2.new(0.5, -180, 0.25, -25) -- Posisi Y dipindah naik ke atas
 	}):Play()
 end)
 
