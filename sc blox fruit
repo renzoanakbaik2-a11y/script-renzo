@@ -63,11 +63,11 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- FITUR 1: NOTIFIKASI BUAH (MULAI DI 50%, TEKS ACAK CEPAT, LALU TWEEN NAIK KE ATAS)
+-- FITUR 1: NOTIFIKASI BUAH (MULAI DI 50%, EFEK KETIK OTOMATIS, LALU TWEEN KE ATAS)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 360, 0, 50)
--- Posisi awal wadah pas di tengah layar (50%)
+-- Posisi Awal Wadah: Tepat di tengah layar (50%)
 NotifFrame.Position = UDim2.new(0.5, -180, 0.5, -25)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 NotifFrame.BorderSizePixel = 0
@@ -99,46 +99,25 @@ NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
--- Fungsi Efek Teks Acak & Susun Satu Persatu secara Cepat di posisi 50%
-local function playFastScramble(targetText)
-	local pool = "Fruit Notifier:MemindaiMap...FruiNotifrcP"
-	local length = string.len(targetText)
-	
-	-- Tahap 1: Efek teks acak / melayang di posisi 50%
-	for step = 1, 15 do
-		local scrambled = ""
-		for i = 1, length do
-			local char = string.sub(targetText, math.random(1, length), math.random(1, length))
-			if math.random(1, 2) == 1 then
-				char = string.sub(pool, math.random(1, #pool), math.random(1, #pool))
-			end
-			scrambled = scrambled .. char
-		end
-		NotifText.Text = scrambled
-		task.wait(0.02)
+-- Fungsi Efek Mengetik Otomatis (Seperti Diketik Sendiri secara Perlahan dan Rapih)
+local function playAutoTypewriter(targetText)
+	NotifText.Text = ""
+	for i = 1, string.len(targetText) do
+		NotifText.Text = string.sub(targetText, 1, i)
+		task.wait(0.05) -- Kecepatan pengetikan otomatis yang pas, enak dilihat dan dibaca
 	end
-	
-	-- Tahap 2: Menyusun huruf aslinya satu per satu secara cepat
-	for i = 1, length do
-		local current = string.sub(targetText, 1, i)
-		for j = i + 1, length do
-			current = current .. string.sub(pool, math.random(1, #pool), math.random(1, #pool))
-		end
-		NotifText.Text = current
-		task.wait(0.015)
-	end
-	
-	NotifText.Text = targetText
 end
 
--- Jalankan animasi: Teks acak di tengah (50%), setelah selesai langsung ditween NAIK ke atas (25%)
+-- Jalankan Alur:
+-- 1. Wadah diam di tengah (50%), teks diketik otomatis huruf per huruf
+-- 2. Setelah teks lengkap, wadah langsung di-tween naik ke atas (posisi target akhir)
 task.spawn(function()
-	playFastScramble("Fruit Notifier: Memindai Map...")
-	task.wait(0.5) -- Jeda sebentar setelah teks tersusun rapi
+	playAutoTypewriter("Fruit Notifier: Memindai Map...")
+	task.wait(0.6) -- Jeda sebentar setelah teks selesai diketik otomatis
 	
-	-- Animasi Tween wadah NAIK ke atas layar (Y = 0.25 atau 25% dari atas)
+	-- Animasi Tween wadah naik ke posisi atas layar (seperti pada foto kedua)
 	TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, -180, 0.25, -25) -- Posisi Y dipindah naik ke atas
+		Position = UDim2.new(0.5, -180, 0.22, -25)
 	}):Play()
 end)
 
