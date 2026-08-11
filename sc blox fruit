@@ -1,4 +1,4 @@
--- [[ GURITA HUB V8.0 - FINAL STABLE BLOX FRUITS ]] --
+-- [[ GURITA HUB V10.0 - CORRECT AUTO COLLECT & HOP ]] --
 
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -11,12 +11,13 @@ local placeId = game.PlaceId
 local SEARCH_DELAY = 4
 
 -- NAMA FILE UNTUK SAVE SETTING PERMANEN
-local CONFIG_FILE = "GuritaHub_v8_Config.json"
+local CONFIG_FILE = "GuritaHub_v10_Config.json"
 
 -- PENGATURAN DEFAULT
 local config = {
 	autoHopActive = false,
 	fruitFinderActive = true,
+	autoCollectActive = true,
 	autoJoinTeamActive = true,
 	selectedTeam = "Pirates" -- "Pirates" atau "Marines"
 }
@@ -50,7 +51,7 @@ if teleportData and type(teleportData) == "table" and teleportData.autoHop ~= ni
 end
 
 -- ==========================================================
--- FUNGSI AUTO JOIN TIM
+-- FUNGSI AUTO JOIN TIM (MANDIRI & TERPISAH)
 -- ==========================================================
 local function autoSelectTeam()
 	if not config.autoJoinTeamActive then return end
@@ -87,10 +88,10 @@ local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
 ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
 ToggleMenuStroke.Thickness = 2
 
--- Frame Utama Menu (Tinggi disesuaikan karena tombol paksa tim sudah dihapus)
+-- Frame Utama Menu
 local Main = Instance.new("Frame", screenGui)
-Main.Size = UDim2.new(0, 240, 0, 230)
-Main.Position = UDim2.new(0.5, -120, 0.5, -115)
+Main.Size = UDim2.new(0, 240, 0, 275)
+Main.Position = UDim2.new(0.5, -120, 0.5, -137)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Visible = true
 Instance.new("UICorner", Main)
@@ -101,7 +102,7 @@ Stroke.Thickness = 2
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Position = UDim2.new(0, 0, 0, 5)
-Title.Text = "GURITA HUB V8.0\nBLOX FRUITS MANAGER"
+Title.Text = "GURITA HUB V10.0\nBLOX FRUITS MANAGER"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 11
 Title.BackgroundTransparency = 1
@@ -109,7 +110,7 @@ Title.TextColor3 = Color3.fromRGB(0, 170, 255)
 
 local function CreateBtn(pos)
 	local b = Instance.new("TextButton", Main)
-	b.Size = UDim2.new(0, 200, 0, 36)
+	b.Size = UDim2.new(0, 200, 0, 34)
 	b.Position = pos
 	b.Font = Enum.Font.GothamBlack
 	b.TextSize = 12
@@ -121,10 +122,11 @@ local function CreateBtn(pos)
 	return b
 end
 
-local ToggleHopBtn    = CreateBtn(UDim2.new(0, 20, 0, 50))
-local ToggleFinderBtn = CreateBtn(UDim2.new(0, 20, 0, 95))
-local TeamBtn         = CreateBtn(UDim2.new(0, 20, 0, 140))
-local ToggleJoinTeam  = CreateBtn(UDim2.new(0, 20, 0, 185))
+local ToggleHopBtn     = CreateBtn(UDim2.new(0, 20, 0, 48))
+local ToggleFinderBtn  = CreateBtn(UDim2.new(0, 20, 0, 88))
+local ToggleCollectBtn = CreateBtn(UDim2.new(0, 20, 0, 128))
+local TeamBtn          = CreateBtn(UDim2.new(0, 20, 0, 168))
+local ToggleJoinTeam   = CreateBtn(UDim2.new(0, 20, 0, 208))
 
 -- Update Teks & Warna Tombol Berdasarkan Config
 ToggleHopBtn.Text = config.autoHopActive and "Auto Hop: ON" or "Auto Hop: OFF"
@@ -132,6 +134,9 @@ ToggleHopBtn.BackgroundColor3 = config.autoHopActive and Color3.fromRGB(46, 204,
 
 ToggleFinderBtn.Text = config.fruitFinderActive and "Fruit Finder: ON" or "Fruit Finder: OFF"
 ToggleFinderBtn.BackgroundColor3 = config.fruitFinderActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+
+ToggleCollectBtn.Text = config.autoCollectActive and "Auto Collect: ON" or "Auto Collect: OFF"
+ToggleCollectBtn.BackgroundColor3 = config.autoCollectActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
 TeamBtn.Text = "Tim: " .. config.selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
@@ -145,7 +150,7 @@ ToggleMenuBtn.MouseButton1Down:Connect(function()
 end)
 
 -- ==========================================================
--- FUNGSI PENCARIAN BUAH
+-- FUNGSI PENCARIAN & KARAKTER BERGERAK KE BUAH
 -- ==========================================================
 local function findFruit()
 	for _, obj in ipairs(Workspace:GetChildren()) do
@@ -156,13 +161,24 @@ local function findFruit()
 	return nil
 end
 
+local function moveToFruit(fruitObj)
+	pcall(function()
+		local handle = fruitObj:FindFirstChild("Handle") or fruitObj:FindFirstChildWhichIsA("BasePart")
+		if handle and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			-- Karakter kita yang bergerak / berpindah ke posisi buah
+			player.Character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 4, 0)
+			print("[SUKSES] Karakter berpindah ke posisi buah: " .. fruitObj.Name)
+		end
+	end)
+end
+
 -- ==========================================================
--- LOGIKA UTAMA SERVER HOP (DENGAN FILTER MINIMAL 5 PLAYER & LOOP AMAN)
+-- LOGIKA UTAMA SERVER HOP (ANTI ERROR 773)
 -- ==========================================================
 local function hopToNewServer()
 	if not config.autoHopActive then return end
 	
-	print("[Blox Fruits] Mencari server publik (Min 5 player, Tidak Penuh)...")
+	print("[Blox Fruits] Mencari server aman...")
 	local success, result = pcall(function()
 		local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
 		return HttpService:JSONDecode(game:HttpGet(url))
@@ -171,30 +187,19 @@ local function hopToNewServer()
 	if success and result and result.data then
 		local servers = {}
 		for _, server in ipairs(result.data) do
-			-- Filter: Minimal 5 pemain, belum penuh, dan bukan server saat ini
-			if server.playing >= 5 and server.playing < server.maxPlayers and server.id ~= game.JobId then
+			if server.id and server.id ~= game.JobId and server.playing < server.maxPlayers then
 				table.insert(servers, server.id)
 			end
 		end
 
 		if #servers > 0 then
 			local randomServerId = servers[math.random(1, #servers)]
-			TeleportService:TeleportToPlaceInstance(placeId, randomServerId, player, { autoHop = true })
-		else
-			-- Jika belum ketemu yang pas, coba longgarkan filter (minimal 1 player) agar tetap jalan
-			for _, server in ipairs(result.data) do
-				if server.playing < server.maxPlayers and server.id ~= game.JobId then
-					table.insert(servers, server.id)
-				end
-			end
-			
-			if #servers > 0 then
-				local randomServerId = servers[math.random(1, #servers)]
+			pcall(function()
 				TeleportService:TeleportToPlaceInstance(placeId, randomServerId, player, { autoHop = true })
-			else
-				task.wait(SEARCH_DELAY)
-				hopToNewServer()
-			end
+			end)
+		else
+			task.wait(SEARCH_DELAY)
+			hopToNewServer()
 		end
 	else
 		task.wait(SEARCH_DELAY)
@@ -208,7 +213,7 @@ local function startMainLoop()
 		autoSelectTeam()
 
 		while config.autoHopActive do
-			task.wait(1)
+			task.wait(1.5)
 
 			-- Cek apakah ada buah di server ini
 			if config.fruitFinderActive then
@@ -216,7 +221,7 @@ local function startMainLoop()
 				if detectedFruit then
 					print("========================================")
 					print("[SUKSES] Buah Ditemukan: " .. detectedFruit.Name .. "!")
-					print("Auto Hop Dihentikan. Karakter diam & teleport ke buah.")
+					print("Auto Hop Dihentikan. Karakter mendatangi buah.")
 					print("========================================")
 					
 					config.autoHopActive = false
@@ -225,17 +230,15 @@ local function startMainLoop()
 					ToggleHopBtn.Text = "Auto Hop: OFF (Buah Ketemu)"
 					ToggleHopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
 					
-					if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-						local handle = detectedFruit:FindFirstChild("Handle") or detectedFruit:FindFirstChildWhichIsA("BasePart")
-						if handle then
-							player.Character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 5, 0)
-						end
+					-- Karakter kita yang bergerak menghampiri buah
+					if config.autoCollectActive then
+						moveToFruit(detectedFruit)
 					end
 					break
 				end
 			end
 
-			-- Jika tidak ada buah sama sekali, langsung jalankan hop server baru
+			-- Jika tidak ada buah sama sekali, lakukan hop server baru
 			print("[Blox Fruits] Tidak ada buah. Melakukan Auto Hop...")
 			hopToNewServer()
 			break
@@ -244,7 +247,7 @@ local function startMainLoop()
 end
 
 -- ==========================================================
--- KONTROL TOMBOL DI DALAM MENU
+-- KONTROL TOMBOL DI DALAM MENU (MANDIRI & TERPISAH)
 -- ==========================================================
 ToggleHopBtn.MouseButton1Click:Connect(function()
 	config.autoHopActive = not config.autoHopActive
@@ -265,6 +268,13 @@ ToggleFinderBtn.MouseButton1Click:Connect(function()
 	saveConfig()
 	ToggleFinderBtn.Text = config.fruitFinderActive and "Fruit Finder: ON" or "Fruit Finder: OFF"
 	ToggleFinderBtn.BackgroundColor3 = config.fruitFinderActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+end)
+
+ToggleCollectBtn.MouseButton1Click:Connect(function()
+	config.autoCollectActive = not config.autoCollectActive
+	saveConfig()
+	ToggleCollectBtn.Text = config.autoCollectActive and "Auto Collect: ON" or "Auto Collect: OFF"
+	ToggleCollectBtn.BackgroundColor3 = config.autoCollectActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 end)
 
 TeamBtn.MouseButton1Click:Connect(function()
