@@ -23,7 +23,7 @@ local Settings = {
 	SoundId = "", -- ID Audio Roblox
 	FlightSpeed = 350, -- Kecepatan terbang (Maksimal 1000)
 	AutoTeleportFruit = false, -- Auto terbang ke buah
-	AutoFlyChest = false,     -- Auto terbang ke chest/peti
+	AutoFlyChest = false,     -- Auto terbang ke semua chest/peti satu map
 	AutoFlyPlayer = false     -- Auto terbang ke player
 }
 
@@ -134,36 +134,30 @@ local function smoothFlyTo(targetCFrame)
 	local rootPart = getCharacterRootPart()
 	if not rootPart then return end
 
-	-- Batasi kecepatan maksimal 1000
 	local currentSpeed = Settings.FlightSpeed
 	if currentSpeed > 1000 then currentSpeed = 1000 end
 	if currentSpeed < 50 then currentSpeed = 50 end
 
 	local distance = (rootPart.Position - targetCFrame.Position).Magnitude
 	local duration = distance / currentSpeed
-	if duration < 0.1 then return end
+	if duration < 0.05 then return end
 
 	local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid.PlatformStand = true
 	end
 
-	-- Simpan posisi kamera saat ini agar tidak ikut bergeser/tertarik
 	local oldCameraCFrame = Camera.CFrame
-
-	-- Buat koneksi agar kamera tetap stabil menghadap posisi semula selama terbang
 	local cameraLockConnection = game:GetService("RunService").RenderStepped:Connect(function()
 		Camera.CFrame = oldCameraCFrame
 	end)
 
-	-- Jalankan Tween perjalanan karakter
 	local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
 	local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
 	
 	tween:Play()
 	tween.Completed:Wait()
 
-	-- Lepaskan pengunci kamera setelah sampai
 	if cameraLockConnection then
 		cameraLockConnection:Disconnect()
 	end
@@ -175,11 +169,11 @@ end
 
 
 -- ==========================================
--- BACKGROUND SYSTEM (SCANNER BUAH, CHEST, PLAYER)
+-- BACKGROUND SYSTEM (SCANNER BUAH, ALL CHEST, PLAYER)
 -- ==========================================
 task.spawn(function()
 	local lastCount = 0
-	while task.wait(3) do
+	while task.wait(2) do
 		-- 1. Scan Buah
 		if Settings.FruitNotifier then
 			local fruitList = {}
@@ -203,7 +197,6 @@ task.spawn(function()
 				end
 				lastCount = currentCount
 
-				-- Auto Terbang ke Buah (Stabil)
 				if Settings.AutoTeleportFruit and targetFruitHandle then
 					local rootPart = getCharacterRootPart()
 					if rootPart and (rootPart.Position - targetFruitHandle.Position).Magnitude > 15 then
@@ -216,21 +209,21 @@ task.spawn(function()
 			end
 		end
 
-		-- 2. Auto Terbang ke Chest / Peti (Stabil & Kamera Diam)
+		-- 2. Auto Terbang ke SEMUA Chest / Peti di Seluruh Map
 		if Settings.AutoFlyChest then
 			for _, obj in ipairs(Workspace:GetDescendants()) do
+				if not Settings.AutoFlyChest then break end
 				if (obj.Name:lower():find("chest") or obj.Name:lower():find("peti")) and obj:IsA("BasePart") then
 					local rootPart = getCharacterRootPart()
 					if rootPart then
 						smoothFlyTo(obj.CFrame)
-						task.wait(1)
-						break
+						task.wait(0.2) -- Jeda singkat antar peti agar mulus
 					end
 				end
 			end
 		end
 
-		-- 3. Auto Terbang ke Player Lain (Stabil)
+		-- 3. Auto Terbang ke Player Lain
 		if Settings.AutoFlyPlayer then
 			for _, player in ipairs(Players:GetPlayers()) do
 				if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -440,7 +433,7 @@ local homeLabel = Instance.new("TextLabel")
 homeLabel.Size = UDim2.new(0.9, 0, 0, 120)
 homeLabel.Position = UDim2.new(0.05, 0, 0.05, 0)
 homeLabel.BackgroundTransparency = 1
-homeLabel.Text = "Selamat datang di BloxFruits Hub!\nGunakan menu di sebelah kiri untuk mengatur:\n\n1. **Settings**: Mengatur kecepatan terbang (Flight Speed) & tim.\n2. **Automatically**: Menyalakan fitur otomatis (Terbang ke Buah, Chest, Player, Notifikasi, dll)."
+homeLabel.Text = "Selamat datang di BloxFruits Hub!\nGunakan menu di sebelah kiri untuk mengatur:\n\n1. **Settings**: Mengatur kecepatan terbang (Flight Speed) & tim.\n2. **Automatically**: Menyalakan fitur otomatis (Terbang ke Buah, All Chest satu map, Player, dll)."
 homeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 homeLabel.TextSize, homeLabel.Font = 11, Enum.Font.Gotham
 homeLabel.TextWrapped = true
@@ -590,7 +583,7 @@ end)
 createAutoToggle(150, "Sound Notif Buah", "CustomSoundEnabled", nil)
 
 createAutoToggle(210, "Auto Terbang ke Buah", "AutoTeleportFruit", nil)
-createAutoToggle(255, "Auto Terbang ke Chest/Peti", "AutoFlyChest", nil)
+createAutoToggle(255, "Auto Collect All Chest", "AutoFlyChest", nil)
 createAutoToggle(300, "Auto Terbang ke Player", "AutoFlyPlayer", nil)
 
 
