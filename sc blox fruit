@@ -29,8 +29,7 @@ local Settings = {
     AutoFlyChest = false,     
     AutoFlyPlayer = false,     
     TargetPlayerName = "",     
-    NotifOffsetX = 50,     
-    NotifOffsetY = 50        
+    NotifOffsetY = 20        -- Default di atas layar (Y = 20 pixel dari atas)
 }
 
 -- Fungsi Load Settings
@@ -48,9 +47,6 @@ local function loadSettings()
 end
 
 loadSettings()
-
-if Settings.NotifOffsetX < 0 or Settings.NotifOffsetX > 100 then Settings.NotifOffsetX = 50 end
-if Settings.NotifOffsetY < 0 or Settings.NotifOffsetY > 100 then Settings.NotifOffsetY = 50 end
 
 -- Fungsi Save Settings
 local function saveSettings()
@@ -87,22 +83,37 @@ if not ScreenGui.Parent or ScreenGui.Parent == nil then
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Notifikasi Buah di Layar
+-- Notifikasi Buah di Layar (Desain Melayang di Atas)
 local NotifFrame = Instance.new("Frame")
-NotifFrame.Size = UDim2.new(0, 340, 0, 45)
-NotifFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+NotifFrame.Size = UDim2.new(0, 360, 0, 45)
+NotifFrame.AnchorPoint = Vector2.new(0.5, 0)
+-- Posisi awal tersembunyi di atas layar sebelum animasi masuk
+NotifFrame.Position = UDim2.new(0.5, 0, 0, -60) 
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+NotifFrame.BackgroundTransparency = 0.1
 NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
 
-local NotifXBox, NotifYBox -- Deklarasi awal agar bisa diakses fungsi reset
+local NotifYBox -- Deklarasi untuk input box Y
 
-local function updateNotifPosition()
-    local scaleX = Settings.NotifOffsetX / 100
-    local scaleY = Settings.NotifOffsetY / 100
-    NotifFrame.Position = UDim2.new(scaleX, 0, scaleY, 0)
+local function getTargetYPos()
+    return Settings.NotifOffsetY
 end
-updateNotifPosition()
+
+local function animateNotifIn()
+    local targetY = getTargetYPos()
+    TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, 0, 0, targetY),
+        BackgroundTransparency = 0.1
+    }):Play()
+end
+
+local function animateNotifOut()
+    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Position = UDim2.new(0.5, 0, 0, -60),
+        BackgroundTransparency = 1
+    }):Play()
+end
 
 local NotifCorner = Instance.new("UICorner")
 NotifCorner.CornerRadius = UDim.new(0, 8)
@@ -260,11 +271,13 @@ local function getChestIslands()
 end
 
 -- ==========================================
--- BACKGROUND SYSTEM
+-- BACKGROUND SYSTEM (NOTIFIKASI & ANIMASI)
 -- ==========================================
 task.spawn(function()
     local lastCount = 0
-    while task.wait(0.1) do
+    local isShown = false
+
+    while task.wait(0.2) do
         if Settings.FruitNotifier then
             local fruitList = {}
             local targetFruitHandle = nil
@@ -282,6 +295,12 @@ task.spawn(function()
             if currentCount > 0 then
                 local combinedNames = table.concat(fruitList, ", ")
                 NotifText.Text = "KETEMU (" .. currentCount .. "): " .. combinedNames
+                
+                if not isShown then
+                    animateNotifIn()
+                    isShown = true
+                end
+
                 if currentCount > lastCount then
                     playFruitSound()
                 end
@@ -294,8 +313,18 @@ task.spawn(function()
                     end
                 end
             else
-                NotifText.Text = "Status: Mencari Buah di Map (Kosong)..."
+                NotifText.Text = "Status: Mencari Buah di Map..."
+                -- Jika mau tampil terus walaupun kosong, hapus baris animateNotifOut di bawah ini
+                if not isShown then
+                    animateNotifIn()
+                    isShown = true
+                end
                 lastCount = 0
+            end
+        else
+            if isShown then
+                animateNotifOut()
+                isShown = false
             end
         end
 
@@ -583,7 +612,11 @@ end)
 -- 2. NOTIFIKASI & MUSIK BUAH
 createSectionHeader(125, "--- 2. NOTIFIKASI & MUSIK BUAH ---")
 createAutoToggle(150, "Fruit Notifier", "FruitNotifier", function(val)
-    NotifFrame.Visible = val
+    if val then
+        animateNotifIn()
+    else
+        animateNotifOut()
+    end
 end)
 
 local SoundTextBox = Instance.new("TextBox")
@@ -609,53 +642,25 @@ end)
 
 createAutoToggle(235, "Custom Sound Buah", "CustomSoundEnabled", nil)
 
--- 3. POSISI NOTIFIKASI
-createSectionHeader(285, "--- 3. POSISI NOTIFIKASI (0-100, 50=Tengah) ---")
+-- 3. KETINGGIAN POSISI NOTIFIKASI DARI ATAS LAYAR
+createSectionHeader(285, "--- 3. JARAK NOTIFIKASI DARI ATAS LAYAR ---")
 local NotifPosLabel = Instance.new("TextLabel")
 NotifPosLabel.Size = UDim2.new(0.9, 0, 0, 20)
 NotifPosLabel.Position = UDim2.new(0.05, 0, 0, 310)
 NotifPosLabel.BackgroundTransparency = 1
-NotifPosLabel.Text = "Atur Posisi (X: 0=Kiri, 50=Tengah, 100=Kanan)"
+NotifPosLabel.Text = "Jarak Pixel dari Atas (Cth: 10 = Paling Atas, 50 = Agak Bawah)"
 NotifPosLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 NotifPosLabel.TextSize, NotifPosLabel.Font = 10, Enum.Font.Gotham
 NotifPosLabel.TextXAlignment = Enum.TextXAlignment.Left
 NotifPosLabel.Parent = Container
 
-NotifXBox = Instance.new("TextBox")
-NotifXBox.Size = UDim2.new(0.43, 0, 0, 35)
-NotifXBox.Position = UDim2.new(0.05, 0, 0, 335)
-NotifXBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
-NotifXBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-NotifXBox.Text = tostring(Settings.NotifOffsetX)
-NotifXBox.PlaceholderText = "X (0 s/d 100)"
-NotifXBox.TextSize, NotifXBox.Font = 10, Enum.Font.Gotham
-NotifXBox.Parent = Container
-
-local nxCorner = Instance.new("UICorner")
-nxCorner.CornerRadius = UDim.new(0, 6)
-nxCorner.Parent = NotifXBox
-
-NotifXBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        local num = tonumber(NotifXBox.Text)
-        if num then
-            if num > 100 then num = 100 end
-            if num < 0 then num = 0 end
-            Settings.NotifOffsetX = num
-            NotifXBox.Text = tostring(num)
-            updateNotifPosition()
-            saveSettings()
-        end
-    end
-end)
-
 NotifYBox = Instance.new("TextBox")
-NotifYBox.Size = UDim2.new(0.43, 0, 0, 35)
-NotifYBox.Position = UDim2.new(0.52, 0, 0, 335)
+NotifYBox.Size = UDim2.new(0.9, 0, 0, 35)
+NotifYBox.Position = UDim2.new(0.05, 0, 0, 335)
 NotifYBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 NotifYBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifYBox.Text = tostring(Settings.NotifOffsetY)
-NotifYBox.PlaceholderText = "Y (0 s/d 100)"
+NotifYBox.PlaceholderText = "Jarak Pixel (Misal: 20)"
 NotifYBox.TextSize, NotifYBox.Font = 10, Enum.Font.Gotham
 NotifYBox.Parent = Container
 
@@ -667,23 +672,23 @@ NotifYBox.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         local num = tonumber(NotifYBox.Text)
         if num then
-            if num > 100 then num = 100 end
+            if num > 300 then num = 300 end
             if num < 0 then num = 0 end
             Settings.NotifOffsetY = num
             NotifYBox.Text = tostring(num)
-            updateNotifPosition()
+            animateNotifIn()
             saveSettings()
         end
     end
 end)
 
--- Tombol Reset Posisi Notifikasi ke 50 (Tengah)
+-- Tombol Reset Posisi Notifikasi ke Default Atas (20 Pixel)
 local ResetPosBtn = Instance.new("TextButton")
 ResetPosBtn.Size = UDim2.new(0.9, 0, 0, 30)
 ResetPosBtn.Position = UDim2.new(0.05, 0, 0, 380)
 ResetPosBtn.BackgroundColor3 = Color3.fromRGB(200, 120, 0)
 ResetPosBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ResetPosBtn.Text = "Reset Posisi Notif ke Tengah (50, 50)"
+ResetPosBtn.Text = "Reset Posisi Notif ke Atas (20 Pixel)"
 ResetPosBtn.TextSize, ResetPosBtn.Font = 10, Enum.Font.GothamBold
 ResetPosBtn.Parent = Container
 
@@ -692,11 +697,9 @@ rpbCorner.CornerRadius = UDim.new(0, 6)
 rpbCorner.Parent = ResetPosBtn
 
 ResetPosBtn.MouseButton1Click:Connect(function()
-    Settings.NotifOffsetX = 50
-    Settings.NotifOffsetY = 50
-    if NotifXBox then NotifXBox.Text = "50" end
-    if NotifYBox then NotifYBox.Text = "50" end
-    updateNotifPosition()
+    Settings.NotifOffsetY = 20
+    if NotifYBox then NotifYBox.Text = "20" end
+    animateNotifIn()
     saveSettings()
 end)
 
@@ -776,7 +779,7 @@ HeightTextBox.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- 5. TARGET PLAYER (LEVEL, NAMA, & BUAH SAJA)
+-- 5. TARGET PLAYER
 createSectionHeader(595, "--- 5. TARGET PLAYER (LEVEL, NAMA, & BUAH) ---")
 local TargetStatusLabel = Instance.new("TextLabel")
 TargetStatusLabel.Size = UDim2.new(0.9, 0, 0, 20)
@@ -838,14 +841,12 @@ local function refreshPlayerList()
             local pFruit = "Tidak Ada Buah"
             
             pcall(function()
-                -- Ambil Level
                 if p:FindFirstChild("Data") and p.Data:FindFirstChild("Level") then
                     pLevel = tostring(p.Data.Level.Value)
                 elseif p:FindFirstChild("leaderstats") and p.leaderstats:FindFirstChild("Level") then
                     pLevel = tostring(p.leaderstats.Level.Value)
                 end
 
-                -- Ambil Buah
                 if p:FindFirstChild("Data") and p.Data:FindFirstChild("DevilFruit") then
                     local dfValue = tostring(p.Data.DevilFruit.Value)
                     if dfValue ~= "" and dfValue ~= "None" and dfValue ~= "nil" and dfValue ~= "Combat" then
@@ -912,3 +913,6 @@ end
 
 OpenButton.MouseButton1Click:Connect(toggleMenu)
 CloseButton.MouseButton1Click:Connect(toggleMenu)
+
+-- Munculkan animasi awal saat script pertama dijalankan
+animateNotifIn()
