@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -14,59 +15,57 @@ local Camera = Workspace.CurrentCamera
 -- Nama file untuk Auto Save Setting
 local FileName = "BloxFruitsHubSettings.json"
 
--- Pengaturan Default & Status Fitur (Posisi Notif di-reset ke 50/Tengah)
+-- Pengaturan Default & Status Fitur
 local Settings = {
-	FruitNotifier = true,
-	AutoJoinEnabled = true,
-	SelectedTeam = "Pirates", -- Pilihan: "Pirates" atau "Marines"
-	FpsBoost = false,
-	CustomSoundEnabled = false,
-	SoundId = "", -- ID Audio Roblox
-	FlightSpeed = 150,      -- Kecepatan terbang mulus
-	FlyHeight = 5,          -- Ketinggian terbang (Maksimal 10)
-	AutoTeleportFruit = false, 
-	AutoFlyChest = false,     
-	AutoFlyPlayer = false,    
-	TargetPlayerName = "",     
-	-- Pengaturan Posisi Notifikasi di-reset ke 50 (Tengah-tengah)
-	NotifOffsetX = 50,      -- 50 = Tengah-tengah
-	NotifOffsetY = 50       -- 50 = Tengah-tengah
+    FruitNotifier = true,
+    AutoJoinEnabled = true,
+    SelectedTeam = "Pirates",
+    FpsBoost = false,
+    CustomSoundEnabled = false,
+    SoundId = "",
+    FlightSpeed = 150,
+    FlyHeight = 5,
+    AutoTeleportFruit = false, 
+    AutoFlyChest = false,     
+    AutoFlyPlayer = false,     
+    TargetPlayerName = "",     
+    NotifOffsetX = 50,     
+    NotifOffsetY = 50        
 }
 
 -- Fungsi Load Settings
 local function loadSettings()
-	if readfile and pcall(readfile, FileName) then
-		local success, data = pcall(function()
-			return HttpService:JSONDecode(readfile(FileName))
-		end)
-		if success and type(data) == "table" then
-			for k, v in pairs(data) do
-				Settings[k] = v
-			end
-		end
-	end
+    if readfile and pcall(readfile, FileName) then
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(readfile(FileName))
+        end)
+        if success and type(data) == "table" then
+            for k, v in pairs(data) do
+                Settings[k] = v
+            end
+        end
+    end
 end
 
 loadSettings()
 
--- Paksa reset posisi ke 50 jika nilainya masih nyangkut di bawah atau belum diatur pas
 if Settings.NotifOffsetX < 0 or Settings.NotifOffsetX > 100 then Settings.NotifOffsetX = 50 end
 if Settings.NotifOffsetY < 0 or Settings.NotifOffsetY > 100 then Settings.NotifOffsetY = 50 end
 
 -- Fungsi Save Settings
 local function saveSettings()
-	if writefile then
-		local success, encoded = pcall(function()
-			return HttpService:JSONEncode(Settings)
-		end)
-		if success then
-			writefile(FileName, encoded)
-		end
-	end
+    if writefile then
+        local success, encoded = pcall(function()
+            return HttpService:JSONEncode(Settings)
+        end)
+        if success then
+            writefile(FileName, encoded)
+        end
+    end
 end
 saveSettings()
 
--- 1. ScreenGui Utama (Aman dari CoreGui Protect)
+-- 1. ScreenGui Utama
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsHub"
 ScreenGui.ResetOnSpawn = false
@@ -74,21 +73,21 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 pcall(function()
-	if syn and syn.protect_gui then
-		syn.protect_gui(ScreenGui)
-		ScreenGui.Parent = CoreGui
-	elseif gethui then
-		ScreenGui.Parent = gethui()
-	else
-		ScreenGui.Parent = CoreGui
-	end
+    if syn and syn.protect_gui then
+        syn.protect_gui(ScreenGui)
+        ScreenGui.Parent = CoreGui
+    elseif gethui then
+        ScreenGui.Parent = gethui()
+    else
+        ScreenGui.Parent = CoreGui
+    end
 end)
 
 if not ScreenGui.Parent or ScreenGui.Parent == nil then
-	ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Notifikasi Buah di Layar dengan Posisi Dinamis (0 s/d 100, 50 = Tengah-tengah)
+-- Notifikasi Buah di Layar
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 340, 0, 45)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -97,9 +96,9 @@ NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
 
 local function updateNotifPosition()
-	local scaleX = Settings.NotifOffsetX / 100
-	local scaleY = Settings.NotifOffsetY / 100
-	NotifFrame.Position = UDim2.new(scaleX, 0, scaleY, 0)
+    local scaleX = Settings.NotifOffsetX / 100
+    local scaleY = Settings.NotifOffsetY / 100
+    NotifFrame.Position = UDim2.new(scaleX, 0, scaleY, 0)
 end
 updateNotifPosition()
 
@@ -112,12 +111,12 @@ UIStroke.Thickness = 2
 UIStroke.Parent = NotifFrame
 
 task.spawn(function()
-	while true do
-		for i = 0, 1, 0.01 do
-			UIStroke.Color = Color3.fromHSV(i, 1, 1)
-			task.wait(0.05)
-		end
-	end
+    while true do
+        for i = 0, 1, 0.01 do
+            UIStroke.Color = Color3.fromHSV(i, 1, 1)
+            task.wait(0.05)
+        end
+    end
 end)
 
 local NotifText = Instance.new("TextLabel")
@@ -128,320 +127,306 @@ NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 11, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
--- Fungsi Suara Notifikasi Buah
 local function playFruitSound()
-	if Settings.CustomSoundEnabled and Settings.SoundId ~= "" then
-		pcall(function()
-			local soundIdNum = Settings.SoundId
-			if not string.find(soundIdNum, "rbxassetid://") then
-				soundIdNum = "rbxassetid://" .. soundIdNum
-			end
-			local sound = Instance.new("Sound")
-			sound.SoundId = soundIdNum
-			sound.Volume = 5
-			sound.Parent = Workspace
-			sound:Play()
-			game:GetService("Debris"):AddItem(sound, 10)
-		end)
-	end
+    if Settings.CustomSoundEnabled and Settings.SoundId ~= "" then
+        pcall(function()
+            local soundIdNum = Settings.SoundId
+            if not string.find(soundIdNum, "rbxassetid://") then
+                soundIdNum = "rbxassetid://" .. soundIdNum
+            end
+            local sound = Instance.new("Sound")
+            sound.SoundId = soundIdNum
+            sound.Volume = 5
+            sound.Parent = Workspace
+            sound:Play()
+            game:GetService("Debris"):AddItem(sound, 10)
+        end)
+    end
 end
 
--- ==========================================
--- FUNGSI DASAR KARAKTER & TERBANG
--- ==========================================
 local function getCharacterRootPart()
-	local character = LocalPlayer.Character
-	if character then
-		return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
-	end
-	return nil
+    local character = LocalPlayer.Character
+    if character then
+        return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
+    end
+    return nil
 end
 
 local function smoothFlyTo(targetCFrame)
-	local rootPart = getCharacterRootPart()
-	if not rootPart then return end
+    local rootPart = getCharacterRootPart()
+    if not rootPart then return end
 
-	local currentSpeed = Settings.FlightSpeed
-	if currentSpeed > 1000 then currentSpeed = 1000 end
-	if currentSpeed < 20 then currentSpeed = 20 end
+    local currentSpeed = Settings.FlightSpeed
+    if currentSpeed > 1000 then currentSpeed = 1000 end
+    if currentSpeed < 20 then currentSpeed = 20 end
 
-	local currentHeight = Settings.FlyHeight
-	if currentHeight > 10 then currentHeight = 10 end
-	if currentHeight < 0 then currentHeight = 0 end
+    local currentHeight = Settings.FlyHeight
+    if currentHeight > 10 then currentHeight = 10 end
+    if currentHeight < 0 then currentHeight = 0 end
 
-	local adjustedTargetCFrame = targetCFrame + Vector3.new(0, currentHeight, 0)
+    local adjustedTargetCFrame = targetCFrame + Vector3.new(0, currentHeight, 0)
+    local distance = (rootPart.Position - adjustedTargetCFrame.Position).Magnitude
+    local duration = distance / currentSpeed
+    if duration < 0.02 then return end
 
-	local distance = (rootPart.Position - adjustedTargetCFrame.Position).Magnitude
-	local duration = distance / currentSpeed
-	if duration < 0.05 then return end
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    
+    if humanoid then
+        humanoid.PlatformStand = true
+    end
 
-	local character = LocalPlayer.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	
-	if humanoid then
-		humanoid.PlatformStand = true
-	end
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Parent = rootPart
 
-	local bodyVelocity = Instance.new("BodyVelocity")
-	bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-	bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-	bodyVelocity.Parent = rootPart
+    local bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bodyGyro.CFrame = rootPart.CFrame
+    bodyGyro.Parent = rootPart
 
-	local bodyGyro = Instance.new("BodyGyro")
-	bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-	bodyGyro.CFrame = rootPart.CFrame
-	bodyGyro.Parent = rootPart
+    local startTime = tick()
+    local startCFrame = rootPart.CFrame
 
-	Camera.CameraType = Enum.CameraType.Custom
+    while tick() - startTime < duration do
+        if not rootPart or not character or not character.Parent then break end
+        local alpha = math.clamp((tick() - startTime) / duration, 0, 1)
+        local smoothAlpha = alpha * (2 - alpha)
+        
+        rootPart.CFrame = startCFrame:Lerp(adjustedTargetCFrame, smoothAlpha)
+        bodyGyro.CFrame = rootPart.CFrame
+        RunService.RenderStepped:Wait()
+    end
 
-	local startTime = tick()
-	local startCFrame = rootPart.CFrame
+    rootPart.CFrame = adjustedTargetCFrame
 
-	while tick() - startTime < duration do
-		if not rootPart or not character or not character.Parent then break end
-		local alpha = math.clamp((tick() - startTime) / duration, 0, 1)
-		local smoothAlpha = alpha * (2 - alpha)
-		
-		rootPart.CFrame = startCFrame:Lerp(adjustedTargetCFrame, smoothAlpha)
-		bodyGyro.CFrame = rootPart.CFrame
-		RunService.RenderStepped:Wait()
-	end
+    if bodyVelocity then bodyVelocity:Destroy() end
+    if bodyGyro then bodyGyro:Destroy() end
 
-	rootPart.CFrame = adjustedTargetCFrame
-
-	if bodyVelocity then bodyVelocity:Destroy() end
-	if bodyGyro then bodyGyro:Destroy() end
-
-	if humanoid then
-		humanoid.PlatformStand = false
-	end
+    if humanoid then
+        humanoid.PlatformStand = false
+    end
 end
 
 -- ==========================================
--- SISTEM CHEST (DENGAN BLACKLIST/MEMORI ANTI-STUCK)
+-- SISTEM CHEST (TANPA DELAY & AUTO LOOP)
 -- ==========================================
 local function getPositionOfObj(obj)
-	if obj:IsA("BasePart") then
-		return obj.Position
-	elseif obj:IsA("Model") and obj.PrimaryPart then
-		return obj.PrimaryPart.Position
-	elseif obj:FindFirstChildWhichIsA("BasePart") then
-		return obj:FindFirstChildWhichIsA("BasePart").Position
-	end
-	return nil
+    if obj:IsA("BasePart") then
+        return obj.Position
+    elseif obj:IsA("Model") and obj.PrimaryPart then
+        return obj.PrimaryPart.Position
+    elseif obj:FindFirstChildWhichIsA("BasePart") then
+        return obj:FindFirstChildWhichIsA("BasePart").Position
+    end
+    return nil
 end
 
--- Menyimpan daftar chest yang gagal/sudah diambil agar tidak ditarget ulang terus-menerus
 local DeadChests = {}
 
 local function getChestIslands()
-	local allChests = {}
-	for _, obj in ipairs(Workspace:GetDescendants()) do
-		local nameLower = obj.Name:lower()
-		-- Cek apakah objek adalah chest dan belum masuk daftar gagal/diambil
-		if (nameLower:find("chest") or nameLower:find("peti") or nameLower:find("treasure")) and not DeadChests[obj] then
-			local pos = getPositionOfObj(obj)
-			if pos then
-				table.insert(allChests, {Object = obj, Position = pos})
-			end
-		end
-	end
+    local allChests = {}
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        local nameLower = obj.Name:lower()
+        if (nameLower:find("chest") or nameLower:find("peti") or nameLower:find("treasure")) and not DeadChests[obj] then
+            local pos = getPositionOfObj(obj)
+            if pos then
+                table.insert(allChests, {Object = obj, Position = pos})
+            end
+        end
+    end
 
-	local islands = {}
-	for _, chest in ipairs(allChests) do
-		local placed = false
-		for _, island in ipairs(islands) do
-			if (island.Center - chest.Position).Magnitude < 400 then
-				table.insert(island.Chests, chest)
-				placed = true
-				break
-			end
-		end
-		if not placed then
-			table.insert(islands, {
-				Center = chest.Position,
-				Chests = {chest}
-			})
-		end
-	end
-	return islands
+    local islands = {}
+    for _, chest in ipairs(allChests) do
+        local placed = false
+        for _, island in ipairs(islands) do
+            if (island.Center - chest.Position).Magnitude < 400 then
+                table.insert(island.Chests, chest)
+                placed = true
+                break
+            end
+        end
+        if not placed then
+            table.insert(islands, {
+                Center = chest.Position,
+                Chests = {chest}
+            })
+        end
+    end
+    return islands
 end
 
 -- ==========================================
 -- BACKGROUND SYSTEM
 -- ==========================================
 task.spawn(function()
-	local lastCount = 0
-	while task.wait(1.5) do
-		if Settings.FruitNotifier then
-			local fruitList = {}
-			local targetFruitHandle = nil
+    local lastCount = 0
+    while task.wait(1) do
+        if Settings.FruitNotifier then
+            local fruitList = {}
+            local targetFruitHandle = nil
 
-			for _, obj in ipairs(Workspace:GetChildren()) do
-				if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-					table.insert(fruitList, obj.Name)
-					if not targetFruitHandle then
-						targetFruitHandle = obj.Handle
-					end
-				end
-			end
-			
-			local currentCount = #fruitList
-			if currentCount > 0 then
-				local combinedNames = table.concat(fruitList, ", ")
-				NotifText.Text = "KETEMU (" .. currentCount .. "): " .. combinedNames
-				if currentCount > lastCount then
-					playFruitSound()
-				end
-				lastCount = currentCount
+            for _, obj in ipairs(Workspace:GetChildren()) do
+                if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
+                    table.insert(fruitList, obj.Name)
+                    if not targetFruitHandle then
+                        targetFruitHandle = obj.Handle
+                    end
+                end
+            end
+            
+            local currentCount = #fruitList
+            if currentCount > 0 then
+                local combinedNames = table.concat(fruitList, ", ")
+                NotifText.Text = "KETEMU (" .. currentCount .. "): " .. combinedNames
+                if currentCount > lastCount then
+                    playFruitSound()
+                end
+                lastCount = currentCount
 
-				if Settings.AutoTeleportFruit and targetFruitHandle then
-					local rootPart = getCharacterRootPart()
-					if rootPart and (rootPart.Position - targetFruitHandle.Position).Magnitude > 15 then
-						smoothFlyTo(targetFruitHandle.CFrame)
-					end
-				end
-			else
-				NotifText.Text = "Status: Mencari Buah di Map (Kosong)..."
-				lastCount = 0
-			end
-		end
+                if Settings.AutoTeleportFruit and targetFruitHandle then
+                    local rootPart = getCharacterRootPart()
+                    if rootPart and (rootPart.Position - targetFruitHandle.Position).Magnitude > 15 then
+                        smoothFlyTo(targetFruitHandle.CFrame)
+                    end
+                end
+            else
+                NotifText.Text = "Status: Mencari Buah di Map (Kosong)..."
+                lastCount = 0
+            end
+        end
 
-		if Settings.AutoFlyChest then
-			local rootPart = getCharacterRootPart()
-			if rootPart then
-				local islands = getChestIslands()
-				
-				for i = #islands, 1, -1 do
-					local validChests = {}
-					for _, cData in ipairs(islands[i].Chests) do
-						if cData.Object and cData.Object.Parent then
-							table.insert(validChests, cData)
-						end
-					end
-					islands[i].Chests = validChests
-					if #islands[i].Chests == 0 then
-						table.remove(islands, i)
-					end
-				end
+        if Settings.AutoFlyChest then
+            local rootPart = getCharacterRootPart()
+            if rootPart then
+                local islands = getChestIslands()
+                
+                -- Jika semua chest di map sudah habis/diambil, reset DeadChests agar mengulang dari awal tanpa relog
+                if #islands == 0 then
+                    DeadChests = {}
+                    islands = getChestIslands()
+                end
 
-				if #islands > 0 then
-					table.sort(islands, function(a, b)
-						return (rootPart.Position - a.Center).Magnitude < (rootPart.Position - b.Center).Magnitude
-					end)
+                for i = #islands, 1, -1 do
+                    local validChests = {}
+                    for _, cData in ipairs(islands[i].Chests) do
+                        if cData.Object and cData.Object.Parent then
+                            table.insert(validChests, cData)
+                        end
+                    end
+                    islands[i].Chests = validChests
+                    if #islands[i].Chests == 0 then
+                        table.remove(islands, i)
+                    end
+                end
 
-					local currentIsland = islands[1]
-					if currentIsland and #currentIsland.Chests > 0 then
-						table.sort(currentIsland.Chests, function(a, b)
-							return (rootPart.Position - a.Position).Magnitude < (rootPart.Position - b.Position).Magnitude
-						end)
+                if #islands > 0 then
+                    table.sort(islands, function(a, b)
+                        return (rootPart.Position - a.Center).Magnitude < (rootPart.Position - b.Center).Magnitude
+                    end)
 
-						local targetChestData = currentIsland.Chests[1]
-						local targetChest = targetChestData.Object
-						local targetPos = getPositionOfObj(targetChest)
-						
-						if targetPos then
-							-- Simpan posisi awal sebelum terbang ke chest
-							local posBeforeFly = rootPart.Position
-							
-							-- Terbang menuju chest
-							smoothFlyTo(CFrame.new(targetPos))
-							task.wait(0.3) -- Tunggu sebentar setelah sampai untuk proses pick up game
-							
-							-- Cek apakah chest benar-benar sudah hilang atau masih ada di tempat
-							if not targetChest or not targetChest.Parent or (targetChest.Parent and getPositionOfObj(targetChest) == nil) then
-								-- Jika sudah hilang/diambil, masukkan ke daftar mati agar langsung skip ke chest berikutnya
-								DeadChests[targetChest] = true
-							else
-								-- Jika chest-nya masih ada (artinya belum sempat ke-pick up atau nyangkut), 
-								-- tandai sementara dan paksa lanjut ke chest lain agar tidak stuck!
-								DeadChests[targetChest] = true
-							end
-						end
-					end
-				end
-			end
-		end
+                    local currentIsland = islands[1]
+                    if currentIsland and #currentIsland.Chests > 0 then
+                        table.sort(currentIsland.Chests, function(a, b)
+                            return (rootPart.Position - a.Position).Magnitude < (rootPart.Position - b.Position).Magnitude
+                        end)
 
-		if Settings.AutoFlyPlayer then
-			task.wait(2)
-			local targetPlayer = nil
+                        local targetChestData = currentIsland.Chests[1]
+                        local targetChest = targetChestData.Object
+                        local targetPos = getPositionOfObj(targetChest)
+                        
+                        if targetPos then
+                            -- Terbang langsung tanpa jeda delay (0 delay)
+                            smoothFlyTo(CFrame.new(targetPos))
+                            
+                            -- Tandai chest sebagai selesai dan langsung lanjut ke chest berikutnya
+                            if targetChest then
+                                DeadChests[targetChest] = true
+                            end
+                        end
+                    end
+                end
+            end
+        end
 
-			if Settings.TargetPlayerName ~= "" then
-				for _, p in ipairs(Players:GetPlayers()) do
-					if p ~= LocalPlayer and string.find(p.Name:lower(), Settings.TargetPlayerName:lower()) then
-						targetPlayer = p
-						break
-					end
-				end
-			else
-				local shortestDist = math.huge
-				local rootPart = getCharacterRootPart()
-				if rootPart then
-					for _, p in ipairs(Players:GetPlayers()) do
-						if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-							local dist = (rootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
-							if dist < shortestDist then
-								shortestDist = dist
-								targetPlayer = p
-							end
-						end
-					end
-				end
-			end
+        if Settings.AutoFlyPlayer then
+            task.wait(1)
+            local targetPlayer = nil
 
-			if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-				local rootPart = getCharacterRootPart()
-				if rootPart then
-					smoothFlyTo(targetPlayer.Character.HumanoidRootPart.CFrame)
-					task.wait(1.5)
-				end
-			end
-		end
-	end
+            if Settings.TargetPlayerName ~= "" then
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and string.find(p.Name:lower(), Settings.TargetPlayerName:lower()) then
+                        targetPlayer = p
+                        break
+                    end
+                end
+            else
+                local shortestDist = math.huge
+                local rootPart = getCharacterRootPart()
+                if rootPart then
+                    for _, p in ipairs(Players:GetPlayers()) do
+                        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                            local dist = (rootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                            if dist < shortestDist then
+                                shortestDist = dist
+                                targetPlayer = p
+                            end
+                        end
+                    end
+                end
+            end
+
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local rootPart = getCharacterRootPart()
+                if rootPart then
+                    smoothFlyTo(targetPlayer.Character.HumanoidRootPart.CFrame)
+                end
+            end
+        end
+    end
 end)
 
 -- ==========================================
 -- AUTO JOIN TEAM
 -- ==========================================
 local function joinTeam()
-	if not Settings.AutoJoinEnabled then return end
-	pcall(function()
-		local ReplicatedStorage = game:GetService("ReplicatedStorage")
-		local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-		if remotes and remotes:FindFirstChild("CommF_") then
-			remotes.CommF_:InvokeServer("SetTeam", Settings.SelectedTeam)
-		end
-	end)
+    if not Settings.AutoJoinEnabled then return end
+    pcall(function()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        if remotes and remotes:FindFirstChild("CommF_") then
+            remotes.CommF_:InvokeServer("SetTeam", Settings.SelectedTeam)
+        end
+    end)
 end
 
 LocalPlayer.CharacterAdded:Connect(function()
-	task.wait(2)
-	joinTeam()
+    task.wait(2)
+    joinTeam()
 end)
 task.spawn(function()
-	task.wait(1)
-	joinTeam()
+    task.wait(1)
+    joinTeam()
 end)
 
 -- ==========================================
 -- FPS BOOST FUNCTION
 -- ==========================================
 local function applyFpsBoost(state)
-	if state then
-		Lighting.GlobalShadows = false
-		Lighting.FogEnd = 999999
-		for _, v in ipairs(Workspace:GetDescendants()) do
-			if v:IsA("BasePart") then
-				v.Material = Enum.Material.SmoothPlastic
-				v.Reflectance = 0
-			elseif v:IsA("Decal") or v:IsA("Texture") then
-				v.Transparency = 1
-			end
-		end
-	else
-		Lighting.GlobalShadows = true
-	end
+    if state then
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 999999
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.Material = Enum.Material.SmoothPlastic
+                v.Reflectance = 0
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 1
+            end
+        end
+    else
+        Lighting.GlobalShadows = true
+    end
 end
 if Settings.FpsBoost then applyFpsBoost(true) end
 
@@ -523,44 +508,44 @@ Container.ScrollBarThickness = 4
 Container.Parent = MainFrame
 
 local function createSectionHeader(posY, text)
-	local lbl = Instance.new("TextLabel")
-	lbl.Size = UDim2.new(0.9, 0, 0, 25)
-	lbl.Position = UDim2.new(0.05, 0, 0, posY)
-	lbl.BackgroundTransparency = 1
-	lbl.Text = text
-	lbl.TextColor3 = Color3.fromRGB(0, 200, 255)
-	lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
-	lbl.TextXAlignment = Enum.TextXAlignment.Left
-	lbl.Parent = Container
-	return lbl
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.9, 0, 0, 25)
+    lbl.Position = UDim2.new(0.05, 0, 0, posY)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(0, 200, 255)
+    lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = Container
+    return lbl
 end
 
 local function createAutoToggle(posY, text, settingKey, callback)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0.9, 0, 0, 35)
-	btn.Position = UDim2.new(0.05, 0, 0, posY)
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 11
-	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	
-	local state = Settings[settingKey]
-	btn.Text = text .. ": " .. (state and "ON" or "OFF")
-	btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
-	btn.Parent = Container
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.Position = UDim2.new(0.05, 0, 0, posY)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    
+    local state = Settings[settingKey]
+    btn.Text = text .. ": " .. (state and "ON" or "OFF")
+    btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
+    btn.Parent = Container
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = btn
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
 
-	btn.MouseButton1Click:Connect(function()
-		Settings[settingKey] = not Settings[settingKey]
-		local newState = Settings[settingKey]
-		btn.Text = text .. ": " .. (newState and "ON" or "OFF")
-		btn.BackgroundColor3 = newState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
-		saveSettings()
-		if callback then callback(newState) end
-	end)
-	return btn
+    btn.MouseButton1Click:Connect(function()
+        Settings[settingKey] = not Settings[settingKey]
+        local newState = Settings[settingKey]
+        btn.Text = text .. ": " .. (newState and "ON" or "OFF")
+        btn.BackgroundColor3 = newState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
+        saveSettings()
+        if callback then callback(newState) end
+    end)
+    return btn
 end
 
 -- ==========================================
@@ -583,25 +568,25 @@ tcbCorner.CornerRadius = UDim.new(0, 6)
 tcbCorner.Parent = TeamConfigBtn
 
 TeamConfigBtn.MouseButton1Click:Connect(function()
-	if Settings.SelectedTeam == "Pirates" then
-		Settings.SelectedTeam = "Marines"
-		TeamConfigBtn.Text = "Auto Join Tim: [ Marines ] (Klik Ganti)"
-	else
-		Settings.SelectedTeam = "Pirates"
-		TeamConfigBtn.Text = "Auto Join Tim: [ Pirates ] (Klik Ganti)"
-	end
-	joinTeam()
-	saveSettings()
+    if Settings.SelectedTeam == "Pirates" then
+        Settings.SelectedTeam = "Marines"
+        TeamConfigBtn.Text = "Auto Join Tim: [ Marines ] (Klik Ganti)"
+    else
+        Settings.SelectedTeam = "Pirates"
+        TeamConfigBtn.Text = "Auto Join Tim: [ Pirates ] (Klik Ganti)"
+    end
+    joinTeam()
+    saveSettings()
 end)
 
 createAutoToggle(75, "Status Auto Join Tim", "AutoJoinEnabled", function()
-	joinTeam()
+    joinTeam()
 end)
 
 -- 2. NOTIFIKASI & MUSIK BUAH
 createSectionHeader(125, "--- 2. NOTIFIKASI & MUSIK BUAH ---")
 createAutoToggle(150, "Fruit Notifier", "FruitNotifier", function(val)
-	NotifFrame.Visible = val
+    NotifFrame.Visible = val
 end)
 
 local SoundTextBox = Instance.new("TextBox")
@@ -619,15 +604,15 @@ stCorner.CornerRadius = UDim.new(0, 6)
 stCorner.Parent = SoundTextBox
 
 SoundTextBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		Settings.SoundId = SoundTextBox.Text
-		saveSettings()
-	end
+    if enterPressed then
+        Settings.SoundId = SoundTextBox.Text
+        saveSettings()
+    end
 end)
 
 createAutoToggle(235, "Custom Sound Buah", "CustomSoundEnabled", nil)
 
--- 3. POSISI NOTIFIKASI (0 s/d 100, 50 = Tengah)
+-- 3. POSISI NOTIFIKASI
 createSectionHeader(285, "--- 3. POSISI NOTIFIKASI (0-100, 50=Tengah) ---")
 local NotifPosLabel = Instance.new("TextLabel")
 NotifPosLabel.Size = UDim2.new(0.9, 0, 0, 20)
@@ -654,17 +639,17 @@ nxCorner.CornerRadius = UDim.new(0, 6)
 nxCorner.Parent = NotifXBox
 
 NotifXBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		local num = tonumber(NotifXBox.Text)
-		if num then
-			if num > 100 then num = 100 end
-			if num < 0 then num = 0 end
-			Settings.NotifOffsetX = num
-			NotifXBox.Text = tostring(num)
-			updateNotifPosition()
-			saveSettings()
-		end
-	end
+    if enterPressed then
+        local num = tonumber(NotifXBox.Text)
+        if num then
+            if num > 100 then num = 100 end
+            if num < 0 then num = 0 end
+            Settings.NotifOffsetX = num
+            NotifXBox.Text = tostring(num)
+            updateNotifPosition()
+            saveSettings()
+        end
+    end
 end)
 
 local NotifYBox = Instance.new("TextBox")
@@ -682,17 +667,17 @@ nyCorner.CornerRadius = UDim.new(0, 6)
 nyCorner.Parent = NotifYBox
 
 NotifYBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		local num = tonumber(NotifYBox.Text)
-		if num then
-			if num > 100 then num = 100 end
-			if num < 0 then num = 0 end
-			Settings.NotifOffsetY = num
-			NotifYBox.Text = tostring(num)
-			updateNotifPosition()
-			saveSettings()
-		end
-	end
+    if enterPressed then
+        local num = tonumber(NotifYBox.Text)
+        if num then
+            if num > 100 then num = 100 end
+            if num < 0 then num = 0 end
+            Settings.NotifOffsetY = num
+            NotifYBox.Text = tostring(num)
+            updateNotifPosition()
+            saveSettings()
+        end
+    end
 end)
 
 -- 4. KECEPATAN & KETINGGIAN TERBANG
@@ -722,16 +707,16 @@ stbCorner.CornerRadius = UDim.new(0, 6)
 stbCorner.Parent = SpeedTextBox
 
 SpeedTextBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		local num = tonumber(SpeedTextBox.Text)
-		if num then
-			if num > 1000 then num = 1000 end
-			if num < 20 then num = 20 end
-			Settings.FlightSpeed = num
-			SpeedTextBox.Text = tostring(num)
-			saveSettings()
-		end
-	end
+    if enterPressed then
+        local num = tonumber(SpeedTextBox.Text)
+        if num then
+            if num > 1000 then num = 1000 end
+            if num < 20 then num = 20 end
+            Settings.FlightSpeed = num
+            SpeedTextBox.Text = tostring(num)
+            saveSettings()
+        end
+    end
 end)
 
 local HeightLabel = Instance.new("TextLabel")
@@ -759,20 +744,20 @@ htbCorner.CornerRadius = UDim.new(0, 6)
 htbCorner.Parent = HeightTextBox
 
 HeightTextBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		local num = tonumber(HeightTextBox.Text)
-		if num then
-			if num > 10 then num = 10 end
-			if num < 0 then num = 0 end
-			Settings.FlyHeight = num
-			HeightTextBox.Text = tostring(num)
-			saveSettings()
-		end
-	end
+    if enterPressed then
+        local num = tonumber(HeightTextBox.Text)
+        if num then
+            if num > 10 then num = 10 end
+            if num < 0 then num = 0 end
+            Settings.FlyHeight = num
+            HeightTextBox.Text = tostring(num)
+            saveSettings()
+        end
+    end
 end)
 
--- 5. TARGET PLAYER
-createSectionHeader(555, "--- 5. TARGET PLAYER ---")
+-- 5. TARGET PLAYER (DENGAN LEVEL & BUAH)
+createSectionHeader(555, "--- 5. TARGET PLAYER (DENGAN LEVEL & BUAH) ---")
 local TargetStatusLabel = Instance.new("TextLabel")
 TargetStatusLabel.Size = UDim2.new(0.9, 0, 0, 20)
 TargetStatusLabel.Position = UDim2.new(0.05, 0, 0, 580)
@@ -815,40 +800,54 @@ rtbCorner.CornerRadius = UDim.new(0, 6)
 rtbCorner.Parent = ResetTargetBtn
 
 ResetTargetBtn.MouseButton1Click:Connect(function()
-	Settings.TargetPlayerName = ""
-	TargetStatusLabel.Text = "Target Aktif: [ Terdekat / Otomatis ]"
-	saveSettings()
+    Settings.TargetPlayerName = ""
+    TargetStatusLabel.Text = "Target Aktif: [ Terdekat / Otomatis ]"
+    saveSettings()
 end)
 
 local function refreshPlayerList()
-	for _, child in ipairs(PlayerListScroll:GetChildren()) do
-		if child:IsA("TextButton") then
-			child:Destroy()
-		end
-	end
+    for _, child in ipairs(PlayerListScroll:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
 
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer then
-			local pBtn = Instance.new("TextButton")
-			pBtn.Size = UDim2.new(1, -6, 0, 30)
-			pBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
-			pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-			pBtn.Text = "  👤 " .. p.Name .. " (" .. p.DisplayName .. ")"
-			pBtn.TextSize, pBtn.Font = 10, Enum.Font.Gotham
-			pBtn.TextXAlignment = Enum.TextXAlignment.Left
-			pBtn.Parent = PlayerListScroll
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local pLevel = "?"
+            local pFruit = "Tidak Ada"
+            
+            pcall(function()
+                if p.Data and p.Data:FindFirstChild("Level") then
+                    pLevel = tostring(p.Data.Level.Value)
+                end
+                if p.Backpack and p.Backpack:FindFirstChildOfClass("Tool") then
+                    pFruit = p.Backpack:FindFirstChildOfClass("Tool").Name
+                elseif p.Character and p.Character:FindFirstChildOfClass("Tool") then
+                    pFruit = p.Character:FindFirstChildOfClass("Tool").Name
+                end
+            end)
 
-			local pBtnCorner = Instance.new("UICorner")
-			pBtnCorner.CornerRadius = UDim.new(0, 4)
-			pBtnCorner.Parent = pBtn
+            local pBtn = Instance.new("TextButton")
+            pBtn.Size = UDim2.new(1, -6, 0, 35)
+            pBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+            pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            pBtn.Text = " 👤 " .. p.Name .. " | Lvl: " .. pLevel .. " | Buah: " .. pFruit
+            pBtn.TextSize, pBtn.Font = 9, Enum.Font.Gotham
+            pBtn.TextXAlignment = Enum.TextXAlignment.Left
+            pBtn.Parent = PlayerListScroll
 
-			pBtn.MouseButton1Click:Connect(function()
-				Settings.TargetPlayerName = p.Name
-				TargetStatusLabel.Text = "Target Aktif: " .. p.Name
-				saveSettings()
-			end)
-		end
-	end
+            local pBtnCorner = Instance.new("UICorner")
+            pBtnCorner.CornerRadius = UDim.new(0, 4)
+            pBtnCorner.Parent = pBtn
+
+            pBtn.MouseButton1Click:Connect(function()
+                Settings.TargetPlayerName = p.Name
+                TargetStatusLabel.Text = "Target Aktif: " .. p.Name
+                saveSettings()
+            end)
+        end
+    end
 end
 
 Players.PlayerAdded:Connect(refreshPlayerList)
@@ -858,10 +857,10 @@ task.spawn(refreshPlayerList)
 -- 6. FITUR AUTOMATIC LAINNYA
 createSectionHeader(780, "--- 6. FITUR AUTOMATIC LAINNYA ---")
 createAutoToggle(805, "Teleport ke Buah", "AutoTeleportFruit", nil)
-createAutoToggle(850, "Auto Collect Chest (Pulau Terdekat & Pindah)", "AutoFlyChest", nil)
+createAutoToggle(850, "Auto Collect Chest (Tanpa Delay & Auto Loop)", "AutoFlyChest", nil)
 createAutoToggle(895, "Teleport ke Player", "AutoFlyPlayer", nil)
 createAutoToggle(940, "FPS Boost", "FpsBoost", function(val)
-	applyFpsBoost(val)
+    applyFpsBoost(val)
 end)
 
 -- ==========================================
@@ -869,16 +868,20 @@ end)
 -- ==========================================
 local menuVisible = false 
 local function toggleMenu()
-	menuVisible = not menuVisible
-	if menuVisible then
-		MainFrame.Visible = true
-		TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 420, 0, 340)}):Play()
-	else
-		local tween = TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 420, 0, 0)})
-		tween:Play()
-		tween.Completed:Wait()
-		MainFrame.Visible = false
-	end
+    menuVisible = not menuVisible
+    if menuVisible then
+        MainFrame.Visible = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 420, 0, 340)}):Play()
+    else
+        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)})
+        tween:Play()
+        tween.Completed:Connect(function()
+            if not menuVisible then
+                MainFrame.Visible = false
+                MainFrame.Size = UDim2.new(0, 420, 0, 340)
+            end
+        end)
+    end
 end
 
 OpenButton.MouseButton1Click:Connect(toggleMenu)
