@@ -1,210 +1,137 @@
--- Jalankan script ini menggunakan Executor yang mendukung fungsi file (writefile/readfile) seperti Delta, Hydrogen, Synapse, dll.
+-- [[ GURITA HUB - AUTO JOIN TEAM MODULE ]] --
 
 local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
-local CoreGui = game:GetService("CoreGui")
-local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
 
-local LocalPlayer = Players.LocalPlayer
-local PlaceId = game.PlaceId
+local player = Players.LocalPlayer
 
--- Nama file untuk menyimpan pengaturan otomatis
-local FileName = "BloxFruitsHopSettings.json"
-
--- Pengaturan Default
-local Settings = {
-	AutoHopEnabled = false
+-- PENGATURAN DEFAULT
+local config = {
+	autoJoinTeamActive = false,
+	selectedTeam = "Pirates"
 }
 
--- Fungsi Load Settings
-local function loadSettings()
-	if readfile and pcall(readfile, FileName) then
-		local success, data = pcall(function()
-			return HttpService:JSONDecode(readfile(FileName))
-		end)
-		if success and type(data) == "table" then
-			for k, v in pairs(data) do
-				Settings[k] = v
-			end
-		end
-	end
-end
-
--- Fungsi Save Settings
-local function saveSettings()
-	if writefile then
-		local success, encoded = pcall(function()
-			return HttpService:JSONEncode(Settings)
-		end)
-		if success then
-			writefile(FileName, encoded)
-		end
-	end
-end
-
-loadSettings()
-
--- 1. ScreenGui Utama
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsModernHop"
-ScreenGui.ResetOnSpawn = false
-pcall(function()
-	ScreenGui.Parent = CoreGui
-end)
-if not ScreenGui.Parent then
-	ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
--- 2. Tombol Mengambang (Floating Button) untuk Buka/Tutup Menu
-local OpenButton = Instance.new("TextButton")
-OpenButton.Size = UDim2.new(0, 50, 0, 50)
-OpenButton.Position = UDim2.new(0.02, 0, 0.4, 0)
-OpenButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-OpenButton.Text = "MENU"
-OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenButton.TextSize, OpenButton.Font = 12, Enum.Font.GothamBold
-OpenButton.Parent = ScreenGui
-
-local OpenCorner = Instance.new("UICorner")
-OpenCorner.CornerRadius = UDim.new(0, 10)
-OpenCorner.Parent = OpenButton
-
--- 3. Frame Utama (Panel Menu)
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 200)
-MainFrame.Position = UDim2.new(0.5, -130, 0.4, -100)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
-MainCorner.Parent = MainFrame
-
--- Garis Atas / Aksen Dekorasi
-local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(1, 0, 0, 40)
-TopBar.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
-TopBar.BorderSizePixel = 0
-TopBar.Parent = MainFrame
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
-TitleLabel.Position = UDim2.new(0.05, 0, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Server Hop"
-TitleLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-TitleLabel.TextSize, TitleLabel.Font = 14, Enum.Font.GothamBold
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Parent = TopBar
-
--- Tombol Tutup (X) di dalam Menu
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 30, 0, 30)
-CloseButton.Position = UDim2.new(0.85, 0, 0.15, 0)
-CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextSize, CloseButton.Font = 12, Enum.Font.GothamBold
-CloseButton.Parent = TopBar
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
-CloseCorner.Parent = CloseButton
-
--- 4. Tombol Toggle Status On/Off
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0.9, 0, 0, 45)
-ToggleButton.Position = UDim2.new(0.05, 0, 0.28, 0)
-ToggleButton.Font = Enum.Font.GothamSemibold
-ToggleButton.TextSize = 13
-ToggleButton.Parent = MainFrame
-
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 8)
-ToggleCorner.Parent = ToggleButton
-
-local function updateToggleButton()
-	if Settings.AutoHopEnabled then
-		ToggleButton.Text = "Auto Hop: AKTIF (ON)"
-		ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-		ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-	else
-		ToggleButton.Text = "Auto Hop: MATI (OFF)"
-		ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-		ToggleButton.TextColor3 = Color3.fromRGB(180, 180, 180)
-	end
-end
-updateToggleButton()
-
--- 5. Tombol Eksekusi Hop Manual
-local HopButton = Instance.new("TextButton")
-HopButton.Size = UDim2.new(0.9, 0, 0, 45)
-HopButton.Position = UDim2.new(0.05, 0, 0.58, 0)
-HopButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-HopButton.Text = "Pindah Server Sekarang"
-HopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-HopButton.TextSize, HopButton.Font = 13, Enum.Font.GothamSemibold
-HopButton.Parent = MainFrame
-
-local HopCorner = Instance.new("UICorner")
-HopCorner.CornerRadius = UDim.new(0, 8)
-HopCorner.Parent = HopButton
-
--- 6. Logika Server Hop
-local function serverHop()
-	HopButton.Text = "Mencari Server..."
-	HopButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
-	
-	local success, result = pcall(function()
-		local url = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-		return HttpService:JSONDecode(game:HttpGet(url))
+-- ==========================================================
+-- FUNGSI NOTIFIKASI DI LAYAR
+-- ==========================================================
+local function sendNotification(title, text, duration)
+	pcall(function()
+		StarterGui:SetCore("SendNotification", {
+			Title = title,
+			Text = text,
+			Duration = duration or 3
+		})
 	end)
-
-	if success and result and result.data then
-		for _, server in ipairs(result.data) do
-			if server.playing < server.maxPlayers and server.id ~= game.JobId then
-				HopButton.Text = "Berpindah..."
-				TeleportService:TeleportToPlaceInstance(PlaceId, server.id, LocalPlayer)
-				return
-			end
-		end
-	end
-	
-	HopButton.Text = "Gagal, Coba Lagi..."
-	HopButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-	task.wait(2)
-	HopButton.Text = "Pindah Server Sekarang"
-	HopButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 end
 
--- 7. Sistem Buka/Tutup Menu (Animasi Halus)
-local menuVisible = true
-local function toggleMenu()
-	menuVisible = not menuVisible
-	if menuVisible then
-		MainFrame.Visible = true
-		TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 260, 0, 200)}):Play()
-	else
-		local tween = TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 260, 0, 0)})
-		tween:Play()
-		tween.Completed:Wait()
-		MainFrame.Visible = false
+-- ==========================================================
+-- FUNGSI AUTO JOIN TIM
+-- ==========================================================
+local function autoSelectTeam()
+	local re = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+	if re then
+		pcall(function()
+			re:InvokeServer("SetTeam", config.selectedTeam)
+			sendNotification("Gurita Hub", "Berhasil bergabung ke tim: " .. config.selectedTeam, 3)
+		end)
 	end
 end
 
--- Event Tombol
-OpenButton.MouseButton1Click:Connect(toggleMenu)
-CloseButton.MouseButton1Click:Connect(toggleMenu)
+-- ==========================================================
+-- TAMPILAN GUI MENU UTAMA
+-- ==========================================================
+if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
+	player.PlayerGui.GuritaHubGUI:Destroy()
+end
 
-ToggleButton.MouseButton1Click:Connect(function()
-	Settings.AutoHopEnabled = not Settings.AutoHopEnabled
-	updateToggleButton()
-	saveSettings() -- Otomatis simpan data ke file setiap kali diubah
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "GuritaHubGUI"
+screenGui.ResetOnSpawn = false
+
+-- Tombol Buka/Tutup Menu (Ikon Garis Tiga ≡)
+local ToggleMenuBtn = Instance.new("TextButton", screenGui)
+ToggleMenuBtn.Size = UDim2.new(0, 85, 0, 40)
+ToggleMenuBtn.Position = UDim2.new(0, 20, 0.4, 0)
+ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleMenuBtn.Text = "MENU ≡"
+ToggleMenuBtn.TextColor3 = Color3.fromRGB(0, 220, 255)
+ToggleMenuBtn.Font = Enum.Font.GothamBlack
+ToggleMenuBtn.TextSize = 13
+Instance.new("UICorner", ToggleMenuBtn)
+local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
+ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
+ToggleMenuStroke.Thickness = 2
+
+-- Frame Utama Menu
+local Main = Instance.new("Frame", screenGui)
+Main.Size = UDim2.new(0, 240, 0, 180)
+Main.Position = UDim2.new(0.5, -120, 0.5, -90)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Main.Visible = true
+Instance.new("UICorner", Main)
+local Stroke = Instance.new("UIStroke", Main)
+Stroke.Color = Color3.fromRGB(0, 170, 255)
+Stroke.Thickness = 2
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Position = UDim2.new(0, 0, 0, 5)
+Title.Text = "GURITA HUB - TEAM MODULE\nBLOX FRUITS"
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 11
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(0, 170, 255)
+
+local function CreateBtn(pos)
+	local b = Instance.new("TextButton", Main)
+	b.Size = UDim2.new(0, 200, 0, 34)
+	b.Position = pos
+	b.Font = Enum.Font.GothamBlack
+	b.TextSize = 12
+	b.TextColor3 = Color3.new(1, 1, 1)
+	Instance.new("UICorner", b)
+	local s = Instance.new("UIStroke", b)
+	s.Color = Color3.fromRGB(0, 170, 255)
+	s.Thickness = 1.2
+	return b
+end
+
+local TeamBtn        = CreateBtn(UDim2.new(0, 20, 0, 55))
+local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 105))
+
+-- Update Teks & Warna Tombol Berdasarkan Config
+TeamBtn.Text = "Tim: " .. config.selectedTeam
+TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+
+ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
+ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+
+ToggleMenuBtn.MouseButton1Down:Connect(function()
+	Main.Visible = not Main.Visible
 end)
 
-HopButton.MouseButton1Click:Connect(function()
-	serverHop()
+-- ==========================================================
+-- KONTROL TOMBOL INTERAKTIF MENU
+-- ==========================================================
+TeamBtn.MouseButton1Click:Connect(function()
+	if config.selectedTeam == "Pirates" then
+		config.selectedTeam = "Marines"
+	else
+		config.selectedTeam = "Pirates"
+	end
+	TeamBtn.Text = "Tim: " .. config.selectedTeam
+	if config.autoJoinTeamActive then
+		autoSelectTeam()
+	end
+end)
+
+ToggleJoinTeam.MouseButton1Click:Connect(function()
+	config.autoJoinTeamActive = not config.autoJoinTeamActive
+	ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
+	ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+	
+	if config.autoJoinTeamActive then
+		autoSelectTeam()
+	end
 end)
