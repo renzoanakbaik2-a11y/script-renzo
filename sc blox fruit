@@ -1,4 +1,4 @@
--- [[ GURITA HUB V7.0 - ULTIMATE BLOX FRUITS SCRIPT ]] --
+-- [[ GURITA HUB V8.0 - FINAL STABLE BLOX FRUITS ]] --
 
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -11,7 +11,7 @@ local placeId = game.PlaceId
 local SEARCH_DELAY = 4
 
 -- NAMA FILE UNTUK SAVE SETTING PERMANEN
-local CONFIG_FILE = "GuritaHub_v7_Config.json"
+local CONFIG_FILE = "GuritaHub_v8_Config.json"
 
 -- PENGATURAN DEFAULT
 local config = {
@@ -87,10 +87,10 @@ local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
 ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
 ToggleMenuStroke.Thickness = 2
 
--- Frame Utama Menu
-Main = Instance.new("Frame", screenGui)
-Main.Size = UDim2.new(0, 240, 0, 275)
-Main.Position = UDim2.new(0.5, -120, 0.5, -137)
+-- Frame Utama Menu (Tinggi disesuaikan karena tombol paksa tim sudah dihapus)
+local Main = Instance.new("Frame", screenGui)
+Main.Size = UDim2.new(0, 240, 0, 230)
+Main.Position = UDim2.new(0.5, -120, 0.5, -115)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Visible = true
 Instance.new("UICorner", Main)
@@ -101,7 +101,7 @@ Stroke.Thickness = 2
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Position = UDim2.new(0, 0, 0, 5)
-Title.Text = "GURITA HUB V7.0\nBLOX FRUITS MANAGER"
+Title.Text = "GURITA HUB V8.0\nBLOX FRUITS MANAGER"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 11
 Title.BackgroundTransparency = 1
@@ -125,7 +125,6 @@ local ToggleHopBtn    = CreateBtn(UDim2.new(0, 20, 0, 50))
 local ToggleFinderBtn = CreateBtn(UDim2.new(0, 20, 0, 95))
 local TeamBtn         = CreateBtn(UDim2.new(0, 20, 0, 140))
 local ToggleJoinTeam  = CreateBtn(UDim2.new(0, 20, 0, 185))
-local ForceJoinBtn    = CreateBtn(UDim2.new(0, 20, 0, 230))
 
 -- Update Teks & Warna Tombol Berdasarkan Config
 ToggleHopBtn.Text = config.autoHopActive and "Auto Hop: ON" or "Auto Hop: OFF"
@@ -137,11 +136,8 @@ ToggleFinderBtn.BackgroundColor3 = config.fruitFinderActive and Color3.fromRGB(4
 TeamBtn.Text = "Tim: " .. config.selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 
-ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto JoinTeam: OFF"
+ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
 ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-
-ForceJoinBtn.Text = "Paksa Pilih Tim"
-ForceJoinBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
 
 -- Aksi Buka/Tutup Menu
 ToggleMenuBtn.MouseButton1Down:Connect(function()
@@ -149,7 +145,7 @@ ToggleMenuBtn.MouseButton1Down:Connect(function()
 end)
 
 -- ==========================================================
--- FUNGSI PENCARIAN BUAH (Cek Terus, Baru/Lama Ketemu Langsung Ambil)
+-- FUNGSI PENCARIAN BUAH
 -- ==========================================================
 local function findFruit()
 	for _, obj in ipairs(Workspace:GetChildren()) do
@@ -161,12 +157,12 @@ local function findFruit()
 end
 
 -- ==========================================================
--- LOGIKA UTAMA SERVER HOP & PENCARIAN SERVER AMAN (ANTI FULL SERVER)
+-- LOGIKA UTAMA SERVER HOP (DENGAN FILTER MINIMAL 5 PLAYER & LOOP AMAN)
 -- ==========================================================
 local function hopToNewServer()
 	if not config.autoHopActive then return end
 	
-	print("[Blox Fruits] Mencari server publik alternatif...")
+	print("[Blox Fruits] Mencari server publik (Min 5 player, Tidak Penuh)...")
 	local success, result = pcall(function()
 		local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
 		return HttpService:JSONDecode(game:HttpGet(url))
@@ -175,8 +171,8 @@ local function hopToNewServer()
 	if success and result and result.data then
 		local servers = {}
 		for _, server in ipairs(result.data) do
-			-- Pastikan server belum penuh dan bukan server saat ini
-			if server.playing < server.maxPlayers and server.id ~= game.JobId then
+			-- Filter: Minimal 5 pemain, belum penuh, dan bukan server saat ini
+			if server.playing >= 5 and server.playing < server.maxPlayers and server.id ~= game.JobId then
 				table.insert(servers, server.id)
 			end
 		end
@@ -185,12 +181,22 @@ local function hopToNewServer()
 			local randomServerId = servers[math.random(1, #servers)]
 			TeleportService:TeleportToPlaceInstance(placeId, randomServerId, player, { autoHop = true })
 		else
-			-- Jika daftar server habis/penuh, tunggu sebentar lalu ulangi lagi pencarian server
-			task.wait(SEARCH_DELAY)
-			hopToNewServer()
+			-- Jika belum ketemu yang pas, coba longgarkan filter (minimal 1 player) agar tetap jalan
+			for _, server in ipairs(result.data) do
+				if server.playing < server.maxPlayers and server.id ~= game.JobId then
+					table.insert(servers, server.id)
+				end
+			end
+			
+			if #servers > 0 then
+				local randomServerId = servers[math.random(1, #servers)]
+				TeleportService:TeleportToPlaceInstance(placeId, randomServerId, player, { autoHop = true })
+			else
+				task.wait(SEARCH_DELAY)
+				hopToNewServer()
+			end
 		end
 	else
-		-- Jika gagal mengambil API, coba ulang lagi sampai dapat
 		task.wait(SEARCH_DELAY)
 		hopToNewServer()
 	end
@@ -201,13 +207,10 @@ local function startMainLoop()
 		task.wait(2)
 		autoSelectTeam()
 
-		while true do
-			if not config.autoHopActive then
-				task.wait(1)
-				continue
-			end
+		while config.autoHopActive do
+			task.wait(1)
 
-			-- Cek apakah ada buah di server (Baik baru join maupun sudah lama)
+			-- Cek apakah ada buah di server ini
 			if config.fruitFinderActive then
 				local detectedFruit = findFruit()
 				if detectedFruit then
@@ -216,14 +219,12 @@ local function startMainLoop()
 					print("Auto Hop Dihentikan. Karakter diam & teleport ke buah.")
 					print("========================================")
 					
-					-- Matikan Auto Hop agar diam di server ini
 					config.autoHopActive = false
 					saveConfig()
 					
 					ToggleHopBtn.Text = "Auto Hop: OFF (Buah Ketemu)"
 					ToggleHopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
 					
-					-- Teleport instan ke dekat buah
 					if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 						local handle = detectedFruit:FindFirstChild("Handle") or detectedFruit:FindFirstChildWhichIsA("BasePart")
 						if handle then
@@ -234,8 +235,8 @@ local function startMainLoop()
 				end
 			end
 
-			-- Jika tidak ada buah dan Auto Hop aktif, pindah server
-			print("[Blox Fruits] Tidak ada buah. Melakukan Auto Hop ke server lain...")
+			-- Jika tidak ada buah sama sekali, langsung jalankan hop server baru
+			print("[Blox Fruits] Tidak ada buah. Melakukan Auto Hop...")
 			hopToNewServer()
 			break
 		end
@@ -282,10 +283,6 @@ ToggleJoinTeam.MouseButton1Click:Connect(function()
 	saveConfig()
 	ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
 	ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-end)
-
-ForceJoinBtn.MouseButton1Click:Connect(function()
-	autoSelectTeam()
 end)
 
 -- Eksekusi Awal Saat Script Dijalankan
