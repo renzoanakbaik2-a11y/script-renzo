@@ -1,4 +1,4 @@
--- [[ GURITA HUB V19.0 - DELTA TELEPORT TOKEN FIX ]] --
+-- [[ GURITA HUB V21.0 - ULTIMATE FIX HOP & COLLECT ]] --
 
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -9,10 +9,10 @@ local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
-local SEARCH_DELAY = 5
+local SEARCH_DELAY = 6
 
 -- NAMA FILE CONFIGURASI PERMANEN
-local CONFIG_FILE = "GuritaHub_v19_Config.json"
+local CONFIG_FILE = "GuritaHub_v21_Config.json"
 
 -- PENGATURAN DEFAULT
 local config = {
@@ -109,7 +109,7 @@ Stroke.Thickness = 2
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Position = UDim2.new(0, 0, 0, 5)
-Title.Text = "GURITA HUB V19.0\nBLOX FRUITS MANAGER"
+Title.Text = "GURITA HUB V21.0\nBLOX FRUITS MANAGER"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 11
 Title.BackgroundTransparency = 1
@@ -135,7 +135,7 @@ local TeamBtn          = CreateBtn(UDim2.new(0, 20, 0, 128))
 local ToggleJoinTeam   = CreateBtn(UDim2.new(0, 20, 0, 168))
 
 -- Update Teks & Warna Tombol Berdasarkan Config
-ToggleHopBtn.Text = config.autoHopActive and "Auto Hop: ON" or "AutoHop: OFF"
+ToggleHopBtn.Text = config.autoHopActive and "Auto Hop: ON" or "Auto Hop: OFF"
 ToggleHopBtn.BackgroundColor3 = config.autoHopActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
 ToggleCollectBtn.Text = config.autoCollectActive and "Auto Collect: ON" or "Auto Collect: OFF"
@@ -153,11 +153,16 @@ ToggleMenuBtn.MouseButton1Down:Connect(function()
 end)
 
 -- ==========================================================
--- FUNGSI PENCARIAN & GERAK KE BUAH
+-- PENCARIAN & AUTO COLLECT BUAH DIPERLUAS
 -- ==========================================================
 local function findFruit()
+	-- Pencarian mendalam di seluruh isi Workspace untuk mendeteksi buah spawn
 	for _, obj in ipairs(Workspace:GetChildren()) do
-		if obj:IsA("Tool") and (obj.Name:find("Fruit") or obj:FindFirstChild("Handle")) then
+		if obj.Name:find("Fruit") or obj.Name:find("BloxFruit") then
+			return obj
+		end
+		-- Cek jika ada handle di dalam objek
+		if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
 			return obj
 		end
 	end
@@ -166,24 +171,29 @@ end
 
 local function moveToFruit(fruitObj)
 	pcall(function()
-		local handle = fruitObj:FindFirstChild("Handle") or fruitObj:FindFirstChildWhichIsA("BasePart")
-		if handle and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			player.Character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
-			print("[SUKSES] Karakter mendatangi posisi buah: " .. fruitObj.Name)
+		local targetPart = fruitObj:FindFirstChild("Handle") or fruitObj:FindFirstChildWhichIsA("BasePart") or fruitObj
+		if targetPart and targetPart:IsA("BasePart") then
+			task.wait(0.5)
+			local char = player.Character or player.CharacterAdded:Wait()
+			local rootPart = char:WaitForChild("HumanoidRootPart", 3)
+			
+			if rootPart then
+				rootPart.CFrame = targetPart.CFrame + Vector3.new(0, 2, 0)
+				print("[SUKSES] Karakter berhasil mendatangi buah: " .. fruitObj.Name)
+			end
 		end
 	end)
 end
 
 -- ==========================================================
--- LOGIKA SERVER HOP AMAN (BYPASS TELEPORT TOKEN ERROR)
+-- LOGIKA SERVER HOP AMAN (BYPASS DELTA RESTRICTION)
 -- ==========================================================
 local function hopToNewServer()
 	if not config.autoHopActive then return end
 	
-	print("[Blox Fruits] Mencari server publik alternatif...")
-	local site
-	local success = pcall(function()
-		site = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"))
+	print("[Blox Fruits] Menjalankan Server Hop Aman...")
+	local success, site = pcall(function()
+		return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"))
 	end)
 
 	if success and site and site.data then
@@ -198,15 +208,15 @@ local function hopToNewServer()
 
 		if #servers > 0 then
 			local targetServer = servers[math.random(1, #servers)]
-			print("[Blox Fruits] Berpindah server...")
+			print("[Blox Fruits] Berpindah ke server lain...")
 			
-			-- Menggunakan fungsi teleport alternatif yang aman dari error token unauthorized di Delta
+			-- Menggunakan metode teleport standar aman delta
 			local tpSuccess = pcall(function()
 				TeleportService:TeleportToPlaceInstance(placeId, targetServer, player)
 			end)
 			
 			if not tpSuccess then
-				-- Jika gagal, gunakan teleport umum bawaan Roblox
+				task.wait(2)
 				TeleportService:Teleport(placeId, player)
 			end
 		else
@@ -214,6 +224,8 @@ local function hopToNewServer()
 			TeleportService:Teleport(placeId, player)
 		end
 	else
+		-- Jika API publik gagal dibaca executor, langsung paksa ganti server via Teleport standar
+		print("[Blox Fruits] Menggunakan metode hop alternatif...")
 		task.wait(SEARCH_DELAY)
 		TeleportService:Teleport(placeId, player)
 	end
@@ -221,19 +233,17 @@ end
 
 local function startMainLoop()
 	task.spawn(function()
-		-- Jeda loading awal agar game termuat sempurna
 		task.wait(4)
 
 		if not config.autoHopActive then return end
 
-		-- CEK BUAH DI SERVER & KIRIM NOTIFIKASI
 		local detectedFruit = findFruit()
 		if detectedFruit then
 			print("========================================")
 			print("[ADA BUAH] Ditemukan: " .. detectedFruit.Name)
-			print("Auto Hop Dimatikan. Karakter diam & mengambil buah.")
+			print("Auto Hop Dimatikan. Mengambil buah...")
 			print("========================================")
-			sendNotification("Gurita Hub V19", "Ada Buah: " .. detectedFruit.Name .. "!", 6)
+			sendNotification("Gurita Hub V21", "Ada Buah: " .. detectedFruit.Name .. "!", 6)
 			
 			config.autoHopActive = false
 			saveConfig()
@@ -246,11 +256,10 @@ local function startMainLoop()
 			end
 			return
 		else
-			print("[TIDAK ADA BUAH] Tidak ada buah di server ini. Melakukan hop...")
-			sendNotification("Gurita Hub V19", "Tidak ada buah di server ini.", 3)
+			print("[TIDAK ADA BUAH] Melakukan hop server...")
+			sendNotification("Gurita Hub V21", "Tidak ada buah, mencari server...", 3)
 		end
 
-		-- JIKA TIDAK ADA BUAH, LANJUTKAN HOP OTOMATIS
 		if config.autoHopActive then
 			hopToNewServer()
 		end
@@ -303,7 +312,7 @@ ToggleJoinTeam.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Eksekusi Utama Langsung Berjalan Otomatis Saat Skrip Dimuat
+-- Eksekusi Utama
 if config.autoHopActive then
 	startMainLoop()
-end  
+end
