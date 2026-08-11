@@ -12,7 +12,7 @@ local LocalPlayer = Players.LocalPlayer
 -- Nama file untuk Auto Save Setting
 local FileName = "BloxFruitsHubSettings.json"
 
--- Pengaturan Default & Status Fitur (Auto Save Aktif / On otomatis)
+-- Pengaturan Default & Status Fitur
 local Settings = {
 	FruitNotifier = true,
 	AutoJoinEnabled = true,
@@ -63,7 +63,7 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- FITUR 1: NOTIFIKASI BUAH (MULAI DI 50%, KETIK OTOMATIS, TWEEN MENTOK ATAS)
+-- FITUR 1: NOTIFIKASI BUAH & TEKS ANIMASI (MENDETEKSI SEMUA BUAH SEKALIGUS)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 360, 0, 50)
@@ -77,7 +77,7 @@ local NotifCorner = Instance.new("UICorner")
 NotifCorner.CornerRadius = UDim.new(0, 8)
 NotifCorner.Parent = NotifFrame
 
--- Animasi Garis Tepi Rainbow (Rainbow Stroke Khusus Notif)
+-- Animasi Garis Tepi Rainbow
 local UIStroke = Instance.new("UIStroke")
 UIStroke.Thickness = 2
 UIStroke.Parent = NotifFrame
@@ -96,26 +96,23 @@ NotifText.Size = UDim2.new(1, 0, 1, 0)
 NotifText.BackgroundTransparency = 1
 NotifText.Text = ""
 NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
-NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
+NotifText.TextSize, NotifText.Font = 12, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
--- Fungsi Efek Mengetik Otomatis secara Perlahan dan Rapih
+-- Fungsi Efek Mengetik Otomatis
 local function playAutoTypewriter(targetText)
 	NotifText.Text = ""
 	for i = 1, string.len(targetText) do
 		NotifText.Text = string.sub(targetText, 1, i)
-		task.wait(0.05)
+		task.wait(0.03)
 	end
 end
 
--- Jalankan Alur:
--- 1. Wadah diam di tengah (50%), teks diketik otomatis huruf per huruf sehingga terlihat jelas
--- 2. Setelah teks lengkap, wadah di-tween NAIK MENTOK ke bagian paling atas layar
+-- Alur Animasi Teks Awal & Geser ke Atas
 task.spawn(function()
 	playAutoTypewriter("Fruit Notifier: Memindai Map...")
-	task.wait(0.6) -- Jeda sebentar setelah teks selesai diketik otomatis
+	task.wait(0.6)
 	
-	-- Animasi Tween wadah naik MENTOK mentok ke atas layar (Y = 0.00, mepet atas)
 	TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		Position = UDim2.new(0.5, -180, 0.00, 0)
 	}):Play()
@@ -139,28 +136,29 @@ local function playFruitSound()
 	end
 end
 
--- Scanner Buah di Workspace
+-- Scanner Semua Buah di Workspace (Menggabungkan beberapa buah sekaligus jika ada)
 task.spawn(function()
-	local lastFound = false
+	local lastCount = 0
 	while task.wait(3) do
 		if Settings.FruitNotifier then
-			local foundFruit = nil
+			local fruitList = {}
 			for _, obj in ipairs(Workspace:GetChildren()) do
 				if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-					foundFruit = obj.Name
-					break
+					table.insert(fruitList, obj.Name)
 				end
 			end
 			
-			if foundFruit then
-				NotifText.Text = "BERHASIL KETEMU: " .. tostring(foundFruit)
-				if not lastFound then
-					lastFound = true
+			local currentCount = #fruitList
+			if currentCount > 0 then
+				local combinedNames = table.concat(fruitList, ", ")
+				NotifText.Text = "KETEMU (" .. currentCount .. "): " .. combinedNames
+				if currentCount > lastCount then
 					playFruitSound()
 				end
+				lastCount = currentCount
 			else
 				NotifText.Text = "Status: Mencari Buah di Map (Kosong)..."
-				lastFound = false
+				lastCount = 0
 			end
 		end
 	end
@@ -220,49 +218,44 @@ end
 
 
 -- ==========================================
--- FITUR 4: MENU ANTARMUKA MINIMALIS (TERTUTUP SAAT AWAL DI-EXECUTOR)
+-- FITUR 4: MENU ANTARMUKA
 -- ==========================================
--- Tombol Mengambang (MENU ≡) - Warna Hitam, Teks Putih Normal, Pinggiran Biru Terang
 local OpenButton = Instance.new("TextButton")
-OpenButton.Size = UDim2.new(0, 55, 0, 55)
+OpenButton.Size = UDim2.new(0, 50, 0, 50)
 OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
-OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20) -- Hitam Elegan
-OpenButton.Text = "MENU ≡"
-OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- Warna Teks Putih Standar
-OpenButton.TextSize, OpenButton.Font = 11, Enum.Font.GothamBold
+OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+OpenButton.Text = "MENU"
+OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.TextSize, OpenButton.Font = 10, Enum.Font.GothamBold
 OpenButton.Parent = ScreenGui
 
 local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(0, 12)
 OpenCorner.Parent = OpenButton
 
--- Garis Tepi Biru Terang pada Tombol Mengambang
 local OpenStroke = Instance.new("UIStroke")
 OpenStroke.Color = Color3.fromRGB(0, 200, 255)
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
--- Panel Menu Utama (DISET TERTUTUP/HIDDEN SAAT PERTAMA KALI DI-EXECUTOR)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 0) -- Ukuran 0 agar tertutup rapat
+MainFrame.Size = UDim2.new(0, 260, 0, 0)
 MainFrame.Position = UDim2.new(0.5, -130, 0.4, -155)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
-MainFrame.Visible = false -- Disembunyikan agar teks notifikasi awal terlihat jelas tanpa terhalang menu
+MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = MainFrame
 
--- Garis Tepi (Stroke) Biru Terang di Samping-Samping Menu Utama
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Color = Color3.fromRGB(0, 170, 255)
 MainStroke.Thickness = 2.5
 MainStroke.Parent = MainFrame
 
--- Top Bar Menu
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 40)
 TopBar.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
@@ -274,7 +267,7 @@ TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.05, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "Blox Fruits Hub"
-TitleLabel.TextColor3 = Color3.fromRGB(0, 200, 255) -- Warna Biru Terang pada Judul Menu Utama
+TitleLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
 TitleLabel.TextSize, TitleLabel.Font = 14, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = TopBar
@@ -293,7 +286,6 @@ CloseCorner.CornerRadius = UDim.new(0, 6)
 CloseCorner.Parent = CloseButton
 
 
--- Helper Fungsi Membuat Tombol Kontrol di Dalam Menu
 local function createButton(posY, defaultText)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(0.9, 0, 0, 36)
@@ -309,7 +301,7 @@ local function createButton(posY, defaultText)
 	return btn
 end
 
--- Tombol 1: Ganti Tim (Pirates / Marines)
+-- Tombol 1: Ganti Tim
 local TeamButton = createButton(0.16, "Tim: [ " .. Settings.SelectedTeam .. " ]")
 TeamButton.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
 TeamButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -342,7 +334,7 @@ AutoJoinButton.MouseButton1Click:Connect(function()
 	saveSettings()
 end)
 
--- Tombol 3: Fast Mode / FPS Boost On/Off
+-- Tombol 3: FPS Boost On/Off
 local FpsButton = createButton(0.40, "FPS Boost: " .. (Settings.FpsBoost and "ON" or "OFF"))
 FpsButton.BackgroundColor3 = Settings.FpsBoost and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
 FpsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -377,7 +369,7 @@ FruitNotifButton.MouseButton1Click:Connect(function()
 	saveSettings()
 end)
 
--- Tombol 5: Toggle Musik Buah On/Off
+-- Tombol 5: Sound Notif On/Off
 local SoundToggleBtn = createButton(0.64, "Sound Notif: " .. (Settings.CustomSoundEnabled and "ON" or "OFF"))
 SoundToggleBtn.BackgroundColor3 = Settings.CustomSoundEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
 SoundToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -417,10 +409,8 @@ SoundTextBox.FocusLost:Connect(function(enterPressed)
 	end
 end)
 
-
--- Status awal menu (tertutup)
+-- Animasi Buka/Tutup Menu Utama
 local menuVisible = false 
-
 local function toggleMenu()
 	menuVisible = not menuVisible
 	if menuVisible then
