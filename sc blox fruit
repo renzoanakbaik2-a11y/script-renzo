@@ -249,7 +249,7 @@ local function autoStoreFruits()
 end
 
 -- ==========================================
--- PERBAIKAN SISTEM JALAN DI AIR (WALK ON WATER)
+-- SISTEM JALAN DI AIR (WALK ON WATER) - REVISED
 -- ==========================================
 local WaterPart = nil
 
@@ -260,22 +260,34 @@ local function updateWaterWalk()
             local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             
             if rootPart then
-                if not WaterPart or not WaterPart.Parent then
-                    WaterPart = Instance.new("Part")
-                    WaterPart.Name = "WaterWalkPlatform"
-                    WaterPart.Size = Vector3.new(60, 1.5, 60) -- Ukuran diperbesar agar lebih aman
-                    WaterPart.Anchored = true
-                    WaterPart.Transparency = 1 -- Transparan (tak terlihat)
-                    WaterPart.CanCollide = true
-                    WaterPart.Parent = Workspace
-                end
+                local currentY = rootPart.Position.Y
                 
-                -- Posisi platform disesuaikan pas di permukaan air Blox Fruits
-                WaterPart.Position = Vector3.new(rootPart.Position.X, rootPart.Position.Y - 3.5, rootPart.Position.Z)
-                
-                if humanoid then
-                    humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
-                    humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                -- Hanya aktif di permukaan air (Y <= 15 agar di daratan tinggi pulau platform tidak muncul)
+                if currentY <= 15 then
+                    if not WaterPart or not WaterPart.Parent then
+                        WaterPart = Instance.new("Part")
+                        WaterPart.Name = "WaterWalkPlatform"
+                        WaterPart.Size = Vector3.new(100, 1, 100)
+                        WaterPart.Anchored = true
+                        WaterPart.Transparency = 1 
+                        WaterPart.CanCollide = true
+                        WaterPart.Parent = Workspace
+                    end
+                    
+                    -- Kunci posisi platform datar di ketinggian air standar Blox Fruits (Y = 3.5)
+                    WaterPart.Position = Vector3.new(rootPart.Position.X, 3.5, rootPart.Position.Z)
+                    
+                    if humanoid then
+                        humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
+                    end
+                else
+                    if WaterPart then
+                        WaterPart:Destroy()
+                        WaterPart = nil
+                    end
+                    if humanoid then
+                        humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
+                    end
                 end
             end
         else
@@ -342,7 +354,7 @@ local function getChestIslands()
 end
 
 -- ==========================================
--- BACKGROUND SYSTEM (NOTIFIKASI & AUTO FARM BUAH SPAWN)
+-- BACKGROUND SYSTEM (NOTIFIKASI HANYA BUAH & AUTO FARM)
 -- ==========================================
 task.spawn(function()
     local lastCount = 0
@@ -368,14 +380,30 @@ task.spawn(function()
                 if not isInsidePlayer then
                     if (obj:IsA("Tool") or obj:IsA("Model")) and (obj:FindFirstChild("Handle") or obj.PrimaryPart or obj:IsA("Tool")) then
                         local nameLower = obj.Name:lower()
-                        if nameLower:find("fruit") or nameLower:find("blox") or nameLower:find("budak") or nameLower:find("bomb") or nameLower:find("spike") or nameLower:find("chop") or nameLower:find("spring") or nameLower:find("kilo") or nameLower:find("spin") or nameLower:find("flame") or nameLower:find("falcon") or nameLower:find("ice") or nameLower:find("sand") or nameLower:find("dark") or nameLower:find("diamond") or nameLower:find("light") or nameLower:find("rubber") or nameLower:find("barrier") or nameLower:find("ghost") or nameLower:find("magma") or nameLower:find("quake") or nameLower:find("buddha") or nameLower:find("love") or nameLower:find("spider") or nameLower:find("sound") or nameLower:find("phoenix") or nameLower:find("portal") or nameLower:find("pain") or nameLower:find("blizzard") or nameLower:find("gravity") or nameLower:find("mammoth") or nameLower:find("trex") or nameLower:find("dough") or nameLower:find("shadow") or nameLower:find("venom") or nameLower:find("control") or nameLower:find("spirit") or nameLower:find("dragon") or nameLower:find("leopard") or nameLower:find("kitsune") or nameLower:find("rocket") then
-                            if not nameLower:find("sword") and not nameLower:find("gun") then
-                                table.insert(fruitList, obj.Name)
-                                
-                                if not collectedFruits[obj] and targetFruitObj == nil then
-                                    targetFruitObj = obj
-                                    targetFruitHandle = obj:FindFirstChild("Handle") or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildWhichIsA("BasePart")
-                                end
+                        
+                        -- Filter ketat agar HANYA MENDETEKSI BUAH SAJA (Mencegah pedang/senjata ikut terdeteksi)
+                        local isRealFruit = false
+                        local validFruitKeywords = {
+                            "fruit", "blox", "rocket", "spin", "spring", "chop", "spike", "flame", 
+                            "falcon", "ice", "sand", "dark", "diamond", "light", "rubber", "barrier", 
+                            "ghost", "magma", "quake", "buddha", "love", "spider", "sound", "phoenix", 
+                            "portal", "pain", "blizzard", "gravity", "mammoth", "trex", "dough", 
+                            "shadow", "venom", "control", "spirit", "dragon", "leopard", "kitsune"
+                        }
+                        
+                        for _, keyword in ipairs(validFruitKeywords) do
+                            if nameLower:find(keyword) then
+                                isRealFruit = true
+                                break
+                            end
+                        end
+                        
+                        if isRealFruit and not nameLower:find("sword") and not nameLower:find("gun") and not nameLower:find("musket") and not nameLower:find("rifle") and not nameLower:find("cutlass") then
+                            table.insert(fruitList, obj.Name)
+                            
+                            if not collectedFruits[obj] and targetFruitObj == nil then
+                                targetFruitObj = obj
+                                targetFruitHandle = obj:FindFirstChild("Handle") or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildWhichIsA("BasePart")
                             end
                         end
                     end
@@ -385,7 +413,7 @@ task.spawn(function()
             local currentCount = #fruitList
             if currentCount > 0 then
                 local combinedNames = table.concat(fruitList, ", ")
-                NotifText.Text = "BERHASIL KETEMU: " .. combinedNames
+                NotifText.Text = "BUAH KETEMU: " .. combinedNames
                 
                 animateNotifIn()
 
