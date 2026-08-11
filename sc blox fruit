@@ -1,53 +1,94 @@
--- Blox Fruits Hub - Clean & Stable Version for Delta
+-- Jalankan script ini menggunakan Executor Roblox (Delta, Hydrogen, Synapse, dll.)
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- Konfigurasi Default (Tanpa File Saving Eksternal agar tidak error di Delta)
+-- Nama file untuk Auto Save Setting
+local FileName = "BloxFruitsHubSettings.json"
+
+-- Pengaturan Default & Status Fitur (Posisi Notif di-reset ke 50/Tengah)
 local Settings = {
 	FruitNotifier = true,
 	AutoJoinEnabled = true,
-	SelectedTeam = "Pirates", -- "Pirates" atau "Marines"
+	SelectedTeam = "Pirates", -- Pilihan: "Pirates" atau "Marines"
 	FpsBoost = false,
-	FlightSpeed = 150,
-	FlyHeight = 5,
+	CustomSoundEnabled = false,
+	SoundId = "", -- ID Audio Roblox
+	FlightSpeed = 150,      -- Kecepatan terbang mulus
+	FlyHeight = 5,          -- Ketinggian terbang (Maksimal 10)
 	AutoTeleportFruit = false, 
 	AutoFlyChest = false,     
 	AutoFlyPlayer = false,    
 	TargetPlayerName = "",     
-	NotifOffsetX = 50,      
-	NotifOffsetY = 50       
+	-- Pengaturan Posisi Notifikasi di-reset ke 50 (Tengah-tengah)
+	NotifOffsetX = 50,      -- 50 = Tengah-tengah
+	NotifOffsetY = 50       -- 50 = Tengah-tengah
 }
 
--- 1. ScreenGui Utama (Aman untuk Delta / CoreGui)
+-- Fungsi Load Settings
+local function loadSettings()
+	if readfile and pcall(readfile, FileName) then
+		local success, data = pcall(function()
+			return HttpService:JSONDecode(readfile(FileName))
+		end)
+		if success and type(data) == "table" then
+			for k, v in pairs(data) do
+				Settings[k] = v
+			end
+		end
+	end
+end
+
+loadSettings()
+
+-- Paksa reset posisi ke 50 jika nilainya masih nyangkut di bawah atau belum diatur pas
+if Settings.NotifOffsetX < 0 or Settings.NotifOffsetX > 100 then Settings.NotifOffsetX = 50 end
+if Settings.NotifOffsetY < 0 or Settings.NotifOffsetY > 100 then Settings.NotifOffsetY = 50 end
+
+-- Fungsi Save Settings
+local function saveSettings()
+	if writefile then
+		local success, encoded = pcall(function()
+			return HttpService:JSONEncode(Settings)
+		end)
+		if success then
+			writefile(FileName, encoded)
+		end
+	end
+end
+saveSettings()
+
+-- 1. ScreenGui Utama (Aman dari CoreGui Protect)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubClean"
+ScreenGui.Name = "BloxFruitsHub"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 pcall(function()
-	if gethui then
-		ScreenGui.Parent = gethui()
-	elseif syn and syn.protect_gui then
+	if syn and syn.protect_gui then
 		syn.protect_gui(ScreenGui)
 		ScreenGui.Parent = CoreGui
+	elseif gethui then
+		ScreenGui.Parent = gethui()
 	else
 		ScreenGui.Parent = CoreGui
 	end
 end)
 
-if not ScreenGui.Parent then
+if not ScreenGui.Parent or ScreenGui.Parent == nil then
 	ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Notifikasi Buah di Layar
+-- Notifikasi Buah di Layar dengan Posisi Dinamis (0 s/d 100, 50 = Tengah-tengah)
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 340, 0, 45)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -56,7 +97,9 @@ NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
 
 local function updateNotifPosition()
-	NotifFrame.Position = UDim2.new(Settings.NotifOffsetX / 100, 0, Settings.NotifOffsetY / 100, 0)
+	local scaleX = Settings.NotifOffsetX / 100
+	local scaleY = Settings.NotifOffsetY / 100
+	NotifFrame.Position = UDim2.new(scaleX, 0, scaleY, 0)
 end
 updateNotifPosition()
 
@@ -71,9 +114,7 @@ UIStroke.Parent = NotifFrame
 task.spawn(function()
 	while true do
 		for i = 0, 1, 0.01 do
-			pcall(function()
-				UIStroke.Color = Color3.fromHSV(i, 1, 1)
-			end)
+			UIStroke.Color = Color3.fromHSV(i, 1, 1)
 			task.wait(0.05)
 		end
 	end
@@ -82,166 +123,291 @@ end)
 local NotifText = Instance.new("TextLabel")
 NotifText.Size = UDim2.new(1, 0, 1, 0)
 NotifText.BackgroundTransparency = 1
-NotifText.Text = "Status: Hub Berhasil Dijalankan!"
+NotifText.Text = "Fruit Notifier & Auto System Aktif"
 NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 11, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
--- Fungsi Karakter & Terbang Aman
+-- Fungsi Suara Notifikasi Buah
+local function playFruitSound()
+	if Settings.CustomSoundEnabled and Settings.SoundId ~= "" then
+		pcall(function()
+			local soundIdNum = Settings.SoundId
+			if not string.find(soundIdNum, "rbxassetid://") then
+				soundIdNum = "rbxassetid://" .. soundIdNum
+			end
+			local sound = Instance.new("Sound")
+			sound.SoundId = soundIdNum
+			sound.Volume = 5
+			sound.Parent = Workspace
+			sound:Play()
+			game:GetService("Debris"):AddItem(sound, 10)
+		end)
+	end
+end
+
+-- ==========================================
+-- FUNGSI DASAR KARAKTER & TERBANG
+-- ==========================================
 local function getCharacterRootPart()
-	local char = LocalPlayer.Character
-	if char then
-		return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+	local character = LocalPlayer.Character
+	if character then
+		return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
 	end
 	return nil
 end
 
 local function smoothFlyTo(targetCFrame)
-	pcall(function()
-		local rootPart = getCharacterRootPart()
-		if not rootPart then return end
+	local rootPart = getCharacterRootPart()
+	if not rootPart then return end
 
-		local speed = math.clamp(Settings.FlightSpeed, 20, 1000)
-		local height = math.clamp(Settings.FlyHeight, 0, 10)
-		local dest = targetCFrame + Vector3.new(0, height, 0)
+	local currentSpeed = Settings.FlightSpeed
+	if currentSpeed > 1000 then currentSpeed = 1000 end
+	if currentSpeed < 20 then currentSpeed = 20 end
 
-		local dist = (rootPart.Position - dest.Position).Magnitude
-		local duration = dist / speed
-		if duration < 0.05 then return end
+	local currentHeight = Settings.FlyHeight
+	if currentHeight > 10 then currentHeight = 10 end
+	if currentHeight < 0 then currentHeight = 0 end
 
-		local char = LocalPlayer.Character
-		local hum = char and char:FindFirstChildOfClass("Humanoid")
-		if hum then hum.PlatformStand = true end
+	local adjustedTargetCFrame = targetCFrame + Vector3.new(0, currentHeight, 0)
 
-		local bv = Instance.new("BodyVelocity")
-		bv.Velocity = Vector3.new(0, 0, 0)
-		bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-		bv.Parent = rootPart
+	local distance = (rootPart.Position - adjustedTargetCFrame.Position).Magnitude
+	local duration = distance / currentSpeed
+	if duration < 0.05 then return end
 
-		local bg = Instance.new("BodyGyro")
-		bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-		bg.CFrame = rootPart.CFrame
-		bg.Parent = rootPart
+	local character = LocalPlayer.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	
+	if humanoid then
+		humanoid.PlatformStand = true
+	end
 
-		local startTick = tick()
-		local startCF = rootPart.CFrame
+	local bodyVelocity = Instance.new("BodyVelocity")
+	bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+	bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+	bodyVelocity.Parent = rootPart
 
-		while tick() - startTick < duration do
-			if not rootPart or not char.Parent then break end
-			local alpha = math.clamp((tick() - startTick) / duration, 0, 1)
-			rootPart.CFrame = startCF:Lerp(dest, alpha * (2 - alpha))
-			bg.CFrame = rootPart.CFrame
-			RunService.RenderStepped:Wait()
-		end
+	local bodyGyro = Instance.new("BodyGyro")
+	bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+	bodyGyro.CFrame = rootPart.CFrame
+	bodyGyro.Parent = rootPart
 
-		rootPart.CFrame = dest
-		if bv then bv:Destroy() end
-		if bg then bg:Destroy() end
-		if hum then hum.PlatformStand = false end
-	end)
+	Camera.CameraType = Enum.CameraType.Custom
+
+	local startTime = tick()
+	local startCFrame = rootPart.CFrame
+
+	while tick() - startTime < duration do
+		if not rootPart or not character or not character.Parent then break end
+		local alpha = math.clamp((tick() - startTime) / duration, 0, 1)
+		local smoothAlpha = alpha * (2 - alpha)
+		
+		rootPart.CFrame = startCFrame:Lerp(adjustedTargetCFrame, smoothAlpha)
+		bodyGyro.CFrame = rootPart.CFrame
+		RunService.RenderStepped:Wait()
+	end
+
+	rootPart.CFrame = adjustedTargetCFrame
+
+	if bodyVelocity then bodyVelocity:Destroy() end
+	if bodyGyro then bodyGyro:Destroy() end
+
+	if humanoid then
+		humanoid.PlatformStand = false
+	end
 end
 
--- Sistem Chest Sederhana & Stabil
+-- ==========================================
+-- SISTEM CHEST (DENGAN BLACKLIST/MEMORI ANTI-STUCK)
+-- ==========================================
+local function getPositionOfObj(obj)
+	if obj:IsA("BasePart") then
+		return obj.Position
+	elseif obj:IsA("Model") and obj.PrimaryPart then
+		return obj.PrimaryPart.Position
+	elseif obj:FindFirstChildWhichIsA("BasePart") then
+		return obj:FindFirstChildWhichIsA("BasePart").Position
+	end
+	return nil
+end
+
+-- Menyimpan daftar chest yang gagal/sudah diambil agar tidak ditarget ulang terus-menerus
 local DeadChests = {}
+
 local function getChestIslands()
-	local chests = {}
-	pcall(function()
-		for _, obj in ipairs(Workspace:GetDescendants()) do
-			if obj.Name:lower():find("chest") and not DeadChests[obj] then
-				local part = obj:IsA("BasePart") and obj or (obj:IsA("Model") and obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart"))
-				if part then
-					table.insert(chests, {Object = obj, Position = part.Position})
-				end
+	local allChests = {}
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		local nameLower = obj.Name:lower()
+		-- Cek apakah objek adalah chest dan belum masuk daftar gagal/diambil
+		if (nameLower:find("chest") or nameLower:find("peti") or nameLower:find("treasure")) and not DeadChests[obj] then
+			local pos = getPositionOfObj(obj)
+			if pos then
+				table.insert(allChests, {Object = obj, Position = pos})
 			end
 		end
-	end)
-	return chests
+	end
+
+	local islands = {}
+	for _, chest in ipairs(allChests) do
+		local placed = false
+		for _, island in ipairs(islands) do
+			if (island.Center - chest.Position).Magnitude < 400 then
+				table.insert(island.Chests, chest)
+				placed = true
+				break
+			end
+		end
+		if not placed then
+			table.insert(islands, {
+				Center = chest.Position,
+				Chests = {chest}
+			})
+		end
+	end
+	return islands
 end
 
--- Background Loop Aman
+-- ==========================================
+-- BACKGROUND SYSTEM
+-- ==========================================
 task.spawn(function()
+	local lastCount = 0
 	while task.wait(1.5) do
-		pcall(function()
-			-- Deteksi Buah
-			if Settings.FruitNotifier then
-				local fruits = {}
-				local targetFruitHandle = nil
-				for _, obj in ipairs(Workspace:GetChildren()) do
-					if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-						table.insert(fruits, obj.Name)
-						if not targetFruitHandle then targetFruitHandle = obj.Handle end
+		if Settings.FruitNotifier then
+			local fruitList = {}
+			local targetFruitHandle = nil
+
+			for _, obj in ipairs(Workspace:GetChildren()) do
+				if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
+					table.insert(fruitList, obj.Name)
+					if not targetFruitHandle then
+						targetFruitHandle = obj.Handle
 					end
 				end
+			end
+			
+			local currentCount = #fruitList
+			if currentCount > 0 then
+				local combinedNames = table.concat(fruitList, ", ")
+				NotifText.Text = "KETEMU (" .. currentCount .. "): " .. combinedNames
+				if currentCount > lastCount then
+					playFruitSound()
+				end
+				lastCount = currentCount
+
+				if Settings.AutoTeleportFruit and targetFruitHandle then
+					local rootPart = getCharacterRootPart()
+					if rootPart and (rootPart.Position - targetFruitHandle.Position).Magnitude > 15 then
+						smoothFlyTo(targetFruitHandle.CFrame)
+					end
+				end
+			else
+				NotifText.Text = "Status: Mencari Buah di Map (Kosong)..."
+				lastCount = 0
+			end
+		end
+
+		if Settings.AutoFlyChest then
+			local rootPart = getCharacterRootPart()
+			if rootPart then
+				local islands = getChestIslands()
 				
-				if #fruits > 0 then
-					NotifText.Text = "KETEMU (" .. #fruits .. "): " .. table.concat(fruits, ", ")
-					if Settings.AutoTeleportFruit and targetFruitHandle then
-						local rp = getCharacterRootPart()
-						if rp and (rp.Position - targetFruitHandle.Position).Magnitude > 15 then
-							smoothFlyTo(targetFruitHandle.CFrame)
+				for i = #islands, 1, -1 do
+					local validChests = {}
+					for _, cData in ipairs(islands[i].Chests) do
+						if cData.Object and cData.Object.Parent then
+							table.insert(validChests, cData)
 						end
 					end
-				else
-					NotifText.Text = "Status: Mencari Buah di Map..."
+					islands[i].Chests = validChests
+					if #islands[i].Chests == 0 then
+						table.remove(islands, i)
+					end
 				end
-			end
 
-			-- Auto Chest
-			if Settings.AutoFlyChest then
-				local rp = getCharacterRootPart()
-				if rp then
-					local chests = getChestIslands()
-					if #chests > 0 then
-						table.sort(chests, function(a, b)
-							return (rp.Position - a.Position).Magnitude < (rp.Position - b.Position).Magnitude
+				if #islands > 0 then
+					table.sort(islands, function(a, b)
+						return (rootPart.Position - a.Center).Magnitude < (rootPart.Position - b.Center).Magnitude
+					end)
+
+					local currentIsland = islands[1]
+					if currentIsland and #currentIsland.Chests > 0 then
+						table.sort(currentIsland.Chests, function(a, b)
+							return (rootPart.Position - a.Position).Magnitude < (rootPart.Position - b.Position).Magnitude
 						end)
-						smoothFlyTo(CFrame.new(chests[1].Position))
-						task.wait(0.3)
-						DeadChests[chests[1].Object] = true
-					end
-				end
-			end
 
-			-- Auto Teleport Player
-			if Settings.AutoFlyPlayer then
-				task.wait(2)
-				local targetP = nil
-				if Settings.TargetPlayerName ~= "" then
-					for _, p in ipairs(Players:GetPlayers()) do
-						if p ~= LocalPlayer and p.Name:lower():find(Settings.TargetPlayerName:lower()) then
-							targetP = p
-							break
-						end
-					end
-				else
-					local shortest = math.huge
-					local rp = getCharacterRootPart()
-					if rp then
-						for _, p in ipairs(Players:GetPlayers()) do
-							if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-								local dist = (rp.Position - p.Character.HumanoidRootPart.Position).Magnitude
-								if dist < shortest then
-									shortest = dist
-									targetP = p
-								end
+						local targetChestData = currentIsland.Chests[1]
+						local targetChest = targetChestData.Object
+						local targetPos = getPositionOfObj(targetChest)
+						
+						if targetPos then
+							-- Simpan posisi awal sebelum terbang ke chest
+							local posBeforeFly = rootPart.Position
+							
+							-- Terbang menuju chest
+							smoothFlyTo(CFrame.new(targetPos))
+							task.wait(0.3) -- Tunggu sebentar setelah sampai untuk proses pick up game
+							
+							-- Cek apakah chest benar-benar sudah hilang atau masih ada di tempat
+							if not targetChest or not targetChest.Parent or (targetChest.Parent and getPositionOfObj(targetChest) == nil) then
+								-- Jika sudah hilang/diambil, masukkan ke daftar mati agar langsung skip ke chest berikutnya
+								DeadChests[targetChest] = true
+							else
+								-- Jika chest-nya masih ada (artinya belum sempat ke-pick up atau nyangkut), 
+								-- tandai sementara dan paksa lanjut ke chest lain agar tidak stuck!
+								DeadChests[targetChest] = true
 							end
 						end
 					end
 				end
+			end
+		end
 
-				if targetP and targetP.Character and targetP.Character:FindFirstChild("HumanoidRootPart") then
-					smoothFlyTo(targetP.Character.HumanoidRootPart.CFrame)
+		if Settings.AutoFlyPlayer then
+			task.wait(2)
+			local targetPlayer = nil
+
+			if Settings.TargetPlayerName ~= "" then
+				for _, p in ipairs(Players:GetPlayers()) do
+					if p ~= LocalPlayer and string.find(p.Name:lower(), Settings.TargetPlayerName:lower()) then
+						targetPlayer = p
+						break
+					end
+				end
+			else
+				local shortestDist = math.huge
+				local rootPart = getCharacterRootPart()
+				if rootPart then
+					for _, p in ipairs(Players:GetPlayers()) do
+						if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+							local dist = (rootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+							if dist < shortestDist then
+								shortestDist = dist
+								targetPlayer = p
+							end
+						end
+					end
+				end
+			end
+
+			if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+				local rootPart = getCharacterRootPart()
+				if rootPart then
+					smoothFlyTo(targetPlayer.Character.HumanoidRootPart.CFrame)
 					task.wait(1.5)
 				end
 			end
-		end)
+		end
 	end
 end)
 
--- Auto Join Tim
+-- ==========================================
+-- AUTO JOIN TEAM
+-- ==========================================
 local function joinTeam()
 	if not Settings.AutoJoinEnabled then return end
 	pcall(function()
+		local ReplicatedStorage = game:GetService("ReplicatedStorage")
 		local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 		if remotes and remotes:FindFirstChild("CommF_") then
 			remotes.CommF_:InvokeServer("SetTeam", Settings.SelectedTeam)
@@ -258,25 +424,30 @@ task.spawn(function()
 	joinTeam()
 end)
 
--- FPS Boost
+-- ==========================================
+-- FPS BOOST FUNCTION
+-- ==========================================
 local function applyFpsBoost(state)
-	pcall(function()
-		Lighting.GlobalShadows = not state
-		if state then
-			Lighting.FogEnd = 999999
-			for _, v in ipairs(Workspace:GetDescendants()) do
-				if v:IsA("BasePart") then
-					v.Material = Enum.Material.SmoothPlastic
-					v.Reflectance = 0
-				elseif v:IsA("Decal") or v:IsA("Texture") then
-					v.Transparency = 1
-				end
+	if state then
+		Lighting.GlobalShadows = false
+		Lighting.FogEnd = 999999
+		for _, v in ipairs(Workspace:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.Material = Enum.Material.SmoothPlastic
+				v.Reflectance = 0
+			elseif v:IsA("Decal") or v:IsA("Texture") then
+				v.Transparency = 1
 			end
 		end
-	end)
+	else
+		Lighting.GlobalShadows = true
+	end
 end
+if Settings.FpsBoost then applyFpsBoost(true) end
 
--- ================= UI MENU UTAMA =================
+-- ==========================================
+-- TAMPILAN UI MENU UTAMA
+-- ==========================================
 local OpenButton = Instance.new("TextButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
 OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
@@ -324,7 +495,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Speed Hub X | Delta Stable Edition"
+TitleLabel.Text = "Speed Hub X | Blox Fruits Edition"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
 TitleLabel.TextSize, TitleLabel.Font = 11, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -347,7 +518,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 850)
+Container.CanvasSize = UDim2.new(0, 0, 0, 950)
 Container.ScrollBarThickness = 4
 Container.Parent = MainFrame
 
@@ -386,12 +557,17 @@ local function createAutoToggle(posY, text, settingKey, callback)
 		local newState = Settings[settingKey]
 		btn.Text = text .. ": " .. (newState and "ON" or "OFF")
 		btn.BackgroundColor3 = newState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
+		saveSettings()
 		if callback then callback(newState) end
 	end)
 	return btn
 end
 
--- Elemen Menu UI
+-- ==========================================
+-- KONTEN MENU UTAMA
+-- ==========================================
+
+-- 1. AUTO JOIN TIM
 createSectionHeader(10, "--- 1. AUTO JOIN TIM ---")
 local TeamConfigBtn = Instance.new("TextButton")
 TeamConfigBtn.Size = UDim2.new(0.9, 0, 0, 35)
@@ -407,24 +583,137 @@ tcbCorner.CornerRadius = UDim.new(0, 6)
 tcbCorner.Parent = TeamConfigBtn
 
 TeamConfigBtn.MouseButton1Click:Connect(function()
-	Settings.SelectedTeam = (Settings.SelectedTeam == "Pirates") and "Marines" or "Pirates"
-	TeamConfigBtn.Text = "Auto Join Tim: [ " .. Settings.SelectedTeam .. " ] (Klik Ganti)"
+	if Settings.SelectedTeam == "Pirates" then
+		Settings.SelectedTeam = "Marines"
+		TeamConfigBtn.Text = "Auto Join Tim: [ Marines ] (Klik Ganti)"
+	else
+		Settings.SelectedTeam = "Pirates"
+		TeamConfigBtn.Text = "Auto Join Tim: [ Pirates ] (Klik Ganti)"
+	end
+	joinTeam()
+	saveSettings()
+end)
+
+createAutoToggle(75, "Status Auto Join Tim", "AutoJoinEnabled", function()
 	joinTeam()
 end)
 
-createAutoToggle(75, "Status Auto Join Tim", "AutoJoinEnabled", function() joinTeam() end)
+-- 2. NOTIFIKASI & MUSIK BUAH
+createSectionHeader(125, "--- 2. NOTIFIKASI & MUSIK BUAH ---")
+createAutoToggle(150, "Fruit Notifier", "FruitNotifier", function(val)
+	NotifFrame.Visible = val
+end)
 
-createSectionHeader(125, "--- 2. NOTIFIKASI BUAH ---")
-createAutoToggle(150, "Fruit Notifier", "FruitNotifier", function(val) NotifFrame.Visible = val end)
+local SoundTextBox = Instance.new("TextBox")
+SoundTextBox.Size = UDim2.new(0.9, 0, 0, 35)
+SoundTextBox.Position = UDim2.new(0.05, 0, 0, 190)
+SoundTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+SoundTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SoundTextBox.Text = Settings.SoundId
+SoundTextBox.PlaceholderText = "Submit ID Lagu (Cth: 12345678)"
+SoundTextBox.TextSize, SoundTextBox.Font = 11, Enum.Font.Gotham
+SoundTextBox.Parent = Container
 
-createSectionHeader(200, "--- 3. KECEPATAN & KETINGGIAN TERBANG ---")
+local stCorner = Instance.new("UICorner")
+stCorner.CornerRadius = UDim.new(0, 6)
+stCorner.Parent = SoundTextBox
+
+SoundTextBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		Settings.SoundId = SoundTextBox.Text
+		saveSettings()
+	end
+end)
+
+createAutoToggle(235, "Custom Sound Buah", "CustomSoundEnabled", nil)
+
+-- 3. POSISI NOTIFIKASI (0 s/d 100, 50 = Tengah)
+createSectionHeader(285, "--- 3. POSISI NOTIFIKASI (0-100, 50=Tengah) ---")
+local NotifPosLabel = Instance.new("TextLabel")
+NotifPosLabel.Size = UDim2.new(0.9, 0, 0, 20)
+NotifPosLabel.Position = UDim2.new(0.05, 0, 0, 310)
+NotifPosLabel.BackgroundTransparency = 1
+NotifPosLabel.Text = "Atur Posisi (X: 0=Kiri, 50=Tengah, 100=Kanan)"
+NotifPosLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+NotifPosLabel.TextSize, NotifPosLabel.Font = 10, Enum.Font.Gotham
+NotifPosLabel.TextXAlignment = Enum.TextXAlignment.Left
+NotifPosLabel.Parent = Container
+
+local NotifXBox = Instance.new("TextBox")
+NotifXBox.Size = UDim2.new(0.43, 0, 0, 35)
+NotifXBox.Position = UDim2.new(0.05, 0, 0, 335)
+NotifXBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+NotifXBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+NotifXBox.Text = tostring(Settings.NotifOffsetX)
+NotifXBox.PlaceholderText = "X (0 s/d 100)"
+NotifXBox.TextSize, NotifXBox.Font = 10, Enum.Font.Gotham
+NotifXBox.Parent = Container
+
+local nxCorner = Instance.new("UICorner")
+nxCorner.CornerRadius = UDim.new(0, 6)
+nxCorner.Parent = NotifXBox
+
+NotifXBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		local num = tonumber(NotifXBox.Text)
+		if num then
+			if num > 100 then num = 100 end
+			if num < 0 then num = 0 end
+			Settings.NotifOffsetX = num
+			NotifXBox.Text = tostring(num)
+			updateNotifPosition()
+			saveSettings()
+		end
+	end
+end)
+
+local NotifYBox = Instance.new("TextBox")
+NotifYBox.Size = UDim2.new(0.43, 0, 0, 35)
+NotifYBox.Position = UDim2.new(0.52, 0, 0, 335)
+NotifYBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+NotifYBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+NotifYBox.Text = tostring(Settings.NotifOffsetY)
+NotifYBox.PlaceholderText = "Y (0 s/d 100)"
+NotifYBox.TextSize, NotifYBox.Font = 10, Enum.Font.Gotham
+NotifYBox.Parent = Container
+
+local nyCorner = Instance.new("UICorner")
+nyCorner.CornerRadius = UDim.new(0, 6)
+nyCorner.Parent = NotifYBox
+
+NotifYBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		local num = tonumber(NotifYBox.Text)
+		if num then
+			if num > 100 then num = 100 end
+			if num < 0 then num = 0 end
+			Settings.NotifOffsetY = num
+			NotifYBox.Text = tostring(num)
+			updateNotifPosition()
+			saveSettings()
+		end
+	end
+end)
+
+-- 4. KECEPATAN & KETINGGIAN TERBANG
+createSectionHeader(385, "--- 4. KECEPATAN & KETINGGIAN TERBANG ---")
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(0.9, 0, 0, 20)
+SpeedLabel.Position = UDim2.new(0.05, 0, 0, 410)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "Kecepatan Terbang (20 - 1000):"
+SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+SpeedLabel.TextSize, SpeedLabel.Font = 10, Enum.Font.Gotham
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+SpeedLabel.Parent = Container
+
 local SpeedTextBox = Instance.new("TextBox")
 SpeedTextBox.Size = UDim2.new(0.9, 0, 0, 35)
-SpeedTextBox.Position = UDim2.new(0.05, 0, 0, 225)
+SpeedTextBox.Position = UDim2.new(0.05, 0, 0, 435)
 SpeedTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 SpeedTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedTextBox.Text = tostring(Settings.FlightSpeed)
-SpeedTextBox.PlaceholderText = "Speed (20 - 1000)"
+SpeedTextBox.PlaceholderText = "Ketik Speed (Misal: 150)"
 SpeedTextBox.TextSize, SpeedTextBox.Font = 11, Enum.Font.Gotham
 SpeedTextBox.Parent = Container
 
@@ -432,27 +721,71 @@ local stbCorner = Instance.new("UICorner")
 stbCorner.CornerRadius = UDim.new(0, 6)
 stbCorner.Parent = SpeedTextBox
 
-SpeedTextBox.FocusLost:Connect(function(enter)
-	if enter then
+SpeedTextBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
 		local num = tonumber(SpeedTextBox.Text)
-		if num then Settings.FlightSpeed = math.clamp(num, 20, 1000) end
+		if num then
+			if num > 1000 then num = 1000 end
+			if num < 20 then num = 20 end
+			Settings.FlightSpeed = num
+			SpeedTextBox.Text = tostring(num)
+			saveSettings()
+		end
 	end
 end)
 
-createSectionHeader(280, "--- 4. TARGET PLAYER ---")
+local HeightLabel = Instance.new("TextLabel")
+HeightLabel.Size = UDim2.new(0.9, 0, 0, 20)
+HeightLabel.Position = UDim2.new(0.05, 0, 0, 480)
+HeightLabel.BackgroundTransparency = 1
+HeightLabel.Text = "Ketinggian Terbang (0 - 10):"
+HeightLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+HeightLabel.TextSize, HeightLabel.Font = 10, Enum.Font.Gotham
+HeightLabel.TextXAlignment = Enum.TextXAlignment.Left
+HeightLabel.Parent = Container
+
+local HeightTextBox = Instance.new("TextBox")
+HeightTextBox.Size = UDim2.new(0.9, 0, 0, 35)
+HeightTextBox.Position = UDim2.new(0.05, 0, 0, 505)
+HeightTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+HeightTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeightTextBox.Text = tostring(Settings.FlyHeight)
+HeightTextBox.PlaceholderText = "Ketinggian maximal 10 (Misal: 5)"
+HeightTextBox.TextSize, HeightTextBox.Font = 11, Enum.Font.Gotham
+HeightTextBox.Parent = Container
+
+local htbCorner = Instance.new("UICorner")
+htbCorner.CornerRadius = UDim.new(0, 6)
+htbCorner.Parent = HeightTextBox
+
+HeightTextBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		local num = tonumber(HeightTextBox.Text)
+		if num then
+			if num > 10 then num = 10 end
+			if num < 0 then num = 0 end
+			Settings.FlyHeight = num
+			HeightTextBox.Text = tostring(num)
+			saveSettings()
+		end
+	end
+end)
+
+-- 5. TARGET PLAYER
+createSectionHeader(555, "--- 5. TARGET PLAYER ---")
 local TargetStatusLabel = Instance.new("TextLabel")
 TargetStatusLabel.Size = UDim2.new(0.9, 0, 0, 20)
-TargetStatusLabel.Position = UDim2.new(0.05, 0, 0, 305)
+TargetStatusLabel.Position = UDim2.new(0.05, 0, 0, 580)
 TargetStatusLabel.BackgroundTransparency = 1
-TargetStatusLabel.Text = "Target Aktif: [ Terdekat / Otomatis ]"
+TargetStatusLabel.Text = "Target Aktif: " .. (Settings.TargetPlayerName == "" and "[ Terdekat / Otomatis ]" or Settings.TargetPlayerName)
 TargetStatusLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
 TargetStatusLabel.TextSize, TargetStatusLabel.Font = 10, Enum.Font.GothamBold
 TargetStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 TargetStatusLabel.Parent = Container
 
 local PlayerListScroll = Instance.new("ScrollingFrame")
-PlayerListScroll.Size = UDim2.new(0.9, 0, 0, 100)
-PlayerListScroll.Position = UDim2.new(0.05, 0, 0, 330)
+PlayerListScroll.Size = UDim2.new(0.9, 0, 0, 120)
+PlayerListScroll.Position = UDim2.new(0.05, 0, 0, 605)
 PlayerListScroll.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
 PlayerListScroll.BorderSizePixel = 0
 PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -468,51 +801,85 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 4)
 UIListLayout.Parent = PlayerListScroll
 
+local ResetTargetBtn = Instance.new("TextButton")
+ResetTargetBtn.Size = UDim2.new(0.9, 0, 0, 30)
+ResetTargetBtn.Position = UDim2.new(0.05, 0, 0, 735)
+ResetTargetBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+ResetTargetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResetTargetBtn.Text = "Reset Target (Jadi Player Terdekat)"
+ResetTargetBtn.TextSize, ResetTargetBtn.Font = 10, Enum.Font.GothamBold
+ResetTargetBtn.Parent = Container
+
+local rtbCorner = Instance.new("UICorner")
+rtbCorner.CornerRadius = UDim.new(0, 6)
+rtbCorner.Parent = ResetTargetBtn
+
+ResetTargetBtn.MouseButton1Click:Connect(function()
+	Settings.TargetPlayerName = ""
+	TargetStatusLabel.Text = "Target Aktif: [ Terdekat / Otomatis ]"
+	saveSettings()
+end)
+
 local function refreshPlayerList()
-	pcall(function()
-		for _, child in ipairs(PlayerListScroll:GetChildren()) do
-			if child:IsA("TextButton") then child:Destroy() end
+	for _, child in ipairs(PlayerListScroll:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
 		end
-		local players = Players:GetPlayers()
-		PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, #players * 30)
-		for _, p in ipairs(players) do
-			if p ~= LocalPlayer then
-				local pBtn = Instance.new("TextButton")
-				pBtn.Size = UDim2.new(1, -4, 0, 28)
-				pBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
-				pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-				pBtn.Text = "  👤 " .. p.Name
-				pBtn.TextSize, pBtn.Font = 10, Enum.Font.Gotham
-				pBtn.TextXAlignment = Enum.TextXAlignment.Left
-				pBtn.Parent = PlayerListScroll
+	end
 
-				local c = Instance.new("UICorner")
-				c.CornerRadius = UDim.new(0, 4)
-				c.Parent = pBtn
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer then
+			local pBtn = Instance.new("TextButton")
+			pBtn.Size = UDim2.new(1, -6, 0, 30)
+			pBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+			pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			pBtn.Text = "  👤 " .. p.Name .. " (" .. p.DisplayName .. ")"
+			pBtn.TextSize, pBtn.Font = 10, Enum.Font.Gotham
+			pBtn.TextXAlignment = Enum.TextXAlignment.Left
+			pBtn.Parent = PlayerListScroll
 
-				pBtn.MouseButton1Click:Connect(function()
-					Settings.TargetPlayerName = p.Name
-					TargetStatusLabel.Text = "Target Aktif: " .. p.Name
-				end)
-			end
+			local pBtnCorner = Instance.new("UICorner")
+			pBtnCorner.CornerRadius = UDim.new(0, 4)
+			pBtnCorner.Parent = pBtn
+
+			pBtn.MouseButton1Click:Connect(function()
+				Settings.TargetPlayerName = p.Name
+				TargetStatusLabel.Text = "Target Aktif: " .. p.Name
+				saveSettings()
+			end)
 		end
-	end)
+	end
 end
+
+Players.PlayerAdded:Connect(refreshPlayerList)
+Players.PlayerRemoving:Connect(refreshPlayerList)
 task.spawn(refreshPlayerList)
 
-createSectionHeader(450, "--- 5. FITUR AUTOMATIC ---")
-createAutoToggle(475, "Teleport ke Buah", "AutoTeleportFruit", nil)
-createAutoToggle(520, "Auto Collect Chest", "AutoFlyChest", nil)
-createAutoToggle(565, "Teleport ke Player", "AutoFlyPlayer", nil)
-createAutoToggle(610, "FPS Boost", "FpsBoost", function(val) applyFpsBoost(val) end)
+-- 6. FITUR AUTOMATIC LAINNYA
+createSectionHeader(780, "--- 6. FITUR AUTOMATIC LAINNYA ---")
+createAutoToggle(805, "Teleport ke Buah", "AutoTeleportFruit", nil)
+createAutoToggle(850, "Auto Collect Chest (Pulau Terdekat & Pindah)", "AutoFlyChest", nil)
+createAutoToggle(895, "Teleport ke Player", "AutoFlyPlayer", nil)
+createAutoToggle(940, "FPS Boost", "FpsBoost", function(val)
+	applyFpsBoost(val)
+end)
 
--- Tombol Menu Buka/Tutup
-local menuVisible = false
-OpenButton.MouseButton1Click:Connect(function()
+-- ==========================================
+-- TOMBOL BUKA/TUTUP MENU UTAMA
+-- ==========================================
+local menuVisible = false 
+local function toggleMenu()
 	menuVisible = not menuVisible
-	MainFrame.Visible = menuVisible
-end)
-CloseButton.MouseButton1Click:Connect(function()
-	menuVisible = false
-	MainFrame.Visible = false
-end)
+	if menuVisible then
+		MainFrame.Visible = true
+		TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 420, 0, 340)}):Play()
+	else
+		local tween = TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 420, 0, 0)})
+		tween:Play()
+		tween.Completed:Wait()
+		MainFrame.Visible = false
+	end
+end
+
+OpenButton.MouseButton1Click:Connect(toggleMenu)
+CloseButton.MouseButton1Click:Connect(toggleMenu)
