@@ -5,17 +5,51 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
-local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Pengaturan Status Fitur
+-- Nama file untuk Auto Save Setting
+local FileName = "BloxFruitsHubSettings.json"
+
+-- Pengaturan Default & Status Fitur (Auto Save Aktif / On otomatis)
 local Settings = {
 	FruitNotifier = true,
 	AutoJoinEnabled = true,
 	SelectedTeam = "Pirates", -- Pilihan: "Pirates" atau "Marines"
-	FpsBoost = false
+	FpsBoost = false,
+	CustomSoundEnabled = false,
+	SoundId = "" -- ID Audio Roblox (Contoh: rbxassetid://...)
 }
+
+-- Fungsi Load Settings
+local function loadSettings()
+	if readfile and pcall(readfile, FileName) then
+		local success, data = pcall(function()
+			return HttpService:JSONDecode(readfile(FileName))
+		end)
+		if success and type(data) == "table" then
+			for k, v in pairs(data) do
+				Settings[k] = v
+			end
+		end
+	end
+end
+
+-- Fungsi Save Settings
+local function saveSettings()
+	if writefile then
+		local success, encoded = pcall(function()
+			return HttpService:JSONEncode(Settings)
+		end)
+		if success then
+			writefile(FileName, encoded)
+		end
+	end
+end
+
+-- Muat pengaturan saat pertama kali script dijalankan
+loadSettings()
 
 -- 1. ScreenGui Utama
 local ScreenGui = Instance.new("ScreenGui")
@@ -29,11 +63,12 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- FITUR 1: NOTIFIKASI BUAH ATAS (FRUIT NOTIFIER)
+-- FITUR 1: NOTIFIKASI BUAH ATAS (DENGAN ANIMASI NAIK & RAINBOW STROKE KHUSUS)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 320, 0, 50)
-NotifFrame.Position = UDim2.new(0.5, -160, 0.02, 0)
+-- Posisi awal di tengah (Y = 0.75 / 75%)
+NotifFrame.Position = UDim2.new(0.5, -160, 0.75, 0)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
@@ -42,7 +77,7 @@ local NotifCorner = Instance.new("UICorner")
 NotifCorner.CornerRadius = UDim.new(0, 8)
 NotifCorner.Parent = NotifFrame
 
--- Animasi Garis Tepi Rainbow (Rainbow Stroke)
+-- Animasi Garis Tepi Rainbow (Rainbow Stroke Khusus Notif)
 local UIStroke = Instance.new("UIStroke")
 UIStroke.Thickness = 2
 UIStroke.Parent = NotifFrame
@@ -64,14 +99,37 @@ NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
+-- Jalankan Animasi Posisi dari 75 ke Atas (Y = 0.02)
+TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+	Position = UDim2.new(0.5, -160, 0.02, 0)
+}):Play()
+
+-- Fungsi Memutar Musik Notifikasi Buah
+local function playFruitSound()
+	if Settings.CustomSoundEnabled and Settings.SoundId ~= "" then
+		pcall(function()
+			local soundIdNum = Settings.SoundId
+			if not string.find(soundIdNum, "rbxassetid://") then
+				soundIdNum = "rbxassetid://" .. soundIdNum
+			end
+			local sound = Instance.new("Sound")
+			sound.SoundId = soundIdNum
+			sound.Volume = 5
+			sound.Parent = Workspace
+			sound:Play()
+			game:GetService("Debris"):AddItem(sound, 10)
+		end)
+	end
+end
+
 -- Scanner Buah di Workspace
 task.spawn(function()
+	local lastFound = false
 	while task.wait(3) do
 		if Settings.FruitNotifier then
 			local foundFruit = nil
 			for _, obj in ipairs(Workspace:GetChildren()) do
 				if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-					-- Biasanya buah di map Blox Fruits dinamai berdasarkan kelas Tool / Handle
 					foundFruit = obj.Name
 					break
 				end
@@ -79,8 +137,13 @@ task.spawn(function()
 			
 			if foundFruit then
 				NotifText.Text = "BERHASIL KETEMU: " .. foundFruit
+				if not lastFound then
+					lastFound = true
+					playFruitSound()
+				end
 			else
 				NotifText.Text = "Status: Mencari Buah di Map (Kosong)..."
+				lastFound = false
 			end
 		end
 	end
@@ -134,16 +197,19 @@ local function applyFpsBoost(state)
 		Lighting.GlobalShadows = true
 	end
 end
+if Settings.FpsBoost then
+	applyFpsBoost(true)
+end
 
 
 -- ==========================================
--- FITUR 4: MENU ANTARMUKA MINIMALIS & PANEL KONTROL
+-- FITUR 4: MENU ANTARMUKA MINIMALIS (BIRU TERANG & GARIS TEPI BIRU TERANG)
 -- ==========================================
 -- Tombol Mengambang (MENU ≡)
 local OpenButton = Instance.new("TextButton")
 OpenButton.Size = UDim2.new(0, 55, 0, 55)
 OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
-OpenButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+OpenButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255) -- Biru Terang
 OpenButton.Text = "MENU ≡"
 OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenButton.TextSize, OpenButton.Font = 11, Enum.Font.GothamBold
@@ -153,11 +219,17 @@ local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(0, 12)
 OpenCorner.Parent = OpenButton
 
+-- Garis Tepi Biru Terang pada Tombol Mengambang
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Color = Color3.fromRGB(0, 200, 255)
+OpenStroke.Thickness = 2
+OpenStroke.Parent = OpenButton
+
 -- Panel Menu Utama
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 240)
-MainFrame.Position = UDim2.new(0.5, -130, 0.4, -120)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+MainFrame.Size = UDim2.new(0, 260, 0, 310)
+MainFrame.Position = UDim2.new(0.5, -130, 0.4, -155)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
@@ -166,10 +238,16 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = MainFrame
 
+-- Garis Tepi (Stroke) Biru Terang di Samping-Samping Menu Utama
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(0, 170, 255)
+MainStroke.Thickness = 2.5
+MainStroke.Parent = MainFrame
+
 -- Top Bar Menu
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 40)
-TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
+TopBar.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
 TopBar.BorderSizePixel = 0
 TopBar.Parent = MainFrame
 
@@ -177,9 +255,9 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.05, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Panel Hub"
-TitleLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-TitleLabel.TextSize, TitleLabel.Font = 13, Enum.Font.GothamBold
+TitleLabel.Text = "Blox Fruits Hub"
+TitleLabel.TextColor3 = Color3.fromRGB(0, 200, 255) -- Warna Biru Terang pada Bacaan Menu
+TitleLabel.TextSize, TitleLabel.Font = 14, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = TopBar
 
@@ -200,7 +278,7 @@ CloseCorner.Parent = CloseButton
 -- Helper Fungsi Membuat Tombol Kontrol di Dalam Menu
 local function createButton(posY, defaultText)
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0.9, 0, 0, 38)
+	btn.Size = UDim2.new(0.9, 0, 0, 36)
 	btn.Position = UDim2.new(0.05, 0, posY, 0)
 	btn.Font = Enum.Font.GothamSemibold
 	btn.TextSize = 12
@@ -214,8 +292,8 @@ local function createButton(posY, defaultText)
 end
 
 -- Tombol 1: Ganti Tim (Pirates / Marines)
-local TeamButton = createButton(0.22, "Tim: [ Pirates ]")
-TeamButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+local TeamButton = createButton(0.16, "Tim: [ " .. Settings.SelectedTeam .. " ]")
+TeamButton.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
 TeamButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 TeamButton.MouseButton1Click:Connect(function()
 	if Settings.SelectedTeam == "Pirates" then
@@ -226,11 +304,12 @@ TeamButton.MouseButton1Click:Connect(function()
 		TeamButton.Text = "Tim: [ Pirates ]"
 	end
 	joinTeam()
+	saveSettings()
 end)
 
 -- Tombol 2: Auto Join Team On/Off
-local AutoJoinButton = createButton(0.42, "Auto Join Team: ON")
-AutoJoinButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+local AutoJoinButton = createButton(0.28, "Auto Join Team: " .. (Settings.AutoJoinEnabled and "ON" or "OFF"))
+AutoJoinButton.BackgroundColor3 = Settings.AutoJoinEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
 AutoJoinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 AutoJoinButton.MouseButton1Click:Connect(function()
 	Settings.AutoJoinEnabled = not Settings.AutoJoinEnabled
@@ -242,27 +321,29 @@ AutoJoinButton.MouseButton1Click:Connect(function()
 		AutoJoinButton.Text = "Auto Join Team: OFF"
 		AutoJoinButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 	end
+	saveSettings()
 end)
 
 -- Tombol 3: Fast Mode / FPS Boost On/Off
-local FpsButton = createButton(0.62, "Fast Mode / FPS Boost: OFF")
-FpsButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+local FpsButton = createButton(0.40, "FPS Boost: " .. (Settings.FpsBoost and "ON" or "OFF"))
+FpsButton.BackgroundColor3 = Settings.FpsBoost and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
 FpsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 FpsButton.MouseButton1Click:Connect(function()
 	Settings.FpsBoost = not Settings.FpsBoost
 	applyFpsBoost(Settings.FpsBoost)
 	if Settings.FpsBoost then
-		FpsButton.Text = "Fast Mode / FPS Boost: ON"
+		FpsButton.Text = "FPS Boost: ON"
 		FpsButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 	else
-		FpsButton.Text = "Fast Mode / FPS Boost: OFF"
+		FpsButton.Text = "FPS Boost: OFF"
 		FpsButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 	end
+	saveSettings()
 end)
 
 -- Tombol 4: Fruit Notifier On/Off
-local FruitNotifButton = createButton(0.82, "Fruit Notifier: ON")
-FruitNotifButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+local FruitNotifButton = createButton(0.52, "Fruit Notifier: " .. (Settings.FruitNotifier and "ON" or "OFF"))
+FruitNotifButton.BackgroundColor3 = Settings.FruitNotifier and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
 FruitNotifButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 FruitNotifButton.MouseButton1Click:Connect(function()
 	Settings.FruitNotifier = not Settings.FruitNotifier
@@ -275,6 +356,47 @@ FruitNotifButton.MouseButton1Click:Connect(function()
 		FruitNotifButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 		NotifFrame.Visible = false
 	end
+	saveSettings()
+end)
+
+-- Tombol 5: Toggle Musik Buah On/Off
+local SoundToggleBtn = createButton(0.64, "Sound Notif: " .. (Settings.CustomSoundEnabled and "ON" or "OFF"))
+SoundToggleBtn.BackgroundColor3 = Settings.CustomSoundEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
+SoundToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SoundToggleBtn.MouseButton1Click:Connect(function()
+	Settings.CustomSoundEnabled = not Settings.CustomSoundEnabled
+	if Settings.CustomSoundEnabled then
+		SoundToggleBtn.Text = "Sound Notif: ON"
+		SoundToggleBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+	else
+		SoundToggleBtn.Text = "Sound Notif: OFF"
+		SoundToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	end
+	saveSettings()
+end)
+
+-- Kotak Masukkan Kode Audio Roblox (TextBox)
+local SoundTextBox = Instance.new("TextBox")
+SoundTextBox.Size = UDim2.new(0.9, 0, 0, 36)
+SoundTextBox.Position = UDim2.new(0.05, 0, 0.77, 0)
+SoundTextBox.BackgroundColor3 = Color3.fromRGB(30, 40, 55)
+SoundTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SoundTextBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+SoundTextBox.PlaceholderText = "Masukkan Kode Audio Roblox..."
+SoundTextBox.Text = Settings.SoundId
+SoundTextBox.TextSize = 11
+SoundTextBox.Font = Enum.Font.Gotham
+SoundTextBox.Parent = MainFrame
+
+local TextCorner = Instance.new("UICorner")
+TextCorner.CornerRadius = UDim.new(0, 6)
+TextCorner.Parent = SoundTextBox
+
+SoundTextBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		Settings.SoundId = SoundTextBox.Text
+		saveSettings()
+	end
 end)
 
 
@@ -284,7 +406,7 @@ local function toggleMenu()
 	menuVisible = not menuVisible
 	if menuVisible then
 		MainFrame.Visible = true
-		TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 260, 0, 240)}):Play()
+		TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 260, 0, 310)}):Play()
 	else
 		local tween = TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 260, 0, 0)})
 		tween:Play()
