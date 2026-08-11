@@ -1,4 +1,4 @@
--- [[ GURITA HUB V10.0 - CORRECT AUTO COLLECT & HOP ]] --
+-- [[ GURITA HUB V11.0 - STABLE FIXED BLOX FRUITS ]] --
 
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -11,7 +11,7 @@ local placeId = game.PlaceId
 local SEARCH_DELAY = 4
 
 -- NAMA FILE UNTUK SAVE SETTING PERMANEN
-local CONFIG_FILE = "GuritaHub_v10_Config.json"
+local CONFIG_FILE = "GuritaHub_v11_Config.json"
 
 -- PENGATURAN DEFAULT
 local config = {
@@ -44,14 +44,8 @@ local function saveConfig()
 	end
 end
 
--- Sinkronisasi Teleport Data
-local teleportData = TeleportService:GetLocalPlayerTeleportData()
-if teleportData and type(teleportData) == "table" and teleportData.autoHop ~= nil then
-	config.autoHopActive = teleportData.autoHop
-end
-
 -- ==========================================================
--- FUNGSI AUTO JOIN TIM (MANDIRI & TERPISAH)
+-- FUNGSI AUTO JOIN TIM (MANDIRI)
 -- ==========================================================
 local function autoSelectTeam()
 	if not config.autoJoinTeamActive then return end
@@ -102,7 +96,7 @@ Stroke.Thickness = 2
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Position = UDim2.new(0, 0, 0, 5)
-Title.Text = "GURITA HUB V10.0\nBLOX FRUITS MANAGER"
+Title.Text = "GURITA HUB V11.0\nBLOX FRUITS MANAGER"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 11
 Title.BackgroundTransparency = 1
@@ -150,7 +144,7 @@ ToggleMenuBtn.MouseButton1Down:Connect(function()
 end)
 
 -- ==========================================================
--- FUNGSI PENCARIAN & KARAKTER BERGERAK KE BUAH
+-- FUNGSI PENCARIAN & GERAK KE BUAH
 -- ==========================================================
 local function findFruit()
 	for _, obj in ipairs(Workspace:GetChildren()) do
@@ -165,20 +159,19 @@ local function moveToFruit(fruitObj)
 	pcall(function()
 		local handle = fruitObj:FindFirstChild("Handle") or fruitObj:FindFirstChildWhichIsA("BasePart")
 		if handle and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			-- Karakter kita yang bergerak / berpindah ke posisi buah
 			player.Character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 4, 0)
-			print("[SUKSES] Karakter berpindah ke posisi buah: " .. fruitObj.Name)
+			print("[SUKSES] Karakter mendatangi buah: " .. fruitObj.Name)
 		end
 	end)
 end
 
 -- ==========================================================
--- LOGIKA UTAMA SERVER HOP (ANTI ERROR 773)
+-- LOGIKA UTAMA SERVER HOP
 -- ==========================================================
 local function hopToNewServer()
 	if not config.autoHopActive then return end
 	
-	print("[Blox Fruits] Mencari server aman...")
+	print("[Blox Fruits] Mencari server lain...")
 	local success, result = pcall(function()
 		local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
 		return HttpService:JSONDecode(game:HttpGet(url))
@@ -195,7 +188,7 @@ local function hopToNewServer()
 		if #servers > 0 then
 			local randomServerId = servers[math.random(1, #servers)]
 			pcall(function()
-				TeleportService:TeleportToPlaceInstance(placeId, randomServerId, player, { autoHop = true })
+				TeleportService:TeleportToPlaceInstance(placeId, randomServerId, player)
 			end)
 		else
 			task.wait(SEARCH_DELAY)
@@ -209,45 +202,46 @@ end
 
 local function startMainLoop()
 	task.spawn(function()
-		task.wait(2)
+		-- Beri waktu jeda server loading awal
+		task.wait(3)
 		autoSelectTeam()
 
-		while config.autoHopActive do
-			task.wait(1.5)
+		-- Cek apakah Auto Hop masih menyala
+		if not config.autoHopActive then return end
 
-			-- Cek apakah ada buah di server ini
-			if config.fruitFinderActive then
-				local detectedFruit = findFruit()
-				if detectedFruit then
-					print("========================================")
-					print("[SUKSES] Buah Ditemukan: " .. detectedFruit.Name .. "!")
-					print("Auto Hop Dihentikan. Karakter mendatangi buah.")
-					print("========================================")
-					
-					config.autoHopActive = false
-					saveConfig()
-					
-					ToggleHopBtn.Text = "Auto Hop: OFF (Buah Ketemu)"
-					ToggleHopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
-					
-					-- Karakter kita yang bergerak menghampiri buah
-					if config.autoCollectActive then
-						moveToFruit(detectedFruit)
-					end
-					break
+		-- 1. Cek buah terlebih dahulu di server ini (baik buah baru maupun lama)
+		if config.fruitFinderActive then
+			local detectedFruit = findFruit()
+			if detectedFruit then
+				print("========================================")
+				print("[SUKSES] Buah Ditemukan di Server Ini: " .. detectedFruit.Name)
+				print("Auto Hop Dibatalkan. Karakter diam & mendatangi buah.")
+				print("========================================")
+				
+				-- Matikan Auto Hop agar tetap diam di server ini
+				config.autoHopActive = false
+				saveConfig()
+				
+				ToggleHopBtn.Text = "Auto Hop: OFF (Buah Ketemu)"
+				ToggleHopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
+				
+				if config.autoCollectActive then
+					moveToFruit(detectedFruit)
 				end
+				return
 			end
+		end
 
-			-- Jika tidak ada buah sama sekali, lakukan hop server baru
-			print("[Blox Fruits] Tidak ada buah. Melakukan Auto Hop...")
+		-- 2. Jika tidak ada buah sama sekali, jalankan hop server
+		if config.autoHopActive then
+			print("[Blox Fruits] Tidak ada buah di server ini. Berpindah server...")
 			hopToNewServer()
-			break
 		end
 	end)
 end
 
 -- ==========================================================
--- KONTROL TOMBOL DI DALAM MENU (MANDIRI & TERPISAH)
+-- KONTROL TOMBOL MENU
 -- ==========================================================
 ToggleHopBtn.MouseButton1Click:Connect(function()
 	config.autoHopActive = not config.autoHopActive
