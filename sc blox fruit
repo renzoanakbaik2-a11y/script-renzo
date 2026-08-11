@@ -26,6 +26,7 @@ local Settings = {
     FlightSpeed = 150,
     FlyHeight = 5,
     AutoTeleportFruit = false, 
+    AutoStoreFruit = false,    
     AutoFlyChest = false,     
     AutoFlyPlayer = false,     
     TargetPlayerName = "",
@@ -83,36 +84,21 @@ if not ScreenGui.Parent or ScreenGui.Parent == nil then
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Notifikasi Buah di Layar (Posisinya di Atas Layar)
+-- Notifikasi Buah di Layar
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 360, 0, 45)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0)
 NotifFrame.Position = UDim2.new(0.5, 0, 0, -60) 
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-NotifFrame.BackgroundTransparency = 1
+NotifFrame.BackgroundTransparency = 0.1
 NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
-
--- Fungsi Animasi Muncul ke Bawah (Masuk ke Layar)
-local function animateNotifIn()
-    TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0.5, 0, 0, 15),
-        BackgroundTransparency = 0.1
-    }):Play()
-end
-
--- Fungsi Animasi Hilang Kembali ke Atas
-local function animateNotifOut()
-    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Position = UDim2.new(0.5, 0, 0, -60),
-        BackgroundTransparency = 1
-    }):Play()
-end
 
 local NotifCorner = Instance.new("UICorner")
 NotifCorner.CornerRadius = UDim.new(0, 8)
 NotifCorner.Parent = NotifFrame
 
+-- UIStroke dengan Pinggiran Pelangi (Rainbow Effect)
 local UIStroke = Instance.new("UIStroke")
 UIStroke.Thickness = 2
 UIStroke.Parent = NotifFrame
@@ -133,6 +119,18 @@ NotifText.Text = "Fruit Notifier & Auto System Aktif"
 NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 11, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
+
+local function animateNotifIn()
+    TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, 0, 0, 15)
+    }):Play()
+end
+
+local function animateNotifOut()
+    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Position = UDim2.new(0.5, 0, 0, -60)
+    }):Play()
+end
 
 local function playFruitSound()
     if Settings.CustomSoundEnabled and Settings.SoundId ~= "" then
@@ -157,26 +155,6 @@ local function getCharacterRootPart()
         return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
     end
     return nil
-end
-
-local function stopFlying()
-    local character = LocalPlayer.Character
-    if character then
-        local rootPart = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        
-        if rootPart then
-            for _, v in ipairs(rootPart:GetChildren()) do
-                if v:IsA("BodyVelocity") or v:IsA("BodyGyro") or v:IsA("LinearVelocity") or v:IsA("AlignPosition") then
-                    v:Destroy()
-                end
-            end
-        end
-        
-        if humanoid then
-            humanoid.PlatformStand = false
-        end
-    end
 end
 
 local function smoothFlyTo(targetCFrame, checkSettingKey)
@@ -243,28 +221,68 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
 end
 
 -- ==========================================
--- SISTEM JALAN DI AIR (WALK ON WATER)
+-- FUNGSI AUTO STORE FRUIT
+-- ==========================================
+local function autoStoreFruits()
+    if not Settings.AutoStoreFruit then return end
+    pcall(function()
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        local character = LocalPlayer.Character
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        
+        local containers = {backpack, character}
+        for _, container in ipairs(containers) do
+            if container then
+                for _, item in ipairs(container:GetChildren()) do
+                    if item:IsA("Tool") then
+                        local nameLower = item.Name:lower()
+                        if nameLower:find("fruit") or nameLower:find("blox") or nameLower:find("rocket") or nameLower:find("spin") or nameLower:find("spring") or nameLower:find("chop") or nameLower:find("spike") or nameLower:find("flame") or nameLower:find("falcon") or nameLower:find("ice") or nameLower:find("sand") or nameLower:find("dark") or nameLower:find("diamond") or nameLower:find("light") or nameLower:find("rubber") or nameLower:find("barrier") or nameLower:find("ghost") or nameLower:find("magma") or nameLower:find("quake") or nameLower:find("buddha") or nameLower:find("love") or nameLower:find("spider") or nameLower:find("sound") or nameLower:find("phoenix") or nameLower:find("portal") or nameLower:find("pain") or nameLower:find("blizzard") or nameLower:find("gravity") or nameLower:find("mammoth") or nameLower:find("trex") or nameLower:find("dough") or nameLower:find("shadow") or nameLower:find("venom") or nameLower:find("control") or nameLower:find("spirit") or nameLower:find("dragon") or nameLower:find("leopard") or nameLower:find("kitsune") then
+                            if remotes and remotes:FindFirstChild("CommF_") then
+                                remotes.CommF_:InvokeServer("StoreFruit", item.Name)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- ==========================================
+-- PERBAIKAN SISTEM JALAN DI AIR (WALK ON WATER)
 -- ==========================================
 local WaterPart = nil
 
 local function updateWaterWalk()
     pcall(function()
         if Settings.WalkOnWater then
-            if not WaterPart or not WaterPart.Parent then
-                WaterPart = Instance.new("Part")
-                WaterPart.Name = "WaterWalkPlatform"
-                WaterPart.Size = Vector3.new(25, 1, 25)
-                WaterPart.Anchored = true
-                WaterPart.Transparency = 1
-                WaterPart.CanCollide = true
-                WaterPart.Parent = Workspace
-            end
-            
             local rootPart = getCharacterRootPart()
+            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            
             if rootPart then
-                WaterPart.Position = Vector3.new(rootPart.Position.X, rootPart.Position.Y - 4.2, rootPart.Position.Z)
+                if not WaterPart or not WaterPart.Parent then
+                    WaterPart = Instance.new("Part")
+                    WaterPart.Name = "WaterWalkPlatform"
+                    WaterPart.Size = Vector3.new(60, 1.5, 60) -- Ukuran diperbesar agar lebih aman
+                    WaterPart.Anchored = true
+                    WaterPart.Transparency = 1 -- Transparan (tak terlihat)
+                    WaterPart.CanCollide = true
+                    WaterPart.Parent = Workspace
+                end
+                
+                -- Posisi platform disesuaikan pas di permukaan air Blox Fruits
+                WaterPart.Position = Vector3.new(rootPart.Position.X, rootPart.Position.Y - 3.5, rootPart.Position.Z)
+                
+                if humanoid then
+                    humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
+                    humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                end
             end
         else
+            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
+            end
             if WaterPart then
                 WaterPart:Destroy()
                 WaterPart = nil
@@ -324,26 +342,40 @@ local function getChestIslands()
 end
 
 -- ==========================================
--- BACKGROUND SYSTEM (NOTIFIKASI & ANIMASI)
+-- BACKGROUND SYSTEM (NOTIFIKASI & AUTO FARM BUAH SPAWN)
 -- ==========================================
 task.spawn(function()
     local lastCount = 0
-    local isShown = false
+    local collectedFruits = {}
 
     while task.wait(0.5) do
         if Settings.FruitNotifier then
             local fruitList = {}
+            local targetFruitObj = nil
             local targetFruitHandle = nil
 
-            -- Deteksi buah secara akurat berdasarkan nama item/folder buah di Blox Fruits
             for _, obj in ipairs(Workspace:GetDescendants()) do
-                if (obj:IsA("Tool") or obj:IsA("Model")) and (obj:FindFirstChild("Handle") or obj.PrimaryPart or obj:IsA("Tool")) then
-                    local nameLower = obj.Name:lower()
-                    if nameLower:find("fruit") or nameLower:find("blox") or nameLower:find("budak") or nameLower:find("bomb") or nameLower:find("spike") or nameLower:find("chop") or nameLower:find("spring") or nameLower:find("kilo") or nameLower:find("spin") or nameLower:find("flame") or nameLower:find("falcon") or nameLower:find("ice") or nameLower:find("sand") or nameLower:find("dark") or nameLower:find("diamond") or nameLower:find("light") or nameLower:find("rubber") or nameLower:find("barrier") or nameLower:find("ghost") or nameLower:find("magma") or nameLower:find("quake") or nameLower:find("buddha") or nameLower:find("love") or nameLower:find("spider") or nameLower:find("sound") or nameLower:find("phoenix") or nameLower:find("portal") or nameLower:find("pain") or nameLower:find("blizzard") or nameLower:find("gravity")  or nameLower:find("mammoth") or nameLower:find("trex") or nameLower:find("dough") or nameLower:find("shadow") or nameLower:find("venom") or nameLower:find("control") or nameLower:find("spirit") or nameLower:find("dragon") or nameLower:find("leopard") or nameLower:find("kitsune") or nameLower:find("rocket") then
-                        if not nameLower:find("sword") and not nameLower:find("gun") then
-                            table.insert(fruitList, obj.Name)
-                            if not targetFruitHandle then
-                                targetFruitHandle = obj:FindFirstChild("Handle") or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildWhichIsA("BasePart")
+                local isInsidePlayer = false
+                local ancestor = obj.Parent
+                while ancestor and ancestor ~= game do
+                    if ancestor:IsA("Model") and Players:GetPlayerFromCharacter(ancestor) then
+                        isInsidePlayer = true
+                        break
+                    end
+                    ancestor = ancestor.Parent
+                end
+
+                if not isInsidePlayer then
+                    if (obj:IsA("Tool") or obj:IsA("Model")) and (obj:FindFirstChild("Handle") or obj.PrimaryPart or obj:IsA("Tool")) then
+                        local nameLower = obj.Name:lower()
+                        if nameLower:find("fruit") or nameLower:find("blox") or nameLower:find("budak") or nameLower:find("bomb") or nameLower:find("spike") or nameLower:find("chop") or nameLower:find("spring") or nameLower:find("kilo") or nameLower:find("spin") or nameLower:find("flame") or nameLower:find("falcon") or nameLower:find("ice") or nameLower:find("sand") or nameLower:find("dark") or nameLower:find("diamond") or nameLower:find("light") or nameLower:find("rubber") or nameLower:find("barrier") or nameLower:find("ghost") or nameLower:find("magma") or nameLower:find("quake") or nameLower:find("buddha") or nameLower:find("love") or nameLower:find("spider") or nameLower:find("sound") or nameLower:find("phoenix") or nameLower:find("portal") or nameLower:find("pain") or nameLower:find("blizzard") or nameLower:find("gravity") or nameLower:find("mammoth") or nameLower:find("trex") or nameLower:find("dough") or nameLower:find("shadow") or nameLower:find("venom") or nameLower:find("control") or nameLower:find("spirit") or nameLower:find("dragon") or nameLower:find("leopard") or nameLower:find("kitsune") or nameLower:find("rocket") then
+                            if not nameLower:find("sword") and not nameLower:find("gun") then
+                                table.insert(fruitList, obj.Name)
+                                
+                                if not collectedFruits[obj] and targetFruitObj == nil then
+                                    targetFruitObj = obj
+                                    targetFruitHandle = obj:FindFirstChild("Handle") or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildWhichIsA("BasePart")
+                                end
                             end
                         end
                     end
@@ -353,50 +385,46 @@ task.spawn(function()
             local currentCount = #fruitList
             if currentCount > 0 then
                 local combinedNames = table.concat(fruitList, ", ")
-                NotifText.Text = "KETEMU (" .. currentCount .. "): " .. combinedNames
+                NotifText.Text = "BERHASIL KETEMU: " .. combinedNames
                 
-                if not isShown then
-                    animateNotifIn()
-                    isShown = true
-                end
+                animateNotifIn()
 
                 if currentCount > lastCount then
                     playFruitSound()
                 end
                 lastCount = currentCount
 
-                if Settings.AutoTeleportFruit and targetFruitHandle then
+                if Settings.AutoTeleportFruit and targetFruitObj and targetFruitHandle then
                     local rootPart = getCharacterRootPart()
-                    if rootPart and (rootPart.Position - targetFruitHandle.Position).Magnitude > 15 then
+                    if rootPart then
                         smoothFlyTo(targetFruitHandle.CFrame, "AutoTeleportFruit")
+                        collectedFruits[targetFruitObj] = true
+                        
+                        task.wait(0.5)
+                        autoStoreFruits()
+                        
+                        task.wait(1)
                     end
                 end
+                
+                task.wait(3)
+                animateNotifOut()
             else
-                -- Notifikasi tetap muncul dengan animasi saat baru join dan belum ada buah
-                NotifText.Text = "Status: Mencari Buah di Map..."
-                if not isShown then
-                    animateNotifIn()
-                    isShown = true
-                end
+                collectedFruits = {}
                 lastCount = 0
             end
         else
-            if isShown then
-                animateNotifOut()
-                isShown = false
-            end
+            animateNotifOut()
         end
 
         if Settings.AutoFlyChest then
             local rootPart = getCharacterRootPart()
             if rootPart then
                 local islands = getChestIslands()
-                
                 if #islands == 0 then
                     DeadChests = {}
                     islands = getChestIslands()
                 end
-
                 for i = #islands, 1, -1 do
                     local validChests = {}
                     for _, cData in ipairs(islands[i].Chests) do
@@ -409,22 +437,18 @@ task.spawn(function()
                         table.remove(islands, i)
                     end
                 end
-
                 if #islands > 0 then
                     table.sort(islands, function(a, b)
                         return (rootPart.Position - a.Center).Magnitude < (rootPart.Position - b.Center).Magnitude
                     end)
-
                     local currentIsland = islands[1]
                     if currentIsland and #currentIsland.Chests > 0 then
                         table.sort(currentIsland.Chests, function(a, b)
                             return (rootPart.Position - a.Position).Magnitude < (rootPart.Position - b.Position).Magnitude
                         end)
-
                         local targetChestData = currentIsland.Chests[1]
                         local targetChest = targetChestData.Object
                         local targetPos = getPositionOfObj(targetChest)
-                        
                         if targetPos and Settings.AutoFlyChest then
                             smoothFlyTo(CFrame.new(targetPos), "AutoFlyChest")
                             if targetChest then
@@ -438,7 +462,6 @@ task.spawn(function()
 
         if Settings.AutoFlyPlayer then
             local targetPlayer = nil
-
             if Settings.TargetPlayerName ~= "" then
                 for _, p in ipairs(Players:GetPlayers()) do
                     if p ~= LocalPlayer and string.find(p.Name:lower(), Settings.TargetPlayerName:lower()) then
@@ -461,7 +484,6 @@ task.spawn(function()
                     end
                 end
             end
-
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and Settings.AutoFlyPlayer then
                 local rootPart = getCharacterRootPart()
                 if rootPart then
@@ -516,7 +538,7 @@ end
 if Settings.FpsBoost then applyFpsBoost(true) end
 
 -- ==========================================
--- TAMPILAN UI MENU UTAMA (MENGGUNAKAN LOGO GAMBAR)
+-- TAMPILAN UI MENU UTAMA
 -- ==========================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -587,7 +609,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 1050)
+Container.CanvasSize = UDim2.new(0, 0, 0, 1100)
 Container.ScrollBarThickness = 4
 Container.Parent = MainFrame
 
@@ -627,19 +649,11 @@ local function createAutoToggle(posY, text, settingKey, callback)
         btn.Text = text .. ": " .. (newState and "ON" or "OFF")
         btn.BackgroundColor3 = newState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
         
-        if not newState and (settingKey == "AutoFlyChest" or settingKey == "AutoFlyPlayer" or settingKey == "AutoTeleportFruit") then
-            stopFlying()
-        end
-
         saveSettings()
         if callback then callback(newState) end
     end)
     return btn
 end
-
--- ==========================================
--- KONTEN MENU UTAMA
--- ==========================================
 
 -- 1. AUTO JOIN TIM
 createSectionHeader(10, "--- 1. AUTO JOIN TIM ---")
@@ -782,7 +796,7 @@ HeightTextBox.FocusLost:Connect(function(enterPressed)
 end)
 
 -- 4. TARGET PLAYER
-createSectionHeader(455, "--- 4. TARGET PLAYER (LEVEL, NAMA, & BUAH) ---")
+createSectionHeader(455, "--- 4. TARGET PLAYER ---")
 local TargetStatusLabel = Instance.new("TextLabel")
 TargetStatusLabel.Size = UDim2.new(0.9, 0, 0, 20)
 TargetStatusLabel.Position = UDim2.new(0.05, 0, 0, 480)
@@ -886,10 +900,11 @@ task.spawn(refreshPlayerList)
 -- 5. FITUR AUTOMATIC LAINNYA
 createSectionHeader(680, "--- 5. FITUR AUTOMATIC LAINNYA ---")
 createAutoToggle(705, "Teleport ke Buah", "AutoTeleportFruit", nil)
-createAutoToggle(750, "Auto Collect Chest (Tanpa Delay & Auto Loop)", "AutoFlyChest", nil)
-createAutoToggle(795, "Teleport ke Player", "AutoFlyPlayer", nil)
-createAutoToggle(840, "Jalan di Air (Walk on Water)", "WalkOnWater", nil)
-createAutoToggle(885, "FPS Boost", "FpsBoost", function(val)
+createAutoToggle(750, "Auto Store Fruit (Simpan Buah)", "AutoStoreFruit", nil)
+createAutoToggle(795, "Auto Collect Chest", "AutoFlyChest", nil)
+createAutoToggle(840, "Teleport ke Player", "AutoFlyPlayer", nil)
+createAutoToggle(885, "Jalan di Air (Walk on Water)", "WalkOnWater", nil)
+createAutoToggle(930, "FPS Boost", "FpsBoost", function(val)
     applyFpsBoost(val)
 end)
 
@@ -916,11 +931,3 @@ end
 
 OpenButton.MouseButton1Click:Connect(toggleMenu)
 CloseButton.MouseButton1Click:Connect(toggleMenu)
-
--- Jalankan animasi masuk pertama kali saat baru join (meskipun belum ada buah)
-task.spawn(function()
-    task.wait(1)
-    if Settings.FruitNotifier then
-        animateNotifIn()
-    end
-end)
