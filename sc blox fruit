@@ -1,55 +1,52 @@
--- [[ GURITA HUB - TEAM & FRUIT NOTIFICATION MODULE ]] --
+-- [[ GURITA HUB - SMART FRUIT NOTIFICATION MODULE ]] --
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
+local lastFruitName = nil -- Variabel untuk melacak status buah
 
--- PENGATURAN DEFAULT
-local config = {
-	autoJoinTeamActive = false,
-	selectedTeam = "Pirates"
-}
-
--- ==========================================================
--- FUNGSI NOTIFIKASI DI LAYAR
--- ==========================================================
+-- FUNGSI NOTIFIKASI
 local function sendNotification(title, text, duration)
 	pcall(function()
 		StarterGui:SetCore("SendNotification", {
 			Title = title,
 			Text = text,
-			Duration = duration or 3
+			Duration = duration or 5
 		})
 	end)
 end
 
 -- ==========================================================
--- FUNGSI AUTO JOIN TIM
--- ==========================================================
-local function autoSelectTeam()
-	local re = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-	if re then
-		pcall(function()
-			re:InvokeServer("SetTeam", config.selectedTeam)
-		end)
-	end
-end
-
--- ==========================================================
--- DETEKSI BUAH & NOTIFIKASI BUAH
+-- SISTEM DETEKSI BUAH ANTI-SPAM
 -- ==========================================================
 local function checkFruit()
+	local foundFruit = nil
+	
+	-- Cari buah di dalam Workspace
 	for _, obj in ipairs(Workspace:GetChildren()) do
 		if obj.Name:find("Fruit") or obj.Name:find("BloxFruit") or (obj:IsA("Tool") and obj:FindFirstChild("Handle")) then
-			sendNotification("Gurita Hub", "Ada Buah: " .. obj.Name .. "!", 6)
+			foundFruit = obj.Name
 			break
+		end
+	end
+
+	-- Logika Anti-Spam
+	if foundFruit then
+		if lastFruitName ~= foundFruit then
+			lastFruitName = foundFruit
+			sendNotification("Gurita Hub", "Buah ditemukan: " .. foundFruit, 5)
+		end
+	else
+		if lastFruitName ~= nil then
+			sendNotification("Gurita Hub", "Buah tidak ada lagi (Kosong).", 5)
+			lastFruitName = nil
 		end
 	end
 end
 
+-- Jalankan scan setiap 5 detik
 task.spawn(function()
 	while task.wait(5) do
 		pcall(checkFruit)
@@ -81,12 +78,12 @@ local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
 ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
 ToggleMenuStroke.Thickness = 2
 
--- Frame Utama Menu
+-- Frame Utama Menu (DISET FALSE/TERSEMBUNYI SAAT PERTAMA KALI DI-EXECUTE)
 local Main = Instance.new("Frame", screenGui)
 Main.Size = UDim2.new(0, 240, 0, 180)
 Main.Position = UDim2.new(0.5, -120, 0.5, -90)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Main.Visible = true
+Main.Visible = false -- Diubah jadi false supaya tidak langsung muncul mengganggu
 Instance.new("UICorner", Main)
 local Stroke = Instance.new("UIStroke", Main)
 Stroke.Color = Color3.fromRGB(0, 170, 255)
@@ -118,20 +115,30 @@ end
 local TeamBtn        = CreateBtn(UDim2.new(0, 20, 0, 55))
 local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 105))
 
--- Update Teks & Warna Tombol Berdasarkan Config
+local config = {
+	autoJoinTeamActive = false,
+	selectedTeam = "Pirates"
+}
+
 TeamBtn.Text = "Tim: " .. config.selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 
 ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
 ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
+local function autoSelectTeam()
+	local re = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+	if re then
+		pcall(function()
+			re:InvokeServer("SetTeam", config.selectedTeam)
+		end)
+	end
+end
+
 ToggleMenuBtn.MouseButton1Down:Connect(function()
 	Main.Visible = not Main.Visible
 end)
 
--- ==========================================================
--- KONTROL TOMBOL INTERAKTIF MENU
--- ==========================================================
 TeamBtn.MouseButton1Click:Connect(function()
 	if config.selectedTeam == "Pirates" then
 		config.selectedTeam = "Marines"
