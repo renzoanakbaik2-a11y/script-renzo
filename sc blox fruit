@@ -1,232 +1,297 @@
--- [[ GURITA HUB - 100% STABLE (NO FILE ERROR) ]] --
+-- Jalankan script ini menggunakan Executor Roblox (seperti Delta, Hydrogen, Synapse, dll.)
+
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
-local player = Players.LocalPlayer
-local lastState = "UNKNOWN"
+local LocalPlayer = Players.LocalPlayer
 
-local config = {
-    autoJoinTeamActive = false,
-    selectedTeam = "Pirates",
-    fastModeActive = false
+-- Pengaturan Status Fitur
+local Settings = {
+	FruitNotifier = true,
+	AutoJoinEnabled = true,
+	SelectedTeam = "Pirates", -- Pilihan: "Pirates" atau "Marines"
+	FpsBoost = false
 }
 
-local function applyFastMode(state)
-    pcall(function()
-        if state then
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.Material = Enum.Material.SmoothPlastic
-                    v.Reflectance = 0
-                elseif v:IsA("Decal") or v:IsA("Texture") then
-                    v.Transparency = 1
-                end
-            end
-            Lighting.GlobalShadows = false
-            Lighting.FogEnd = 9999
-        else
-            Lighting.GlobalShadows = true
-        end
-    end)
+-- 1. ScreenGui Utama
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BloxFruitsHub"
+ScreenGui.ResetOnSpawn = false
+pcall(function()
+	ScreenGui.Parent = CoreGui
+end)
+if not ScreenGui.Parent then
+	ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
-pcall(function()
-    if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
-        player.PlayerGui.GuritaHubGUI:Destroy()
-    end
-    if player.PlayerGui:FindFirstChild("GuritaHubTopNotification") then
-        player.PlayerGui.GuritaHubTopNotification:Destroy()
-    end
+-- ==========================================
+-- FITUR 1: NOTIFIKASI BUAH ATAS (FRUIT NOTIFIER)
+-- ==========================================
+local NotifFrame = Instance.new("Frame")
+NotifFrame.Size = UDim2.new(0, 320, 0, 50)
+NotifFrame.Position = UDim2.new(0.5, -160, 0.02, 0)
+NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+NotifFrame.BorderSizePixel = 0
+NotifFrame.Parent = ScreenGui
+
+local NotifCorner = Instance.new("UICorner")
+NotifCorner.CornerRadius = UDim.new(0, 8)
+NotifCorner.Parent = NotifFrame
+
+-- Animasi Garis Tepi Rainbow (Rainbow Stroke)
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 2
+UIStroke.Parent = NotifFrame
+
+task.spawn(function()
+	while true do
+		for i = 0, 1, 0.01 do
+			UIStroke.Color = Color3.fromHSV(i, 1, 1)
+			task.wait(0.05)
+		end
+	end
 end)
 
-local notificationGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-notificationGui.Name = "GuritaHubTopNotification"
-notificationGui.ResetOnSpawn = false
-
-local NotifFrame = Instance.new("Frame", notificationGui)
-NotifFrame.Size = UDim2.new(0, 300, 0, 45)
-NotifFrame.Position = UDim2.new(0.5, -150, 0, -60) 
-NotifFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-NotifFrame.BorderSizePixel = 0
-Instance.new("UICorner", NotifFrame).CornerRadius = UDim.new(0, 8)
-
-local NotifStroke = Instance.new("UIStroke", NotifFrame)
-NotifStroke.Thickness = 2.5
-
-local NotifText = Instance.new("TextLabel", NotifFrame)
+local NotifText = Instance.new("TextLabel")
 NotifText.Size = UDim2.new(1, 0, 1, 0)
 NotifText.BackgroundTransparency = 1
-NotifText.Font = Enum.Font.GothamBold
+NotifText.Text = "Fruit Notifier: Memindai Map..."
 NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
-NotifText.TextSize = 13
-NotifText.Text = ""
+NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
+NotifText.Parent = NotifFrame
 
-local function showTopNotification(text, duration)
-    pcall(function()
-        NotifText.Text = text
-        NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, 75), "Out", "Quad", 0.3, true)
-        task.delay(duration or 5, function()
-            NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, -60), "In", "Quad", 0.3, true)
-        end)
-    end)
-end
-
-local function autoSelectTeam()
-    if not config.autoJoinTeamActive then return end
-    if player.Team and player.Team.Name == config.selectedTeam then return end
-
-    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-    local commF = remotes and remotes:FindFirstChild("CommF_")
-    if commF then
-        pcall(function()
-            commF:InvokeServer("SetTeam", config.selectedTeam)
-        end)
-    end
-end
-
+-- Scanner Buah di Workspace
 task.spawn(function()
-    task.wait(1.5)
-    autoSelectTeam()
-    while task.wait(5) do
-        pcall(autoSelectTeam)
-    end
+	while task.wait(3) do
+		if Settings.FruitNotifier then
+			local foundFruit = nil
+			for _, obj in ipairs(Workspace:GetChildren()) do
+				if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
+					-- Biasanya buah di map Blox Fruits dinamai berdasarkan kelas Tool / Handle
+					foundFruit = obj.Name
+					break
+				end
+			end
+			
+			if foundFruit then
+				NotifText.Text = "BERHASIL KETEMU: " .. foundFruit
+			else
+				NotifText.Text = "Status: Mencari Buah di Map (Kosong)..."
+			end
+		end
+	end
 end)
 
-local function checkFruit()
-    local foundFruitName = nil
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        if obj:IsA("Model") or obj:IsA("Tool") then
-            local name = obj.Name
-            if (name:lower():find("fruit") or name:lower():find("bloxfruit")) and name ~= "Fruit" then
-                foundFruitName = name
-                break
-            end
-        end
-    end
 
-    if foundFruitName then
-        if lastState ~= foundFruitName then
-            lastState = foundFruitName
-            showTopNotification("Buah Ditemukan: " .. foundFruitName, 5)
-        end
-    else
-        if lastState ~= "NONE" then
-            showTopNotification("Buah Tidak Ada (Kosong)", 5)
-            lastState = "NONE"
-        end
-    end
+-- ==========================================
+-- FITUR 2: AUTO JOIN TEAM
+-- ==========================================
+local function joinTeam()
+	if not Settings.AutoJoinEnabled then return end
+	pcall(function()
+		local ReplicatedStorage = game:GetService("ReplicatedStorage")
+		local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+		if remotes and remotes:FindFirstChild("CommF_") then
+			if Settings.SelectedTeam == "Pirates" then
+				remotes.CommF_:InvokeServer("SetTeam", "Pirates")
+			elseif Settings.SelectedTeam == "Marines" then
+				remotes.CommF_:InvokeServer("SetTeam", "Marines")
+			end
+		end
+	end)
 end
 
+LocalPlayer.CharacterAdded:Connect(function()
+	task.wait(2)
+	joinTeam()
+end)
 task.spawn(function()
-    while task.wait(5) do
-        pcall(checkFruit)
-    end
+	task.wait(1)
+	joinTeam()
 end)
 
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.Name = "GuritaHubGUI"
-screenGui.ResetOnSpawn = false
 
-local ToggleMenuBtn = Instance.new("TextButton", screenGui)
-ToggleMenuBtn.Size = UDim2.new(0, 85, 0, 40)
-ToggleMenuBtn.Position = UDim2.new(0, 20, 0.4, 0)
-ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleMenuBtn.Text = "MENU ≡"
-ToggleMenuBtn.TextColor3 = Color3.fromRGB(0, 220, 255)
-ToggleMenuBtn.Font = Enum.Font.GothamBlack
-ToggleMenuBtn.TextSize = 13
-Instance.new("UICorner", ToggleMenuBtn)
-local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
-ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
-ToggleMenuStroke.Thickness = 2
-
-local Main = Instance.new("Frame", screenGui)
-Main.Size = UDim2.new(0, 240, 0, 220)
-Main.Position = UDim2.new(0.5, -120, 0.5, -110)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Main.Visible = false 
-Instance.new("UICorner", Main)
-local Stroke = Instance.new("UIStroke", Main)
-Stroke.Color = Color3.fromRGB(0, 170, 255)
-Stroke.Thickness = 2
-
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Position = UDim2.new(0, 0, 0, 5)
-Title.Text = "GURITA HUB - MODULE\nBLOX FRUITS"
-Title.Font = Enum.Font.GothamBlack
-Title.TextSize = 11
-Title.BackgroundTransparency = 1
-Title.TextColor3 = Color3.fromRGB(0, 170, 255)
-
-local function CreateBtn(pos)
-    local b = Instance.new("TextButton", Main)
-    b.Size = UDim2.new(0, 200, 0, 34)
-    b.Position = pos
-    b.Font = Enum.Font.GothamBlack
-    b.TextSize = 12
-    b.TextColor3 = Color3.new(1, 1, 1)
-    Instance.new("UICorner", b)
-    local s = Instance.new("UIStroke", b)
-    s.Color = Color3.fromRGB(0, 170, 255)
-    s.Thickness = 1.2
-    return b
+-- ==========================================
+-- FITUR 3: MODE CEPAT / FPS BOOST
+-- ==========================================
+local function applyFpsBoost(state)
+	if state then
+		Lighting.GlobalShadows = false
+		Lighting.FogEnd = 999999
+		for _, v in ipairs(Workspace:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.Material = Enum.Material.SmoothPlastic
+				v.Reflectance = 0
+			elseif v:IsA("Decal") or v:IsA("Texture") then
+				v.Transparency = 1
+			end
+		end
+	else
+		Lighting.GlobalShadows = true
+	end
 end
 
-local TeamBtn        = CreateBtn(UDim2.new(0, 20, 0, 55))
-local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 98))
-local ToggleFastMode = CreateBtn(UDim2.new(0, 20, 0, 141))
 
-TeamBtn.Text = "Tim: " .. config.selectedTeam
-TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+-- ==========================================
+-- FITUR 4: MENU ANTARMUKA MINIMALIS & PANEL KONTROL
+-- ==========================================
+-- Tombol Mengambang (MENU ≡)
+local OpenButton = Instance.new("TextButton")
+OpenButton.Size = UDim2.new(0, 55, 0, 55)
+OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
+OpenButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+OpenButton.Text = "MENU ≡"
+OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.TextSize, OpenButton.Font = 11, Enum.Font.GothamBold
+OpenButton.Parent = ScreenGui
 
-ToggleJoinTeam.Text = "Auto Join Team: OFF"
-ToggleJoinTeam.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(0, 12)
+OpenCorner.Parent = OpenButton
 
-ToggleFastMode.Text = "Mode Cepat: OFF"
-ToggleFastMode.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+-- Panel Menu Utama
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 260, 0, 240)
+MainFrame.Position = UDim2.new(0.5, -130, 0.4, -120)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
 
-RunService.RenderStepped:Connect(function()
-    local hue = tick() % 5 / 5
-    local rainbowColor = Color3.fromHSV(hue, 1, 1)
-    if NotifStroke and NotifStroke.Parent then
-        NotifStroke.Color = rainbowColor
-    end
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+-- Top Bar Menu
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+TitleLabel.Position = UDim2.new(0.05, 0, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "Blox Fruits Panel Hub"
+TitleLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+TitleLabel.TextSize, TitleLabel.Font = 13, Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TopBar
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(0.85, 0, 0.15, 0)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize, CloseButton.Font = 12, Enum.Font.GothamBold
+CloseButton.Parent = TopBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseButton
+
+
+-- Helper Fungsi Membuat Tombol Kontrol di Dalam Menu
+local function createButton(posY, defaultText)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0.9, 0, 0, 38)
+	btn.Position = UDim2.new(0.05, 0, posY, 0)
+	btn.Font = Enum.Font.GothamSemibold
+	btn.TextSize = 12
+	btn.Text = defaultText
+	btn.Parent = MainFrame
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 6)
+	corner.Parent = btn
+	return btn
+end
+
+-- Tombol 1: Ganti Tim (Pirates / Marines)
+local TeamButton = createButton(0.22, "Tim: [ Pirates ]")
+TeamButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+TeamButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeamButton.MouseButton1Click:Connect(function()
+	if Settings.SelectedTeam == "Pirates" then
+		Settings.SelectedTeam = "Marines"
+		TeamButton.Text = "Tim: [ Marines ]"
+	else
+		Settings.SelectedTeam = "Pirates"
+		TeamButton.Text = "Tim: [ Pirates ]"
+	end
+	joinTeam()
 end)
 
-ToggleMenuBtn.MouseButton1Down:Connect(function()
-    Main.Visible = not Main.Visible
+-- Tombol 2: Auto Join Team On/Off
+local AutoJoinButton = createButton(0.42, "Auto Join Team: ON")
+AutoJoinButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+AutoJoinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoJoinButton.MouseButton1Click:Connect(function()
+	Settings.AutoJoinEnabled = not Settings.AutoJoinEnabled
+	if Settings.AutoJoinEnabled then
+		AutoJoinButton.Text = "Auto Join Team: ON"
+		AutoJoinButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+		joinTeam()
+	else
+		AutoJoinButton.Text = "Auto Join Team: OFF"
+		AutoJoinButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	end
 end)
 
-TeamBtn.MouseButton1Click:Connect(function()
-    if config.selectedTeam == "Pirates" then
-        config.selectedTeam = "Marines"
-    else
-        config.selectedTeam = "Pirates"
-    end
-    TeamBtn.Text = "Tim: " .. config.selectedTeam
-    if config.autoJoinTeamActive then
-        autoSelectTeam()
-    end
+-- Tombol 3: Fast Mode / FPS Boost On/Off
+local FpsButton = createButton(0.62, "Fast Mode / FPS Boost: OFF")
+FpsButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+FpsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+FpsButton.MouseButton1Click:Connect(function()
+	Settings.FpsBoost = not Settings.FpsBoost
+	applyFpsBoost(Settings.FpsBoost)
+	if Settings.FpsBoost then
+		FpsButton.Text = "Fast Mode / FPS Boost: ON"
+		FpsButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+	else
+		FpsButton.Text = "Fast Mode / FPS Boost: OFF"
+		FpsButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	end
 end)
 
-ToggleJoinTeam.MouseButton1Click:Connect(function()
-    config.autoJoinTeamActive = not config.autoJoinTeamActive
-    ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
-    ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    if config.autoJoinTeamActive then
-        autoSelectTeam()
-    end
+-- Tombol 4: Fruit Notifier On/Off
+local FruitNotifButton = createButton(0.82, "Fruit Notifier: ON")
+FruitNotifButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+FruitNotifButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+FruitNotifButton.MouseButton1Click:Connect(function()
+	Settings.FruitNotifier = not Settings.FruitNotifier
+	if Settings.FruitNotifier then
+		FruitNotifButton.Text = "Fruit Notifier: ON"
+		FruitNotifButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+		NotifFrame.Visible = true
+	else
+		FruitNotifButton.Text = "Fruit Notifier: OFF"
+		FruitNotifButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+		NotifFrame.Visible = false
+	end
 end)
 
-ToggleFastMode.MouseButton1Click:Connect(function()
-    config.fastModeActive = not config.fastModeActive
-    ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
-    ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    applyFastMode(config.fastModeActive)
-end)
 
-print("Gurita Hub Stable Loaded!")
+-- Animasi Buka/Tutup Menu Utama
+local menuVisible = true
+local function toggleMenu()
+	menuVisible = not menuVisible
+	if menuVisible then
+		MainFrame.Visible = true
+		TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 260, 0, 240)}):Play()
+	else
+		local tween = TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 260, 0, 0)})
+		tween:Play()
+		tween.Completed:Wait()
+		MainFrame.Visible = false
+	end
+end
+
+OpenButton.MouseButton1Click:Connect(toggleMenu)
+CloseButton.MouseButton1Click:Connect(toggleMenu)
