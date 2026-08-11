@@ -23,8 +23,9 @@ local Settings = {
 	SoundId = "", -- ID Audio Roblox
 	FlightSpeed = 350, -- Kecepatan terbang (Maksimal 1000)
 	AutoTeleportFruit = false, -- Auto terbang ke buah
-	AutoFlyChest = false,     -- Auto terbang ke semua chest/peti satu map
-	AutoFlyPlayer = false     -- Auto terbang ke player
+	AutoFlyChest = false,     -- Auto terbang ke semua chest/peti
+	AutoFlyPlayer = false,    -- Auto terbang ke player (ON/OFF)
+	TargetPlayerName = ""     -- Target nama player spesifik (kosongkan jika ingin terdekat)
 }
 
 -- Fungsi Load Settings
@@ -119,7 +120,7 @@ end
 
 
 -- ==========================================
--- FUNGSI DASAR KARAKTER & TERBANG STABIL ANTI-KAMERA GOYANG
+-- FUNGSI DASAR KARAKTER & TERBANG (KREDIT KAMERA DIAM & PULIH SETELAH SAMPAI)
 -- ==========================================
 local function getCharacterRootPart()
 	local character = LocalPlayer.Character
@@ -129,7 +130,7 @@ local function getCharacterRootPart()
 	return nil
 end
 
--- Fungsi Terbang Mulus dengan Pengunci Kamera agar Tidak Ikut Naik-Turun
+-- Fungsi Terbang Mulus: Kamera Terkunci di Posisi Awal, Baru Normal Lagi Setelah Sampai
 local function smoothFlyTo(targetCFrame)
 	local rootPart = getCharacterRootPart()
 	if not rootPart then return end
@@ -147,9 +148,13 @@ local function smoothFlyTo(targetCFrame)
 		humanoid.PlatformStand = true
 	end
 
-	local oldCameraCFrame = Camera.CFrame
-	local cameraLockConnection = game:GetService("RunService").RenderStepped:Connect(function()
-		Camera.CFrame = oldCameraCFrame
+	-- Simpan posisi & orientasi kamera tepat sebelum terbang agar tidak gerak/liar
+	local savedCameraCFrame = Camera.CFrame
+	Camera.CameraType = Enum.CameraType.Scriptable
+
+	-- Lock posisi kamera agar diam total selama perjalanan
+	local camLockConnection = game:GetService("RunService").RenderStepped:Connect(function()
+		Camera.CFrame = savedCameraCFrame
 	end)
 
 	local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
@@ -158,10 +163,13 @@ local function smoothFlyTo(targetCFrame)
 	tween:Play()
 	tween.Completed:Wait()
 
-	if cameraLockConnection then
-		cameraLockConnection:Disconnect()
+	-- Lepaskan kunci kamera setelah sampai di tujuan
+	if camLockConnection then
+		camLockConnection:Disconnect()
 	end
 
+	-- Kembalikan kamera ke mode normal (Custom)
+	Camera.CameraType = Enum.CameraType.Custom
 	if humanoid then
 		humanoid.PlatformStand = false
 	end
@@ -169,7 +177,7 @@ end
 
 
 -- ==========================================
--- BACKGROUND SYSTEM (SCANNER BUAH, ALL CHEST, PLAYER)
+-- BACKGROUND SYSTEM (SCANNER BUAH, CHEST, PLAYER DENGAN DELAY)
 -- ==========================================
 task.spawn(function()
 	local lastCount = 0
@@ -209,30 +217,61 @@ task.spawn(function()
 			end
 		end
 
-		-- 2. Auto Terbang ke SEMUA Chest / Peti di Seluruh Map
+		-- 2. Auto Terbang ke SEMUA Chest / Peti
 		if Settings.AutoFlyChest then
+			local chestsFound = false
 			for _, obj in ipairs(Workspace:GetDescendants()) do
 				if not Settings.AutoFlyChest then break end
 				if (obj.Name:lower():find("chest") or obj.Name:lower():find("peti")) and obj:IsA("BasePart") then
+					chestsFound = true
 					local rootPart = getCharacterRootPart()
 					if rootPart then
 						smoothFlyTo(obj.CFrame)
-						task.wait(0.2) -- Jeda singkat antar peti agar mulus
+						task.wait(0.1)
 					end
 				end
 			end
+			if chestsFound then
+				task.wait(1)
+			end
 		end
 
-		-- 3. Auto Terbang ke Player Lain
+		-- 3. Auto Terbang ke Player (Dengan Delay, Nama Spesifik atau Terdekat)
 		if Settings.AutoFlyPlayer then
-			for _, player in ipairs(Players:GetPlayers()) do
-				if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-					local rootPart = getCharacterRootPart()
-					if rootPart then
-						smoothFlyTo(player.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0))
-						task.wait(2)
+			task.wait(3) -- Delay sebelum mengeksekusi perpindahan ke player agar tidak langsung ngebut
+			local targetPlayer = nil
+
+			-- Cek apakah user mengisi target nama player di settings
+			if Settings.TargetPlayerName ~= "" then
+				for _, p in ipairs(Players:GetPlayers()) do
+					if p ~= LocalPlayer and string.find(p.Name:lower(), Settings.TargetPlayerName:lower()) then
+						targetPlayer = p
 						break
 					end
+				end
+			else
+				-- Jika kosong, pilih player terdekat
+				local shortestDist = math.huge
+				local rootPart = getCharacterRootPart()
+				if rootPart then
+					for _, p in ipairs(Players:GetPlayers()) do
+						if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+							local dist = (rootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+							if dist < shortestDist then
+								shortestDist = dist
+								targetPlayer = p
+							end
+						end
+					end
+				end
+			end
+
+			-- Jika target ditemukan, terbang ke player tersebut
+			if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+				local rootPart = getCharacterRootPart()
+				if rootPart then
+					smoothFlyTo(targetPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0))
+					task.wait(2)
 				end
 			end
 		end
@@ -433,7 +472,7 @@ local homeLabel = Instance.new("TextLabel")
 homeLabel.Size = UDim2.new(0.9, 0, 0, 120)
 homeLabel.Position = UDim2.new(0.05, 0, 0.05, 0)
 homeLabel.BackgroundTransparency = 1
-homeLabel.Text = "Selamat datang di BloxFruits Hub!\nGunakan menu di sebelah kiri untuk mengatur:\n\n1. **Settings**: Mengatur kecepatan terbang (Flight Speed) & tim.\n2. **Automatically**: Menyalakan fitur otomatis (Terbang ke Buah, All Chest satu map, Player, dll)."
+homeLabel.Text = "Selamat datang di BloxFruits Hub!\nGunakan menu di sebelah kiri untuk mengatur:\n\n1. **Settings**: Kecepatan terbang, Tim, & Target Nama Player.\n2. **Automatically**: Menyalakan fitur otomatis (Terbang ke Buah, Chest, & Player)."
 homeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 homeLabel.TextSize, homeLabel.Font = 11, Enum.Font.Gotham
 homeLabel.TextWrapped = true
@@ -442,7 +481,7 @@ homeLabel.Parent = PageHome
 
 
 -- ==========================================
--- ISI KONTEN: HALAMAN CONFIGURATION / SETTINGS (No. 1)
+-- ISI KONTEN: HALAMAN CONFIGURATION / SETTINGS
 -- ==========================================
 local function createConfigLabel(posY, text)
 	local lbl = Instance.new("TextLabel")
@@ -513,11 +552,34 @@ TeamConfigBtn.MouseButton1Click:Connect(function()
 	saveSettings()
 end)
 
-createConfigLabel(165, "3. KODE AUDIO NOTIFIKASI BUAH:")
+createConfigLabel(165, "3. TARGET NAMA PLAYER (Kosong = Terdekat):")
+
+local PlayerTargetTextBox = Instance.new("TextBox")
+PlayerTargetTextBox.Size = UDim2.new(0.9, 0, 0, 35)
+PlayerTargetTextBox.Position = UDim2.new(0.05, 0, 0, 190)
+PlayerTargetTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+PlayerTargetTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerTargetTextBox.Text = Settings.TargetPlayerName
+PlayerTargetTextBox.PlaceholderText = "Ketik Nama Player (Contoh: Zeno / Kosongkan)"
+PlayerTargetTextBox.TextSize, PlayerTargetTextBox.Font = 11, Enum.Font.Gotham
+PlayerTargetTextBox.Parent = PageConfig
+
+local ptCorner = Instance.new("UICorner")
+ptCorner.CornerRadius = UDim.new(0, 6)
+ptCorner.Parent = PlayerTargetTextBox
+
+PlayerTargetTextBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		Settings.TargetPlayerName = PlayerTargetTextBox.Text
+		saveSettings()
+	end
+end)
+
+createConfigLabel(240, "4. KODE AUDIO NOTIFIKASI BUAH:")
 
 local SoundTextBox = Instance.new("TextBox")
 SoundTextBox.Size = UDim2.new(0.9, 0, 0, 35)
-SoundTextBox.Position = UDim2.new(0.05, 0, 0, 190)
+SoundTextBox.Position = UDim2.new(0.05, 0, 0, 265)
 SoundTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 SoundTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 SoundTextBox.Text = Settings.SoundId
@@ -538,7 +600,7 @@ end)
 
 
 -- ==========================================
--- ISI KONTEN: HALAMAN AUTOMATICALLY (No. 2 - ON/OFF)
+-- ISI KONTEN: HALAMAN AUTOMATICALLY (ON/OFF)
 -- ==========================================
 local function createAutoToggle(posY, text, settingKey, callback)
 	local btn = Instance.new("TextButton")
@@ -584,7 +646,7 @@ createAutoToggle(150, "Sound Notif Buah", "CustomSoundEnabled", nil)
 
 createAutoToggle(210, "Auto Terbang ke Buah", "AutoTeleportFruit", nil)
 createAutoToggle(255, "Auto Collect All Chest", "AutoFlyChest", nil)
-createAutoToggle(300, "Auto Terbang ke Player", "AutoFlyPlayer", nil)
+createAutoToggle(300, "Auto Terbang ke Player (Auto)", "AutoFlyPlayer", nil)
 
 
 -- ==========================================
