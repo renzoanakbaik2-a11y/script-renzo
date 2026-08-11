@@ -1,9 +1,8 @@
--- [[ GURITA HUB - FULL FINAL MODULE ]] --
+-- [[ GURITA HUB - FULL FINAL MODULE (FIXED & OPTIMIZED) ]] --
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local StarterGui = game:GetService("StarterGui")
 local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
@@ -41,24 +40,52 @@ end
 
 loadConfig()
 
--- FUNGSI NOTIFIKASI
-local function sendNotification(title, text, duration)
+-- ==========================================================
+-- SISTEM NOTIFIKASI KUSTOM (POSISI 75% PAS & WARNA TEMA MENU)
+-- ==========================================================
+local notificationGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+notificationGui.Name = "GuritaHubTopNotification"
+notificationGui.ResetOnSpawn = false
+
+local NotifFrame = Instance.new("Frame", notificationGui)
+NotifFrame.Size = UDim2.new(0, 300, 0, 45)
+-- Posisi disesuaikan jadi tidak terlalu mentok ke atas (75% / Y = 75)
+NotifFrame.Position = UDim2.new(0.5, -150, 0, -60) 
+NotifFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+NotifFrame.BorderSizePixel = 0
+Instance.new("UICorner", NotifFrame).CornerRadius = UDim.new(0, 8)
+
+-- Warna garis tepi disamakan persis dengan menu utama (biru terang)
+local NotifStroke = Instance.new("UIStroke", NotifFrame)
+NotifStroke.Color = Color3.fromRGB(0, 170, 255)
+NotifStroke.Thickness = 2
+
+local NotifText = Instance.new("TextLabel", NotifFrame)
+NotifText.Size = UDim2.new(1, 0, 1, 0)
+NotifText.BackgroundTransparency = 1
+NotifText.Font = Enum.Font.GothamBold
+NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
+NotifText.TextSize = 13
+NotifText.Text = ""
+
+local function showTopNotification(text, duration)
 	pcall(function()
-		StarterGui:SetCore("SendNotification", {
-			Title = title,
-			Text = text,
-			Duration = duration or 5
-		})
+		NotifText.Text = text
+		-- Diturunkan ke posisi Y = 75 agar pas dan tidak terlalu mentok atas
+		NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, 75), "Out", "Quad", 0.3, true)
+		
+		task.delay(duration or 5, function()
+			NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, -60), "In", "Quad", 0.3, true)
+		end)
 	end)
 end
 
 -- ==========================================================
--- FUNGSI AUTO JOIN TIM (ANTI-SPAM & CEK STATUS TIM)
+-- FUNGSI AUTO JOIN TIM (DI-FIX AGAR TIDAK ADA DELAY)
 -- ==========================================================
 local function autoSelectTeam()
 	if not config.autoJoinTeamActive then return end
 	
-	-- Kalau player sudah benar-benar masuk ke tim yang dipilih, STOP! Jangan kirim request lagi.
 	if player.Team and player.Team.Name == config.selectedTeam then
 		return 
 	end
@@ -74,15 +101,17 @@ local function autoSelectTeam()
 	end
 end
 
--- Looping pengaman santai (cek setiap 10 detik agar tidak spam/berat)
+-- Dipercepat agar langsung eksekusi begitu game siap tanpa delay lama
 task.spawn(function()
-	while task.wait(10) do
+	task.wait(1) 
+	autoSelectTeam()
+	while task.wait(5) do
 		pcall(autoSelectTeam)
 	end
 end)
 
 -- ==========================================================
--- SISTEM DETEKSI BUAH LENGKAP (ADA & KOSONG DENGAN NAMA)
+-- SISTEM DETEKSI BUAH (ADA & KOSONG)
 -- ==========================================================
 local function checkFruit()
 	local foundFruitObj = nil
@@ -99,11 +128,11 @@ local function checkFruit()
 	if foundFruitObj then
 		if lastState ~= foundFruitName then
 			lastState = foundFruitName
-			sendNotification("Gurita Hub", "Buah Ada: " .. foundFruitName, 5)
+			showTopNotification("Buah Ada: " .. foundFruitName, 5)
 		end
 	else
 		if lastState ~= "NONE" then
-			sendNotification("Gurita Hub", "Buah Tidak Ada (Kosong)", 5)
+			showTopNotification("Buah Tidak Ada (Kosong)", 5)
 			lastState = "NONE"
 		end
 	end
@@ -116,7 +145,7 @@ task.spawn(function()
 end)
 
 -- ==========================================================
--- TAMPILAN GUI MENU UTAMA (TERSEMBUNYI SAAT PERTAMA KALI)
+-- TAMPILAN GUI MENU UTAMA
 -- ==========================================================
 if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
 	player.PlayerGui.GuritaHubGUI:Destroy()
@@ -140,7 +169,7 @@ local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
 ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
 ToggleMenuStroke.Thickness = 2
 
--- Frame Utama Menu (Visible = false agar tidak mengganggu layar saat di-execute)
+-- Frame Utama Menu (Visible = false saat pertama kali di-execute)
 local Main = Instance.new("Frame", screenGui)
 Main.Size = UDim2.new(0, 240, 0, 180)
 Main.Position = UDim2.new(0.5, -120, 0.5, -90)
