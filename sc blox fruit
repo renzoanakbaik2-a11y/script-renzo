@@ -1,100 +1,58 @@
--- [[ GURITA HUB - AUTO SAVE CONFIG SCRIPT ]] --
-
+-- [[ GURITA HUB - FULL FEATURES + CONFIG MEMORY ]] --
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local lastState = "UNKNOWN"
 
--- CONFIG DEFAULT
+-- Status Config (Disimpan dalam memori agar aman saat pindah server/hop)
 local config = {
-	autoJoinActive = false,
-	selectedTeam = "Pirates",
-	fastModeActive = false
+    autoJoinActive = false,
+    selectedTeam = "Pirates",
+    fastModeActive = false
 }
 
-local configFileName = "GuritaHub_Config.json"
-
--- LOAD CONFIG SAAT JOIN / HOP SERVER
-local function loadConfig()
-	pcall(function()
-		if readfile and isfile and isfile(configFileName) then
-			local data = HttpService:JSONDecode(readfile(configFileName))
-			if type(data) == "table" then
-				for k, v in pairs(data) do
-					config[k] = v
-				end
-			end
-		end
-	end)
-end
-
-loadConfig()
-
--- SAVE CONFIG SAAT DIUBAH
-local function saveConfig()
-	pcall(function()
-		if writefile then
-			writefile(configFileName, HttpService:JSONEncode(config))
-		end
-	end)
-end
-
--- ==========================================================
--- FUNGSI MODE CEPAT
--- ==========================================================
+-- Fungsi Mode Cepat
 local function applyFastMode(state)
-	pcall(function()
-		if state then
-			for _, v in ipairs(Workspace:GetDescendants()) do
-				if v:IsA("BasePart") then
-					v.Material = Enum.Material.SmoothPlastic
-					v.Reflectance = 0
-				elseif v:IsA("Decal") or v:IsA("Texture") then
-					v.Transparency = 1
-				end
-			end
-			Lighting.GlobalShadows = false
-			Lighting.FogEnd = 9999
-		else
-			Lighting.GlobalShadows = true
-		end
-	end)
+    pcall(function()
+        if state then
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    v.Material = Enum.Material.SmoothPlastic
+                    v.Reflectance = 0
+                elseif v:IsA("Decal") or v:IsA("Texture") then
+                    v.Transparency = 1
+                end
+            end
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 9999
+        else
+            Lighting.GlobalShadows = true
+        end
+    end)
 end
 
-if config.fastModeActive then
-	task.spawn(function()
-		task.wait(1)
-		applyFastMode(true)
-	end)
-end
-
--- ==========================================================
--- BERSIHKAN GUI LAMA
--- ==========================================================
+-- Bersihkan GUI Lama
 pcall(function()
-	if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
-		player.PlayerGui.GuritaHubGUI:Destroy()
-	end
-	if player.PlayerGui:FindFirstChild("GuritaHubTopNotification") then
-		player.PlayerGui.GuritaHubTopNotification:Destroy()
-	end
+    if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
+        player.PlayerGui.GuritaHubGUI:Destroy()
+    end
+    if player.PlayerGui:FindFirstChild("GuritaHubTopNotification") then
+        player.PlayerGui.GuritaHubTopNotification:Destroy()
+    end
 end)
 
--- ==========================================================
--- NOTIFIKASI ATAS (RAINBOW STROKE)
--- ==========================================================
+-- Notifikasi Atas (Rainbow Stroke)
 local notificationGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 notificationGui.Name = "GuritaHubTopNotification"
 notificationGui.ResetOnSpawn = false
 
 local NotifFrame = Instance.new("Frame", notificationGui)
 NotifFrame.Size = UDim2.new(0, 300, 0, 45)
-NotifFrame.Position = UDim2.new(0.5, -150, 0, -60) 
+NotifFrame.Position = UDim2.new(0.5, -150, 0, -60)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 NotifFrame.BorderSizePixel = 0
 Instance.new("UICorner", NotifFrame).CornerRadius = UDim.new(0, 8)
@@ -111,76 +69,70 @@ NotifText.TextSize = 13
 NotifText.Text = ""
 
 local function showTopNotification(text, duration)
-	pcall(function()
-		NotifText.Text = text
-		NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, 75), "Out", "Quad", 0.3, true)
-		task.delay(duration or 5, function()
-			NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, -60), "In", "Quad", 0.3, true)
-		end)
-	end)
+    pcall(function()
+        NotifText.Text = text
+        NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, 75), "Out", "Quad", 0.3, true)
+        task.delay(duration or 5, function()
+            NotifFrame:TweenPosition(UDim2.new(0.5, -150, 0, -60), "In", "Quad", 0.3, true)
+        end)
+    end)
 end
 
--- ==========================================================
--- AUTO JOIN TEAM
--- ==========================================================
+-- Auto Join Team
 local function autoSelectTeam()
-	if not config.autoJoinActive then return end
-	if player.Team and player.Team.Name == config.selectedTeam then return end
+    if not config.autoJoinActive then return end
+    if player.Team and player.Team.Name == config.selectedTeam then return end
 
-	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-	local commF = remotes and remotes:FindFirstChild("CommF_")
-	if commF then
-		pcall(function()
-			commF:InvokeServer("SetTeam", config.selectedTeam)
-		end)
-	end
+    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    local commF = remotes and remotes:FindFirstChild("CommF_")
+    if commF then
+        pcall(function()
+            commF:InvokeServer("SetTeam", config.selectedTeam)
+        end)
+    end
 end
 
 task.spawn(function()
-	task.wait(1.5)
-	autoSelectTeam()
-	while task.wait(5) do
-		pcall(autoSelectTeam)
-	end
+    task.wait(1.5)
+    autoSelectTeam()
+    while task.wait(5) do
+        pcall(autoSelectTeam)
+    end
 end)
 
--- ==========================================================
--- DETEKSI BUAH AKURAT
--- ==========================================================
+-- Deteksi Buah Otomatis (Fruit Notifier)
 local function checkFruit()
-	local foundFruitName = nil
-	for _, obj in ipairs(Workspace:GetChildren()) do
-		if obj:IsA("Model") or obj:IsA("Tool") then
-			local name = obj.Name
-			if (name:lower():find("fruit") or name:lower():find("bloxfruit")) and name ~= "Fruit" then
-				foundFruitName = name
-				break
-			end
-		end
-	end
+    local foundFruitName = nil
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj:IsA("Model") or obj:IsA("Tool") then
+            local name = obj.Name
+            if (name:lower():find("fruit") or name:lower():find("bloxfruit")) and name ~= "Fruit" then
+                foundFruitName = name
+                break
+            end
+        end
+    end
 
-	if foundFruitName then
-		if lastState ~= foundFruitName then
-			lastState = foundFruitName
-			showTopNotification("Buah Ditemukan: " .. foundFruitName, 5)
-		end
-	else
-		if lastState ~= "NONE" then
-			showTopNotification("Buah Tidak Ada (Kosong)", 5)
-			lastState = "NONE"
-		end
-	end
+    if foundFruitName then
+        if lastState ~= foundFruitName then
+            lastState = foundFruitName
+            showTopNotification("Buah Ditemukan: " .. foundFruitName, 5)
+        end
+    else
+        if lastState ~= "NONE" then
+            showTopNotification("Buah Tidak Ada (Kosong)", 5)
+            lastState = "NONE"
+        end
+    end
 end
 
 task.spawn(function()
-	while task.wait(5) do
-		pcall(checkFruit)
-	end
+    while task.wait(5) do
+        pcall(checkFruit)
+    end
 end)
 
--- ==========================================================
--- MENU UTAMA (WARNA BIRU)
--- ==========================================================
+-- Menu Interaktif Minimalis
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "GuritaHubGUI"
 screenGui.ResetOnSpawn = false
@@ -202,7 +154,7 @@ local Main = Instance.new("Frame", screenGui)
 Main.Size = UDim2.new(0, 240, 0, 220)
 Main.Position = UDim2.new(0.5, -120, 0.5, -110)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Main.Visible = false 
+Main.Visible = false
 Instance.new("UICorner", Main)
 local Stroke = Instance.new("UIStroke", Main)
 Stroke.Color = Color3.fromRGB(0, 170, 255)
@@ -218,75 +170,70 @@ Title.BackgroundTransparency = 1
 Title.TextColor3 = Color3.fromRGB(0, 170, 255)
 
 local function CreateBtn(pos)
-	local b = Instance.new("TextButton", Main)
-	b.Size = UDim2.new(0, 200, 0, 34)
-	b.Position = pos
-	b.Font = Enum.Font.GothamBlack
-	b.TextSize = 12
-	b.TextColor3 = Color3.new(1, 1, 1)
-	Instance.new("UICorner", b)
-	local s = Instance.new("UIStroke", b)
-	s.Color = Color3.fromRGB(0, 170, 255)
-	s.Thickness = 1.2
-	return b
+    local b = Instance.new("TextButton", Main)
+    b.Size = UDim2.new(0, 200, 0, 34)
+    b.Position = pos
+    b.Font = Enum.Font.GothamBlack
+    b.TextSize = 12
+    b.TextColor3 = Color3.new(1, 1, 1)
+    Instance.new("UICorner", b)
+    local s = Instance.new("UIStroke", b)
+    s.Color = Color3.fromRGB(0, 170, 255)
+    s.Thickness = 1.2
+    return b
 end
 
-local TeamBtn        = CreateBtn(UDim2.new(0, 20, 0, 55))
+local TeamBtn = CreateBtn(UDim2.new(0, 20, 0, 55))
 local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 98))
 local ToggleFastMode = CreateBtn(UDim2.new(0, 20, 0, 141))
 
--- Set Tampilan Tombol Sesuai Config yang Tersimpan
 TeamBtn.Text = "Tim: " .. config.selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 
-ToggleJoinTeam.Text = config.autoJoinActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
-ToggleJoinTeam.BackgroundColor3 = config.autoJoinActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+ToggleJoinTeam.Text = "Auto Join Team: OFF"
+ToggleJoinTeam.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 
-ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
-ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+ToggleFastMode.Text = "Mode Cepat: OFF"
+ToggleFastMode.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 
 RunService.RenderStepped:Connect(function()
-	local hue = tick() % 5 / 5
-	local rainbowColor = Color3.fromHSV(hue, 1, 1)
-	
-	if NotifStroke and NotifStroke.Parent then
-		NotifStroke.Color = rainbowColor
-	end
+    local hue = tick() % 5 / 5
+    local rainbowColor = Color3.fromHSV(hue, 1, 1)
+    if NotifStroke and NotifStroke.Parent then
+        NotifStroke.Color = rainbowColor
+    end
 end)
 
 ToggleMenuBtn.MouseButton1Down:Connect(function()
-	Main.Visible = not Main.Visible
+    Main.Visible = not Main.Visible
 end)
 
 TeamBtn.MouseButton1Click:Connect(function()
-	if config.selectedTeam == "Pirates" then
-		config.selectedTeam = "Marines"
-	else
-		config.selectedTeam = "Pirates"
-	end
-	TeamBtn.Text = "Tim: " .. config.selectedTeam
-	saveConfig() -- Simpan otomatis
-	if config.autoJoinActive then
-		autoSelectTeam()
-	end
+    if config.selectedTeam == "Pirates" then
+        config.selectedTeam = "Marines"
+    else
+        config.selectedTeam = "Pirates"
+    end
+    TeamBtn.Text = "Tim: " .. config.selectedTeam
+    if config.autoJoinActive then
+        autoSelectTeam()
+    end
 end)
 
 ToggleJoinTeam.MouseButton1Click:Connect(function()
-	config.autoJoinActive = not config.autoJoinActive
-	ToggleJoinTeam.Text = config.autoJoinActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
-	ToggleJoinTeam.BackgroundColor3 = config.autoJoinActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-	saveConfig() -- Simpan otomatis
-	if config.autoJoinActive then
-		autoSelectTeam()
-	end
+    config.autoJoinActive = not config.autoJoinActive
+    ToggleJoinTeam.Text = config.autoJoinActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
+    ToggleJoinTeam.BackgroundColor3 = config.autoJoinActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    if config.autoJoinActive then
+        autoSelectTeam()
+    end
 end)
 
 ToggleFastMode.MouseButton1Click:Connect(function()
-	config.fastModeActive = not config.fastModeActive
-	ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
-	ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-	saveConfig() -- Simpan otomatis
-	applyFastMode(config.fastModeActive)
+    config.fastModeActive = not config.fastModeActive
+    ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
+    ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    applyFastMode(config.fastModeActive)
 end)
 
-print("Gurita Hub + Auto Save Config Berhasil Dijalankan!")
+print("Gurita Hub All-in-One Berhasil Dijalankan!")
