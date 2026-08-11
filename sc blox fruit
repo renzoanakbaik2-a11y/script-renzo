@@ -1,37 +1,18 @@
--- [[ GURITA HUB - FIXED MEMORY-BASED AUTO SAVE ]] --
+-- [[ GURITA HUB - 100% STABLE (NO FILE ERROR) ]] --
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
-local TeleportService = game:GetService("TeleportService")
 
 local player = Players.LocalPlayer
 local lastState = "UNKNOWN"
 
-local success, savedConfig = pcall(function()
-    return TeleportService:GetTeleportData()
-end)
-
-local config = (success and type(savedConfig) == "table" and savedConfig) or {
+local config = {
     autoJoinTeamActive = false,
     selectedTeam = "Pirates",
     fastModeActive = false
 }
-
-local function saveConfig()
-    pcall(function()
-        if setgenv then
-            getgenv().GuritaHubSavedConfig = config
-        end
-    end)
-end
-
-if setgenv() and getgenv().GuritaHubSavedConfig then
-    for k, v in pairs(getgenv().GuritaHubSavedConfig) do
-        config[k] = v
-    end
-end
 
 local function applyFastMode(state)
     pcall(function()
@@ -49,13 +30,6 @@ local function applyFastMode(state)
         else
             Lighting.GlobalShadows = true
         end
-    end)
-end
-
-if config.fastModeActive then
-    task.spawn(function()
-        task.wait(1)
-        applyFastMode(true)
     end)
 end
 
@@ -209,11 +183,11 @@ local ToggleFastMode = CreateBtn(UDim2.new(0, 20, 0, 141))
 TeamBtn.Text = "Tim: " .. config.selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 
-ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
-ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+ToggleJoinTeam.Text = "Auto Join Team: OFF"
+ToggleJoinTeam.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 
-ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
-ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+ToggleFastMode.Text = "Mode Cepat: OFF"
+ToggleFastMode.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 
 RunService.RenderStepped:Connect(function()
     local hue = tick() % 5 / 5
@@ -234,7 +208,6 @@ TeamBtn.MouseButton1Click:Connect(function()
         config.selectedTeam = "Pirates"
     end
     TeamBtn.Text = "Tim: " .. config.selectedTeam
-    saveConfig()
     if config.autoJoinTeamActive then
         autoSelectTeam()
     end
@@ -244,7 +217,6 @@ ToggleJoinTeam.MouseButton1Click:Connect(function()
     config.autoJoinTeamActive = not config.autoJoinTeamActive
     ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
     ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    saveConfig()
     if config.autoJoinTeamActive then
         autoSelectTeam()
     end
@@ -254,8 +226,7 @@ ToggleFastMode.MouseButton1Click:Connect(function()
     config.fastModeActive = not config.fastModeActive
     ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
     ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    saveConfig()
     applyFastMode(config.fastModeActive)
 end)
 
-print("Gurita Hub Berhasil Dijalankan Tanpa Error File!")
+print("Gurita Hub Stable Loaded!")
