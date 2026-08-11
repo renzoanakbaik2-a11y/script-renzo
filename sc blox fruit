@@ -29,7 +29,7 @@ local Settings = {
     AutoFlyChest = false,     
     AutoFlyPlayer = false,     
     TargetPlayerName = "",
-    WalkOnWater = false -- Fitur Jalan di Air baru
+    WalkOnWater = false
 }
 
 -- Fungsi Load Settings
@@ -159,7 +159,6 @@ local function getCharacterRootPart()
     return nil
 end
 
--- Fungsi Stop Terbang Paksa
 local function stopFlying()
     local character = LocalPlayer.Character
     if character then
@@ -256,14 +255,13 @@ local function updateWaterWalk()
                 WaterPart.Name = "WaterWalkPlatform"
                 WaterPart.Size = Vector3.new(25, 1, 25)
                 WaterPart.Anchored = true
-                WaterPart.Transparency = 1 -- Tidak terlihat
+                WaterPart.Transparency = 1
                 WaterPart.CanCollide = true
                 WaterPart.Parent = Workspace
             end
             
             local rootPart = getCharacterRootPart()
             if rootPart then
-                -- Menempatkan part transparan sedikit di bawah kaki pemain
                 WaterPart.Position = Vector3.new(rootPart.Position.X, rootPart.Position.Y - 4.2, rootPart.Position.Z)
             end
         else
@@ -332,16 +330,20 @@ task.spawn(function()
     local lastCount = 0
     local isShown = false
 
-    while task.wait(0.2) do
+    while task.wait(0.5) do
         if Settings.FruitNotifier then
             local fruitList = {}
             local targetFruitHandle = nil
 
-            for _, obj in ipairs(Workspace:GetChildren()) do
+            -- Menggunakan GetDescendants agar mendeteksi buah di seluruh map/folder
+            for _, obj in ipairs(Workspace:GetDescendants()) do
                 if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-                    table.insert(fruitList, obj.Name)
-                    if not targetFruitHandle then
-                        targetFruitHandle = obj.Handle
+                    local nameLower = obj.Name:lower()
+                    if nameLower:find("fruit") or nameLower:find("blox") or nameLower:find("budak") or not nameLower:find("sword") then
+                        table.insert(fruitList, obj.Name)
+                        if not targetFruitHandle then
+                            targetFruitHandle = obj.Handle
+                        end
                     end
                 end
             end
