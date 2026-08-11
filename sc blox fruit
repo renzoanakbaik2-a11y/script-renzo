@@ -1,11 +1,18 @@
--- [[ GURITA HUB - SMART FRUIT NOTIFICATION MODULE ]] --
+-- [[ GURITA HUB - SMART TEAM & FRUIT MODULE ]] --
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
-local lastFruitName = nil -- Variabel untuk melacak status buah
+local lastFruitName = nil
+
+-- PENGATURAN DEFAULT
+local config = {
+	autoJoinTeamActive = false,
+	selectedTeam = "Pirates"
+}
 
 -- FUNGSI NOTIFIKASI
 local function sendNotification(title, text, duration)
@@ -19,12 +26,36 @@ local function sendNotification(title, text, duration)
 end
 
 -- ==========================================================
+-- FUNGSI AUTO JOIN TIM (DIPERBAIKI & DIPASTIKAN JALAN)
+-- ==========================================================
+local function autoSelectTeam()
+	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	if remotes then
+		local commF = remotes:FindFirstChild("CommF_")
+		if commF then
+			pcall(function()
+				commF:InvokeServer("SetTeam", config.selectedTeam)
+			end)
+		end
+	end
+end
+
+-- Looping otomatis untuk memastikan tim langsung terpilih jika aktif
+task.spawn(function()
+	while true do
+		if config.autoJoinTeamActive then
+			autoSelectTeam()
+		end
+		task.wait(2)
+	end
+end)
+
+-- ==========================================================
 -- SISTEM DETEKSI BUAH ANTI-SPAM
 -- ==========================================================
 local function checkFruit()
 	local foundFruit = nil
 	
-	-- Cari buah di dalam Workspace
 	for _, obj in ipairs(Workspace:GetChildren()) do
 		if obj.Name:find("Fruit") or obj.Name:find("BloxFruit") or (obj:IsA("Tool") and obj:FindFirstChild("Handle")) then
 			foundFruit = obj.Name
@@ -32,7 +63,6 @@ local function checkFruit()
 		end
 	end
 
-	-- Logika Anti-Spam
 	if foundFruit then
 		if lastFruitName ~= foundFruit then
 			lastFruitName = foundFruit
@@ -46,7 +76,6 @@ local function checkFruit()
 	end
 end
 
--- Jalankan scan setiap 5 detik
 task.spawn(function()
 	while task.wait(5) do
 		pcall(checkFruit)
@@ -54,7 +83,7 @@ task.spawn(function()
 end)
 
 -- ==========================================================
--- TAMPILAN GUI MENU UTAMA
+-- TAMPILAN GUI MENU UTAMA (TERSEMBUNYI SAAT PERTAMA KALI)
 -- ==========================================================
 if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
 	player.PlayerGui.GuritaHubGUI:Destroy()
@@ -78,12 +107,12 @@ local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
 ToggleMenuStroke.Color = Color3.fromRGB(0, 170, 255)
 ToggleMenuStroke.Thickness = 2
 
--- Frame Utama Menu (DISET FALSE/TERSEMBUNYI SAAT PERTAMA KALI DI-EXECUTE)
+-- Frame Utama Menu (Visible = false agar tidak langsung mengganggu)
 local Main = Instance.new("Frame", screenGui)
 Main.Size = UDim2.new(0, 240, 0, 180)
 Main.Position = UDim2.new(0.5, -120, 0.5, -90)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Main.Visible = false -- Diubah jadi false supaya tidak langsung muncul mengganggu
+Main.Visible = false 
 Instance.new("UICorner", Main)
 local Stroke = Instance.new("UIStroke", Main)
 Stroke.Color = Color3.fromRGB(0, 170, 255)
@@ -115,25 +144,11 @@ end
 local TeamBtn        = CreateBtn(UDim2.new(0, 20, 0, 55))
 local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 105))
 
-local config = {
-	autoJoinTeamActive = false,
-	selectedTeam = "Pirates"
-}
-
 TeamBtn.Text = "Tim: " .. config.selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 
 ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
 ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-
-local function autoSelectTeam()
-	local re = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-	if re then
-		pcall(function()
-			re:InvokeServer("SetTeam", config.selectedTeam)
-		end)
-	end
-end
 
 ToggleMenuBtn.MouseButton1Down:Connect(function()
 	Main.Visible = not Main.Visible
