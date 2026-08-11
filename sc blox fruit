@@ -63,12 +63,12 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- FITUR 1: NOTIFIKASI BUAH ATAS (DENGAN ANIMASI DARI 75 KE 100 DI AWAL JOIN)
+-- FITUR 1: NOTIFIKASI BUAH (TEKS ACAK & ANIMASI KE TENGAH LALU KE ATAS)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
-NotifFrame.Size = UDim2.new(0, 320, 0, 50)
--- Posisi awal tepat pas baru join berada di 75% layar (di bawah)
-NotifFrame.Position = UDim2.new(0.5, -160, 0.75, 0)
+NotifFrame.Size = UDim2.new(0, 340, 0, 50)
+-- Posisi awal di tengah layar (Y = 0.5) agar player bisa melihat animasi teks acak/terpecah
+NotifFrame.Position = UDim2.new(0.5, -170, 0.5, -25)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
@@ -94,16 +94,48 @@ end)
 local NotifText = Instance.new("TextLabel")
 NotifText.Size = UDim2.new(1, 0, 1, 0)
 NotifText.BackgroundTransparency = 1
-NotifText.Text = "Fruit Notifier: Memindai Map..."
+NotifText.Text = ""
 NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
--- MENJALANKAN ANIMASI TEPAT PAS AWAL JOIN: 
--- Dari posisi 75% di bawah, ditarik mulus ke 100% (mentok paling atas layar / Y = 0)
-TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-	Position = UDim2.new(0.5, -160, 0, 0)
-}):Play()
+-- Fungsi Efek Teks Acak Terpecah Menjadi Rapi (Scramble Text Effect)
+local function playScrambleText(targetText)
+	local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$*&"
+	local length = string.len(targetText)
+	
+	-- Tahap 1: Efek acak huruf (terpecah-pecah)
+	for step = 1, 15 do
+		local randomized = ""
+		for i = 1, length do
+			local randChar = string.sub(chars, math.random(1, #chars), math.random(1, #chars))
+			randomized = randomized .. randChar
+		end
+		NotifText.Text = randomized
+		task.wait(0.03)
+	end
+	
+	-- Tahap 2: Huruf tersusun rapi satu per satu
+	for i = 1, length do
+		local currentText = string.sub(targetText, 1, i)
+		for j = i + 1, length do
+			currentText = currentText .. string.sub(chars, math.random(1, #chars), math.random(1, #chars))
+		end
+		NotifText.Text = currentText
+		task.wait(0.02)
+	end
+	
+	NotifText.Text = targetText
+end
+
+-- Jalankan animasi teks acak di tengah (50%), lalu geser mulus ke atas layar
+task.spawn(function()
+	playScrambleText("Fruit Notifier: Memindai Map...")
+	task.wait(1.5)
+	TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Position = UDim2.new(0.5, -170, 0.05, 0)
+	}):Play()
+end)
 
 -- Fungsi Memutar Musik Notifikasi Buah
 local function playFruitSound()
@@ -395,7 +427,7 @@ TextCorner.Parent = SoundTextBox
 
 SoundTextBox.FocusLost:Connect(function(enterPressed)
 	if enterPressed then
-        Settings.SoundId = SoundTextBox.Text
+		Settings.SoundId = SoundTextBox.Text
 		saveSettings()
 	end
 end)
