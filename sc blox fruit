@@ -24,10 +24,13 @@ local Settings = {
 	SoundId = "", -- ID Audio Roblox
 	FlightSpeed = 150,      -- Kecepatan terbang mulus
 	FlyHeight = 5,          -- Ketinggian terbang (Maksimal 10)
-	AutoTeleportFruit = false, -- Auto terbang ke buah
-	AutoFlyChest = false,     -- Auto terbang ke semua chest/peti secara berurutan per pulau
-	AutoFlyPlayer = false,    -- Auto terbang ke player (ON/OFF)
-	TargetPlayerName = ""     -- Target nama player spesifik
+	AutoTeleportFruit = false, 
+	AutoFlyChest = false,     
+	AutoFlyPlayer = false,    
+	TargetPlayerName = "",     
+	-- Pengaturan Posisi Notifikasi (X & Y Offset)
+	NotifOffsetX = 0,       -- Minus = Kiri, Bulat/Positif = Kanan, 0 = Tengah
+	NotifOffsetY = 0        -- Minus = Bawah, Bulat/Positif = Atas, 0 = Tengah
 }
 
 -- Fungsi Load Settings
@@ -80,10 +83,12 @@ if not ScreenGui.Parent or ScreenGui.Parent == nil then
 	ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Notifikasi Buah di Layar Atas
+-- Notifikasi Buah di Layar Atas dengan Posisi Dinamis (X & Y Offset)
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 360, 0, 50)
-NotifFrame.Position = UDim2.new(0.5, -180, 0.00, 0)
+-- AnchorPoint 0.5, 0.5 supaya 0,0 pas di tengah layar, dan offset mengikuti setting user
+NotifFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+NotifFrame.Position = UDim2.new(0.5, Settings.NotifOffsetX, 0.1, Settings.NotifOffsetY)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
@@ -112,6 +117,11 @@ NotifText.Text = "Fruit Notifier & Auto System Aktif"
 NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 12, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
+
+-- Fungsi untuk memperbarui posisi notifikasi secara live saat diganti
+local function updateNotifPosition()
+	NotifFrame.Position = UDim2.new(0.5, Settings.NotifOffsetX, 0.1, Settings.NotifOffsetY)
+end
 
 -- Fungsi Suara Notifikasi Buah
 local function playFruitSound()
@@ -143,7 +153,6 @@ local function getCharacterRootPart()
 	return nil
 end
 
--- Terbang Super Stabil & Mulus Tanpa Goyang/Getar Kamera
 local function smoothFlyTo(targetCFrame)
 	local rootPart = getCharacterRootPart()
 	if not rootPart then return end
@@ -206,7 +215,7 @@ end
 
 
 -- ==========================================
--- SISTEM PENGELOMPOKKAN PULAU & AUTO COLLECT CHEST (PULAU TERDEKAT & HABIS GANTI)
+-- SISTEM CHEST (PULAU TERDEKAT -> HABIS -> PULAU TERDEKAT BERIKUTNYA)
 -- ==========================================
 local function getPositionOfObj(obj)
 	if obj:IsA("BasePart") then
@@ -222,7 +231,8 @@ end
 local function getChestIslands()
 	local allChests = {}
 	for _, obj in ipairs(Workspace:GetDescendants()) do
-		if (obj.Name:lower():find("chest") or obj.Name:lower():find("peti")) then
+		local nameLower = obj.Name:lower()
+		if nameLower:find("chest") or nameLower:find("peti") or nameLower:find("treasure") then
 			local pos = getPositionOfObj(obj)
 			if pos then
 				table.insert(allChests, {Object = obj, Position = pos})
@@ -252,11 +262,11 @@ end
 
 
 -- ==========================================
--- BACKGROUND SYSTEM (SCANNER BUAH, CHEST PER PULAU, PLAYER)
+-- BACKGROUND SYSTEM (SCANNER BUAH, CHEST, PLAYER)
 -- ==========================================
 task.spawn(function()
 	local lastCount = 0
-	while task.wait(2) do
+	while task.wait(1.5) do
 		-- 1. Scan Buah
 		if Settings.FruitNotifier then
 			local fruitList = {}
@@ -292,14 +302,13 @@ task.spawn(function()
 			end
 		end
 
-		-- 2. Auto Collect Chest (Peti) - Pulau Terdekat, Jika Habis Ganti Pulau Lain Secara Otomatis
+		-- 2. Auto Chest (Pulau Terdekat -> Selesai -> Pindah ke Pulau Terdekat Lain)
 		if Settings.AutoFlyChest then
 			local rootPart = getCharacterRootPart()
 			if rootPart then
 				local islands = getChestIslands()
-				-- Bersihkan pulau yang chest-nya sudah kosong/0
+				
 				for i = #islands, 1, -1 do
-					-- Filter chest yang masih valid di dalam game
 					local validChests = {}
 					for _, cData in ipairs(islands[i].Chests) do
 						if cData.Object and cData.Object.Parent then
@@ -313,14 +322,12 @@ task.spawn(function()
 				end
 
 				if #islands > 0 then
-					-- Urutkan pulau berdasarkan pulau terdekat dari posisi player saat ini
 					table.sort(islands, function(a, b)
 						return (rootPart.Position - a.Center).Magnitude < (rootPart.Position - b.Center).Magnitude
 					end)
 
 					local currentIsland = islands[1]
 					if currentIsland and #currentIsland.Chests > 0 then
-						-- Urutkan chest dalam pulau ini dari yang terdekat
 						table.sort(currentIsland.Chests, function(a, b)
 							return (rootPart.Position - a.Position).Magnitude < (rootPart.Position - b.Position).Magnitude
 						end)
@@ -329,17 +336,16 @@ task.spawn(function()
 						local targetPos = getPositionOfObj(targetChest)
 						if targetPos then
 							smoothFlyTo(CFrame.new(targetPos))
-							task.wait(0.2)
+							task.wait(0.1)
 						end
 					end
 				end
 			end
-			task.wait(0.5)
 		end
 
 		-- 3. Auto Terbang ke Player
 		if Settings.AutoFlyPlayer then
-			task.wait(3)
+			task.wait(2)
 			local targetPlayer = nil
 
 			if Settings.TargetPlayerName ~= "" then
@@ -369,7 +375,7 @@ task.spawn(function()
 				local rootPart = getCharacterRootPart()
 				if rootPart then
 					smoothFlyTo(targetPlayer.Character.HumanoidRootPart.CFrame)
-					task.wait(2)
+					task.wait(1.5)
 				end
 			end
 		end
@@ -402,7 +408,7 @@ end)
 
 
 -- ==========================================
--- FPS BOOST
+-- FPS BOOST FUNCTION
 -- ==========================================
 local function applyFpsBoost(state)
 	if state then
@@ -424,7 +430,7 @@ if Settings.FpsBoost then applyFpsBoost(true) end
 
 
 -- ==========================================
--- TAMPILAN UI MENU UTAMA (DIPERBAIKI AGAR PASTI MUNCUL)
+-- TAMPILAN UI MENU UTAMA
 -- ==========================================
 local OpenButton = Instance.new("TextButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -513,7 +519,7 @@ local function createTabPage(name)
 	page.Size = UDim2.new(1, 0, 1, 0)
 	page.BackgroundTransparency = 1
 	page.Visible = false
-	page.CanvasSize = UDim2.new(0, 0, 0, 700)
+	page.CanvasSize = UDim2.new(0, 0, 0, 850)
 	page.ScrollBarThickness = 4
 	page.Parent = Container
 	pages[name] = page
@@ -564,7 +570,7 @@ local homeLabel = Instance.new("TextLabel")
 homeLabel.Size = UDim2.new(0.9, 0, 0, 130)
 homeLabel.Position = UDim2.new(0.05, 0, 0.05, 0)
 homeLabel.BackgroundTransparency = 1
-homeLabel.Text = "Selamat datang di BloxFruits Hub!\nGunakan menu di sebelah kiri:\n\n1. **Automatically**: Atur semua fitur otomatis, Tim, & Musik.\n2. **Settings**: Kecepatan terbang, Ketinggian, & Target Player."
+homeLabel.Text = "Selamat datang di BloxFruits Hub!\nGunakan menu di sebelah kiri:\n\n1. **Automatically**: Atur semua fitur otomatis, Tim, & Musik.\n2. **Settings**: Kecepatan terbang, Ketinggian, Target Player, & Posisi Notifikasi."
 homeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 homeLabel.TextSize, homeLabel.Font = 11, Enum.Font.Gotham
 homeLabel.TextWrapped = true
@@ -643,13 +649,13 @@ TeamConfigBtn.MouseButton1Click:Connect(function()
 	saveSettings()
 end)
 
-createAutoToggle(75, "Auto Join Tim (ON/OFF)", "AutoJoinEnabled", function()
+createAutoToggle(75, "Auto Join Tim", "AutoJoinEnabled", function()
 	joinTeam()
 end)
 
--- 2. AUTO NOTIFIKASI & MUSIK BUAH
-createSectionHeader(125, "--- AUTO NOTIFIKASI & MUSIK ---")
-createAutoToggle(150, "Fruit Notifier & Text", "FruitNotifier", function(val)
+-- 2. NOTIFIKASI & MUSIK BUAH
+createSectionHeader(125, "--- NOTIFIKASI & MUSIK BUAH ---")
+createAutoToggle(150, "Fruit Notifier", "FruitNotifier", function(val)
 	NotifFrame.Visible = val
 end)
 
@@ -674,20 +680,20 @@ SoundTextBox.FocusLost:Connect(function(enterPressed)
 	end
 end)
 
-createAutoToggle(235, "Auto Aktif Lagu (Saat Buah Ditemukan)", "CustomSoundEnabled", nil)
+createAutoToggle(235, "Custom Sound Buah", "CustomSoundEnabled", nil)
 
--- 3. FITUR TERBANG OTOMATIS LAINNYA
-createSectionHeader(285, "--- AUTO TERBANG & LAINNYA ---")
-createAutoToggle(310, "Auto Terbang ke Buah", "AutoTeleportFruit", nil)
-createAutoToggle(355, "Auto Collect Chest (Peti per Pulau)", "AutoFlyChest", nil)
-createAutoToggle(400, "Auto Terbang ke Player", "AutoFlyPlayer", nil)
+-- 3. FITUR AUTOMATIC LAINNYA
+createSectionHeader(285, "--- FITUR AUTOMATIC LAINNYA ---")
+createAutoToggle(310, "Teleport ke Buah", "AutoTeleportFruit", nil)
+createAutoToggle(355, "Auto Collect Chest (Pulau Terdekat & Pindah)", "AutoFlyChest", nil)
+createAutoToggle(400, "Teleport ke Player", "AutoFlyPlayer", nil)
 createAutoToggle(445, "FPS Boost", "FpsBoost", function(val)
 	applyFpsBoost(val)
 end)
 
 
 -- ==========================================
--- ISI KONTEN: HALAMAN CONFIGURATION / SETTINGS (DENGAN SCROLL PLAYER LIST)
+-- ISI KONTEN: HALAMAN CONFIGURATION / SETTINGS
 -- ==========================================
 local function createConfigLabel(posY, text)
 	local lbl = Instance.new("TextLabel")
@@ -731,7 +737,7 @@ SpeedTextBox.FocusLost:Connect(function(enterPressed)
 	end
 end)
 
-createConfigLabel(90, "2. Ketinggian (Ketinggian Maximal 10):")
+createConfigLabel(90, "2. Ketinggian Terbang (Maksimal 10):")
 
 local HeightTextBox = Instance.new("TextBox")
 HeightTextBox.Size = UDim2.new(0.9, 0, 0, 35)
@@ -760,12 +766,66 @@ HeightTextBox.FocusLost:Connect(function(enterPressed)
 	end
 end)
 
-createConfigLabel(165, "3. PILIH TARGET PLAYER (Klik untuk Pilih):")
+-- PENGATURAN POSISI NOTIFIKASI (X & Y)
+createConfigLabel(165, "3. POSISI NOTIFIKASI (Minus=Kiri/Bawah, 0=Tengah, Positif=Kanan/Atas):")
 
--- Label Status Target Aktif
+local NotifXBox = Instance.new("TextBox")
+NotifXBox.Size = UDim2.new(0.43, 0, 0, 35)
+NotifXBox.Position = UDim2.new(0.05, 0, 0, 190)
+NotifXBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+NotifXBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+NotifXBox.Text = tostring(Settings.NotifOffsetX)
+NotifXBox.PlaceholderText = "X (Cth: -100 / 0 / 100)"
+NotifXBox.TextSize, NotifXBox.Font = 10, Enum.Font.Gotham
+NotifXBox.Parent = PageConfig
+
+local nxCorner = Instance.new("UICorner")
+nxCorner.CornerRadius = UDim.new(0, 6)
+nxCorner.Parent = NotifXBox
+
+NotifXBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		local num = tonumber(NotifXBox.Text)
+		if num then
+			Settings.NotifOffsetX = num
+			NotifXBox.Text = tostring(num)
+			updateNotifPosition()
+			saveSettings()
+		end
+	end
+end)
+
+local NotifYBox = Instance.new("TextBox")
+NotifYBox.Size = UDim2.new(0.43, 0, 0, 35)
+NotifYBox.Position = UDim2.new(0.52, 0, 0, 190)
+NotifYBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+NotifYBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+NotifYBox.Text = tostring(Settings.NotifOffsetY)
+NotifYBox.PlaceholderText = "Y (Cth: -50 / 0 / 50)"
+NotifYBox.TextSize, NotifYBox.Font = 10, Enum.Font.Gotham
+NotifYBox.Parent = PageConfig
+
+local nyCorner = Instance.new("UICorner")
+nyCorner.CornerRadius = UDim.new(0, 6)
+nyCorner.Parent = NotifYBox
+
+NotifYBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		local num = tonumber(NotifYBox.Text)
+		if num then
+			Settings.NotifOffsetY = num
+			NotifYBox.Text = tostring(num)
+			updateNotifPosition()
+			saveSettings()
+		end
+	end
+end)
+
+createConfigLabel(240, "4. PILIH TARGET PLAYER (Klik untuk Pilih):")
+
 local TargetStatusLabel = Instance.new("TextLabel")
 TargetStatusLabel.Size = UDim2.new(0.9, 0, 0, 20)
-TargetStatusLabel.Position = UDim2.new(0.05, 0, 0, 190)
+TargetStatusLabel.Position = UDim2.new(0.05, 0, 0, 265)
 TargetStatusLabel.BackgroundTransparency = 1
 TargetStatusLabel.Text = "Target Aktif: " .. (Settings.TargetPlayerName == "" and "[ Terdekat / Otomatis ]" or Settings.TargetPlayerName)
 TargetStatusLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
@@ -773,10 +833,9 @@ TargetStatusLabel.TextSize, TargetStatusLabel.Font = 10, Enum.Font.GothamBold
 TargetStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 TargetStatusLabel.Parent = PageConfig
 
--- ScrollingFrame untuk Daftar Player di Server (Bisa di-scroll dari atas ke bawah)
 local PlayerListScroll = Instance.new("ScrollingFrame")
 PlayerListScroll.Size = UDim2.new(0.9, 0, 0, 140)
-PlayerListScroll.Position = UDim2.new(0.05, 0, 0, 215)
+PlayerListScroll.Position = UDim2.new(0.05, 0, 0, 290)
 PlayerListScroll.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
 PlayerListScroll.BorderSizePixel = 0
 PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -792,10 +851,9 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 4)
 UIListLayout.Parent = PlayerListScroll
 
--- Tombol Reset Target (Kembali ke Terdekat)
 local ResetTargetBtn = Instance.new("TextButton")
 ResetTargetBtn.Size = UDim2.new(0.9, 0, 0, 30)
-ResetTargetBtn.Position = UDim2.new(0.05, 0, 0, 365)
+ResetTargetBtn.Position = UDim2.new(0.05, 0, 0, 440)
 ResetTargetBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 ResetTargetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ResetTargetBtn.Text = "Reset Target (Jadi Player Terdekat)"
@@ -812,9 +870,7 @@ ResetTargetBtn.MouseButton1Click:Connect(function()
 	saveSettings()
 end)
 
--- Fungsi untuk memperbarui daftar player yang ada di server secara otomatis
 local function refreshPlayerList()
-	-- Hapus tombol lama di dalam list
 	for _, child in ipairs(PlayerListScroll:GetChildren()) do
 		if child:IsA("TextButton") then
 			child:Destroy()
@@ -839,7 +895,7 @@ local function refreshPlayerList()
 			pBtnCorner.CornerRadius = UDim.new(0, 4)
 			pBtnCorner.Parent = pBtn
 
-			pBtn.MouseButton1Click:Connect(function()
+			pBtn.MouseButton1Click:Connect(function(inner)
 				Settings.TargetPlayerName = p.Name
 				TargetStatusLabel.Text = "Target Aktif: " .. p.Name
 				saveSettings()
@@ -848,7 +904,6 @@ local function refreshPlayerList()
 	end
 end
 
--- Update daftar player saat ada yang masuk atau keluar server
 Players.PlayerAdded:Connect(refreshPlayerList)
 Players.PlayerRemoving:Connect(refreshPlayerList)
 task.spawn(refreshPlayerList)
