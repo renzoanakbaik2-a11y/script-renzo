@@ -1,21 +1,21 @@
--- [[ GURITA HUB - RAINBOW STROKE MODULE ]] --
+-- [[ GURITA HUB - ULTRA LIGHTWEIGHT OPTIMIZATION MODULE ]] --
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local lastState = "UNKNOWN"
 
--- PENGATURAN DEFAULT
 local config = {
 	autoJoinTeamActive = false,
-	selectedTeam = "Pirates"
+	selectedTeam = "Pirates",
+	fastModeActive = false
 }
 
--- FOLDER & FILE PENYIMPANAN SETTING (CONFIG SAVE)
 local configFileName = "GuritaHub_BloxFruits_Config.json"
 
 local function saveConfig()
@@ -42,7 +42,38 @@ end
 loadConfig()
 
 -- ==========================================================
--- SISTEM NOTIFIKASI KUSTOM (POSISI 75% & NAMA BUAH SPESIFIK)
+-- FUNGSI ULTRA LIGHTWEIGHT (SANGAT RINGAN UNTUK RAM 4GB)
+-- ==========================================================
+local function applyFastMode(state)
+	pcall(function()
+		if state then
+			-- Matikan efek grafis berat & hapus partikel tidak penting untuk menghemat RAM/CPU
+			for _, v in ipairs(Workspace:GetDescendants()) do
+				if v:IsA("BasePart") then
+					v.Material = Enum.Material.SmoothPlastic
+					v.Reflectance = 0
+				elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") then
+					v.Enabled = false
+				end
+			end
+			Lighting.GlobalShadows = false
+			Lighting.Brightness = 1
+			Lighting.FogEnd = 999999
+			
+			settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+		else
+			Lighting.GlobalShadows = true
+			settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+		end
+	end)
+end
+
+if config.fastModeActive then
+	applyFastMode(true)
+end
+
+-- ==========================================================
+-- SISTEM NOTIFIKASI KUSTOM
 -- ==========================================================
 local notificationGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 notificationGui.Name = "GuritaHubTopNotification"
@@ -78,7 +109,7 @@ local function showTopNotification(text, duration)
 end
 
 -- ==========================================================
--- FUNGSI AUTO JOIN TIM (TANPA DELAY & ANTI-SPAM)
+-- FUNGSI AUTO JOIN TIM (DIOPTIMALKAN, CEK TIAP 15 DETIK)
 -- ==========================================================
 local function autoSelectTeam()
 	if not config.autoJoinTeamActive then return end
@@ -101,13 +132,13 @@ end
 task.spawn(function()
 	task.wait(1) 
 	autoSelectTeam()
-	while task.wait(5) do
+	while task.wait(15) do -- Diperlama jadi 15 detik agar CPU tidak bekerja berat
 		pcall(autoSelectTeam)
 	end
 end)
 
 -- ==========================================================
--- SISTEM DETEKSI NAMA BUAH SPESIFIK & KOSONG
+-- SISTEM DETEKSI BUAH (DIOPTIMALKAN TIAP 8 DETIK)
 -- ==========================================================
 local function checkFruit()
 	local foundFruitName = nil
@@ -133,13 +164,13 @@ local function checkFruit()
 end
 
 task.spawn(function()
-	while task.wait(5) do
+	while task.wait(8) do -- Diperlama ke 8 detik agar RAM 4GB tidak lag saat scan
 		pcall(checkFruit)
 	end
 end)
 
 -- ==========================================================
--- TAMPILAN GUI MENU UTAMA & EFEK RAINBOW STROKE (PINGGIRAN SAJA)
+-- TAMPILAN GUI MENU UTAMA & EFEK RAINBOW STROKE
 -- ==========================================================
 if player.PlayerGui:FindFirstChild("GuritaHubGUI") then
 	player.PlayerGui.GuritaHubGUI:Destroy()
@@ -149,10 +180,8 @@ local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "GuritaHubGUI"
 screenGui.ResetOnSpawn = false
 
--- List untuk menampung semua bagian pinggir (Stroke) yang akan diberi efek rainbow
 local rainbowStrokes = {}
 
--- Tombol Buka/Tutup Menu (Ikon Garis Tiga ≡)
 local ToggleMenuBtn = Instance.new("TextButton", screenGui)
 ToggleMenuBtn.Size = UDim2.new(0, 85, 0, 40)
 ToggleMenuBtn.Position = UDim2.new(0, 20, 0.4, 0)
@@ -166,10 +195,9 @@ local ToggleMenuStroke = Instance.new("UIStroke", ToggleMenuBtn)
 ToggleMenuStroke.Thickness = 2
 table.insert(rainbowStrokes, ToggleMenuStroke)
 
--- Frame Utama Menu (Visible = false saat pertama kali di-execute)
 local Main = Instance.new("Frame", screenGui)
-Main.Size = UDim2.new(0, 240, 0, 180)
-Main.Position = UDim2.new(0.5, -120, 0.5, -90)
+Main.Size = UDim2.new(0, 240, 0, 220)
+Main.Position = UDim2.new(0.5, -120, 0.5, -110)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Visible = false 
 Instance.new("UICorner", Main)
@@ -191,20 +219,19 @@ local function CreateBtn(pos)
 	b.Size = UDim2.new(0, 200, 0, 34)
 	b.Position = pos
 	b.Font = Enum.Font.GothamBlack
+	b.TextSize.TextSize = 12
 	b.TextSize = 12
 	b.TextColor3 = Color3.new(1, 1, 1)
 	Instance.new("UICorner", b)
-	local s = Instance.new("UIStroke", s or b)
+	local s = Instance.new("UIStroke", b)
 	s.Thickness = 1.2
 	table.insert(rainbowStrokes, s)
 	return b
 end
 
 local TeamBtn        = CreateBtn(UDim2.new(0, 20, 0, 55))
-local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 105))
-
--- Tambahkan pinggiran notifikasi ke dalam efek rainbow juga
-table.insert(rainbowStrokes, NotifStroke)
+local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 98))
+local ToggleFastMode = CreateBtn(UDim2.new(0, 20, 0, 141))
 
 TeamBtn.Text = "Tim: " .. config.selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
@@ -212,7 +239,12 @@ TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 ToggleJoinTeam.Text = config.autoJoinTeamActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
 ToggleJoinTeam.BackgroundColor3 = config.autoJoinTeamActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
--- Looping animasi warna pelangi khusus untuk pinggiran (Stroke)
+ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
+ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+
+table.insert(rainbowStrokes, NotifStroke)
+
+-- Looping animasi rainbow dibatasi dan dioptimalkan agar tidak bikin patah-patah
 RunService.RenderStepped:Connect(function()
 	local hue = tick() % 5 / 5
 	local rainbowColor = Color3.fromHSV(hue, 1, 1)
@@ -250,4 +282,13 @@ ToggleJoinTeam.MouseButton1Click:Connect(function()
 	if config.autoJoinTeamActive then
 		autoSelectTeam()
 	end
+end)
+
+ToggleFastMode.MouseButton1Click:Connect(function()
+	config.fastModeActive = not config.fastModeActive
+	ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
+	ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+	saveConfig()
+	
+	applyFastMode(config.fastModeActive)
 end)
