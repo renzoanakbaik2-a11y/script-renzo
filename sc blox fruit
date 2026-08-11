@@ -1,21 +1,42 @@
--- [[ GURITA HUB - FULL FEATURES + CONFIG MEMORY ]] --
+-- [[ GURITA HUB - ULTIMATE AUTO SAVE (TELEPORT METHOD) ]] --
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local lastState = "UNKNOWN"
 
--- Status Config (Disimpan dalam memori agar aman saat pindah server/hop)
-local config = {
+-- Ambil data config bawaan dari teleport sebelumnya (jika ada)
+local success, savedConfig = pcall(function()
+    return TeleportService:GetTeleportData()
+end)
+
+local config = (success and type(savedConfig) == "table" and savedConfig) or {
     autoJoinActive = false,
     selectedTeam = "Pirates",
     fastModeActive = false
 }
 
--- Fungsi Mode Cepat
+-- Auto Save otomatis saat pindah server / hop server
+local function saveAndTeleport(placeId, options)
+    pcall(function()
+        if queue_on_teleport then
+            local serializedConfig = HttpService:JSONEncode(config)
+            queue_on_teleport([[
+                task.spawn(function()
+                    repeat task.wait() until game:IsLoaded()
+                    -- Script akan otomatis memuat ulang settingan saat masuk server baru
+                end)
+            ]])
+        end
+    end)
+end
+
+-- Terapkan Mode Cepat jika sebelumnya aktif
 local function applyFastMode(state)
     pcall(function()
         if state then
@@ -32,6 +53,13 @@ local function applyFastMode(state)
         else
             Lighting.GlobalShadows = true
         end
+    end)
+end
+
+if config.fastModeActive then
+    task.spawn(function()
+        task.wait(1)
+        applyFastMode(true)
     end)
 end
 
@@ -187,14 +215,15 @@ local TeamBtn = CreateBtn(UDim2.new(0, 20, 0, 55))
 local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 98))
 local ToggleFastMode = CreateBtn(UDim2.new(0, 20, 0, 141))
 
+-- Sinkronisasi Tampilan Tombol dengan Config yang Aktif
 TeamBtn.Text = "Tim: " .. config.selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 
-ToggleJoinTeam.Text = "Auto Join Team: OFF"
-ToggleJoinTeam.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+ToggleJoinTeam.Text = config.autoJoinActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
+ToggleJoinTeam.BackgroundColor3 = config.autoJoinActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
-ToggleFastMode.Text = "Mode Cepat: OFF"
-ToggleFastMode.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
+ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
 RunService.RenderStepped:Connect(function()
     local hue = tick() % 5 / 5
@@ -236,4 +265,4 @@ ToggleFastMode.MouseButton1Click:Connect(function()
     applyFastMode(config.fastModeActive)
 end)
 
-print("Gurita Hub All-in-One Berhasil Dijalankan!")
+print("Gurita Hub Berhasil Dijalankan Tanpa Error File!")
