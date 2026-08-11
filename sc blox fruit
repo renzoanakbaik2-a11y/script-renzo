@@ -95,6 +95,8 @@ NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
 
+local NotifXBox, NotifYBox -- Deklarasi awal agar bisa diakses fungsi reset
+
 local function updateNotifPosition()
     local scaleX = Settings.NotifOffsetX / 100
     local scaleY = Settings.NotifOffsetY / 100
@@ -210,7 +212,7 @@ local function smoothFlyTo(targetCFrame)
 end
 
 -- ==========================================
--- SISTEM CHEST (TANPA DELAY & AUTO LOOP)
+-- SISTEM CHEST
 -- ==========================================
 local function getPositionOfObj(obj)
     if obj:IsA("BasePart") then
@@ -262,7 +264,7 @@ end
 -- ==========================================
 task.spawn(function()
     local lastCount = 0
-    while task.wait(1) do
+    while task.wait(0.1) do
         if Settings.FruitNotifier then
             local fruitList = {}
             local targetFruitHandle = nil
@@ -302,7 +304,6 @@ task.spawn(function()
             if rootPart then
                 local islands = getChestIslands()
                 
-                -- Jika semua chest di map sudah habis/diambil, reset DeadChests agar mengulang dari awal tanpa relog
                 if #islands == 0 then
                     DeadChests = {}
                     islands = getChestIslands()
@@ -337,10 +338,7 @@ task.spawn(function()
                         local targetPos = getPositionOfObj(targetChest)
                         
                         if targetPos then
-                            -- Terbang langsung tanpa jeda delay (0 delay)
                             smoothFlyTo(CFrame.new(targetPos))
-                            
-                            -- Tandai chest sebagai selesai dan langsung lanjut ke chest berikutnya
                             if targetChest then
                                 DeadChests[targetChest] = true
                             end
@@ -351,7 +349,6 @@ task.spawn(function()
         end
 
         if Settings.AutoFlyPlayer then
-            task.wait(1)
             local targetPlayer = nil
 
             if Settings.TargetPlayerName ~= "" then
@@ -503,7 +500,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 950)
+Container.CanvasSize = UDim2.new(0, 0, 0, 1000)
 Container.ScrollBarThickness = 4
 Container.Parent = MainFrame
 
@@ -624,7 +621,7 @@ NotifPosLabel.TextSize, NotifPosLabel.Font = 10, Enum.Font.Gotham
 NotifPosLabel.TextXAlignment = Enum.TextXAlignment.Left
 NotifPosLabel.Parent = Container
 
-local NotifXBox = Instance.new("TextBox")
+NotifXBox = Instance.new("TextBox")
 NotifXBox.Size = UDim2.new(0.43, 0, 0, 35)
 NotifXBox.Position = UDim2.new(0.05, 0, 0, 335)
 NotifXBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
@@ -652,7 +649,7 @@ NotifXBox.FocusLost:Connect(function(enterPressed)
     end
 end)
 
-local NotifYBox = Instance.new("TextBox")
+NotifYBox = Instance.new("TextBox")
 NotifYBox.Size = UDim2.new(0.43, 0, 0, 35)
 NotifYBox.Position = UDim2.new(0.52, 0, 0, 335)
 NotifYBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
@@ -680,11 +677,34 @@ NotifYBox.FocusLost:Connect(function(enterPressed)
     end
 end)
 
+-- Tombol Reset Posisi Notifikasi ke 50 (Tengah)
+local ResetPosBtn = Instance.new("TextButton")
+ResetPosBtn.Size = UDim2.new(0.9, 0, 0, 30)
+ResetPosBtn.Position = UDim2.new(0.05, 0, 0, 380)
+ResetPosBtn.BackgroundColor3 = Color3.fromRGB(200, 120, 0)
+ResetPosBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResetPosBtn.Text = "Reset Posisi Notif ke Tengah (50, 50)"
+ResetPosBtn.TextSize, ResetPosBtn.Font = 10, Enum.Font.GothamBold
+ResetPosBtn.Parent = Container
+
+local rpbCorner = Instance.new("UICorner")
+rpbCorner.CornerRadius = UDim.new(0, 6)
+rpbCorner.Parent = ResetPosBtn
+
+ResetPosBtn.MouseButton1Click:Connect(function()
+    Settings.NotifOffsetX = 50
+    Settings.NotifOffsetY = 50
+    if NotifXBox then NotifXBox.Text = "50" end
+    if NotifYBox then NotifYBox.Text = "50" end
+    updateNotifPosition()
+    saveSettings()
+end)
+
 -- 4. KECEPATAN & KETINGGIAN TERBANG
-createSectionHeader(385, "--- 4. KECEPATAN & KETINGGIAN TERBANG ---")
+createSectionHeader(425, "--- 4. KECEPATAN & KETINGGIAN TERBANG ---")
 local SpeedLabel = Instance.new("TextLabel")
 SpeedLabel.Size = UDim2.new(0.9, 0, 0, 20)
-SpeedLabel.Position = UDim2.new(0.05, 0, 0, 410)
+SpeedLabel.Position = UDim2.new(0.05, 0, 0, 450)
 SpeedLabel.BackgroundTransparency = 1
 SpeedLabel.Text = "Kecepatan Terbang (20 - 1000):"
 SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -694,7 +714,7 @@ SpeedLabel.Parent = Container
 
 local SpeedTextBox = Instance.new("TextBox")
 SpeedTextBox.Size = UDim2.new(0.9, 0, 0, 35)
-SpeedTextBox.Position = UDim2.new(0.05, 0, 0, 435)
+SpeedTextBox.Position = UDim2.new(0.05, 0, 0, 475)
 SpeedTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 SpeedTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedTextBox.Text = tostring(Settings.FlightSpeed)
@@ -721,7 +741,7 @@ end)
 
 local HeightLabel = Instance.new("TextLabel")
 HeightLabel.Size = UDim2.new(0.9, 0, 0, 20)
-HeightLabel.Position = UDim2.new(0.05, 0, 0, 480)
+HeightLabel.Position = UDim2.new(0.05, 0, 0, 520)
 HeightLabel.BackgroundTransparency = 1
 HeightLabel.Text = "Ketinggian Terbang (0 - 10):"
 HeightLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -731,7 +751,7 @@ HeightLabel.Parent = Container
 
 local HeightTextBox = Instance.new("TextBox")
 HeightTextBox.Size = UDim2.new(0.9, 0, 0, 35)
-HeightTextBox.Position = UDim2.new(0.05, 0, 0, 505)
+HeightTextBox.Position = UDim2.new(0.05, 0, 0, 545)
 HeightTextBox.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 HeightTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 HeightTextBox.Text = tostring(Settings.FlyHeight)
@@ -756,11 +776,11 @@ HeightTextBox.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- 5. TARGET PLAYER (DENGAN LEVEL & BUAH)
-createSectionHeader(555, "--- 5. TARGET PLAYER (DENGAN LEVEL & BUAH) ---")
+-- 5. TARGET PLAYER (LEVEL, NAMA, & BUAH SAJA)
+createSectionHeader(595, "--- 5. TARGET PLAYER (LEVEL, NAMA, & BUAH) ---")
 local TargetStatusLabel = Instance.new("TextLabel")
 TargetStatusLabel.Size = UDim2.new(0.9, 0, 0, 20)
-TargetStatusLabel.Position = UDim2.new(0.05, 0, 0, 580)
+TargetStatusLabel.Position = UDim2.new(0.05, 0, 0, 620)
 TargetStatusLabel.BackgroundTransparency = 1
 TargetStatusLabel.Text = "Target Aktif: " .. (Settings.TargetPlayerName == "" and "[ Terdekat / Otomatis ]" or Settings.TargetPlayerName)
 TargetStatusLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
@@ -770,7 +790,7 @@ TargetStatusLabel.Parent = Container
 
 local PlayerListScroll = Instance.new("ScrollingFrame")
 PlayerListScroll.Size = UDim2.new(0.9, 0, 0, 120)
-PlayerListScroll.Position = UDim2.new(0.05, 0, 0, 605)
+PlayerListScroll.Position = UDim2.new(0.05, 0, 0, 645)
 PlayerListScroll.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
 PlayerListScroll.BorderSizePixel = 0
 PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -788,7 +808,7 @@ UIListLayout.Parent = PlayerListScroll
 
 local ResetTargetBtn = Instance.new("TextButton")
 ResetTargetBtn.Size = UDim2.new(0.9, 0, 0, 30)
-ResetTargetBtn.Position = UDim2.new(0.05, 0, 0, 735)
+ResetTargetBtn.Position = UDim2.new(0.05, 0, 0, 775)
 ResetTargetBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 ResetTargetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ResetTargetBtn.Text = "Reset Target (Jadi Player Terdekat)"
@@ -815,16 +835,22 @@ local function refreshPlayerList()
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
             local pLevel = "?"
-            local pFruit = "Tidak Ada"
+            local pFruit = "Tidak Ada Buah"
             
             pcall(function()
-                if p.Data and p.Data:FindFirstChild("Level") then
+                -- Ambil Level
+                if p:FindFirstChild("Data") and p.Data:FindFirstChild("Level") then
                     pLevel = tostring(p.Data.Level.Value)
+                elseif p:FindFirstChild("leaderstats") and p.leaderstats:FindFirstChild("Level") then
+                    pLevel = tostring(p.leaderstats.Level.Value)
                 end
-                if p.Backpack and p.Backpack:FindFirstChildOfClass("Tool") then
-                    pFruit = p.Backpack:FindFirstChildOfClass("Tool").Name
-                elseif p.Character and p.Character:FindFirstChildOfClass("Tool") then
-                    pFruit = p.Character:FindFirstChildOfClass("Tool").Name
+
+                -- Ambil Buah
+                if p:FindFirstChild("Data") and p.Data:FindFirstChild("DevilFruit") then
+                    local dfValue = tostring(p.Data.DevilFruit.Value)
+                    if dfValue ~= "" and dfValue ~= "None" and dfValue ~= "nil" and dfValue ~= "Combat" then
+                        pFruit = dfValue
+                    end
                 end
             end)
 
@@ -832,7 +858,7 @@ local function refreshPlayerList()
             pBtn.Size = UDim2.new(1, -6, 0, 35)
             pBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
             pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            pBtn.Text = " 👤 " .. p.Name .. " | Lvl: " .. pLevel .. " | Buah: " .. pFruit
+            pBtn.Text = " Lv." .. pLevel .. " | " .. p.Name .. " | Buah: " .. pFruit
             pBtn.TextSize, pBtn.Font = 9, Enum.Font.Gotham
             pBtn.TextXAlignment = Enum.TextXAlignment.Left
             pBtn.Parent = PlayerListScroll
@@ -855,11 +881,11 @@ Players.PlayerRemoving:Connect(refreshPlayerList)
 task.spawn(refreshPlayerList)
 
 -- 6. FITUR AUTOMATIC LAINNYA
-createSectionHeader(780, "--- 6. FITUR AUTOMATIC LAINNYA ---")
-createAutoToggle(805, "Teleport ke Buah", "AutoTeleportFruit", nil)
-createAutoToggle(850, "Auto Collect Chest (Tanpa Delay & Auto Loop)", "AutoFlyChest", nil)
-createAutoToggle(895, "Teleport ke Player", "AutoFlyPlayer", nil)
-createAutoToggle(940, "FPS Boost", "FpsBoost", function(val)
+createSectionHeader(820, "--- 6. FITUR AUTOMATIC LAINNYA ---")
+createAutoToggle(845, "Teleport ke Buah", "AutoTeleportFruit", nil)
+createAutoToggle(890, "Auto Collect Chest (Tanpa Delay & Auto Loop)", "AutoFlyChest", nil)
+createAutoToggle(935, "Teleport ke Player", "AutoFlyPlayer", nil)
+createAutoToggle(980, "FPS Boost", "FpsBoost", function(val)
     applyFpsBoost(val)
 end)
 
