@@ -63,11 +63,11 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- FITUR 1: NOTIFIKASI BUAH (TEKS MELAYANG BERSANGKUT PAUT + ANIMASI KE 50% LALU KE ATAS)
+-- FITUR 1: NOTIFIKASI BUAH (TEKS MELAYANG DI TENGAH -> MENTOK KE ATAS LAYAR)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 360, 0, 50)
--- Posisi awal di tengah layar (Y = 0.5) agar player bisa melihat animasi teks melayang/tersusun
+-- Posisi awal di tengah layar (Y = 0.5) untuk menampilkan efek teks melayang
 NotifFrame.Position = UDim2.new(0.5, -180, 0.5, -25)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 NotifFrame.BorderSizePixel = 0
@@ -99,13 +99,12 @@ NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
--- Fungsi Efek Teks Melayang & Acak yang Masih Bersangkut Paut dengan Kata Asli
+-- Fungsi Efek Teks Melayang & Bersangkut Paut
 local function playFloatingScramble(targetText)
-	-- Kumpulan karakter yang bersangkut paut (mengambil huruf/simbol dari teks aslinya ditambah variasi tipis)
 	local pool = "Fruit Notier:MemindaiMap...FruiNotifrcP"
 	local length = string.len(targetText)
 	
-	-- Tahap 1: Efek teks melayang / bergeser acak tapi bernuansa kata aslinya
+	-- Tahap 1: Efek teks melayang / acak bernuansa kata asli di tengah layar
 	for step = 1, 18 do
 		local scrambled = ""
 		for i = 1, length do
@@ -119,7 +118,7 @@ local function playFloatingScramble(targetText)
 		task.wait(0.04)
 	end
 	
-	-- Tahap 2: Menyusun huruf aslinya satu per satu secara mulus (efek melayang merapat)
+	-- Tahap 2: Menyusun huruf aslinya satu per satu
 	for i = 1, length do
 		local current = string.sub(targetText, 1, i)
 		for j = i + 1, length do
@@ -132,12 +131,12 @@ local function playFloatingScramble(targetText)
 	NotifText.Text = targetText
 end
 
--- Jalankan animasi teks melayang di tengah (50%), lalu geser mulus ke atas layar setelah selesai
+-- Jalankan animasi teks melayang di tengah (50%), lalu geser MENTOK KE ATAS (Y = 0)
 task.spawn(function()
 	playFloatingScramble("Fruit Notifier: Memindai Map...")
-	task.wait(1.5)
+	task.wait(1.5) -- Jeda sebentar supaya player sempat baca di tengah
 	TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, -180, 0.05, 0)
+		Position = UDim2.new(0.5, -180, 0, 0) -- Y = 0 artinya mentok paling atas layar!
 	}):Play()
 end)
 
