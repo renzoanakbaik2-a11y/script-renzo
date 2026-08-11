@@ -89,11 +89,11 @@ NotifFrame.Size = UDim2.new(0, 360, 0, 45)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0)
 NotifFrame.Position = UDim2.new(0.5, 0, 0, -60) 
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-NotifFrame.BackgroundTransparency = 0.1
+NotifFrame.BackgroundTransparency = 1
 NotifFrame.BorderSizePixel = 0
 NotifFrame.Parent = ScreenGui
 
--- Fungsi Animasi Muncul dari Atas
+-- Fungsi Animasi Muncul ke Bawah (Masuk ke Layar)
 local function animateNotifIn()
     TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Position = UDim2.new(0.5, 0, 0, 15),
@@ -335,14 +335,16 @@ task.spawn(function()
             local fruitList = {}
             local targetFruitHandle = nil
 
-            -- Menggunakan GetDescendants agar mendeteksi buah di seluruh map/folder
+            -- Deteksi buah secara akurat berdasarkan nama item/folder buah di Blox Fruits
             for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
+                if (obj:IsA("Tool") or obj:IsA("Model")) and (obj:FindFirstChild("Handle") or obj.PrimaryPart or obj:IsA("Tool")) then
                     local nameLower = obj.Name:lower()
-                    if nameLower:find("fruit") or nameLower:find("blox") or nameLower:find("budak") or not nameLower:find("sword") then
-                        table.insert(fruitList, obj.Name)
-                        if not targetFruitHandle then
-                            targetFruitHandle = obj.Handle
+                    if nameLower:find("fruit") or nameLower:find("blox") or nameLower:find("budak") or nameLower:find("bomb") or nameLower:find("spike") or nameLower:find("chop") or nameLower:find("spring") or nameLower:find("kilo") or nameLower:find("spin") or nameLower:find("flame") or nameLower:find("falcon") or nameLower:find("ice") or nameLower:find("sand") or nameLower:find("dark") or nameLower:find("diamond") or nameLower:find("light") or nameLower:find("rubber") or nameLower:find("barrier") or nameLower:find("ghost") or nameLower:find("magma") or nameLower:find("quake") or nameLower:find("buddha") or nameLower:find("love") or nameLower:find("spider") or nameLower:find("sound") or nameLower:find("phoenix") or nameLower:find("portal") or nameLower:find("pain") or nameLower:find("blizzard") or nameLower:find("gravity")  or nameLower:find("mammoth") or nameLower:find("trex") or nameLower:find("dough") or nameLower:find("shadow") or nameLower:find("venom") or nameLower:find("control") or nameLower:find("spirit") or nameLower:find("dragon") or nameLower:find("leopard") or nameLower:find("kitsune") or nameLower:find("rocket") then
+                        if not nameLower:find("sword") and not nameLower:find("gun") then
+                            table.insert(fruitList, obj.Name)
+                            if not targetFruitHandle then
+                                targetFruitHandle = obj:FindFirstChild("Handle") or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildWhichIsA("BasePart")
+                            end
                         end
                     end
                 end
@@ -370,6 +372,7 @@ task.spawn(function()
                     end
                 end
             else
+                -- Notifikasi tetap muncul dengan animasi saat baru join dan belum ada buah
                 NotifText.Text = "Status: Mencari Buah di Map..."
                 if not isShown then
                     animateNotifIn()
@@ -513,15 +516,14 @@ end
 if Settings.FpsBoost then applyFpsBoost(true) end
 
 -- ==========================================
--- TAMPILAN UI MENU UTAMA
+-- TAMPILAN UI MENU UTAMA (MENGGUNAKAN LOGO GAMBAR)
 -- ==========================================
-local OpenButton = Instance.new("TextButton")
+local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
 OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
 OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-OpenButton.Text = "MENU"
-OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenButton.TextSize, OpenButton.Font = 10, Enum.Font.GothamBold
+OpenButton.Image = "rbxassetid://72916050815889"
+OpenButton.ScaleType = Enum.ScaleType.Crop
 OpenButton.ZIndex = 999
 OpenButton.Parent = ScreenGui
 
@@ -915,5 +917,10 @@ end
 OpenButton.MouseButton1Click:Connect(toggleMenu)
 CloseButton.MouseButton1Click:Connect(toggleMenu)
 
--- Jalankan animasi masuk pertama kali
-animateNotifIn()
+-- Jalankan animasi masuk pertama kali saat baru join (meskipun belum ada buah)
+task.spawn(function()
+    task.wait(1)
+    if Settings.FruitNotifier then
+        animateNotifIn()
+    end
+end)
