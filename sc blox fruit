@@ -203,15 +203,15 @@ end
 
 
 -- ==========================================
--- FITUR 4: MENU ANTARMUKA MINIMALIS (TOMBOL HITAM, PINGGIRAN & BACAAN BIRU)
+-- FITUR 4: MENU ANTARMUKA MINIMALIS (TOMBOL HITAM, TEKS PUTIH, PINGGIRAN BIRU)
 -- ==========================================
--- Tombol Mengambang (MENU ≡) - Warna Hitam dengan Teks Biru Terang & Garis Tepi Biru
+-- Tombol Mengambang (MENU ≡) - Warna Hitam, Teks Putih Normal, Pinggiran Biru Terang
 local OpenButton = Instance.new("TextButton")
 OpenButton.Size = UDim2.new(0, 55, 0, 55)
 OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
 OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20) -- Hitam Elegan
 OpenButton.Text = "MENU ≡"
-OpenButton.TextColor3 = Color3.fromRGB(0, 200, 255) -- Warna Biru Terang pada Bacaan Tombol Buka Menu
+OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- Warna Teks Putih Standar
 OpenButton.TextSize, OpenButton.Font = 11, Enum.Font.GothamBold
 OpenButton.Parent = ScreenGui
 
@@ -219,7 +219,7 @@ local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(0, 12)
 OpenCorner.Parent = OpenButton
 
--- Garis Tepi Biru Terang pada Tombol Mengambang Hitam
+-- Garis Tepi Biru Terang pada Tombol Mengambang
 local OpenStroke = Instance.new("UIStroke")
 OpenStroke.Color = Color3.fromRGB(0, 200, 255)
 OpenStroke.Thickness = 2
@@ -256,7 +256,7 @@ TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.05, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "Blox Fruits Hub"
-TitleLabel.TextColor3 = Color3.fromRGB(0, 200, 255) -- Warna Biru Terang pada Bacaan Judul Menu
+TitleLabel.TextColor3 = Color3.fromRGB(0, 200, 255) -- Warna Biru Terang pada Judul Menu Utama
 TitleLabel.TextSize, TitleLabel.Font = 14, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = TopBar
