@@ -1,17 +1,48 @@
--- [[ GURITA HUB - STANDALONE SAFE SCRIPT ]] --
+-- [[ GURITA HUB - AUTO SAVE CONFIG SCRIPT ]] --
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local lastState = "UNKNOWN"
 
-local autoJoinActive = false
-local selectedTeam = "Pirates"
-local fastModeActive = false
+-- CONFIG DEFAULT
+local config = {
+	autoJoinActive = false,
+	selectedTeam = "Pirates",
+	fastModeActive = false
+}
+
+local configFileName = "GuritaHub_Config.json"
+
+-- LOAD CONFIG SAAT JOIN / HOP SERVER
+local function loadConfig()
+	pcall(function()
+		if readfile and isfile and isfile(configFileName) then
+			local data = HttpService:JSONDecode(readfile(configFileName))
+			if type(data) == "table" then
+				for k, v in pairs(data) do
+					config[k] = v
+				end
+			end
+		end
+	end)
+end
+
+loadConfig()
+
+-- SAVE CONFIG SAAT DIUBAH
+local function saveConfig()
+	pcall(function()
+		if writefile then
+			writefile(configFileName, HttpService:JSONEncode(config))
+		end
+	end)
+end
 
 -- ==========================================================
 -- FUNGSI MODE CEPAT
@@ -32,6 +63,13 @@ local function applyFastMode(state)
 		else
 			Lighting.GlobalShadows = true
 		end
+	end)
+end
+
+if config.fastModeActive then
+	task.spawn(function()
+		task.wait(1)
+		applyFastMode(true)
 	end)
 end
 
@@ -86,14 +124,14 @@ end
 -- AUTO JOIN TEAM
 -- ==========================================================
 local function autoSelectTeam()
-	if not autoJoinActive then return end
-	if player.Team and player.Team.Name == selectedTeam then return end
+	if not config.autoJoinActive then return end
+	if player.Team and player.Team.Name == config.selectedTeam then return end
 
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	local commF = remotes and remotes:FindFirstChild("CommF_")
 	if commF then
 		pcall(function()
-			commF:InvokeServer("SetTeam", selectedTeam)
+			commF:InvokeServer("SetTeam", config.selectedTeam)
 		end)
 	end
 end
@@ -197,14 +235,15 @@ local TeamBtn        = CreateBtn(UDim2.new(0, 20, 0, 55))
 local ToggleJoinTeam = CreateBtn(UDim2.new(0, 20, 0, 98))
 local ToggleFastMode = CreateBtn(UDim2.new(0, 20, 0, 141))
 
-TeamBtn.Text = "Tim: " .. selectedTeam
+-- Set Tampilan Tombol Sesuai Config yang Tersimpan
+TeamBtn.Text = "Tim: " .. config.selectedTeam
 TeamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
 
-ToggleJoinTeam.Text = "Auto Join Team: OFF"
-ToggleJoinTeam.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+ToggleJoinTeam.Text = config.autoJoinActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
+ToggleJoinTeam.BackgroundColor3 = config.autoJoinActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
-ToggleFastMode.Text = "Mode Cepat: OFF"
-ToggleFastMode.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
+ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 
 RunService.RenderStepped:Connect(function()
 	local hue = tick() % 5 / 5
@@ -220,31 +259,34 @@ ToggleMenuBtn.MouseButton1Down:Connect(function()
 end)
 
 TeamBtn.MouseButton1Click:Connect(function()
-	if selectedTeam == "Pirates" then
-		selectedTeam = "Marines"
+	if config.selectedTeam == "Pirates" then
+		config.selectedTeam = "Marines"
 	else
-		selectedTeam = "Pirates"
+		config.selectedTeam = "Pirates"
 	end
-	TeamBtn.Text = "Tim: " .. selectedTeam
-	if autoJoinActive then
+	TeamBtn.Text = "Tim: " .. config.selectedTeam
+	saveConfig() -- Simpan otomatis
+	if config.autoJoinActive then
 		autoSelectTeam()
 	end
 end)
 
 ToggleJoinTeam.MouseButton1Click:Connect(function()
-	autoJoinActive = not autoJoinActive
-	ToggleJoinTeam.Text = autoJoinActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
-	ToggleJoinTeam.BackgroundColor3 = autoJoinActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-	if autoJoinActive then
+	config.autoJoinActive = not config.autoJoinActive
+	ToggleJoinTeam.Text = config.autoJoinActive and "Auto Join Team: ON" or "Auto Join Team: OFF"
+	ToggleJoinTeam.BackgroundColor3 = config.autoJoinActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+	saveConfig() -- Simpan otomatis
+	if config.autoJoinActive then
 		autoSelectTeam()
 	end
 end)
 
 ToggleFastMode.MouseButton1Click:Connect(function()
-	fastModeActive = not fastModeActive
-	ToggleFastMode.Text = fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
-	ToggleFastMode.BackgroundColor3 = fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-	applyFastMode(fastModeActive)
+	config.fastModeActive = not config.fastModeActive
+	ToggleFastMode.Text = config.fastModeActive and "Mode Cepat: ON" or "Mode Cepat: OFF"
+	ToggleFastMode.BackgroundColor3 = config.fastModeActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+	saveConfig() -- Simpan otomatis
+	applyFastMode(config.fastModeActive)
 end)
 
-print("Gurita Hub Berhasil Dijalankan!")
+print("Gurita Hub + Auto Save Config Berhasil Dijalankan!")
