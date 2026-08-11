@@ -58,14 +58,25 @@ end
 
 loadSettings()
 
--- 1. ScreenGui Utama
+-- 1. ScreenGui Utama (Aman dari CoreGui Protect)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsHub"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
 pcall(function()
-	ScreenGui.Parent = CoreGui
+	if syn and syn.protect_gui then
+		syn.protect_gui(ScreenGui)
+		ScreenGui.Parent = CoreGui
+	elseif gethui then
+		ScreenGui.Parent = gethui()
+	else
+		ScreenGui.Parent = CoreGui
+	end
 end)
-if not ScreenGui.Parent then
+
+if not ScreenGui.Parent or ScreenGui.Parent == nil then
 	ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
@@ -195,7 +206,7 @@ end
 
 
 -- ==========================================
--- SISTEM PENGELOMPOKKAN PULAU & AUTO COLLECT CHEST BERDASARKAN PULAU TERDEKAT
+-- SISTEM PENGELOMPOKKAN PULAU & AUTO COLLECT CHEST (PULAU TERDEKAT & HABIS GANTI)
 -- ==========================================
 local function getPositionOfObj(obj)
 	if obj:IsA("BasePart") then
@@ -281,18 +292,35 @@ task.spawn(function()
 			end
 		end
 
-		-- 2. Auto Collect Chest (Peti) Berdasarkan Pulau Terdekat & Berpindah Otomatis
+		-- 2. Auto Collect Chest (Peti) - Pulau Terdekat, Jika Habis Ganti Pulau Lain Secara Otomatis
 		if Settings.AutoFlyChest then
 			local rootPart = getCharacterRootPart()
 			if rootPart then
 				local islands = getChestIslands()
+				-- Bersihkan pulau yang chest-nya sudah kosong/0
+				for i = #islands, 1, -1 do
+					-- Filter chest yang masih valid di dalam game
+					local validChests = {}
+					for _, cData in ipairs(islands[i].Chests) do
+						if cData.Object and cData.Object.Parent then
+							table.insert(validChests, cData)
+						end
+					end
+					islands[i].Chests = validChests
+					if #islands[i].Chests == 0 then
+						table.remove(islands, i)
+					end
+				end
+
 				if #islands > 0 then
+					-- Urutkan pulau berdasarkan pulau terdekat dari posisi player saat ini
 					table.sort(islands, function(a, b)
 						return (rootPart.Position - a.Center).Magnitude < (rootPart.Position - b.Center).Magnitude
 					end)
 
 					local currentIsland = islands[1]
 					if currentIsland and #currentIsland.Chests > 0 then
+						-- Urutkan chest dalam pulau ini dari yang terdekat
 						table.sort(currentIsland.Chests, function(a, b)
 							return (rootPart.Position - a.Position).Magnitude < (rootPart.Position - b.Position).Magnitude
 						end)
@@ -396,7 +424,7 @@ if Settings.FpsBoost then applyFpsBoost(true) end
 
 
 -- ==========================================
--- TAMPILAN UI MENU UTAMA
+-- TAMPILAN UI MENU UTAMA (DIPERBAIKI AGAR PASTI MUNCUL)
 -- ==========================================
 local OpenButton = Instance.new("TextButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -405,6 +433,7 @@ OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 OpenButton.Text = "MENU"
 OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenButton.TextSize, OpenButton.Font = 10, Enum.Font.GothamBold
+OpenButton.ZIndex = 999
 OpenButton.Parent = ScreenGui
 
 local OpenCorner = Instance.new("UICorner")
@@ -422,6 +451,7 @@ MainFrame.Position = UDim2.new(0.5, -240, 0.5, -170)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
+MainFrame.ZIndex = 100
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -501,7 +531,7 @@ local function createTabButton(posY, tabName, displayName)
 	btn.Size = UDim2.new(0.9, 0, 0, 35)
 	btn.Position = UDim2.new(0.05, 0, 0, posY)
 	btn.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
-	btn.Text = "  " + displayName
+	btn.Text = "  " .. displayName
 	btn.TextColor3 = Color3.fromRGB(220, 220, 220)
 	btn.TextSize, btn.Font = 11, Enum.Font.GothamBold
 	btn.TextXAlignment = Enum.TextXAlignment.Left
