@@ -8,6 +8,7 @@ local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
 
 -- Nama file untuk Auto Save Setting
 local FileName = "BloxFruitsHubSettings.json"
@@ -65,7 +66,7 @@ if not ScreenGui.Parent then
 	ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Notifikasi Buah di Layar Atas (Teks Berjalan & Mendukung Banyak Buah)
+-- Notifikasi Buah di Layar Atas
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 360, 0, 50)
 NotifFrame.Position = UDim2.new(0.5, -180, 0.00, 0)
@@ -98,7 +99,6 @@ NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 12, Enum.Font.GothamBold
 NotifText.Parent = NotifFrame
 
-
 -- Fungsi Suara Notifikasi Buah
 local function playFruitSound()
 	if Settings.CustomSoundEnabled and Settings.SoundId ~= "" then
@@ -119,7 +119,7 @@ end
 
 
 -- ==========================================
--- FUNGSI DASAR KARAKTER & TERBANG (TWEEN)
+-- FUNGSI DASAR KARAKTER & TERBANG STABIL ANTI-KAMERA GOYANG
 -- ==========================================
 local function getCharacterRootPart()
 	local character = LocalPlayer.Character
@@ -129,7 +129,7 @@ local function getCharacterRootPart()
 	return nil
 end
 
--- Fungsi Terbang Mulus ke Target (CFrame) dengan Kecepatan yang Diatur
+-- Fungsi Terbang Mulus dengan Pengunci Kamera agar Tidak Ikut Naik-Turun
 local function smoothFlyTo(targetCFrame)
 	local rootPart = getCharacterRootPart()
 	if not rootPart then return end
@@ -141,18 +141,32 @@ local function smoothFlyTo(targetCFrame)
 
 	local distance = (rootPart.Position - targetCFrame.Position).Magnitude
 	local duration = distance / currentSpeed
+	if duration < 0.1 then return end
 
 	local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid.PlatformStand = true
 	end
 
-	local destination = targetCFrame + Vector3.new(0, 5, 0)
+	-- Simpan posisi kamera saat ini agar tidak ikut bergeser/tertarik
+	local oldCameraCFrame = Camera.CFrame
+
+	-- Buat koneksi agar kamera tetap stabil menghadap posisi semula selama terbang
+	local cameraLockConnection = game:GetService("RunService").RenderStepped:Connect(function()
+		Camera.CFrame = oldCameraCFrame
+	end)
+
+	-- Jalankan Tween perjalanan karakter
 	local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-	local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = destination})
+	local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
 	
 	tween:Play()
 	tween.Completed:Wait()
+
+	-- Lepaskan pengunci kamera setelah sampai
+	if cameraLockConnection then
+		cameraLockConnection:Disconnect()
+	end
 
 	if humanoid then
 		humanoid.PlatformStand = false
@@ -166,7 +180,7 @@ end
 task.spawn(function()
 	local lastCount = 0
 	while task.wait(3) do
-		-- 1. Scan Buah (Mendukung banyak buah sekaligus)
+		-- 1. Scan Buah
 		if Settings.FruitNotifier then
 			local fruitList = {}
 			local targetFruitHandle = nil
@@ -189,7 +203,7 @@ task.spawn(function()
 				end
 				lastCount = currentCount
 
-				-- Auto Terbang ke Buah Jika Aktif
+				-- Auto Terbang ke Buah (Stabil)
 				if Settings.AutoTeleportFruit and targetFruitHandle then
 					local rootPart = getCharacterRootPart()
 					if rootPart and (rootPart.Position - targetFruitHandle.Position).Magnitude > 15 then
@@ -202,7 +216,7 @@ task.spawn(function()
 			end
 		end
 
-		-- 2. Auto Terbang ke Chest / Peti (Jika Aktif)
+		-- 2. Auto Terbang ke Chest / Peti (Stabil & Kamera Diam)
 		if Settings.AutoFlyChest then
 			for _, obj in ipairs(Workspace:GetDescendants()) do
 				if (obj.Name:lower():find("chest") or obj.Name:lower():find("peti")) and obj:IsA("BasePart") then
@@ -216,13 +230,13 @@ task.spawn(function()
 			end
 		end
 
-		-- 3. Auto Terbang ke Player Lain (Jika Aktif)
+		-- 3. Auto Terbang ke Player Lain (Stabil)
 		if Settings.AutoFlyPlayer then
 			for _, player in ipairs(Players:GetPlayers()) do
 				if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 					local rootPart = getCharacterRootPart()
 					if rootPart then
-						smoothFlyTo(player.Character.HumanoidRootPart.CFrame)
+						smoothFlyTo(player.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0))
 						task.wait(2)
 						break
 					end
@@ -416,7 +430,7 @@ createTabButton(10, "Home", "Home")
 createTabButton(50, "Automatically", "Automatically")
 createTabButton(90, "Configuration", "Settings")
 
-switchTab("Home") -- Buka halaman utama pertama kali
+switchTab("Home")
 
 
 -- ==========================================
@@ -452,7 +466,6 @@ end
 
 createConfigLabel(15, "1. ATUR KECEPATAN TERBANG (Max 1000):")
 
--- Kotak Ketik Speed Terbang
 local SpeedTextBox = Instance.new("TextBox")
 SpeedTextBox.Size = UDim2.new(0.9, 0, 0, 35)
 SpeedTextBox.Position = UDim2.new(0.05, 0, 0, 40)
@@ -562,7 +575,6 @@ local function createAutoToggle(posY, text, settingKey, callback)
 	return btn
 end
 
--- Tombol-tombol di Menu Automatically
 createAutoToggle(15, "Fruit Notifier & Text", "FruitNotifier", function(val)
 	NotifFrame.Visible = val
 end)
@@ -577,7 +589,6 @@ end)
 
 createAutoToggle(150, "Sound Notif Buah", "CustomSoundEnabled", nil)
 
--- Fitur Terbang Otomatis (Terpisah & Masuk Menu Auto)
 createAutoToggle(210, "Auto Terbang ke Buah", "AutoTeleportFruit", nil)
 createAutoToggle(255, "Auto Terbang ke Chest/Peti", "AutoFlyChest", nil)
 createAutoToggle(300, "Auto Terbang ke Player", "AutoFlyPlayer", nil)
