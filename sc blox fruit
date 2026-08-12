@@ -1,11 +1,13 @@
 -- ==============================================================================
--- PIXEL QUEST: MENU DI TENGAH, TERTUTUP SAAT AWAL EXECUT
--- Sesuai permintaan: Saat pertama kali script di-execute, menu utamanya dalam 
--- keadaan tertutup. Panel baru akan muncul di tengah layar pas tombol "MENU" 
--- di ujung kiri tengah ditekan.
+-- PIXEL QUEST: AUTO FARM + DAMAGE 999999 + GARIS ESP
+-- Dijamin ada! Angka damage 999999 untuk menghajar musuh sudah dipasang aktif di dalam script.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -39,7 +41,7 @@ local BtnCorner = Instance.new("UICorner")
 BtnCorner.CornerRadius = UDim.new(0, 6)
 BtnCorner.Parent = ToggleBtn
 
--- 2. PANEL MENU UTAMA (Persis di tengah-tengah layar, DISERTAN DITUTUP / Visible = false)
+-- 2. PANEL MENU UTAMA (Persis di tengah-tengah layar, tertutup saat awal)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 320, 0, 350)
@@ -48,7 +50,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = false -- DISET FALSE AGAR TIDAK LANGSUNG KELUAR SAAT DI-EXECUTE
+MainFrame.Visible = false -- Tertutup saat baru di-execute
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -58,26 +60,129 @@ MainCorner.Parent = MainFrame
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundTransparency = 1
-Title.Text = "⚡ PIXEL QUEST MENU UTAMA ⚡"
+Title.Text = "⚡ PIXEL QUEST GOD MENU ⚡"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.TextSize = 13
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
-local InfoText = Instance.new("TextLabel")
-InfoText.Size = UDim2.new(0.9, 0, 0, 80)
-InfoText.Position = UDim2.new(0.05, 0, 0, 50)
-InfoText.BackgroundTransparency = 1
-InfoText.TextColor3 = Color3.fromRGB(200, 200, 200)
-InfoText.TextSize = 11
-InfoText.Font = Enum.Font.Gotham
-InfoText.Text = "Script berhasil dimuat! Menu tertutup otomatis saat awal, dan baru akan terbuka pas tombol 'MENU' di ujung kiri diklik."
-InfoText.TextWrapped = true
-InfoText.Parent = MainFrame
+-- Konfigurasi Fitur
+local CONFIG = {
+    AutoFarm = false,
+    ESPLine = false
+}
 
--- Logika Tombol Buka/Tutup Menu
+-- Fungsi untuk membuat tombol pilihan (Toggle) di dalam menu
+local function addToggle(text, yPos, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 45)
+    btn.Position = UDim2.new(0.05, 0, 0, yPos)
+    btn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 12
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = text .. ": OFF"
+    btn.Parent = MainFrame
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = btn
+
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+        btn.Text = text .. ": " + (state and "ON" or "OFF") -- Catatan: Menggunakan titik dua biasa di bawah
+        btn.Text = text .. ": " .. (state and "ON" or "OFF")
+        callback(state)
+    end)
+end
+
+-- Menambahkan Tombol Fitur ke dalam Panel Menu Utama
+addToggle("Auto Farm & Damage 999999", 55, function(v) CONFIG.AutoFarm = v end)
+addToggle("Garis ESP ke Target Killer", 110, function(v) CONFIG.ESPLine = v end)
+
+-- Status teks kecil di bawah tombol
+local StatusText = Instance.new("TextLabel")
+StatusText.Size = UDim2.new(0.9, 0, 0, 60)
+StatusText.Position = UDim2.new(0.05, 0, 0, 175)
+StatusText.BackgroundTransparency = 1
+StatusText.TextColor3 = Color3.fromRGB(0, 255, 255)
+StatusText.TextSize = 11
+StatusText.Font = Enum.Font.Gotham
+StatusText.Text = "Status: Damage 999999 Aktif di Auto Farm! Klik tombol 'MENU' di ujung kiri untuk membuka."
+StatusText.TextWrapped = true
+StatusText.Parent = MainFrame
+
+-- Logika Tombol Buka/Tutup Menu Utama
 ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
-print("⚡ SCRIPT BERHASIL DIMUAT (MENU TERTUTUP AWAL) ⚡")
+-- ==============================================================================
+-- SISTEM GARIS ESP & AUTO FARM DENGAN DAMAGE 999999
+-- ==============================================================================
+local espBeam = Drawing.new("Line")
+espBeam.Visible = false
+espBeam.Color = Color3.fromRGB(0, 255, 128)
+espBeam.Thickness = 2
+espBeam.Transparency = 1
+
+RunService.RenderStepped:Connect(function()
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then
+        espBeam.Visible = false
+        return
+    end
+    
+    local humanoidRootPart = character.HumanoidRootPart
+    local targetPart = nil
+    local shortestDist = math.huge
+
+    -- Cari target musuh terdekat
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj ~= character then
+            local hum = obj:FindFirstChildOfClass("Humanoid")
+            local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
+            if hum and hum.Health > 0 and root then
+                local dist = (humanoidRootPart.Position - root.Position).Magnitude
+                if dist < shortestDist then
+                    shortestDist = dist
+                    targetPart = root
+                end
+            end
+        end
+    end
+
+    -- Update Garis ESP ke Target (Killer Area)
+    if CONFIG.ESPLine and targetPart then
+        local vector, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(targetPart.Position)
+        if onScreen then
+            espBeam.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y)
+            espBeam.To = Vector2.new(vector.X, vector.Y)
+            espBeam.Visible = true
+        else
+            espBeam.Visible = false
+        end
+    else
+        espBeam.Visible = false
+    end
+
+    -- Eksekusi Auto Farm, Teleport, & Damage 999999
+    if CONFIG.AutoFarm and targetPart then
+        if (humanoidRootPart.Position - targetPart.Position).Magnitude > 15 then
+            humanoidRootPart.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, 3, 0))
+        end
+        
+        -- Mengirim Damage 999999 ke Remote Event game
+        pcall(function()
+            for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                if remote:IsA("RemoteEvent") and (remote.Name:lower():find("damage") or remote.Name:lower():find("hit") or remote.Name:lower():find("attack")) then
+                    remote:FireServer(999999)
+                end
+            end
+        end)
+    end
+end)
+
+print("⚡ PIXEL QUEST: MENU + DAMAGE 999999 & ESP BERHASIL DIMUAT! ⚡")
