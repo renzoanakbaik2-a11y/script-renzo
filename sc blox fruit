@@ -143,77 +143,92 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
---// Auto Collect Chest Logic (Fixed Precise Names & Direct Physics Movement)
+--// Dedicated Flight & Chest Collection System (Using LinearVelocity for Guaranteed Movement)
 task.spawn(function()
+    local attachment, linearVelocity, alignOrientation
+    
     while true do
         task.wait(0.1)
         pcall(function()
-            if Settings.AutoChest then
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local humanoid = char and char:FindFirstChild("Humanoid")
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char and char:FindFirstChild("Humanoid")
+            
+            if Settings.AutoChest and hrp and humanoid and humanoid.Health > 0 then
+                -- Aktifkan mode terbang (PlatformStand agar tidak bentrok dengan animasi bawaan)
+                humanoid.PlatformStand = true
                 
-                if hrp and humanoid and humanoid.Health > 0 then
-                    local targetChest = nil
-                    local shortestDistance = math.huge
-                    
-                    for _, obj in pairs(Workspace:GetDescendants()) do
-                        local name = obj.Name
-                        if name == "Bronze Chest" or name == "Silver Chest" or name == "Gold Chest" or name == "Diamond Chest" or name:lower():find("chest") then
-                            local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-                            if part then
-                                local dist = (hrp.Position - part.Position).Magnitude
-                                if dist < shortestDistance then
-                                    shortestDistance = dist
-                                    targetChest = part
-                                end
+                -- Setup Attachment & Physics Constraint jika belum ada
+                if not hrp:FindFirstChild("RootAttachmentCustom") then
+                    attachment = Instance.new("Attachment")
+                    attachment.Name = "RootAttachmentCustom"
+                    attachment.Parent = hrp
+                else
+                    attachment = hrp:FindFirstChild("RootAttachmentCustom")
+                end
+                
+                if not hrp:FindFirstChild("CustomLinearVelocity") then
+                    linearVelocity = Instance.new("LinearVelocity")
+                    linearVelocity.Name = "CustomLinearVelocity"
+                    linearVelocity.Attachment0 = attachment
+                    linearVelocity.MaxForce = math.huge
+                    linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
+                    linearVelocity.Parent = hrp
+                else
+                    linearVelocity = hrp:FindFirstChild("CustomLinearVelocity")
+                end
+                
+                if not hrp:FindFirstChild("CustomAlignOrientation") then
+                    alignOrientation = Instance.new("AlignOrientation")
+                    alignOrientation.Name = "CustomAlignOrientation"
+                    alignOrientation.Attachment0 = attachment
+                    alignOrientation.MaxTorque = math.huge
+                    alignOrientation.Responsiveness = 200
+                    alignOrientation.Parent = hrp
+                else
+                    alignOrientation = hrp:FindFirstChild("CustomAlignOrientation")
+                end
+                
+                -- Cari Chest Terdekat (Bronze, Silver, Gold, Diamond, atau universal)
+                local targetChest = nil
+                local shortestDistance = math.huge
+                
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    local name = obj.Name
+                    if name == "Bronze Chest" or name == "Silver Chest" or name == "Gold Chest" or name == "Diamond Chest" or name:lower():find("chest") then
+                        local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                        if part then
+                            local dist = (hrp.Position - part.Position).Magnitude
+                            if dist < shortestDistance then
+                                shortestDistance = dist
+                                targetChest = part
                             end
                         end
                     end
+                end
+                
+                if targetChest and targetChest.Parent then
+                    -- Terbang mulus langsung menuju ke posisi chest
+                    local targetPos = targetChest.Position + Vector3.new(0, 3, 0)
+                    local direction = (targetPos - hrp.Position)
+                    local distance = direction.Magnitude
                     
-                    if targetChest then
-                        humanoid.PlatformStand = true
-                        
-                        local bv = hrp:FindFirstChild("ChestFlyVelocity")
-                        if not bv then
-                            bv = Instance.new("BodyVelocity")
-                            bv.Name = "ChestFlyVelocity"
-                            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-                            bv.Parent = hrp
-                        end
-                        
-                        local bg = hrp:FindFirstChild("ChestFlyGyro")
-                        if not bg then
-                            bg = Instance.new("BodyGyro")
-                            bg.Name = "ChestFlyGyro"
-                            bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-                            bg.P = 20000
-                            bg.Parent = hrp
-                        end
-                        
-                        while Settings.AutoChest and targetChest.Parent and (hrp.Position - targetChest.Position).Magnitude > 3 do
-                            local targetPos = targetChest.Position + Vector3.new(0, 2, 0)
-                            local direction = (targetPos - hrp.Position).Unit
-                            bv.Velocity = direction * 300
-                            bg.CFrame = CFrame.new(hrp.Position, targetPos)
-                            task.wait(0.05)
-                        end
-                        
-                        if bv then bv.Velocity = Vector3.new(0, 0, 0) end
-                        humanoid.PlatformStand = false
+                    if distance > 3 then
+                        linearVelocity.VectorVelocity = direction.Unit * 300
+                        alignOrientation.CFrame = CFrame.new(hrp.Position, targetPos)
                     else
-                        if hrp:FindFirstChild("ChestFlyVelocity") then hrp.ChestFlyVelocity:Destroy() end
-                        if hrp:FindFirstChild("ChestFlyGyro") then hrp.ChestFlyGyro:Destroy() end
-                        humanoid.PlatformStand = false
+                        linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
                     end
+                else
+                    -- Jika tidak ada chest, terbang diam di tempat
+                    linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
                 end
             else
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local humanoid = char and char:FindFirstChild("Humanoid")
+                -- Matikan sistem terbang saat fitur dimatikan atau karakter mati
                 if hrp then
-                    if hrp:FindFirstChild("ChestFlyVelocity") then hrp.ChestFlyVelocity:Destroy() end
-                    if hrp:FindFirstChild("ChestFlyGyro") then hrp.ChestFlyGyro:Destroy() end
+                    if hrp:FindFirstChild("CustomLinearVelocity") then hrp.CustomLinearVelocity:Destroy() end
+                    if hrp:FindFirstChild("CustomAlignOrientation") then hrp.CustomAlignOrientation:Destroy() end
+                    if hrp:FindFirstChild("RootAttachmentCustom") then hrp.RootAttachmentCustom:Destroy() end
                 end
                 if humanoid then
                     humanoid.PlatformStand = false
