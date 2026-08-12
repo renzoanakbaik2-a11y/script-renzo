@@ -1,7 +1,7 @@
 -- ==============================================================================
--- RACKET RIVALS: ULTIMATE GOD-TIER SCRIPT (FIX TELEPORT TINGGI + AUTO HIT PASTI)
--- Logika: Teleport presisi mengikuti KETINGGIAN bola (bisa naik/turun ke atas),
--- hanya mengejar bola jika sudah lewat net, serta auto-hit super kuat & stabil!
+-- PIXEL QUEST: ULTIMATE DUNGEON PORTAL SELECTOR & AUTO FARM SCRIPT
+-- Fitur: Pemilihan Portal Dungeon berdasarkan Level/Tengkorak, Auto Teleport,
+-- Auto Boss Killer, Auto Loot Aksesoris Bagus, dan Menu UI Lengkap dengan Save JSON.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -9,23 +9,37 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
-local VirtualUser = game:GetService("VirtualUser")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
 
-local CONFIG_FILE_NAME = "RacketRivals_UltimateGodFix.json"
+local CONFIG_FILE_NAME = "PixelQuest_UltimateDungeonConfig.json"
 
-local CONFIG = {
-    AutoHitEnabled = false,
-    AutoTeleportEnabled = false,
-    HitDistance = 22, -- Jangkauan pukul diperluas agar pasti kena
-    TeleportOffset = {0, 1, -1} -- Mengikuti persis posisi bola secara akurat
+-- Daftar Nama Portal Dungeon Berdasarkan Tingkat Tengkorak / Bioma
+local DUNGEON_LIST = {
+    {Tier = 1, Name = "Crab Cove", Desc = "Dungeon Pantai Awal (Low Tier)"},
+    {Tier = 2, Name = "Mermaid Cove", Desc = "Dungeon Pesisir Air"},
+    {Tier = 3, Name = "Pirate Island", Desc = "Dungeon Pulau Bajak Laut"},
+    {Tier = 4, Name = "Wooded Thicket", Desc = "Dungeon Hutan Tingkat 4"},
+    {Tier = 5, Name = "The Bog", Desc = "Dungeon Rawa Beracun"},
+    {Tier = 6, Name = "Mushroom Den", Desc = "Dungeon Jamur Misterius"},
+    {Tier = 7, Name = "Desert Ruins", Desc = "Dungeon Reruntuhan Gurun"},
+    {Tier = 8, Name = "Catacombs", Desc = "Dungeon Bawah Tanah Tengkorak"},
+    {Tier = 9, Name = "Worm Nest", Desc = "Dungeon Sarang Cacing Raksasa"},
+    {Tier = 10, Name = "Void Realm", Desc = "Dungeon Paling Sulit (Max Tier)"}
 }
 
--- Load & Save Settings
+local CONFIG = {
+    AutoFarmEnabled = false,
+    AutoBossEnabled = false,
+    AutoDungeonPortal = false,
+    AutoLootAccessory = true, -- Auto ambil aksesoris bagus, buang basic
+    SelectedDungeonIndex = 1,
+    TeleportOffset = {0, 3, 0}
+}
+
+-- Sistem Save & Load Pengaturan (JSON)
 local function saveSettings()
     local success, encoded = pcall(function() return HttpService:JSONEncode(CONFIG) end)
     if success and writefile then pcall(function() writefile(CONFIG_FILE_NAME, encoded) end) end
@@ -42,16 +56,16 @@ end
 loadSettings()
 
 -- ==============================================================================
--- USER INTERFACE (UI) MENU ON/OFF
+-- USER INTERFACE (UI) MENU ON/OFF & DRAGGABLE
 -- ==============================================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RacketRivalsGodFixUI"
+ScreenGui.Name = "PixelQuestDungeonUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 280)
-MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 300, 0, 360)
+MainFrame.Position = UDim2.new(0.05, 0, 0.15, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -63,21 +77,21 @@ UICorner.CornerRadius = UDim.new(0, 10)
 UICorner.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 45)
+Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
-Title.Text = "⚡ GOD FIX: TINGGI & AUTO HIT ⚡"
-Title.TextColor3 = Color3.fromRGB(255, 215, 0)
-Title.TextSize = 13
+Title.Text = "⚡ DUNGEON PORTAL & AUTO FARM ⚡"
+Title.TextColor3 = Color3.fromRGB(0, 255, 200)
+Title.TextSize = 12
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
 local function createToggle(name, defaultState, posY, callback)
     local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(0.9, 0, 0, 40)
+    Btn.Size = UDim2.new(0.9, 0, 0, 35)
     Btn.Position = UDim2.new(0.05, 0, 0, posY)
     Btn.BackgroundColor3 = defaultState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
     Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Btn.TextSize = 14
+    Btn.TextSize = 12
     Btn.Font = Enum.Font.GothamBold
     Btn.Text = name .. ": " .. (defaultState and "ON" or "OFF")
     Btn.Parent = MainFrame
@@ -96,25 +110,64 @@ local function createToggle(name, defaultState, posY, callback)
     end)
 end
 
-createToggle("Auto Hit (Power)", CONFIG.AutoHitEnabled, 50, function(state) CONFIG.AutoHitEnabled = state end)
-createToggle("Auto Teleport (3D Tinggi)", CONFIG.AutoTeleportEnabled, 100, function(state) CONFIG.AutoTeleportEnabled = state end)
+createToggle("Auto Farm & Teleport", CONFIG.AutoFarmEnabled, 45, function(state) CONFIG.AutoFarmEnabled = state end)
+createToggle("Auto Boss Killer", CONFIG.AutoBossEnabled, 85, function(state) CONFIG.AutoBossEnabled = state end)
+createToggle("Auto Teleport ke Portal Dungeon", CONFIG.AutoDungeonPortal, 125, function(state) CONFIG.AutoDungeonPortal = state end)
+createToggle("Auto Loot Aksesoris (Buang Basic)", CONFIG.AutoLootAccessory, 165, function(state) CONFIG.AutoLootAccessory = state end)
 
-local InfoLabel = Instance.new("TextLabel")
-InfoLabel.Size = UDim2.new(0.9, 0, 0, 30)
-InfoLabel.Position = UDim2.new(0.05, 0, 0, 150)
-InfoLabel.BackgroundTransparency = 1
-InfoLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-InfoLabel.TextSize = 11
-InfoLabel.Font = Enum.Font.Gotham
-InfoLabel.Text = "Status: Siap Melacak Bola..."
-InfoLabel.Parent = MainFrame
+-- Panel Pilihan Dungeon & Level Tengkorak
+local currentSelected = DUNGEON_LIST[CONFIG.SelectedDungeonIndex]
+local DungeonLabel = Instance.new("TextLabel")
+DungeonLabel.Size = UDim2.new(0.9, 0, 0, 30)
+DungeonLabel.Position = UDim2.new(0.05, 0, 0, 205)
+DungeonLabel.BackgroundTransparency = 1
+DungeonLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+DungeonLabel.TextSize = 11
+DungeonLabel.Font = Enum.Font.GothamBold
+DungeonLabel.Text = "💀 Tengkorak Tier " .. currentSelected.Tier .. " : " .. currentSelected.Name
+DungeonLabel.Parent = MainFrame
+
+local DungeonBtn = Instance.new("TextButton")
+DungeonBtn.Size = UDim2.new(0.9, 0, 0, 35)
+DungeonBtn.Position = UDim2.new(0.05, 0, 0, 235)
+DungeonBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+DungeonBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DungeonBtn.TextSize = 12
+DungeonBtn.Font = Enum.Font.GothamBold
+DungeonBtn.Text = "Ganti Pilihan Dungeon (Klik)"
+DungeonBtn.Parent = MainFrame
+
+local DngCorner = Instance.new("UICorner")
+DngCorner.CornerRadius = UDim.new(0, 6)
+DngCorner.Parent = DungeonBtn
+
+DungeonBtn.MouseButton1Click:Connect(function()
+    CONFIG.SelectedDungeonIndex = CONFIG.SelectedDungeonIndex + 1
+    if CONFIG.SelectedDungeonIndex > #DUNGEON_LIST then
+        CONFIG.SelectedDungeonIndex = 1
+    end
+    local selected = DUNGEON_LIST[CONFIG.SelectedDungeonIndex]
+    DungeonLabel.Text = "💀 Tengkorak Tier " .. selected.Tier .. " : " .. selected.Name
+    saveSettings()
+end)
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(0.9, 0, 0, 35)
+StatusLabel.Position = UDim2.new(0.05, 0, 0, 280)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+StatusLabel.TextSize = 11
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Text = "Status: Siap Berburu Portal & Boss..."
+StatusLabel.TextWrapped = true
+StatusLabel.Parent = MainFrame
 
 local ToggleUIBtn = Instance.new("TextButton")
-ToggleUIBtn.Size = UDim2.new(0, 110, 0, 30)
-ToggleUIBtn.Position = UDim2.new(0.05, 0, 0.05, 0)
-ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleUIBtn.Size = UDim2.new(0, 100, 0, 25)
+ToggleUIBtn.Position = UDim2.new(0.05, 0, 0.02, 0)
+ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 ToggleUIBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleUIBtn.TextSize = 12
+ToggleUIBtn.TextSize = 11
 ToggleUIBtn.Font = Enum.Font.GothamBold
 ToggleUIBtn.Text = "Toggle Menu"
 ToggleUIBtn.Parent = ScreenGui
@@ -126,123 +179,124 @@ TglCorner.Parent = ToggleUIBtn
 ToggleUIBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 
 -- ==============================================================================
--- PENCARIAN OBJEK TERSEMBUNYI DENGAN DETEKSI NET & STATUS SISI LAPANGAN
+-- PENCARIAN OBJEK PORTAL, BOSS, & PENGELOLAAN ITEM/AKSESORIS
 -- ==============================================================================
-local function getBestTarget()
-    local targetBall = nil
+local function findTargetObject()
+    local targetPart = nil
+    local targetType = "None"
     local shortestDist = math.huge
-    local isAtOurSide = false
+    local targetDungeonName = DUNGEON_LIST[CONFIG.SelectedDungeonIndex].Name
 
-    -- 1. Deteksi letak net lapangan
-    local netZ = 0
-    for _, v in ipairs(Workspace:GetDescendants()) do
-        if v:IsA("BasePart") and string.find(string.lower(v.Name), "net") then
-            netZ = v.Position.Z
-            break
-        end
-    end
-
-    -- 2. Memindai objek bola/kok tersembunyi
     for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and not obj:IsDescendantOf(character) then
-            if obj.Size.Magnitude < 20 and not obj.Anchored then
-                local dist = (humanoidRootPart.Position - obj.Position).Magnitude
-                local playerZ = humanoidRootPart.Position.Z
-                
-                if netZ ~= 0 then
-                    -- Cek apakah bola sudah melewati net ke area kita
-                    if (playerZ > netZ and obj.Position.Z > netZ) or (playerZ < netZ and obj.Position.Z < netZ) then
-                        isAtOurSide = true
-                    else
-                        isAtOurSide = false -- Masih di area musuh, jangan dikejar!
+        if obj:IsA("BasePart") or obj:IsA("Model") then
+            local nameLower = string.lower(obj.Name)
+            local root = obj:IsA("Model") and (obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")) or obj
+
+            if root then
+                local dist = (humanoidRootPart.Position - root.Position).Magnitude
+
+                -- 1. Deteksi Portal Dungeon Sesuai Pilihan Menu
+                if CONFIG.AutoDungeonPortal and (string.find(nameLower, string.lower(targetDungeonName)) or string.find(nameLower, "portal") or string.find(nameLower, "cove")) then
+                    if dist < shortestDist then
+                        shortestDist = dist
+                        targetPart = root
+                        targetType = "Portal"
                     end
-                else
-                    isAtOurSide = true
                 end
 
-                if dist < shortestDist then
-                    shortestDist = dist
-                    targetBall = obj
+                -- 2. Deteksi Boss / Musuh Utama
+                if CONFIG.AutoBossEnabled and (string.find(nameLower, "boss") or string.find(nameLower, "leader") or string.find(nameLower, "skull")) then
+                    local hum = obj:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health > 0 and dist < shortestDist then
+                        shortestDist = dist
+                        targetPart = root
+                        targetType = "Boss"
+                    end
                 end
-            end
-        end
-    end
 
-    return targetBall, shortestDist, isAtOurSide
-end
-
--- ==============================================================================
--- FUNGSI AUTO HIT TINGKAT DEWA (MEMAKSA PUKULAN LEWAT TOOL & REMOTE)
--- ==============================================================================
-local function executeGodHit(targetBall)
-    -- 1. Aktifkan Tool (Raket) di tangan pemain
-    local tool = character:FindFirstChildOfClass("Tool")
-    if tool then
-        pcall(function() tool:Activate() end)
-    end
-
-    -- 2. Simulasi Klik Kiri Mouse
-    pcall(function()
-        VirtualUser:Button1Down(Vector2.new(0,0))
-        task.wait(0.02)
-        VirtualUser:Button1Up(Vector2.new(0,0))
-    end)
-
-    -- 3. Spam SEMUA RemoteEvent di game yang berpotensi menjadi fungsi pukulan
-    for _, container in ipairs({ReplicatedStorage, player:FindFirstChild("PlayerGui"), Workspace}) do
-        if container then
-            for _, remote in ipairs(container:GetDescendants()) do
-                if remote:IsA("RemoteEvent") then
-                    local rName = string.lower(remote.Name)
-                    if rName:find("hit") or rName:find("swing") or rName:find("shot") or rName:find("action") or rName:find("ball") or rName:find("racket") or rName:find("play") then
-                        pcall(function()
-                            remote:FireServer(targetBall)
-                            remote:FireServer(targetBall.Position)
-                            remote:FireServer()
-                        end)
+                -- 3. Auto Farm Musuh Biasa
+                if CONFIG.AutoFarmEnabled and targetType == "None" then
+                    local hum = obj:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health > 0 and obj ~= character and dist < shortestDist then
+                        shortestDist = dist
+                        targetPart = root
+                        targetType = "Farm"
                     end
                 end
             end
         end
     end
+
+    return targetPart, targetType, shortestDist
 end
 
 -- ==============================================================================
--- EKSEKUSI UTAMA LOOPING (FIX TELEPORT TINGGI + AUTO HIT STABIL)
+-- LOGIKA UTAMA EKSEKUSI (RENDERSTEPPED)
 -- ==============================================================================
 RunService.RenderStepped:Connect(function()
     if not character or not character:FindFirstChild("HumanoidRootPart") then 
         character = player.Character
-        if character then 
-            humanoidRootPart = character:WaitForChild("HumanoidRootPart") 
-            humanoid = character:WaitForChild("Humanoid")
-        end
+        if character then humanoidRootPart = character:WaitForChild("HumanoidRootPart") end
         return 
     end
 
-    local ball, distance, atOurSide = getBestTarget()
-    
-    if ball then
-        InfoLabel.Text = "Dist: " .. math.floor(distance) .. " | Sisi: " .. (atOurSide and "Kita 🟢" : "Musuh 🔴")
-        
-        if atOurSide then
-            -- 1. Auto Teleport 3D Sempurna (Mengikuti X, Y Z agar ikut terbang ke atas jika bola tinggi)
-            if CONFIG.AutoTeleportEnabled and distance > CONFIG.HitDistance then
-                -- Mematikan gravitasi sementara agar karakter tidak jatuh saat teleport di udara mengikuti bola
-                humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
-                
-                local offset = Vector3.new(CONFIG.TeleportOffset[1], CONFIG.TeleportOffset[2], CONFIG.TeleportOffset[3])
-                humanoidRootPart.CFrame = CFrame.new(ball.Position + offset, ball.Position)
+    -- Fitur Auto Loot Aksesoris (Membersihkan item Basic, menyimpan Tier Bagus)
+    if CONFIG.AutoLootAccessory then
+        pcall(function()
+            for _, item in ipairs(player.Backpack:GetChildren()) do
+                local itemName = string.lower(item.Name)
+                if itemName:find("basic") or itemName:find("common") or itemName:find("trash") then
+                    item:Destroy() -- Membuang item basic otomatis agar tas tidak penuh
+                end
             end
-            
-            -- 2. Auto Hit Otomatis Saat Masuk Jangkauan Raket
-            if CONFIG.AutoHitEnabled and distance <= CONFIG.HitDistance then
-                executeGodHit(ball)
+        end)
+    end
+
+    local targetPart, targetType, dist = findTargetObject()
+
+    if targetPart then
+        StatusLabel.Text = "Target: " .. targetType .. " | Jarak: " .. math.floor(dist)
+
+        -- Auto Teleport ke Portal Dungeon / Boss / Musuh
+        if (CONFIG.AutoDungeonPortal or CONFIG.AutoBossEnabled or CONFIG.AutoFarmEnabled) and dist > 15 then
+            local offset = Vector3.new(CONFIG.TeleportOffset[1], CONFIG.TeleportOffset[2], CONFIG.TeleportOffset[3])
+            humanoidRootPart.CFrame = CFrame.new(targetPart.Position + offset)
+        end
+
+        -- Instant Damage / Auto Kill jika berhadapan dengan Boss atau Musuh Farm
+        if targetType == "Boss" or targetType == "Farm" then
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("Model") and obj ~= character then
+                    local hum = obj:FindFirstChildOfClass("Humanoid")
+                    local rp = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
+                    if hum and rp and hum.Health > 0 then
+                        if (humanoidRootPart.Position - rp.Position).Magnitude <= 40 then
+                            pcall(function() hum.Health = 0 end) -- Instant Kill musuh terdekat
+                        end
+                    end
+                end
+            end
+
+            -- Spam RemoteEvent combat/damage game
+            for _, container in ipairs({ReplicatedStorage, player:FindFirstChild("PlayerGui"), Workspace}) do
+                if container then
+                    for _, remote in ipairs(container:GetDescendants()) do
+                        if remote:IsA("RemoteEvent") then
+                            local rName = string.lower(remote.Name)
+                            if rName:find("damage") or rName:find("hit") or rName:find("attack") or rName:find("boss") then
+                                pcall(function()
+                                    remote:FireServer(999999999, targetPart)
+                                    remote:FireServer(999999999)
+                                end)
+                            end
+                        end
+                    end
+                end
             end
         end
     else
-        InfoLabel.Text = "Status: Menunggu Bola Masuk..."
+        StatusLabel.Text = "Status: Menelusuri Portal Dungeon & Boss..."
     end
 end)
 
-print("⚡ RACKET RIVALS: ULTIMATE GOD FIX BERHASIL DIMUAT! ⚡")
+print("⚡ PIXEL QUEST: ULTIMATE DUNGEON PORTAL & AUTO FARM BERHASIL DIMUAT! ⚡")
