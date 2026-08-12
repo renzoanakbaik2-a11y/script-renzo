@@ -1,7 +1,7 @@
 -- ==============================================================================
--- RACKET RIVALS: ADVANCED TACTICAL AI (NET-SIDE FILTER & ADAPTIVE POWER)
--- Logika: Teleport HANYA saat bola lewat net ke area kita, ikuti ketinggian bola,
--- dan sesuaikan kekuatan (Power Smash vs Slow Drop-Shot) berdasarkan posisi.
+-- RACKET RIVALS: ULTIMATE GOD-TIER SCRIPT (FIX TELEPORT TINGGI + AUTO HIT PASTI)
+-- Logika: Teleport presisi mengikuti KETINGGIAN bola (bisa naik/turun ke atas),
+-- hanya mengejar bola jika sudah lewat net, serta auto-hit super kuat & stabil!
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -14,14 +14,15 @@ local VirtualUser = game:GetService("VirtualUser")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
 
-local CONFIG_FILE_NAME = "RacketRivals_TacticalPro.json"
+local CONFIG_FILE_NAME = "RacketRivals_UltimateGodFix.json"
 
 local CONFIG = {
     AutoHitEnabled = false,
     AutoTeleportEnabled = false,
-    HitDistance = 20,
-    TeleportOffset = {0, 0, 0} -- Mengikuti persis titik koordinat bola (tinggi/rendah)
+    HitDistance = 22, -- Jangkauan pukul diperluas agar pasti kena
+    TeleportOffset = {0, 1, -1} -- Mengikuti persis posisi bola secara akurat
 }
 
 -- Load & Save Settings
@@ -44,7 +45,7 @@ loadSettings()
 -- USER INTERFACE (UI) MENU ON/OFF
 -- ==============================================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RacketRivalsTacticalUI"
+ScreenGui.Name = "RacketRivalsGodFixUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
@@ -64,9 +65,9 @@ UICorner.Parent = MainFrame
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundTransparency = 1
-Title.Text = "⚡ TACTICAL PRO MODE ⚡"
-Title.TextColor3 = Color3.fromRGB(0, 255, 128)
-Title.TextSize = 14
+Title.Text = "⚡ GOD FIX: TINGGI & AUTO HIT ⚡"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+Title.TextSize = 13
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
@@ -95,17 +96,17 @@ local function createToggle(name, defaultState, posY, callback)
     end)
 end
 
-createToggle("Auto Hit (Adaptive)", CONFIG.AutoHitEnabled, 50, function(state) CONFIG.AutoHitEnabled = state end)
-createToggle("Auto Teleport (Our Side)", CONFIG.AutoTeleportEnabled, 100, function(state) CONFIG.AutoTeleportEnabled = state end)
+createToggle("Auto Hit (Power)", CONFIG.AutoHitEnabled, 50, function(state) CONFIG.AutoHitEnabled = state end)
+createToggle("Auto Teleport (3D Tinggi)", CONFIG.AutoTeleportEnabled, 100, function(state) CONFIG.AutoTeleportEnabled = state end)
 
 local InfoLabel = Instance.new("TextLabel")
 InfoLabel.Size = UDim2.new(0.9, 0, 0, 30)
 InfoLabel.Position = UDim2.new(0.05, 0, 0, 150)
 InfoLabel.BackgroundTransparency = 1
-InfoLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+InfoLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
 InfoLabel.TextSize = 11
 InfoLabel.Font = Enum.Font.Gotham
-InfoLabel.Text = "Status: Memantau Garis Net..."
+InfoLabel.Text = "Status: Siap Melacak Bola..."
 InfoLabel.Parent = MainFrame
 
 local ToggleUIBtn = Instance.new("TextButton")
@@ -125,44 +126,38 @@ TglCorner.Parent = ToggleUIBtn
 ToggleUIBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 
 -- ==============================================================================
--- SISTEM PENCARIAN BOLA DENGAN FILTER BATAS NET (Z-AXIS / X-AXIS)
+-- PENCARIAN OBJEK TERSEMBUNYI DENGAN DETEKSI NET & STATUS SISI LAPANGAN
 -- ==============================================================================
-local function getTacticalTarget()
+local function getBestTarget()
     local targetBall = nil
     local shortestDist = math.huge
     local isAtOurSide = false
 
-    -- 1. Deteksi letak pembatas net lapangan
-    local netPos = nil
+    -- 1. Deteksi letak net lapangan
+    local netZ = 0
     for _, v in ipairs(Workspace:GetDescendants()) do
         if v:IsA("BasePart") and string.find(string.lower(v.Name), "net") then
-            netPos = v.Position
+            netZ = v.Position.Z
             break
         end
     end
 
-    -- 2. Scan objek bergerak (bola/kok)
+    -- 2. Memindai objek bola/kok tersembunyi
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") and not obj:IsDescendantOf(character) then
             if obj.Size.Magnitude < 20 and not obj.Anchored then
                 local dist = (humanoidRootPart.Position - obj.Position).Magnitude
+                local playerZ = humanoidRootPart.Position.Z
                 
-                -- Logika Utama Pemilahan Sisi Net:
-                -- Jika bola berada di wilayah musuh (jangan dikejar), jika sudah lewat net ke area kita (teleport).
-                -- Kita gunakan perbandingan sumbu Z atau X tergantung orientasi map game.
-                if netPos then
-                    local playerSide = humanoidRootPart.Position.Z
-                    local netSide = netPos.Z
-                    local ballSide = obj.Position.Z
-
-                    -- Memastikan bola sudah melewati net dan masuk ke sisi area pemain
-                    if (playerSide > netSide and ballSide > netSide) or (playerSide < netSide and ballSide < netSide) then
+                if netZ ~= 0 then
+                    -- Cek apakah bola sudah melewati net ke area kita
+                    if (playerZ > netZ and obj.Position.Z > netZ) or (playerZ < netZ and obj.Position.Z < netZ) then
                         isAtOurSide = true
                     else
-                        isAtOurSide = false -- Masih di area musuh, JANGAN DIKEJAR!
+                        isAtOurSide = false -- Masih di area musuh, jangan dikejar!
                     end
                 else
-                    isAtOurSide = true -- Fallback jika net tidak terdeteksi
+                    isAtOurSide = true
                 end
 
                 if dist < shortestDist then
@@ -177,40 +172,35 @@ local function getTacticalTarget()
 end
 
 -- ==============================================================================
--- FUNGSI PUKULAN ADAPTIF (POWER SMASH JIKA POSISI TINGGI/BAGUS, SLOW DROP JIKA SULIT)
+-- FUNGSI AUTO HIT TINGKAT DEWA (MEMAKSA PUKULAN LEWAT TOOL & REMOTE)
 -- ==============================================================================
-local function adaptiveHit(targetBall)
-    -- Evaluasi Posisi Bola (Ketinggian Y relatif terhadap pemain)
-    local heightDifference = targetBall.Position.Y - humanoidRootPart.Position.Y
-    local isGoodPosition = heightDifference > 2 -- Posisi bola di atas kepala/bagus untuk dismash
-
+local function executeGodHit(targetBall)
+    -- 1. Aktifkan Tool (Raket) di tangan pemain
     local tool = character:FindFirstChildOfClass("Tool")
     if tool then
         pcall(function() tool:Activate() end)
     end
 
+    -- 2. Simulasi Klik Kiri Mouse
     pcall(function()
-        if isGoodPosition then
-            -- Kondisi Posisi Bagus: Power Kuat / Smash ke arah Bawah
-            VirtualUser:Button1Down(Vector2.new(0,0))
-            task.wait(0.05) -- Tahan sebentar untuk memicu power tinggi
-            VirtualUser:Button1Up(Vector2.new(0,0))
-        else
-            -- Kondisi Posisi Jelek/Terlambat: Pukul Pelan (Slow Shot) agar tidak out / keluar lapangan
-            VirtualUser:Button1Down(Vector2.new(0,0))
-            VirtualUser:Button1Up(Vector2.new(0,0)) -- Klik cepat tanpa tahan untuk daya minimal
-        end
+        VirtualUser:Button1Down(Vector2.new(0,0))
+        task.wait(0.02)
+        VirtualUser:Button1Up(Vector2.new(0,0))
     end)
 
-    -- Bypass Remote Game untuk memastikan perintah pukul terkirim ke server
+    -- 3. Spam SEMUA RemoteEvent di game yang berpotensi menjadi fungsi pukulan
     for _, container in ipairs({ReplicatedStorage, player:FindFirstChild("PlayerGui"), Workspace}) do
         if container then
             for _, remote in ipairs(container:GetDescendants()) do
                 if remote:IsA("RemoteEvent") then
-                    pcall(function()
-                        remote:FireServer(targetBall, isGoodPosition)
-                        remote:FireServer()
-                    end)
+                    local rName = string.lower(remote.Name)
+                    if rName:find("hit") or rName:find("swing") or rName:find("shot") or rName:find("action") or rName:find("ball") or rName:find("racket") or rName:find("play") then
+                        pcall(function()
+                            remote:FireServer(targetBall)
+                            remote:FireServer(targetBall.Position)
+                            remote:FireServer()
+                        end)
+                    end
                 end
             end
         end
@@ -218,41 +208,41 @@ local function adaptiveHit(targetBall)
 end
 
 -- ==============================================================================
--- EKSEKUSI UTAMA (LOOPING)
+-- EKSEKUSI UTAMA LOOPING (FIX TELEPORT TINGGI + AUTO HIT STABIL)
 -- ==============================================================================
 RunService.RenderStepped:Connect(function()
     if not character or not character:FindFirstChild("HumanoidRootPart") then 
         character = player.Character
-        if character then humanoidRootPart = character:WaitForChild("HumanoidRootPart") end
+        if character then 
+            humanoidRootPart = character:WaitForChild("HumanoidRootPart") 
+            humanoid = character:WaitForChild("Humanoid")
+        end
         return 
     end
 
-    local ball, distance, atOurSide = getTacticalTarget()
+    local ball, distance, atOurSide = getBestTarget()
     
     if ball then
-        -- Cek apakah posisi bola tinggi atau rendah untuk teks info menu
-        local heightDiff = ball.Position.Y - humanoidRootPart.Position.Y
-        local modeText = heightDiff > 2 and "Power Smash ⚡" or "Slow Drop 🛡️"
+        InfoLabel.Text = "Dist: " .. math.floor(distance) .. " | Sisi: " .. (atOurSide and "Kita 🟢" : "Musuh 🔴")
         
         if atOurSide then
-            InfoLabel.Text = "Area: Sisi Kita | " .. modeText
-            
-            -- 1. Auto Teleport mengikuti posisi bola (termasuk ketinggian atas/bawah) SEGERA setelah melewati net ke area kita
+            -- 1. Auto Teleport 3D Sempurna (Mengikuti X, Y Z agar ikut terbang ke atas jika bola tinggi)
             if CONFIG.AutoTeleportEnabled and distance > CONFIG.HitDistance then
-                -- Mengikuti posisi bola secara akurat (X, Y, Z) agar ikut terbang/naik jika bola di atas
-                humanoidRootPart.CFrame = CFrame.new(ball.Position)
+                -- Mematikan gravitasi sementara agar karakter tidak jatuh saat teleport di udara mengikuti bola
+                humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+                
+                local offset = Vector3.new(CONFIG.TeleportOffset[1], CONFIG.TeleportOffset[2], CONFIG.TeleportOffset[3])
+                humanoidRootPart.CFrame = CFrame.new(ball.Position + offset, ball.Position)
             end
             
-            -- 2. Auto Hit Adaptif (Kuat kalau posisi bagus, pelan kalau posisi jelek)
+            -- 2. Auto Hit Otomatis Saat Masuk Jangkauan Raket
             if CONFIG.AutoHitEnabled and distance <= CONFIG.HitDistance then
-                adaptiveHit(ball)
+                executeGodHit(ball)
             end
-        else
-            InfoLabel.Text = "Area: Sisi Musuh (Diam/Menunggu)"
         end
     else
         InfoLabel.Text = "Status: Menunggu Bola Masuk..."
     end
 end)
 
-print("⚡ RACKET RIVALS: TACTICAL NET-FILTER & ADAPTIVE POWER AKTIF! ⚡")
+print("⚡ RACKET RIVALS: ULTIMATE GOD FIX BERHASIL DIMUAT! ⚡")
