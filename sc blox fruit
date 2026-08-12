@@ -1,6 +1,6 @@
 -- ==============================================================================
--- RACKET RIVALS: AUTO HIT, AUTO TELEPORT, UI MENU, & AUTO SAVE
--- Simpan script ini sebagai LocalScript di dalam StarterPlayerScripts atau StarterGui
+-- RACKET RIVALS: ADVANCED AUTO HIT & AUTO TELEPORT (UNIVERSAL SCANNER)
+-- Menggunakan sistem pemindaian mendalam untuk mendeteksi bola/kok dinamis di game
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -12,32 +12,26 @@ local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
--- Nama File untuk Menyimpan Pengaturan
-local CONFIG_FILE_NAME = "RacketRivals_Settings.json"
+local CONFIG_FILE_NAME = "RacketRivals_UltimateSettings.json"
 
--- Konfigurasi Default & Status Fitur
 local CONFIG = {
     AutoHitEnabled = false,
     AutoTeleportEnabled = false,
-    HitDistance = 15,
-    TeleportDistance = 25,
-    TeleportOffset = {0, 3, -3} -- Disimpan dalam bentuk array untuk JSON
+    HitDistance = 18,
+    TeleportDistance = 30,
+    TeleportOffset = {0, 2, -2}
 }
 
--- Fungsi untuk Menyimpan Pengaturan (Save Setting)
+-- Sistem Save & Load Pengaturan
 local function saveSettings()
     local success, encoded = pcall(function()
         return HttpService:JSONEncode(CONFIG)
     end)
     if success and writefile then
-        pcall(function()
-            writefile(CONFIG_FILE_NAME, encoded)
-        end)
-        print("Pengaturan berhasil disimpan!")
+        pcall(function() writefile(CONFIG_FILE_NAME, encoded) end)
     end
 end
 
--- Fungsi untuk Memuat Pengaturan yang Disimpan (Load Setting)
 local function loadSettings()
     if readfile and pcall(function() return readfile(CONFIG_FILE_NAME) end) then
         local success, decoded = pcall(function()
@@ -47,30 +41,27 @@ local function loadSettings()
             for k, v in pairs(decoded) do
                 CONFIG[k] = v
             end
-            print("Pengaturan berhasil dimuat!")
         end
     end
 end
 
--- Muat pengaturan saat script dijalankan
 loadSettings()
 
 -- ==============================================================================
--- PEMBUATAN USER INTERFACE (UI) MENU ON / OFF
+-- USER INTERFACE (UI) MENU ON/OFF
 -- ==============================================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RacketRivalsMenu"
+ScreenGui.Name = "RacketRivalsUltimateUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 240, 0, 260)
+MainFrame.Size = UDim2.new(0, 240, 0, 240)
 MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- UI bisa digeser-geser
+MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
@@ -80,112 +71,94 @@ UICorner.Parent = MainFrame
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
-Title.Text = "Racket Rivals Menu"
+Title.Text = "Racket Rivals - Pro Menu"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
-Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 15
+Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
--- Fungsi Pembuat Tombol Toggle (ON/OFF)
-local function createToggleButton(name, defaultState, posY, callback)
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0.9, 0, 0, 40)
-    Button.Position = UDim2.new(0.05, 0, 0, posY)
-    Button.BackgroundColor3 = defaultState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Button.TextSize = 14
-    Button.Font = Enum.Font.SourceSansBold
-    Button.Text = name .. ": " .. (defaultState and "ON" or "OFF")
-    Button.Parent = MainFrame
+local function createToggle(name, defaultState, posY, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(0.9, 0, 0, 40)
+    Btn.Position = UDim2.new(0.05, 0, 0, posY)
+    Btn.BackgroundColor3 = defaultState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.TextSize = 14
+    Btn.Font = Enum.Font.GothamBold
+    Btn.Text = name .. ": " .. (defaultState and "ON" or "OFF")
+    Btn.Parent = MainFrame
 
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 6)
-    BtnCorner.Parent = Button
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = Btn
 
     local state = defaultState
-    Button.MouseButton1Click:Connect(function()
+    Btn.MouseButton1Click:Connect(function()
         state = not state
-        Button.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-        Button.Text = name .. ": " .. (state and "ON" or "OFF")
+        Btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+        Btn.Text = name .. ": " .. (state and "ON" or "OFF")
         callback(state)
-        saveSettings() -- Otomatis menyimpan setiap kali tombol diubah
+        saveSettings()
     end)
-    
-    return Button
 end
 
--- Tombol 1: Auto Hit Toggle
-createToggleButton("Auto Hit", CONFIG.AutoHitEnabled, 50, function(state)
+createToggle("Auto Hit", CONFIG.AutoHitEnabled, 50, function(state)
     CONFIG.AutoHitEnabled = state
 end)
 
--- Tombol 2: Auto Teleport Toggle
-createToggleButton("Auto Teleport", CONFIG.AutoTeleportEnabled, 100, function(state)
+createToggle("Auto Teleport", CONFIG.AutoTeleportEnabled, 100, function(state)
     CONFIG.AutoTeleportEnabled = state
 end)
 
--- Tombol Manual Save Setting Tambahan
-local SaveButton = Instance.new("TextButton")
-SaveButton.Size = UDim2.new(0.9, 0, 0, 35)
-SaveButton.Position = UDim2.new(0.05, 0, 0, 160)
-SaveButton.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
-SaveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-SaveButton.TextSize = 14
-SaveButton.Font = Enum.Font.SourceSansBold
-SaveButton.Text = "Save Settings"
-SaveButton.Parent = MainFrame
-
-local SaveCorner = Instance.new("UICorner")
-SaveCorner.CornerRadius = UDim.new(0, 6)
-SaveCorner.Parent = SaveButton
-
-SaveButton.MouseButton1Click:Connect(function()
-    saveSettings()
-    SaveButton.Text = "Saved!"
-    task.wait(1)
-    SaveButton.Text = "Save Settings"
-end)
-
--- Tombol Minimize / Sembunyikan Menu Utama
-local ToggleMenuBtn = Instance.new("TextButton")
-ToggleMenuBtn.Size = UDim2.new(0, 120, 0, 30)
-ToggleMenuBtn.Position = UDim2.new(0.05, 0, 0.05, 0)
-ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ToggleMenuBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleMenuBtn.TextSize = 12
-ToggleMenuBtn.Font = Enum.Font.SourceSansBold
-ToggleMenuBtn.Text = "Toggle UI Menu"
-ToggleMenuBtn.Parent = ScreenGui
+local ToggleUIBtn = Instance.new("TextButton")
+ToggleUIBtn.Size = UDim2.new(0, 110, 0, 30)
+ToggleUIBtn.Position = UDim2.new(0.05, 0, 0.05, 0)
+ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleUIBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleUIBtn.TextSize = 12
+ToggleUIBtn.Font = Enum.Font.GothamBold
+ToggleUIBtn.Text = "Toggle Menu"
+ToggleUIBtn.Parent = ScreenGui
 
 local TglCorner = Instance.new("UICorner")
 TglCorner.CornerRadius = UDim.new(0, 6)
-TglCorner.Parent = ToggleMenuBtn
+TglCorner.Parent = ToggleUIBtn
 
-ToggleMenuBtn.MouseButton1Click:Connect(function()
+ToggleUIBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
 -- ==============================================================================
--- LOGIKA UTAMA: PENCARIAN OBJEK "SHUTTLE" + AUTO HIT & TELEPORT
+-- PENCARIAN OBJEK CERDAS (MENDETEKSI SEMUA KEMUNGKINAN NAMA BOLA/KOK)
 -- ==============================================================================
-local function findNearestShuttle()
-    local nearestShuttle = nil
+local function findActiveBall()
+    local targetBall = nil
     local shortestDistance = math.huge
     
-    -- Menggunakan GetDescendants agar bisa mencari sampai ke dalam folder di Workspace
+    -- Memindai seluruh Workspace tanpa batasan nama spesifik agar tidak meleset
     for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and (obj.Name == "Shuttle" or obj.Name == "Shuttlecock" or obj.Name == "Ball") then
-            local distance = (humanoidRootPart.Position - obj.Position).Magnitude
-            if distance < shortestDistance then
-                shortestDistance = distance
-                nearestShuttle = obj
+        if obj:IsA("BasePart") then
+            local nameLower = string.lower(obj.Name)
+            -- Mendeteksi kata kunci yang sering dipakai untuk bola/kok di game olahraga
+            if string.find(nameLower, "shuttle") or string.find(nameLower, "ball") or string.find(nameLower, "kok") or string.find(nameLower, "object") then
+                -- Memastikan objek tidak menyatu dengan karakter pemain sendiri
+                if not obj:IsDescendantOf(character) then
+                    local distance = (humanoidRootPart.Position - obj.Position).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        targetBall = obj
+                    end
+                end
             end
         end
     end
     
-    return nearestShuttle, shortestDistance
+    return targetBall, shortestDistance
 end
 
+-- ==============================================================================
+-- EKsekusi UTAMA (AUTO TELEPORT & AUTO HIT)
+-- ==============================================================================
 RunService.RenderStepped:Connect(function()
     if not character or not character:FindFirstChild("HumanoidRootPart") then 
         character = player.Character
@@ -195,24 +168,30 @@ RunService.RenderStepped:Connect(function()
         return 
     end
 
-    local shuttle, distance = findNearestShuttle()
+    local ball, distance = findActiveBall()
     
-    if shuttle then
-        -- 1. Logika Auto Teleport mendekati Shuttle
+    if ball then
+        -- 1. Logika Auto Teleport Presisi ke Arah Bola
         if CONFIG.AutoTeleportEnabled and distance <= CONFIG.TeleportDistance and distance > CONFIG.HitDistance then
             local offset = Vector3.new(CONFIG.TeleportOffset[1], CONFIG.TeleportOffset[2], CONFIG.TeleportOffset[3])
-            local targetPosition = shuttle.Position + offset
-            humanoidRootPart.CFrame = CFrame.new(targetPosition, shuttle.Position)
+            humanoidRootPart.CFrame = CFrame.new(ball.Position + offset, ball.Position)
         end
         
-        -- 2. Logika Auto Hit ketika Shuttle berada di jangkauan pukul
+        -- 2. Logika Auto Hit Otomatis Saat Berada di Jangkauan
         if CONFIG.AutoHitEnabled and distance <= CONFIG.HitDistance then
-            local characterTool = character:FindFirstChildOfClass("Tool")
-            if characterTool then
-                characterTool:Activate()
+            local tool = character:FindFirstChildOfClass("Tool")
+            if tool then
+                tool:Activate()
+            end
+            
+            -- Trigger tambahan via RemoteEvent jika game menggunakan sistem server-sided click
+            for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                if remote:IsA("RemoteEvent") and (string.find(string.lower(remote.Name), "hit") or string.find(string.lower(remote.Name), "swing")) then
+                    remote:FireServer(ball)
+                end
             end
         end
     end
 end)
 
-print("Script Racket Rivals (Auto Hit, Teleport, UI Menu, & Auto Save) Berhasil Dimuat!")
+print("Racket Rivals Ultimate Script Loaded Successfully!")
