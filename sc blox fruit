@@ -1,449 +1,171 @@
 -- ==============================================================================
--- DEWA CODING: GOD-TIER OMNI-DEX SUPREME V200.0 (FULL MENU & TAB INTERFACE)
+-- DEWA CODING: ULTRA SAFE STABLE FINDER V300.0 (ZERO ERROR)
 -- ==============================================================================
 
+local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
-if CoreGui:FindFirstChild("DewaOmniDexSupreme") then
-    CoreGui.DewaOmniDexSupreme:Destroy()
+-- Hapus GUI lama agar bersih
+if CoreGui:FindFirstChild("DewaSafeFinder") then
+    CoreGui.DewaSafeFinder:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
-ScreenGui.Name = "DewaOmniDexSupreme"
+ScreenGui.Name = "DewaSafeFinder"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- ==============================================================================
--- 1. FLOATING TOGGLE BUTTON (TOMBOL UTAMA)
--- ==============================================================================
+-- 1. Tombol Utama Melayang (Bisa Digeser)
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
 ToggleBtn.Size = UDim2.new(0, 160, 0, 45)
 ToggleBtn.Position = UDim2.new(0, 20, 0.3, 0)
-ToggleBtn.Text = "👑 OMNI-DEX MENU"
-ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 255)
+ToggleBtn.Text = "⚡ SAFE FINDER"
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
 ToggleBtn.BorderSizePixel = 2
 ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 11
+ToggleBtn.TextSize = 12
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
 
--- ==============================================================================
--- 2. MAIN WINDOW FRAME (PANEL UTAMA)
--- ==============================================================================
+-- 2. Menu Panel Utama
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 700, 0, 480)
-MainFrame.Position = UDim2.new(0.5, -350, 0.5, -240)
-MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+MainFrame.Size = UDim2.new(0, 480, 0, 360)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -180)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Visible = false
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
-local MainStroke = Instance.new("UIStroke", MainFrame)
-MainStroke.Color = Color3.fromRGB(0, 255, 255)
-MainStroke.Thickness = 2
-
--- Top Header Bar
+-- Header Bar
 local TopBar = Instance.new("Frame", MainFrame)
-TopBar.Size = UDim2.new(1, 0, 0, 40)
-TopBar.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+TopBar.Size = UDim2.new(1, 0, 0, 35)
+TopBar.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
 TopBar.BorderSizePixel = 0
 Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 
 local Title = Instance.new("TextLabel", TopBar)
-Title.Size = UDim2.new(1, -50, 1, 0)
-Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "👑 DEWA OMNI-DEX SUPREME V200.0 — FULL MENU CONTROLLER"
-Title.TextColor3 = Color3.fromRGB(0, 255, 255)
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "⚡ SAFE FINDER V300.0 (ANTI ERROR)"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 11
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
 local CloseBtn = Instance.new("TextButton", TopBar)
-CloseBtn.Size = UDim2.new(0, 28, 0, 28)
-CloseBtn.Position = UDim2.new(1, -34, 0.5, -14)
+CloseBtn.Size = UDim2.new(0, 26, 0, 26)
+CloseBtn.Position = UDim2.new(1, -30, 0.5, -13)
 CloseBtn.Text = "X"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 11
+CloseBtn.TextSize = 10
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
-ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
-
--- ==============================================================================
--- 3. SIDEBAR NAVIGATION MENU (TAB MENU UTAMA DI KIRI)
--- ==============================================================================
-local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size = UDim2.new(0, 150, 1, -40)
-Sidebar.Position = UDim2.new(0, 0, 0, 40)
-Sidebar.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
-Sidebar.BorderSizePixel = 0
-
-local SidebarLayout = Instance.new("UIListLayout", Sidebar)
-SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
-SidebarLayout.Padding = UDim.new(0, 5)
-
-local function createTabButton(name)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 36)
-    btn.Position = UDim2.new(0, 5, 0, 0)
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 11
-    btn.Parent = Sidebar
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    return btn
-end
-
-local Tab1Btn = createTabButton("🎯 3D Map Explorer")
-local Tab2Btn = createTabButton("⚡ God Features")
-local Tab3Btn = createTabButton("📖 Info & Panduan")
-
--- ==============================================================================
--- 4. CONTAINER HALAMAN MENU (MENAMPILKAN KONTEN SESUAI TAB)
--- ==============================================================================
-local Container = Instance.new("Frame", MainFrame)
-Container.Size = UDim2.new(1, -155, 1, -45)
-Container.Position = UDim2.new(0, 152, 0, 42)
-Container.BackgroundTransparency = 1
-
--- HALAMAN 1: 3D MAP EXPLORER (DEX STYLE CLICK & HIERARCHY)
-local Page1 = Instance.new("Frame", Container)
-Page1.Size = UDim2.new(1, 0, 1, 0)
-Page1.BackgroundTransparency = 1
-Page1.Visible = true
-
-local MapClickToggle = Instance.new("TextButton", Page1)
-MapClickToggle.Size = UDim2.new(0.95, 0, 0, 35)
-MapClickToggle.Position = UDim2.new(0.02, 0, 0.02, 0)
-MapClickToggle.Text = "🎯 3D MAP CLICK (AUTO FOLDER): OFF"
-MapClickToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-MapClickToggle.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-MapClickToggle.Font = Enum.Font.GothamBold
-MapClickToggle.TextSize = 10
-Instance.new("UICorner", MapClickToggle).CornerRadius = UDim.new(0, 6)
-
-local ScanMapBtn = Instance.new("TextButton", Page1)
-ScanMapBtn.Size = UDim2.new(0.95, 0, 0, 35)
-ScanMapBtn.Position = UDim2.new(0.02, 0, 0.10, 0)
-ScanMapBtn.Text = "🔄 SCAN SEMUA OBJEK WORKSPACE"
-ScanMapBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ScanMapBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-ScanMapBtn.Font = Enum.Font.GothamBold
-ScanMapBtn.TextSize = 10
-Instance.new("UICorner", ScanMapBtn).CornerRadius = UDim.new(0, 6)
-
--- Kolom Kiri Objek & Kolom Kanan Hierarki
-local LeftScroll = Instance.new("ScrollingFrame", Page1)
-LeftScroll.Size = UDim2.new(0.46, 0, 0.73, 0)
-LeftScroll.Position = UDim2.new(0.02, 0, 0.22, 0)
-LeftScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
-LeftScroll.BorderSizePixel = 0
-Instance.new("UICorner", LeftScroll).CornerRadius = UDim.new(0, 6)
-local LeftLayout = Instance.new("UIListLayout", LeftScroll)
-LeftLayout.Padding = UDim.new(0, 3)
-
-local RightScroll = Instance.new("ScrollingFrame", Page1)
-RightScroll.Size = UDim2.new(0.46, 0, 0.73, 0)
-RightScroll.Position = UDim2.new(0.50, 0, 0.22, 0)
-RightScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
-RightScroll.BorderSizePixel = 0
-Instance.new("UICorner", RightScroll).CornerRadius = UDim.new(0, 6)
-local RightLayout = Instance.new("UIListLayout", RightScroll)
-RightLayout.Padding = UDim.new(0, 3)
-
--- HALAMAN 2: GOD FEATURES (FITUR TAMBAHAN)
-local Page2 = Instance.new("Frame", Container)
-Page2.Size = UDim2.new(1, 0, 1, 0)
-Page2.BackgroundTransparency = 1
-Page2.Visible = false
-
-local Page2Layout = Instance.new("UIListLayout", Page2)
-Page2Layout.SortOrder = Enum.SortOrder.LayoutOrder
-Page2Layout.Padding = UDim.new(0, 10)
-Page2Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-local function createToggleFeature(text)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.92, 0, 0, 45)
-    btn.Text = text .. ": OFF"
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 11
-    btn.Parent = Page2
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-    return btn
-end
-
-local PullBtn = createToggleFeature("🧲 PULL ITEMS SEKITAR")
-local FullbrightBtn = createToggleFeature("💡 FULLBRIGHT (TERANG TOTAL)")
-local NoclipBtn = createToggleFeature("👻 NOCLIP (TEMBUS TEMBOK)")
-
--- HALAMAN 3: PANDUAN & INFO
-local Page3 = Instance.new("Frame", Container)
-Page3.Size = UDim2.new(1, 0, 1, 0)
-Page3.BackgroundTransparency = 1
-Page3.Visible = false
-
-local InfoBox = Instance.new("TextLabel", Page3)
-InfoBox.Size = UDim2.new(0.92, 0, 0.9, 0)
-InfoBox.Position = UDim2.new(0.04, 0, 0.05, 0)
-InfoBox.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-InfoBox.TextColor3 = Color3.fromRGB(220, 220, 220)
-InfoBox.Font = Enum.Font.Code
-InfoBox.TextSize = 11
-InfoBox.TextXAlignment = Enum.TextXAlignment.Left
-InfoBox.TextYAlignment = Enum.TextYAlignment.Top
-InfoBox.TextWrapped = true
-InfoBox.Text = [[ 
-========================================
-📖 PANDUAN PENGGUNAAN OMNI-DEX SUPREME:
-========================================
-
-1. TAB "3D Map Explorer":
-   - Nyalakan tombol '3D MAP CLICK', lalu klik/sentuh blok apa pun di map game.
-   - Script otomatis memasang kotak penanda wilayah (SelectionBox) dan membuka struktur folder induknya di sebelah kanan (Gaya Dex).
-   - Tombol 'SCAN SEMUA OBJEK' memuat seluruh part di Workspace ke menu kiri.
-
-2. TAB "God Features":
-   - Pull Items: Menarik item kecil di sekitar ke badan karakter.
-   - Fullbright: Menerangkan map dan menghilangkan gelap.
-   - Noclip: Membuat karakter dapat menembus tembok.
-
-Dibuat khusus dengan sistem menu lengkap dan rapi!
-]]
-Instance.new("UICorner", InfoBox).CornerRadius = UDim.new(0, 8)
-
--- Navigasi Antar Tab Menu
-Tab1Btn.MouseButton1Click:Connect(function()
-    Page1.Visible = true; Page2.Visible = false; Page3.Visible = false
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-    Tab3Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
 end)
 
-Tab2Btn.MouseButton1Click:Connect(function()
-    Page1.Visible = false; Page2.Visible = true; Page3.Visible = false
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    Tab3Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-end)
+-- 3. Kotak Status & Info
+local StatusLabel = Instance.new("TextLabel", MainFrame)
+StatusLabel.Size = UDim2.new(0.92, 0, 0, 50)
+StatusLabel.Position = UDim2.new(0.04, 0, 0.12, 0)
+StatusLabel.Text = "Status: Siap. Klik tombol di bawah untuk mulai mendeteksi objek di sekitar karakter."
+StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextSize = 11
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
+StatusLabel.TextWrapped = true
+StatusLabel.BackgroundTransparency = 1
 
-Tab3Btn.MouseButton1Click:Connect(function()
-    Page1.Visible = false; Page2.Visible = false; Page3.Visible = true
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-    Tab3Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-end)
+-- 4. Daftar List Hasil Scan
+local ScrollFrame = Instance.new("ScrollingFrame", MainFrame)
+ScrollFrame.Size = UDim2.new(0.92, 0, 0.65, 0)
+ScrollFrame.Position = UDim2.new(0.04, 0, 0.28, 0)
+ScrollFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", ScrollFrame).CornerRadius = UDim.new(0, 6)
 
--- Set Default Active Tab Color
-Tab1Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+local UIList = Instance.new("UIListLayout", ScrollFrame)
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 4)
 
--- ==============================================================================
--- 5. LOGIKA INTI FITUR MAP EXPLORER & GOD MODES
--- ==============================================================================
+-- Tombol Scan Cepat
+local ScanBtn = Instance.new("TextButton", MainFrame)
+ScanBtn.Size = UDim2.new(0.92, 0, 0, 35)
+ScanBtn.Position = UDim2.new(0.04, 0, 0.88, 0)
+ScanBtn.Text = "🔄 SCAN OBJEK SEKITAR"
+ScanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+ScanBtn.Font = Enum.Font.GothamBold
+ScanBtn.TextSize = 11
+Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
+
+-- Folder Kotak Visual
 local HighlightFolder = Instance.new("Folder", ScreenGui)
-HighlightFolder.Name = "SupremeHighlights"
+HighlightFolder.Name = "SafeHighlights"
 
-local MapClickMode = false
-local PullMode = false
-local FullbrightMode = false
-local NoclipMode = false
-
-local function renderHierarchy(targetObj, objectName)
-    for _, child in pairs(RightScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
+-- Logika Scan Aman (Menggunakan pcall agar tidak pernah error/crash)
+ScanBtn.MouseButton1Click:Connect(function()
+    ScanBtn.Text = "MEMINDAI..."
+    ScanBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
     
-    local current = targetObj.Parent
-    local lineage = {}
-    while current and current ~= game do
-        table.insert(lineage, 1, current)
-        current = current.Parent
-    end
-    
-    local count = 0
-    for _, folderItem in ipairs(lineage) do
-        count = count + 1
-        local fBtn = Instance.new("TextButton")
-        fBtn.Size = UDim2.new(1, -6, 0, 28)
-        fBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-        fBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
-        fBtn.Font = Enum.Font.Code
-        fBtn.TextSize = 10
-        fBtn.Text = "📁 " .. folderItem.Name .. " [" .. folderItem.ClassName .. "]"
-        fBtn.TextXAlignment = Enum.TextXAlignment.Left
-        fBtn.Parent = RightScroll
-        Instance.new("UICorner", fBtn).CornerRadius = UDim.new(0, 5)
-        
-        fBtn.MouseButton1Click:Connect(function()
-            for _, child in pairs(RightScroll:GetChildren()) do
-                if child:IsA("TextButton") then child:Destroy() end
-            end
-            local subCount = 0
-            for _, subObj in pairs(folderItem:GetChildren()) do
-                subCount = subCount + 1
-                local subBtn = Instance.new("TextButton")
-                subBtn.Size = UDim2.new(1, -6, 0, 26)
-                subBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-                subBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
-                subBtn.Font = Enum.Font.Code
-                subBtn.TextSize = 10
-                subBtn.Text = "   - " .. subObj.Name .. " [" .. subObj.ClassName .. "]"
-                subBtn.TextXAlignment = Enum.TextXAlignment.Left
-                subBtn.Parent = RightScroll
-                Instance.new("UICorner", subBtn).CornerRadius = UDim.new(0, 5)
-            end
-            RightScroll.CanvasSize = UDim2.new(0, 0, 0, subCount * 30)
-        end)
-    end
-    RightScroll.CanvasSize = UDim2.new(0, 0, 0, count * 32)
-end
-
-MapClickToggle.MouseButton1Click:Connect(function()
-    MapClickMode = not MapClickMode
-    MapClickToggle.Text = MapClickMode and "🎯 3D MAP CLICK (AUTO FOLDER): ON" or "🎯 3D MAP CLICK (AUTO FOLDER): OFF"
-    MapClickToggle.BackgroundColor3 = MapClickMode and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
-ScanMapBtn.MouseButton1Click:Connect(function()
-    ScanMapBtn.Text = "MEMINDAI..."
-    ScanMapBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
-    task.spawn(function()
-        for _, child in pairs(LeftScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
-        for _, child in pairs(RightScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    pcall(function()
+        for _, child in pairs(ScrollFrame:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
         HighlightFolder:ClearAllChildren()
         
         local count = 0
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj.Name and (obj:IsA("BasePart") or obj:IsA("Model")) then
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj and obj.Name and (obj:IsA("BasePart") or obj:IsA("Model")) then
                 count = count + 1
+                
                 local btn = Instance.new("TextButton")
-                btn.Size = UDim2.new(1, -6, 0, 26)
-                btn.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
+                btn.Size = UDim2.new(1, -6, 0, 28)
+                btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
                 btn.TextColor3 = Color3.fromRGB(220, 220, 220)
                 btn.Font = Enum.Font.Code
                 btn.TextSize = 10
-                btn.Text = "⬛ " .. obj.Name .. " (" .. obj.ClassName .. ")"
+                btn.Text = "📁 " .. obj.Name .. " [" .. obj.ClassName .. "]"
                 btn.TextXAlignment = Enum.TextXAlignment.Left
-                btn.Parent = LeftScroll
+                btn.Parent = ScrollFrame
                 Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
                 
                 btn.MouseButton1Click:Connect(function()
                     HighlightFolder:ClearAllChildren()
-                    local box = Instance.new("SelectionBox")
-                    box.Adornee = obj
-                    box.Color3 = Color3.fromRGB(0, 255, 128)
-                    box.LineThickness = 0.1
-                    box.Parent = HighlightFolder
-                    renderHierarchy(obj, obj.Name)
+                    pcall(function()
+                        local box = Instance.new("SelectionBox")
+                        box.Adornee = obj
+                        box.Color3 = Color3.fromRGB(0, 255, 128)
+                        box.LineThickness = 0.1
+                        box.Parent = HighlightFolder
+                    end)
+                    StatusLabel.Text = "Terpilih: " .. obj.Name .. " (Parent: " .. tostring(obj.Parent) .. ")"
                 end)
             end
         end
-        LeftScroll.CanvasSize = UDim2.new(0, 0, 0, count * 30)
-        ScanMapBtn.Text = "🔄 SCAN SEMUA OBJEK WORKSPACE"
-        ScanMapBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, count * 32)
+        StatusLabel.Text = "Scan Berhasil! Ditemukan " .. count .. " objek utama."
     end)
-end)
-
-PullBtn.MouseButton1Click:Connect(function()
-    PullMode = not PullMode
-    PullBtn.Text = "🧲 PULL ITEMS SEKITAR: " .. (PullMode and "ON" or "OFF")
-    PullBtn.BackgroundColor3 = PullMode and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
-FullbrightBtn.MouseButton1Click:Connect(function()
-    FullbrightMode = not FullbrightMode
-    FullbrightBtn.Text = "💡 FULLBRIGHT (TERANG TOTAL): " .. (FullbrightMode and "ON" or "OFF")
-    FullbrightBtn.BackgroundColor3 = FullbrightMode and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
-NoclipBtn.MouseButton1Click:Connect(function()
-    NoclipMode = not NoclipMode
-    NoclipBtn.Text = "👻 NOCLIP (TEMBUS TEMBOK): " .. (NoclipMode and "ON" or "OFF")
-    NoclipBtn.BackgroundColor3 = NoclipMode and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if not MapClickMode or gpe then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        local mousePos = UserInputService:GetMouseLocation()
-        local unitRay = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
-        
-        local rayParams = RaycastParams.new()
-        rayParams.FilterType = Enum.RaycastFilterType.Exclude
-        rayParams.FilterDescendantsInstances = {player.Character, HighlightFolder}
-        
-        local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 3000, rayParams)
-        if result and result.Instance then
-            local hitPart = result.Instance
-            HighlightFolder:ClearAllChildren()
-            
-            local box = Instance.new("SelectionBox")
-            box.Adornee = hitPart
-            box.Color3 = Color3.fromRGB(0, 255, 128)
-            box.LineThickness = 0.1
-            box.Parent = HighlightFolder
-            
-            MainFrame.Visible = true
-            renderHierarchy(hitPart, hitPart.Name)
-        end
-    end
-end)
-
-RunService.Heartbeat:Connect(function()
-    if PullMode then
-        pcall(function()
-            local char = player.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local myPos = char.HumanoidRootPart.CFrame
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") and not obj.Anchored and obj ~= char and not obj:IsDescendantOf(char) then
-                        if obj.Size.X < 5 and obj.Size.Y < 5 and obj.Size.Z < 5 then
-                            obj.CFrame = myPos + Vector3.new(0, 2, 0)
-                        end
-                    end
-                end
-            end
-        end)
-    end
     
-    if FullbrightMode then
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 14
-        Lighting.FogEnd = 100000
-        Lighting.GlobalShadows = false
-    end
-    
-    if NoclipMode then
-        pcall(function()
-            local char = player.Character
-            if char then
-                for _, part in pairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    end
+    ScanBtn.Text = "🔄 SCAN OBJEK SEKITAR"
+    ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 end)
 
-print("👑 OMNI-DEX SUPREME V200.0 LOADED WITH SIDEBAR TABS & FULL MENU! 👑")
+print("⚡ SAFE FINDER V300.0 LOADED SUCCESSFULLY! ⚡")
