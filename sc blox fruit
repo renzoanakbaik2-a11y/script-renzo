@@ -1,182 +1,110 @@
 -- ==============================================================================
--- SAMBUNG KATA: MEGA DICTIONARY OMEGA ULTIMATE
--- Penambahan Kamus Kata Masif (Ratusan kata bahasa Indonesia lengkap dari A-Z)
--- dengan sistem pemantauan dan pengisian otomatis tanpa lag.
+-- SAMBUNG KATA: OMEGA ULTIMATE BYPASS (FINAL REVISION)
+-- Pembaruan total: Menggunakan pendeteksi teks universal berbasis string UI
+-- untuk membaca huruf aktif di layar dan mengirim jawaban secara instan.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Kamus Mega Bahasa Indonesia (Ratusan kata lengkap A-Z)
-local MegaDictionary = {
-    ["a"] = {"api", "anak", "alam", "angsa", "apel", "akar", "atap", "arah", "asin", "abu", "amplop", "andalan", "angsa", "anting", "artis", "asbak", "asrama", "aturan", "ayam", "ajang", "aktif", "alamat", "alibi", "alun", "amal", "ambang", "ampuh", "aneka", "angin", "angsa", "anjing", "antara", "anyaman", "aparat", "arsip", "asam", "asli", "asuransi", "atlet", "acara", "agung", "ahli", "akbar", "akses", "aktor", "akuarium", "alkohol", "amethyst", "amfibi", "ampelas", "amunisi", "analisis", "anarki", "anatomi", "anestesi", "aneh", "anggrek", "angkasa", "angklung", "angpao", "anomali", "anten", "antologi", "antrean", "anugerah", "apik", "apkir", "apnea", "apostrof", "apotek", "apresiasi", "April", "aquarium", "arah", "arsitek", "artileri", "arungi", "asbes", "asket", "aspirasi", "asteroid", "astronot", "asumsi", "atrium", "auk", "aura", "autentik", "autoritas", "azab", "azimut"},
-    ["b"] = {"bola", "buku", "batu", "bunga", "burung", "bulan", "botol", "besi", "baju", "balon", "banjir", "bantal", "barang", "batas", "bau", "bayi", "bebek", "becak", "bedah", "bekicot", "belalang", "beli", "benang", "bendera", "bensin", "benteng", "beras", "besok", "beton", "biaya", "bibir", "bidang", "biksu", "bilah", "bintang", "biola", "bisnis", "bocah", "bodoh", "bogor", "bojonegoro", "boks", "bolpoin", "bom", "bon", "boneka", "bor", "bosan", "botol", "boyong", "buah", "buaya", "bubar", "budaya", "budi", "buih", "bujuk", "buka", "bukti", "buku", "bulan", "buli", "bulu", "bumbu", "bumi", "bunda", "bungalow", "bunga", "bungkam", "bungkus", "buntal", "buntut", "bupati", "buron", "bursa", "buruh", "burung", "bus", "busana", "busur", "buta", "butik", "butir", "buyar"},
-    ["c"] = {"cabe", "cinta", "cermin", "cicak", "cuka", "catur", "cangkir", "cacar", "cacing", "cahaya", "cair", "cakap", "cakar", "cakrawala", "calon", "camat", "camilan", "campur", "candat", "candi", "cangkok", "cantik", "capung", "cara", "cari", "caw", "cebur", "cece", "cegah", "cek", "cekcok", "celah", "celana", "celengan", "cemara", "cemerlang", "cemburu", "cemooh", "cemplung", "cengkeh", "cepat", "cerah", "cerita", "cerna", "cermin", "ceroboh", "cetak", "ciamik", "cibir", "cicil", "cicit", "cikal", "ciked", "cilegon", "cilik", "cinta", "cipta", "ciri", "cita", "cium", "ciut", "coblos", "cocok", "codot", "cokelat", "colek", "colok", "comot", "congkak", "contoh", "copet", "copot", "corak", "coret", "corong", "cuaca", "cuci", "cucu", "cuka", "cukur", "cuma", "cumi", "cangkang", "cantum", "cap", "caplok", "cicip"},
-    ["d"] = {"daun", "dasi", "daging", "desa", "dahi", "domba", "dapur", "dadu", "daerah", "daftar", "dagang", "dahsyat", "dakwah", "dalang", "daldim", "damai", "dampak", "dampar", "danau", "dansa", "dapat", "dapur", "dara", "darah", "darat", "dari", "darurat", "dasar", "dasawarsa", "data", "datar", "datuk", "daulat", "daun", "daya", "dayung", "debat", "debu", "dedak", "dedikasi", "defile", "degil", "degup", "dekat", "deklarasi", "delapan", "delima", "delta", "demam", "demikian", "demokrasi", "dendam", "dengan", "dengar", "dengan", "densitas", "dentam", "depan", "deras", "derita", "derma", "desa", "desain", "desak", "detik", "dewan", "dewasa", "dewi", "di", "dia", "diam", "diameter", "diang", "diberi", "didik", "diet", "digdaya", "diklat", "dikit", "dilema", "diligent", "dimensi", "dinamo", "dingin", "dini", "dioda", "diploma", "dirgantara", "disko", "divisi", "doa", "dokter", "dokumen", "dolar", "domba", "dominan", "dompet", "donat", "dosis", "drama", "drastis", "dua", "duduk", "dudu", "duet", "duGA", "dugong", "duka", "dukun", "dunia", "duo", "duren", "durhaka", "duri", "durian", "dusta", "dwi"},
-    ["e"] = {"emas", "ember", "elang", "enam", "esok", "ekor", "embun", "ebony", "eche", "edisi", "edukasi", "efek", "efisien", "egois", "eja", "ejek", "ekonomi", "ekor", "eksekutif", "ekspedisi", "eksperimen", "eksplorasi", "ekspresi", "ektoderm", "elak", "elastis", "elegan", "elemen", "eliminasi", "elips", "elitis", "elok", "emak", "emas", "embargo", "embel", "embun", "emen", "emigrasi", "emosi", "empang", "empati", "empedu", "empiris", "enak", "enam", "energi", "enggan", "engsel", "enigma", "entah", "enteng", "entitas", "enzim", "epidemik", "episenter", "episode", "era", "erat", "erek", "erang", "erosi", "arti", "es", "esai", "esensi", "eskimo", "estetika", "estuari", "etika", "etnis", "eufimisme", "evakuasi", "evaluasi", "evolusi", "eksodus"},
-    ["f"] = {"foto", "fajar", "fakir", "filsafat", "fitnah", "format", "faedah", "faham", "faksi", "faktor", "fakultas", "falceto", "falsafah", "famili", "fanatik", "fantasi", "farad", "farmasi", "fasih", "fasilitas", "fasih", "fatwa", "fauna", "februari", "fedora", "feminin", "fenomena", "fermentasi", "festival", "fetis", "feodal", "fiber", "fikih", "fiksinya", "filantropi", "filateli", "filial", "film", "filosofi", "filter", "finansial", "firaun", "firma", "fisika", "fisiologi", "fitnes", "fitrah", "fobia", "fokus", "folio", "fondasi", "fonetik", "fonem", "formal", "format", "formulir", "fosil", "foto", "fotogenik", "foya", "fragmen", "frekuensi", "frustrasi", "fuad", "fungsi", "fusi"},
-    ["g"] = {"gigi", "guru", "garpu", "gajah", "gelas", "garam", "gedung", "gabah", "gabung", "gadis", "gagal", "gagah", "gagak", "gagasan", "gahar", "gait", "gaji", "galaksi", "galang", "galeri", "galon", "gambar", "gambut", "gamelan", "gempita", "ganda", "gandeng", "gandum", "gang", "ganggu", "ganjil", "gantung", "garansi", "garasi", "garis", "garong", "garpu", "garuda", "gas", "gasi", "gatal", "gaul", "gaun", "gaya", "gayung", "gebrak", "gedebuk", "gedong", "gejala", "gelagat", "gelang", "gelap", "gelar", "gelembung", "gelisah", "gelombang", "gemar", "gembala", "gembira", "gembong", "gembrot", "gempita", "gempa", "gemuk", "gen", "gencat", "gendang", "gendong", "generasi", "genetik", "genggam", "genius", "geografi", "geologi", "gerai", "gerak", "geram", "gerbang", "gereja", "gerhana", "gerigi", "gesek", "gesit", "getah", "getar", "getir", "giat", "gila", "giliran", "giling", "gips", "girang", "gitar", "gizi", "global", "glori", "goblok", "gol", "golok", "golongan", "gong", "goyang", "gua", "gual", "gubuk", "gudang", "gugat", "gula", "gulai", "gulung", "gumpal", "guna", "guncang", "gundah", "gundul", "gurau", "gurat", "gurih", "guru", "gusar", "gusti"},
-    ["h"] = {"hati", "hutan", "hujan", "harimau", "hiu", "handuk", "helm", "habis", "hadap", "hafal", "hajat", "hakim", "halal", "halaman", "halang", "halilintar", "halimun", "halo", "hamba", "hambur", "hamil", "hampir", "hamster", "hancur", "handal", "hangat", "hanggar", "hantam", "hantar", "hantu", "hanya", "hapus", "harap", "harga", "hari", "harimau", "harmoni", "harta", "harum", "harus", "hasil", "haus", "heboh", "hedon", "hektar", "helai", "helikopter", "hemat", "hembus", "hemisfer", "hempas", "hendak", "hewan", "hiasan", "hibah", "hibur", "hidangan", "hidup", "hijau", "hikayat", "hilang", "hilir", "himpun", "hindar", "hinggap", "hipotesis", "hirau", "hirup", "hitam", "hitung", "hoki", "hormat", "hotel", "hubo", "hukum", "hulubalang", "huni", "huruf", "hutan", "hutang"},
-    ["i"] = {"ikan", "itik", "intan", "istana", "ijok", "ilmu", "irama", "ialah", "ibas", "ide", "idealis", "identitas", "idiom", "idola", "ijazah", "ijo", "ikatan", "iklan", "iklim", "ikut", "ilahiah", "ilham", "ilmu", "imajinasi", "imbang", "imbas", "iming", "imitasi", "impas", "impian", "importir", "imun", "inang", "incar", "incer", "indah", "indeks", "indikasi", "individu", "induk", "industri", "infanteri", "infeksi", "informasi", "infus", "ingat", "inggris", "ingin", "ingkar", "inisial", "injeksi", "inovasi", "insan", "insang", "insektisida", "insiden", "inspeksi", "inspirasi", "instalasi", "instan", "insting", "institut", "instruktur", "insulator", "intan", "integrasi", "integritas", "intelek", "intelijen", "intens", "interaksi", "internal", "internet", "interpretasi", "intervensi", "inti", "intip", "intrik", "introspeksi", "investasi", "invasi", "inversi", "irama", "irit", "irigasi", "isi", "iseng", "isolasi", "istana", "istri", "isu", "itikat", "izin"},
-    ["j"] = {"jeruk", "jarum", "jalan", "janggut", "jagung", "jendela", "jabal", "jabat", "jadi", "jaga", "jago", "jahat", "jahit", "jajah", "jajar", "jakarta", "jaki", "jalur", "jambat", "jamin", "jampi", "jamur", "janji", "jantung", "jarak", "jari", "jaring", "jarum", "jasa", "jasad", "jati", "jauh", "jawa", "jawab", "jaya", "jazirah", "jejak", "jelajah", "jelas", "jelek", "jelma", "jemaah", "jemari", "jembatan", "jempol", "jemur", "jendral", "jenggot", "jenis", "jepit", "jerami", "jerat", "jerih", "jernih", "jeruk", "jesta", "jiwa", "joget", "jongkok", "jua", "juadah", "juang", "juara", "jubah", "judes", "judi", "judul", "jujur", "juli", "jumlah", "jumpa", "jundi", "jungkir", "juni", "junjung", "jurnal", "jurus", "justru", "juta", "jutawan"},
-    ["k"] = {"kucing", "kuda", "kayu", "kelereng", "kipas", "kertas", "kancil", "kabar", "kabel", "kabin", "kabinet", "kabur", "kacamata", "kaca", "kadal", "kadal", "kader", "kadi", "kafe", "kail", "kain", "kaisar", "kakitangan", "kaki", "kakilangit", "kaktus", "kala", "kalau", "kalender", "kali", "kalkulator", "kamar", "kambing", "kamera", "kampanye", "kampung", "kamus", "kanal", "kancil", "kandang", "kangguru", "kanker", "kantung", "kantor", "kapak", "kapal", "kapas", "kapiten", "kapital", "kapok", "karang", "karat", "karbon", "kardus", "karena", "karnaval", "karpet", "kartu", "karya", "kasih", "kasta", "kasur", "kata", "katak", "kaum", "kawai", "kawan", "kawat", "kayu", "keadilan", "kebal", "kebaya", "kebun", "kecil", "kecoa", "kecuali", "kedai", "kedelai", "kedip", "kedua", "kejar", "kejut", "kekasih", "kekuatan", "kelapa", "kelas", "keledai", "kelelawar", "keliling", "kelinci", "kelompok", "keluarga", "keluar", "kemarin", "kembang", "kemenangan", "kempis", "kemudi", "kenal", "kendali", "kencang", "kendi", "kening", "kenyang", "kepala", "kepiting", "keputusan", "keras", "kereta", "kering", "kerja", "kerjasama", "kesal", "ketiak", "ketinting", "ketupat", "khabar", "khawatir", "khayal", "khusus", "kiambang", "kiat", "kibas", "kifarat", "kilat", "kilau", "kimia", "kimono", "kinerja", "kipas", "kira", "kirim", "kisah", "kisar", "kisi", "kita", "kitab", "klaim", "klasik", "klep", "klik", "klinik", "kloroform", "kloter", "klub", "kobra", "kode", "kodok", "koin", "kokoh", "kolaborasi", "kolam", "koleksi", "koloni", "komandan", "komedi", "komentar", "kompas", "komputer", "komunikasi", "kondisi", "konferensi", "kongres", "konklusif", "konsep", "konservasi", "konstan", "kontak", "kontes", "kontribusi", "kontrol", "konvoi", "kopyor", "koral", "koran", "koreksi", "koridor", "kornea", "korps", "korupsi", "kosakata", "kosong", "kosmetik", "kota", "kotak", "koyo", "kreatif", "kredit", "krem", "kriminal", "kristal", "kritik", "kroni", "kuah", "kuali", "kualifikasi", "kualitas", "kuantitas", "kuasa", "kuat", "kuba", "kubang", "kubikal", "kubis", "kubo", "kubur", "kucing", "kudapan", "kuda", "kudus", "kue", "kuis", "kuku", "kuliah", "kulit", "kulkas", "kumpul", "kunci", "kuning", "kunjung", "kuntum", "kuno", "kura", "kurang", "kurma", "kursi", "kursus", "kurun", "kurus", "kuta", "kutub", "kuwuk", "kuyang"},
-    ["l"] = {"lilin", "lampu", "lidah", "lebah", "lorong", "langit", "lemari", "laba", "labirin", "labuh", "lacak", "lada", "ladang", "laga", "lagi", "lagu", "lahar", "lahir", "lain", "lajang", "laju", "laknat", "lakon", "laku", "lalat", "lalu", "lama", "lamar", "lambang", "lambat", "lambung", "lampau", "lampin", "lampu", "lamun", "lanang", "lancar", "landak", "landas", "langgan", "langit", "langka", "langkah", "langsat", "lanjut", "lantai", "lantang", "lantas", "lantik", "lapang", "lapar", "lapor", "lapuk", "lara", "larang", "lari", "laris", "laron", "larut", "laskar", "latar", "latih", "lau", "lauk", "laut", "lawan", "lawas", "layak", "layan", "layar", "layat", "layu", "lazim", "lebar", "lebih", "lebu", "ledak", "legendaris", "leher", "lelah", "lelaki", "lelang", "lemah", "lemari", "lemas", "lembab", "lembar", "lembu", "lempar", "lemper", "lena", "lencan", "lensa", "lenth", "lepas", "lepi", "lereng", "lesap", "lesbi", "lesu", "letak", "leter", "leung", "lewat", "lezat", "liar", "libur", "licik", "licin", "lidah", "lidi", "lihat", "liku", "lilin", "lilit", "lima", "limbah", "limit", "limpah", "linang", "lincah", "lindungi", "linear", "lingkar", "lingkungan", "linta", "lintas", "lipat", "lipstik", "lirik", "lisan", "lisensi", "listrik", "literatur", "litter", "liturgi", "liur", "lobak", "logika", "logistik", "loh", "lokal", "lokasi", "lokomotif", "lolos", "lomba", "longgar", "longsor", "lontar", "lop", "los", "losion", "loteng", "lotion", "luak", "luang", "luar", "luas", "lucu", "luka", "lukis", "lulus", "lumpur", "lunas", "luntur", "lupa", "lura", "lurah", "lurus", "lusa", "lutut", "luwes", "uzur"},
-    ["m"] = {"makan", "mangga", "meja", "mobil", "mata", "macan", "merpati", "maaf", "mabuk", "macet", "madu", "mafia", "mahal", "mahkota", "main", "majalah", "maju", "makassar", "makhluk", "makin", "makmur", "maksimal", "makwana", "malam", "malang", "malas", "malik", "mampir", "manado", "manah", "manasik", "mandi", "mangkuk", "manis", "manusia", "mapan", "mara", "marah", "maret", "marga", "mari", "marinir", "markas", "marmut", "martabat", "masa", "masak", "masalah", "masjid", "masuk", "mata", "matahari", "matang", "mati", "mau", "maulid", "mawar", "maya", "mayat", "mayones", "medali", "medan", "media", "medis", "mega", "megah", "meja", "mekar", "melati", "melejit", "melodi", "memar", "mental", "mentari", "menteri", "mentimun", "menu", "merah", "merdeka", "meriah", "mesin", "meski", "mestinya", "metafora", "meter", "metode", "mi", "mial", "mika", "mikrofon", "militer", "mimpi", "mina", "mineral", "minggu", "minima", "minimum", "minis", "minta", "minum", "minyak", "mirip", "misa", "misi", "misteri", "mobil", "model", "modern", "modifikasi", "modis", "molek", "momentum", "monarki", "monitor", "monumen", "moral", "motor", "muara", "muat", "muda", "mudah", "mudik", "muhammad", "mukjizat", "muka", "mukena", "mulia", "mulut", "multi", "mumet", "muncul", "mundur", "mungil", "mungkin", "muntah", "murah", "murid", "murni", "murung", "musang", "musim", "musik", "musnah", "mustahil", "musuh", "mutasi", "mutiara", "mutlak", "mutilasi"},
-    ["n"] = {"nasi", "nenek", "nangka", "nilai", "nyamuk", "napas", "nampan", "nabi", "nada", "nafas", "nahkoda", "naik", "najis", "nakhoda", "nama", "nampak", "nangka", "nanti", "napas", "narapidana", "narsisme", "nasib", "nasional", "naskah", "nasrani", "natal", "natrium", "natural", "naufa", "naungan", "negara", "negatif", "negeri", "nekad", "nenek", "neon", "neraca", "neraka", "netral", "niaga", "niat", "nihil", "nikah", "nikel", "nikmat", "nila", "nilai", "nilam", "nilon", "nirmala", "niskala", "nissin", "niteni", "nitrogen", "no", "noda", "nomor", "non", "nonaktif", "nongkrong", "normal", "not", "notaris", "notasi", "novela", "november", "nuansa", "nubuat", "nujum", "nuklir", "nusa", "nutrisi", "nyala", "nyaman", "nyamuk", "nyanyian", "nyata", "nyawa", "nyenyak", "nyiur", "nyoman"},
-    ["o"] = {"obat", "ombak", "otak", "ojek", "ongkos", "ons", "organ", "oasis", "obesitas", "objek", "oblasi", "obral", "obrol", "obor", "observasi", "obturator", "ocean", "odol", "oase", "otoritas", "otentik", "otobiografi", "otomatis", "otonomi", "otot", "oyong", "oleh", "oleng", "olahraga", "ombak", "omega", "omelan", "omong", "omset", "omzet", "ongkos", "online", "ons", "ontologi", "onyx", "operasi", "opini", "opium", "oportunis", "opsi", "optik", "optimal", "optimis", "orang", "orbit", "ordnance", "oreng", "organ", "organik", "organisasi", "orgasme", "orients", "orisinil", "orkestra", "ornamen", "ortodoks", "osilasi", "osmosis", "ostentasi", "otak", "otentikasi", "otobiografi", "otomotif", "ozon"},
-    ["p"] = {"pintu", "pohon", "paku", "pisang", "piring", "paus", "pedang", "pabrik", "pacar", "pacu", "padam", "padang", "padat", "padu", "pagar", "pagi", "pahlawan", "pajak", "pajang", "pakai", "pakar", "pakat", "paksa", "paku", "palang", "palawija", "palembang", "paling", "palsu", "pamer", "pameran", "pamit", "panah", "panas", "pancar", "pandai", "pandang", "pandemi", "panen", "pamer", "papan", "para", "parade", "paragraf", "parau", "pariwisata", "parlemen", "partai", "partikel", "pas", "pasang", "pasar", "pasir", "pasok", "pasta", "pasti", "pasukan", "patah", "paten", "pati", "patroli", "patuh", "patung", "paus", "payung", "pecah", "pecel", "pedagang", "pedas", "peduli", "pegang", " pegawai", "pekarangan", "pekat", "pelangi", "pelayan", "pelita", "peluang", "peluh", "pemuda", "penak", "penasaran", "pendek", "pengaruh", "pengertian", "penjara", "penting", "penuh", "penyanyi", "perahu", "perang", "peraturan", "perca", "percaya", "perempuan", "pergi", "perhiasan", "periksa", "perintah", "perkara", "perkasa", "perlu", "permata", "pernah", "persen", "pertama", "perwira", "pesan", "pesawat", "pesiar", "pesona", "pesona", "pesta", "peta", "petak", "petani", "petir", "petualang", "piatu", "pidato", "pihak", "pikir", "pilar", "pilih", "pilin", "pilot", "pimpin", "pinang", "pindah", "pinggir", "pinjam", "pintu", "pipa", "pipi", "piramid", "piring", "pisang", "pisah", "piston", "pita", "pitam", "plafon", "planet", "plastik", "plat", "podcast", "pohon", "pojok", "pokok", "polisi", "politik", "polusi", "pompa", "pondok", "populer", "poros", "porsi", "portal", "pos", "posisi", "positif", "potensi", "potong", "prajurit", "praktik", "prambus", "pramuka", "prangko", "prasarana", "pribadi", "pribumi", "prima", "prinsip", "prioritas", "pro", "proses", "provinsi", "proyek", "puas", "puasa", "pucat", "pucuk", "puji", "puing", "pukau", "pukul", "pulang", "pulau", "pulpen", "pulsar", "pulsa", "pundi", "pungguk", "punggung", "pungut", "punah", "puncak", "pundak", "pusing", "pusat", "pustaka", "putaran", "putih", "putra", "putri", "putus"},
-    ["q"] = {"quran", "qardh", "qariah", "qari", "qunut", "qimah", "qasad"},
-    ["r"] = {"rumah", "rusa", "roti", "rambut", "raja", "ranting", "ronda", "raba", "rabu", "racun", "rada", "radak", "radar", "radiasi", "radikal", "radio", "raga", "ragam", "ragu", "rahasia", "rahim", "raih", "raksasa", "rakyak", "rakyat", "ralat", "ramah", "ramai", "ramalan", "rambut", "ramdan", "ramlee", "rampas", "ramping", "ramuan", "rana", "rancang", "rangkul", "rangka", "rangking", "rantai", "ranting", "rapat", "rapi", "rapor", "rasa", "rasional", "rasul", "rata", "ratapan", "ratu", "raung", "raut", "rawa", "rawat", "rayap", "rayu", "reaksi", "real", "realitas", "rebah", "rebut", "redaksi", "redup", "refleksi", "regu", "reka", "rekor", "rel", "relasi", "relevan", "religi", "remaja", "rembulan", "rempah", "rencana", "rendah", "rendang", "renggang", "rentang", "reparasi", "reputasi", "resep", "resmi", "restoran", "revolusi", "rezeki", "rezim", "riang", "rias", "ribuan", "ribut", "ridha", "rifle", "rigi", "riil", "rimba", "rintang", "rintih", "risiko", "riset", "ritme", "riuh", "riwayat", "roboh", "robot", "roda", "rodja", "rohani", "rojok", "rokok", "rol", "romantis", "rombong", "rona", "rongga", "rontok", "roti", "ruah", "ruang", "ruas", "rubah", "rugi", "rujuk", "rukun", "rumah", "rumaysho", "rumble", "rumit", "rumput", "rumus", "runtuh", "ruparupa", "rupiah", "rusa", "rusak", "rusuk", "rutin"},
-    ["s"] = {"susu", "sapi", "sendok", "sabun", "sepatu", "sungai", "sawah", "sabar", "sabda", "sabtu", "sabun", "sadar", "sadi", "sagu", "sahabat", "saham", "sahih", "sahur", "saing", "saja", "saji", "sakit", "saksama", "saksi", "sakti", "salah", "salak", "salam", "salju", "salur", "sama", "sambut", "sampai", "samping", "samporn", "sampul", "sana", "sandal", "sandar", "sandiwara", "sangat", "sanggah", "sanggup", "sangka", "sangkut", "santai", "santet", "santri", "santun", "sapa", "sapi", "sapu", "saraf", "saran", "sarang", "saring", "sarjana", "sarung", "satu", "sawah", "saya", "sayang", "sayat", "sayur", "sebab", "sebar", "sebelah", "sebentar", "sebut", "secara", "sedang", "sedia", "sedih", "sedikit", "segala", "segar", "segel", "sehat", "sejahtera", "sejuk", "sekadar", "sekali", "sekarang", "sekolah", "seks", "sekretaris", "seksual", "sekutu", "sela", "selamat", "selam", "selatan", "selendang", "selesa", "selesai", "selimut", "selisih", "selokan", "seluruh", "selvedge", "semai", "semangka", "semangat", "sembah", "sembilan", "sembunyi", "semen", "sementara", "semesta", "semut", "senang", "senapan", "sendiri", "sendok", "sengit", "seni", "senior", "senjata", "sentosa", "sentuhan", "senyum", "sepatu", "seperti", "sepi", "sepon", "sepupu", "seragam", "serak", "seram", "serang", "seratus", "serbu", "seret", "seri", "sering", "serius", "serta", "sertifikat", "sesak", "sesal", "sesuai", "setan", "setia", "setuju", "sewa", "siaga", "siang", "siap", "siar", "bias", "siasat", "sia", "sibolga", "sida", "sihir", "sikap", "sikat", "siku", "sila", "silang", "silau", "silikon", "silih", "silo", "simpan", "simpang", "simpel", "simptom", "simulasi", "simvol", "sina", "sinar", "sindikat", "singgah", "singkat", "singkong", "singa", "sini", "sinis", "sintal", "sinyal", "siram", "sirip", "sirsak", "sisa", "sisi", "sistem", "situs", "siul", "siuman", "skala", "sketsa", "skor", "skuter", "slank", "soal", "sobek", "soda", "sodok", "sopan", "sore", "sosial", "sosis", "sosok", "soto", "sovenir", "spesial", "spesifik", "spion", "sponsor", "sport", "spons", "stabil", "stadion", "stasiun", "status", "steak", "stempel", "strategi", "strata", "stress", "suaka", "suami", "suasana", "suatu", "subjek", "subsidi", "subuh", "suci", "sudah", "sudut", "sufi", "suguh", "suhu", "sujud", "suka", "sukarela", "sukar", "sukses", "sukur", "sulam", "sulap", "sulit", "suluh", "sultan", "sumbang", "sumbar", "sumbat", "sumpah", "sumur", "sumut", "sunat", "sungai", "sungguh", "suntik", "sunyi", "sup", "supaya", "suplai", "suport", "supremasi", "surat", "surau", "surga", "suruh", "surut", "survei", "susah", "susu", "susul", "susun", "sutradara", "sutra", "swasta", "syahdu", "syahid", "syaitan", "syarat", "syariat", "syiar", "syukur"},
-    ["t"] = {"tikus", "topi", "tinta", "taman", "tali", "tulis", "tomat", "taat", "tabah", "tabiat", "tabir", "tackle", "tagih", "tahu", "tahun", "taji", "tajam", "tajuk", "takdir", "takhta", "takluk", "takok", "takrif", "taksa", "takut", "talenta", "tali", "tamadun", "taman", "tambar", "tambah", "tambul", "tampan", "tampil", "tampung", "tanah", "tanam", "tanda", "tangan", "tangani", "tanggap", "tanggal", "tangguh", "tanggung", "tangis", "tangkap", "tani", "tanpa", "tanya", "tapal", "tapis", "taraf", "tarik", "taring", "taris", "taruh", "taruna", "tas", "tasik", "tata", "tatap", "tau", "taufan", "taulan", "tawar", "tawon", "tebar", "tebas", "tebing", "tebu", "tebus", "teduh", "tegar", "tegang", "tegap", "teguh", "teka", "tekad", "tekan", "tekel", "teknik", "teknologi", "tekstur", "teks", "teladan", "telanjang", "telapak", "telinga", "teliti", "telor", "teluk", "telur", "teman", "tembak", "tembok", "tembus", "tempe", "tempat", "tempel", "tempur", "temu", "tenaga", "tenang", "tenda", "tengah", "tenggelam", "tengkar", "tengok", "tenis", "tentang", "tentara", "tentu", "tepat", "tepi", "tepuk", "terang", "terapung", "teratai", "terbang", "terbit", "terik", "terjun", "terka", "terkam", "terlalu", "termos", "ternak", "teror", "tertib", "terumbu", "terus", "terutama", "tes", "tetangga", "tetap", "tetas", "tetangga", "tewas", "tiada", "tiang", "tiap", "tiba", "tidak", "tidur", "tiga", "tiket", "tiki", "tikus", "tilam", "tilik", "tim", "timba", "timbang", "timor", "timpa", "timur", "tindak", "tindih", "tinggal", "tinggi", "tingkat", "tinjau", "tinta", "tiongkok", "tipis", "tipu", "tirai", "tiru", "tisue", "titik", "titip", "tiup", "toél", "tobat", "todak", "toko", "tokoh", "toksik", "tolak", "toleransi", "tolol", "tomat", "tombak", "tong", "tongkat", "tonil", "onton", "topan", "topeng", "topi", "toreh", "torpedo", "total", "totok", "towel", "tradisi", "trafik", "trafo", "traktor", "transaksi", "transfer", "transisi", "transparan", "transportasi", "trauma", "travelling", "trend", "tria", "tribun", "trik", "tropis", "truk", "tuah", "tualang", "tuang", "tuan", "tuang", "tubuh", "tudung", "tugas", "tuh", "tuhan", "tujuh", "tukang", "tukar", "tulang", "tulis", "tulus", "tumbang", "tumbuh", "tumpah", "tumpuk", "tumpu", "tunai", "tunas", "tunduk", "tunggu", "tunjuk", "tuntun", "tuntut", "turap", "turis", "turun", "turut", "tusuk", "tutup", "tutur"},
-    ["u"] = {"ular", "uang", "udang", "ubi", "hulu", "unta", "ukiran", "uap", "ubah", "uban", "ubi", "ucap", "udang", "udara", "ufuk", "ugama", "ugut", "uji", "ujung", "ukir", "ukuran", "ula", "ulama", "ulang", "ular", "ulas", "ulat", "ulung", "ulur", "umat", "umban", "umbi", "umbul", "umum", "umur", "uncang", "undang", "unduh", "unggas", "unggul", "ungkap", "ungu", "uni", "unik", "universitas", "untung", "unta", "upacara", "upaya", "upah", "uraian", "urat", "urat", "urus", "urut", "usia", "usil", "usir", "uskup", "usul", "usaha", "utama", "utang", "utara", "utuh", "uyel"},
-    ["v"] = {"vase", "vila", "vaksin", "voli", "vokal", "vacum", "vakansi", "vakum", "valid", "valuta", "vampir", "vanili", "variasi", "varietas", "vas", "vasi", "veda", "vektor", "velg", "venom", "ventilasi", "venus", "vera", "verifikasi", "versi", "vertebrata", "vertikal", "veteran", "veto", "via", "viaduct", "vibrasi", "video", "vigour", "viking", "vila", "vinil", "viola", "violet", "violin", "viral", "virus", "viscosity", "visi", "visum", "vital", "vitamin", "vitrase", "viva", "vokal", "volkano", "voli", "volume", "volunter"},
-    ["w"] = {"wajan", "waktu", "warga", "warna", "wortel", "wisata", "wadah", "waduk", "wafat", "wajah", "wajar", "wajib", "wakatobi", "wakil", "waktu", "walau", "wali", "walikota", "walrus", "wangi", "wanita", "wanti", "waralaba", "waras", "warga", "waria", "warisan", "warta", "wartawan", "warung", "waspada", "wasit", "wasiat", "wata", "watak", "waton", "wazir", "web", "website", "wewenang", "wibawa", "wihara", "wijaya", "wilayah", "windu", "wiraswasta", "wisata", "wisudawan", "wisudawati", "wisma", "wujud", "wulung", "wus"},
-    ["y"] = {"yoyo", "yodium", "yaki", "yakult", "yahudi", "yakin", "yakiniku", "yal", "yamaha", "yan", "yang", "yap", "yard", "yarmulke", "yayasan", "yel", "yelp", "yen", "yoga", "yogya", "yoni", "yosua", "yuan", "yudikatif", "yudisium", "yurisdiksi"},
-    ["z"] = {"zaitun", "zebra", "zaman", "zona", "zakat", "zakar", "zalf", "zaman", "zamin", "zani", "zapin", "zarah", "zat", "zebracross", "zeni", "zenit", "zero", "ziarah", "zigura", "zigma", "zink", "zip", "zodiak", "zona", "zonal", "zoologi", "zulhijah", "zulkaidah"}
+-- Kamus Kata Bahasa Indonesia Lengkap A-Z
+local Dictionary = {
+    ["a"] = {"api", "anak", "alam", "apel", "akar", "atap", "arah", "asin", "abu", "amplop", "andalan", "angsa", "anting", "artis"},
+    ["b"] = {"bola", "buku", "batu", "bunga", "burung", "bulan", "botol", "besi", "baju", "balon", "banjir", "bantal", "barang"},
+    ["c"] = {"cabe", "cinta", "cermin", "cicak", "cuka", "catur", "cangkir", "cacar", "cacing", "cahaya", "cair", "cakap"},
+    ["d"] = {"daun", "dasi", "daging", "desa", "dahi", "domba", "dapur", "dadu", "daerah", "daftar", "dagang"},
+    ["e"] = {"emas", "ember", "elang", "enam", "esok", "ekor", "embun", "edisi", "edukasi", "efek", "efisien"},
+    ["f"] = {"foto", "fajar", "fakir", "format", "faedah", "faham", "faksi", "faktor", "fantasi"},
+    ["g"] = {"gigi", "guru", "garpu", "gajah", "gelas", "garam", "gedung", "gabah", "gadis", "gagal", "gagah"},
+    ["h"] = {"hati", "hutan", "hujan", "harimau", "hiu", "handuk", "helm", "habis", "hadap", "hafal", "hajat"},
+    ["i"] = {"ikan", "itik", "intan", "istana", "ilmu", "irama", "ialah", "ide", "identitas", "ijazah"},
+    ["j"] = {"jeruk", "jarum", "jalan", "janggut", "jagung", "jendela", "jabat", "jadi", "jaga", "jago", "jahat"},
+    ["k"] = {"kucing", "kuda", "kayu", "kipas", "kertas", "kancil", "kabar", "kabel", "kabin", "kacamata"},
+    ["l"] = {"lilin", "lampu", "lidah", "lebah", "lorong", "langit", "lemari", "laba", "lada", "ladang", "laga"},
+    ["m"] = {"makan", "mangga", "meja", "mobil", "mata", "macan", "merpati", "maaf", "mabuk", "macet", "madu"},
+    ["n"] = {"nasi", "nenek", "nangka", "nilai", "nyamuk", "napas", "nampan", "nabi", "nada", "naik", "nama"},
+    ["o"] = {"obat", "ombak", "otak", "ojek", "ongkos", "ons", "organ", "oasis", "objek", "obral", "obor"},
+    ["p"] = {"pintu", "pohon", "paku", "pisang", "piring", "paus", "pedang", "pabrik", "pacar", "padang", "pagar"},
+    ["q"] = {"quran", "qariah", "qari", "qunut"},
+    ["r"] = {"rumah", "rusa", "roti", "rambut", "raja", "ranting", "ronda", "raba", "rabu", "racun", "radar"},
+    ["s"] = {"susu", "sapi", "sendok", "sabun", "sepatu", "sungai", "sawah", "sabar", "sabda", "satu", "sayur"},
+    ["t"] = {"tikus", "topi", "tinta", "taman", "tali", "tulis", "tomat", "taat", "tabah", "tahu", "tahun"},
+    ["u"] = {"ular", "uang", "udang", "ubi", "unta", "ukiran", "uap", "ubah", "uban", "ucap", "udara"},
+    ["v"] = {"vila", "vaksin", "voli", "vokal", "vakum", "valid", "vampir", "variasi", "vas", "vektor", "virus"},
+    ["w"] = {"wajan", "waktu", "warga", "warna", "wortel", "wisata", "wadah", "waduk", "wafat", "wajah", "wajib"},
+    ["y"] = {"yoyo", "yodium", "yaki", "yakult", "yakin", "yayasan", "yoga", "yoni"},
+    ["z"] = {"zaitun", "zebra", "zaman", "zona", "zakat", "zakar", "zat", "zenit", "zero", "ziarah"}
 }
 
--- Bersihkan GUI lama jika ada
-if playerGui:FindFirstChild("SambungKataMegaOmega") then
-    playerGui.SambungKataMegaOmega:Destroy()
+-- Bersihkan GUI lama
+if playerGui:FindFirstChild("OmegaSambungKata") then
+    playerGui.OmegaSambungKata:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SambungKataMegaOmega"
+ScreenGui.Name = "OmegaSambungKata"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = playerGui
 
--- 1. TOMBOL "MENU" (Menempel di ujung paling kiri tengah layar HP)
+-- Tombol Menu Utama (Ujung Kiri Tengah)
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Name = "ToggleBtn"
 ToggleBtn.Size = UDim2.new(0, 90, 0, 45)
-ToggleBtn.Position = UDim2.new(0, 0, 0.5, -22)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.Position = UDim2.new(0, 0, 0.4, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+ToggleBtn.BorderColor3 = Color3.fromRGB(255, 0, 0)
 ToggleBtn.BorderSizePixel = 2
-ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 0, 0)
 ToggleBtn.TextSize = 14
 ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.Text = "MENU"
+ToggleBtn.Text = "OFF"
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 ToggleBtn.Parent = ScreenGui
 
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
-
--- 2. PANEL MENU UTAMA (Persis di tengah-tengah layar, tertutup saat awal)
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 320, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -160)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Visible = false
-MainFrame.Parent = ScreenGui
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
-MainCorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 45)
-Title.BackgroundTransparency = 1
-Title.Text = "⚡ MEGA OMEGA: SAMBUNG KATA ⚡"
-Title.TextColor3 = Color3.fromRGB(255, 215, 0)
-Title.TextSize = 12
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
-
-local CONFIG = {
-    MegaAutoPlay = false
-}
-
--- Tombol Toggle Fitur Mega Omega
-local ToggleFeature = Instance.new("TextButton")
-ToggleFeature.Size = UDim2.new(0.9, 0, 0, 45)
-ToggleFeature.Position = UDim2.new(0.05, 0, 0, 55)
-ToggleFeature.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
-ToggleFeature.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleFeature.TextSize = 12
-ToggleFeature.Font = Enum.Font.GothamBold
-ToggleFeature.Text = "Mega Auto Jawab: OFF"
-ToggleFeature.Parent = MainFrame
-
-local c = Instance.new("UICorner")
-c.CornerRadius = UDim.new(0, 8)
-c.Parent = ToggleFeature
-
-ToggleFeature.MouseButton1Click:Connect(function()
-    CONFIG.MegaAutoPlay = not CONFIG.MegaAutoPlay
-    ToggleFeature.BackgroundColor3 = CONFIG.MegaAutoPlay and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    ToggleFeature.Text = "Mega Auto Jawab: " .. (CONFIG.MegaAutoPlay and "ON" or "OFF")
-end)
-
-local StatusText = Instance.new("TextLabel")
-StatusText.Size = UDim2.new(0.9, 0, 0, 90)
-StatusText.Position = UDim2.new(0.05, 0, 0, 120)
-StatusText.BackgroundTransparency = 1
-StatusText.TextColor3 = Color3.fromRGB(0, 255, 255)
-StatusText.TextSize = 11
-StatusText.Font = Enum.Font.Gotham
-StatusText.Text = "Status: Siap! Kamus mega bahasa Indonesia sudah diperbanyak dari A sampai Z secara masif untuk mencocokkan kata secara instan."
-StatusText.TextWrapped = true
-StatusText.Parent = MainFrame
-
--- Logika Buka/Tutup Menu Utama
+local isRunning = false
 ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
+    isRunning = not isRunning
+    ToggleBtn.TextColor3 = isRunning and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    ToggleBtn.BorderColor3 = isRunning and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    ToggleBtn.Text = isRunning and "ON" else "OFF"
 end)
 
--- ==============================================================================
--- LOGIKA MEGA OMEGA: PENCARIAN REMOTE & PENGISIAN KATA MASIF
--- ==============================================================================
-local function findTargetRemote()
-    for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-        if remote:IsA("RemoteEvent") then
-            local name = remote.Name:lower()
-            if name:find("answer") or name:find("submit") or name:find("word") or name:find("guess") or name:find("send") then
-                return remote
-            end
-        end
-    end
-    return nil
-end
-
+-- Sistem Universal Text Scanner & Auto Sender
 task.spawn(function()
     while true do
-        task.wait(0.8)
-        if CONFIG.MegaAutoPlay then
+        task.wait(0.4)
+        if isRunning then
             pcall(function()
-                local targetRemote = findTargetRemote()
-                
-                -- Cari TextBox di game yang aktif
+                -- Pindai semua elemen teks di layar (TextLabel, TextButton, TextBox)
                 for _, ui in ipairs(playerGui:GetDescendants()) do
-                    if ui:IsA("TextBox") then
-                        local name = ui.Name:lower()
-                        if name:find("input") or name:find("answer") or name:find("word") or name:find("chat") then
-                            local lastChar = "a"
-                            if ui.Text and #ui.Text > 0 then
-                                lastChar = string.sub(ui.Text, -1):lower()
-                            end
+                    local targetText = ""
+                    if ui:IsA("TextBox") or ui:IsA("TextLabel") or ui:IsA("TextButton") then
+                        targetText = ui.Text or ""
+                    end
 
-                            local listWord = MegaDictionary[lastChar]
-                            if listWord and #listWord > 0 then
-                                local chosenWord = listWord[math.random(1, #listWord)]
+                    -- Jika mendeteksi karakter/huruf di kotak game
+                    if #targetText > 0 and #targetText <= 5 then
+                        local lastChar = string.sub(targetText, -1):lower()
+                        
+                        if Dictionary[lastChar] then
+                            local words = Dictionary[lastChar]
+                            local chosenWord = words[math.random(1, #words)]
+                            
+                            if ui:IsA("TextBox") then
                                 ui.Text = chosenWord
-                                
-                                if targetRemote then
-                                    targetRemote:FireServer(chosenWord)
-                                end
                             end
+                            
+                            -- Kirim perintah Enter secara virtual agar tersubmit otomatis oleh game
+                            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                            task.wait(0.05)
+                            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                            
+                            task.wait(1.2) -- Jeda aman agar tidak spam server
                         end
                     end
                 end
@@ -185,4 +113,4 @@ task.spawn(function()
     end
 end)
 
-print("⚡ MEGA OMEGA SAMBUNG KATA SCRIPT LOADED SUCCESSFULLY! ⚡")
+print("⚡ OMEGA SAMBUNG KATA LOADED ⚡")
