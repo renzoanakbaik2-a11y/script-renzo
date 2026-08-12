@@ -1,7 +1,7 @@
 -- ==============================================================================
--- PIXEL QUEST: CLEAN TOGGLE MENU (TOMBOL BUKA/TUTUP UTAMA)
--- Tombol ini berfungsi untuk memunculkan atau menyembunyikan menu utama 
--- tempat kita nanti meletakkan semua fitur (Auto Farm, Dungeon, dll).
+-- PIXEL QUEST: MENU UTAMA (POSISI DI KIRI ATAS)
+-- Tombol "MENU" diposisikan rapi di pojok kiri atas layar HP agar mudah dijangkau,
+-- dan berfungsi untuk membuka/menutup panel utama tempat fitur-fitur berada.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -18,31 +18,31 @@ ScreenGui.Name = "PixelQuestMenuSystem"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = playerGui
 
--- 1. TOMBOL UTAMA UNTUK MEMBUKA/MENUTUP MENU (Diposisikan di tengah atas)
+-- 1. TOMBOL "MENU" (Diposisikan di pojok kiri atas layar)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleBtn"
-ToggleBtn.Size = UDim2.new(0, 180, 0, 50)
-ToggleBtn.Position = UDim2.new(0.5, -90, 0.02, 0)
+ToggleBtn.Size = UDim2.new(0, 110, 0, 45)
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.08, 0)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
-ToggleBtn.BorderSizePixel = 3
+ToggleBtn.BorderSizePixel = 2
 ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
 ToggleBtn.TextSize = 14
 ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.Text = "❌ TUTUP MENU"
+ToggleBtn.Text = "MENU"
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 ToggleBtn.Parent = ScreenGui
 
 local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 10)
+BtnCorner.CornerRadius = UDim.new(0, 8)
 BtnCorner.Parent = ToggleBtn
 
--- 2. PANEL UTAMA TEMPAT FITUR-FITUR NANTI
+-- 2. PANEL UTAMA (Tempat fitur-fitur nanti)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 300, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -150, 0.15, 0)
+MainFrame.Position = UDim2.new(0.02, 0, 0.18, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -70,20 +70,13 @@ InfoText.BackgroundTransparency = 1
 InfoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 InfoText.TextSize = 11
 InfoText.Font = Enum.Font.Gotham
-InfoText.Text = "Menu utama berhasil dibuat. Tombol di atas berfungsi menyembunyikan/memunculkan panel ini. Siap diisi fitur!"
+InfoText.Text = "Tombol 'MENU' di kiri atas berhasil dipasang. Panel ini bisa disembunyikan dan dimunculkan kembali. Siap kita isi fitur selanjutnya!"
 InfoText.TextWrapped = true
 InfoText.Parent = MainFrame
 
 -- Logika Tombol Buka/Tutup Menu
 ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
-    if MainFrame.Visible then
-        ToggleBtn.Text = "❌ TUTUP MENU"
-        ToggleBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-    else
-        ToggleBtn.Text = "⚡ BUKA MENU"
-        ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
-    end
 end)
 
-print("⚡ MENU UTAMA BERHASIL DIMUAT! ⚡")
+print("⚡ TOMBOL MENU DI KIRI ATAS BERHASIL DIMUAT! ⚡")
