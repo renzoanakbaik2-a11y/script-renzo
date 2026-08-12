@@ -271,7 +271,7 @@ local function isRealSpawnedFruit(obj)
 end
 
 -- ==========================================
--- 3. JALAN DI ATAS AIR ULTRA MULUS & ANTI-GETAR (DISEMPURNAKAN)
+-- 3. JALAN DI ATAS AIR ULTRA MULUS & ANTI-GETAR
 -- ==========================================
 local waterWalkConnection = nil
 local function toggleWaterWalk(state)
@@ -290,7 +290,6 @@ local function toggleWaterWalk(state)
                 if Settings.WalkOnWater and rootPart and humanoid and not activeFlyConnection then
                     local pos = rootPart.Position
                     if pos.Y <= 5 and pos.Y > -40 then
-                        -- Mengunci posisi Y tepat di atas permukaan air secara stabil (bebas getar)
                         rootPart.CFrame = CFrame.new(pos.X, 3.2, pos.Z) * (rootPart.CFrame - rootPart.CFrame.Position)
                         
                         local bv = rootPart:FindFirstChild("BodyVelocityWater")
@@ -327,7 +326,7 @@ local function toggleWaterWalk(state)
 end
 
 -- ==========================================
--- 4. AUTO STORE FRUIT & AUTO CHEST (TEMBUS RUMAH & TEMBOK)
+-- 4. AUTO STORE FRUIT & AUTO CHEST (DIREVISI UNTUK DELTA)
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -358,24 +357,34 @@ task.spawn(function()
             if Settings.AutoChest and not activeFlyConnection then
                 local rootPart = getCharacterRootPart()
                 if rootPart then
+                    local targetChestPart = nil
+                    local shortestDist = math.huge
+
                     for _, v in ipairs(Workspace:GetDescendants()) do
-                        if not Settings.AutoChest then break end
-                        if v:IsA("BasePart") then
+                        if v:IsA("BasePart") or v:IsA("Model") then
                             local nameLower = v.Name:lower()
                             if nameLower:find("chest") or nameLower:find("bronze") or nameLower:find("silver") or nameLower:find("gold") or nameLower:find("diamond") then
-                                if v.Parent and v.Transparency < 1 then
-                                    smoothFlyTo(v.CFrame, "AutoChest")
-                                    local startTime = tick()
-                                    repeat
-                                        task.wait(0.15)
-                                        if not getCharacterRootPart() then break end
-                                        local currentRoot = getCharacterRootPart()
-                                        if not currentRoot then break end
-                                        local dist = (currentRoot.Position - v.Position).Magnitude
-                                    until dist < 6 or not v.Parent or tick() - startTime > 4
+                                local partToCheck = v:IsA("Model") and (v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")) or v
+                                if partToCheck then
+                                    local dist = (rootPart.Position - partToCheck.Position).Magnitude
+                                    if dist < shortestDist and partToCheck.Transparency < 1 then
+                                        shortestDist = dist
+                                        targetChestPart = partToCheck
+                                    end
                                 end
                             end
                         end
+                    end
+
+                    if targetChestPart then
+                        smoothFlyTo(targetChestPart.CFrame, "AutoChest")
+                        local startTime = tick()
+                        repeat
+                            task.wait(0.15)
+                            local currentRoot = getCharacterRootPart()
+                            if not currentRoot or not targetChestPart.Parent then break end
+                            local dist = (currentRoot.Position - targetChestPart.Position).Magnitude
+                        until dist < 6 or not Settings.AutoChest or tick() - startTime > 4
                     end
                 end
             end
@@ -554,7 +563,7 @@ end
 if Settings.FpsBoost then applyFpsBoost(true) end
 
 -- ==========================================
--- 9. TAMPILAN MENU UTAMA (TERSUSUN RAPI)
+-- 9. TAMPILAN MENU UTAMA
 -- ==========================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -681,10 +690,6 @@ local function createToggle(text, settingKey, callback)
     end)
     return btn
 end
-
--- ==========================================
--- PENYUSUNAN MENU TERSUSUN RAPI & AKURAT
--- ==========================================
 
 createSectionHeader("1. Auto Join Tim & Server")
 createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
