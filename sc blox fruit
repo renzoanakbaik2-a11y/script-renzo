@@ -1,7 +1,8 @@
 -- ==============================================================================
--- PIXEL QUEST: FIXED UI TOGGLE & ULTIMATE DUNGEON PORTAL SCRIPT
--- Perbaikan: Tombol Toggle Menu diperbaiki agar responsif, posisi aman di layar,
--- serta sistem Auto Farm, Auto Boss, dan Auto Dungeon Portal.
+-- PIXEL QUEST: ULTIMATE ROBUST GUI & AUTO SYSTEM
+-- Perbaikan Total: Menggunakan CoreGui (jika didukung executor) atau PlayerGui 
+-- dengan proteksi anti-destroy, tombol menu mengambang (Floating Toggle), 
+-- serta sistem Auto Farm, Auto Boss, dan Auto Dungeon Portal yang aman.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -9,14 +10,15 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
-local CONFIG_FILE_NAME = "PixelQuest_FixedConfig.json"
+local CONFIG_FILE_NAME = "PixelQuest_UltimateSafeConfig.json"
 
--- Daftar Nama Portal Dungeon Berdasarkan Tingkat Tengkorak / Bioma
+-- Daftar Nama Portal Dungeon & Tingkat Tengkorak
 local DUNGEON_LIST = {
     {Tier = 1, Name = "Crab Cove", Desc = "Dungeon Pantai Awal"},
     {Tier = 2, Name = "Mermaid Cove", Desc = "Dungeon Pesisir Air"},
@@ -39,7 +41,7 @@ local CONFIG = {
     TeleportOffset = {0, 3, 0}
 }
 
--- Load & Save Settings
+-- Load & Save Settings via JSON
 local function saveSettings()
     local success, encoded = pcall(function() return HttpService:JSONEncode(CONFIG) end)
     if success and writefile then pcall(function() writefile(CONFIG_FILE_NAME, encoded) end) end
@@ -56,43 +58,61 @@ end
 loadSettings()
 
 -- ==============================================================================
--- USER INTERFACE (UI) & TOMBOL BUKA/TUTUP MENU YANG DIPERBAIKI
+-- PEMBUATAN UI YANG DIJAMIN MUNCUL (CONTAINER AMAN)
 -- ==============================================================================
-local existingGui = player:WaitForChild("PlayerGui"):FindFirstChild("PixelQuestFixedUI")
-if existingGui then existingGui:Destroy() end
+local guiParent = player:WaitForChild("PlayerGui")
+pcall(function()
+    if CoreGui and gethui then
+        guiParent = gethui()
+    elseif CoreGui and syn then
+        guiParent = CoreGui
+    end
+end)
+
+-- Bersihkan GUI lama jika ada duplikasi
+for _, v in ipairs(guiParent:GetChildren()) do
+    if v.Name == "PixelQuestMasterUI" then
+        v:Destroy()
+    end
+end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PixelQuestFixedUI"
+ScreenGui.Name = "PixelQuestMasterUI"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.Parent = guiParent
 
--- Tombol Mengambang (Floating Toggle Button) untuk Membuka/Menutup Menu Utama
+-- 1. Tombol Menu Mengambang (Floating Button) yang sangat jelas di layar
 local ToggleUIBtn = Instance.new("TextButton")
-ToggleUIBtn.Size = UDim2.new(0, 130, 0, 40)
-ToggleUIBtn.Position = UDim2.new(0.02, 0, 0.12, 0)
-ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-ToggleUIBtn.BorderColor3 = Color3.fromRGB(0, 255, 200)
-ToggleUIBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
+ToggleUIBtn.Name = "ToggleMenuButton"
+ToggleUIBtn.Size = UDim2.new(0, 140, 0, 45)
+ToggleUIBtn.Position = UDim2.new(0.02, 0, 0.10, 0)
+ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleUIBtn.BorderColor3 = Color3.fromRGB(0, 255, 150)
+ToggleUIBtn.BorderSizePixel = 2
+ToggleUIBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
 ToggleUIBtn.TextSize = 13
 ToggleUIBtn.Font = Enum.Font.GothamBold
-ToggleUIBtn.Text = "⚙️ MENU UTAMA"
+ToggleUIBtn.Text = "⚡ BUKA MENU"
 ToggleUIBtn.Active = true
 ToggleUIBtn.Draggable = true
+ToggleUIBtn.ZIndex = 9999
 ToggleUIBtn.Parent = ScreenGui
 
 local TglCorner = Instance.new("UICorner")
 TglCorner.CornerRadius = UDim.new(0, 8)
 TglCorner.Parent = ToggleUIBtn
 
--- Panel Menu Utama (Main Frame)
+-- 2. Panel Utama Menu (Main Frame)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 360)
-MainFrame.Position = UDim2.new(0.02, 0, 0.20, 0)
+MainFrame.Name = "MainPanel"
+MainFrame.Size = UDim2.new(0, 310, 0, 370)
+MainFrame.Position = UDim2.new(0.02, 0, 0.18, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = true -- Mulai dalam kondisi terbuka agar langsung terlihat
+MainFrame.Visible = true -- Dibuka secara default agar langsung terlihat
+MainFrame.ZIndex = 9988
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -102,17 +122,26 @@ MainCorner.Parent = MainFrame
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
-Title.Text = "⚡ PIXEL QUEST GOD MENU ⚡"
-Title.TextColor3 = Color3.fromRGB(0, 255, 200)
+Title.Text = "🔥 PIXEL QUEST GOD MODE 🔥"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.TextSize = 12
 Title.Font = Enum.Font.GothamBold
+Title.ZIndex = 9989
 Title.Parent = MainFrame
 
--- Fungsi untuk menyambungkan tombol buka/tutup menu secara aman
+-- Logika Tombol Buka/Tutup Menu Utama
 ToggleUIBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
+    if MainFrame.Visible then
+        ToggleUIBtn.Text = "❌ TUTUP MENU"
+        ToggleUIBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+    else
+        ToggleUIBtn.Text = "⚡ BUKA MENU"
+        ToggleUIBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
+    end
 end)
 
+-- Fungsi Pembuatan Tombol Toggle Fitur
 local function createToggle(name, defaultState, posY, callback)
     local Btn = Instance.new("TextButton")
     Btn.Size = UDim2.new(0.9, 0, 0, 35)
@@ -122,6 +151,7 @@ local function createToggle(name, defaultState, posY, callback)
     Btn.TextSize = 12
     Btn.Font = Enum.Font.GothamBold
     Btn.Text = name .. ": " .. (defaultState and "ON" or "OFF")
+    Btn.ZIndex = 9989
     Btn.Parent = MainFrame
 
     local Corner = Instance.new("UICorner")
@@ -149,10 +179,11 @@ local DungeonLabel = Instance.new("TextLabel")
 DungeonLabel.Size = UDim2.new(0.9, 0, 0, 30)
 DungeonLabel.Position = UDim2.new(0.05, 0, 0, 205)
 DungeonLabel.BackgroundTransparency = 1
-DungeonLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+DungeonLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
 DungeonLabel.TextSize = 11
 DungeonLabel.Font = Enum.Font.GothamBold
 DungeonLabel.Text = "💀 Tengkorak Tier " .. currentSelected.Tier .. " : " .. currentSelected.Name
+DungeonLabel.ZIndex = 9989
 DungeonLabel.Parent = MainFrame
 
 local DungeonBtn = Instance.new("TextButton")
@@ -163,6 +194,7 @@ DungeonBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 DungeonBtn.TextSize = 12
 DungeonBtn.Font = Enum.Font.GothamBold
 DungeonBtn.Text = "Ganti Pilihan Dungeon (Klik)"
+DungeonBtn.ZIndex = 9989
 DungeonBtn.Parent = MainFrame
 
 local DngCorner = Instance.new("UICorner")
@@ -183,15 +215,16 @@ local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(0.9, 0, 0, 35)
 StatusLabel.Position = UDim2.new(0.05, 0, 0, 280)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
 StatusLabel.TextSize = 11
 StatusLabel.Font = Enum.Font.Gotham
-StatusLabel.Text = "Status: Menu Berhasil Dimuat!"
+StatusLabel.Text = "Status: Berhasil Dimuat & Siap Beraksi!"
 StatusLabel.TextWrapped = true
+StatusLabel.ZIndex = 9989
 StatusLabel.Parent = MainFrame
 
 -- ==============================================================================
--- LOGIKA UTAMA PENCARIAN TARGET & EKSEKUSI
+-- LOGIKA UTAMA SCRIPT (AUTO FARM, BOSS, PORTAL & AUTO LOOT)
 -- ==============================================================================
 local function findTargetObject()
     local targetPart = nil
@@ -301,4 +334,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("⚡ PIXEL QUEST: MENU UTAMA BERHASIL DIPERBAIKI & AKTIF! ⚡")
+print("⚡ PIXEL QUEST: MASTER GUI BERHASIL DIMUAT SEMPURNA! ⚡")
