@@ -210,21 +210,6 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 targetPos = targetPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, currentHeight, 0)
             end
-        elseif checkSettingKey == "AutoChest" then
-            local nearest = nil
-            local shortDist = math.huge
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if v.Name:lower():find("chest") and v:IsA("BasePart") then
-                    local d = (currentPos - v.Position).Magnitude
-                    if d < shortDist then
-                        shortDist = d
-                        nearest = v
-                    end
-                end
-            end
-            if nearest then
-                targetPos = nearest.Position + Vector3.new(0, 2, 0)
-            end
         end
 
         local direction = (targetPos - currentPos)
@@ -270,11 +255,11 @@ local function isRealSpawnedFruit(obj)
 end
 
 -- ==========================================
--- 3. JALAN DI ATAS AIR (ANTI MATI & SOLID)
+-- 3. JALAN DI ATAS AIR (REVISI TOTAL: 100% AMAN TANPA JATUH/MATI)
 -- ==========================================
 local WaterPlatform = nil
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait(0.05) do
         pcall(function()
             local character = LocalPlayer.Character
             local rootPart = getCharacterRootPart()
@@ -283,8 +268,8 @@ task.spawn(function()
             if Settings.WalkOnWater and rootPart and humanoid then
                 if not WaterPlatform or not WaterPlatform.Parent then
                     WaterPlatform = Instance.new("Part")
-                    WaterPlatform.Name = "SolidWaterPlatform"
-                    WaterPlatform.Size = Vector3.new(50, 3, 50)
+                    WaterPlatform.Name = "SolidWaterPlatformFixed"
+                    WaterPlatform.Size = Vector3.new(40, 1, 40)
                     WaterPlatform.Anchored = true
                     WaterPlatform.CanCollide = true
                     WaterPlatform.Transparency = 1
@@ -292,11 +277,14 @@ task.spawn(function()
                 end
                 
                 local pos = rootPart.Position
-                -- Memastikan platform stabil di permukaan air tanpa membuat player melompat-lompat atau mati karena jatuh
-                if pos.Y <= 10 and pos.Y > -25 then
-                    WaterPlatform.Position = Vector3.new(pos.X, 1.2, pos.Z)
+                -- Deteksi posisi air Blox Fruits (biasanya Y di sekitar 0 hingga -15)
+                if pos.Y <= 5 and pos.Y > -30 then
+                    -- Kunci posisi platform pas di bawah kaki player agar tidak lompat-lompat / jatuh ke air
+                    WaterPlatform.Position = Vector3.new(pos.X, pos.Y - 3.2, pos.Z)
                     WaterPlatform.CanCollide = true
-                    if humanoid:GetState() == Enum.HumanoidStateType.Freefall and pos.Y < 4 then
+                    
+                    -- Paksa state humanoid jadi Running/Standing agar tidak masuk fase freefall/mati jatuh
+                    if humanoid:GetState() == Enum.HumanoidStateType.Freefall or humanoid:GetState() == Enum.HumanoidStateType.FallingDown then
                         humanoid:ChangeState(Enum.HumanoidStateType.Running)
                     end
                 else
@@ -313,7 +301,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- 4. AUTO STORE FRUIT & AUTO CHEST
+-- 4. AUTO STORE FRUIT & AUTO CHEST (KELiling SEMUA CHEST DI MAP)
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -338,28 +326,29 @@ local function autoStoreFruits()
     end)
 end
 
--- Auto Chest Terbang Halus & Konsisten (Tanpa Macet)
+-- Auto Chest: Mengambil SEMUA chest yang ada di seluruh map secara berurutan tanpa macet
 task.spawn(function()
-    while task.wait(1.5) do
+    while task.wait(1) do
         pcall(function()
             if Settings.AutoChest and not activeFlyConnection then
                 local rootPart = getCharacterRootPart()
                 if rootPart then
-                    local nearestChest = nil
-                    local shortestDist = math.huge
-                    
+                    -- Cari semua chest di Workspace
                     for _, v in ipairs(Workspace:GetDescendants()) do
+                        if not Settings.AutoChest then break end
                         if v.Name:lower():find("chest") and v:IsA("BasePart") then
-                            local dist = (rootPart.Position - v.Position).Magnitude
-                            if dist < shortestDist then
-                                shortestDist = dist
-                                nearestChest = v
+                            -- Pastikan chest valid dan belum diambil / masih ada
+                            if v.Parent and v.Transparency < 1 then
+                                smoothFlyTo(v.CFrame, "AutoChest")
+                                -- Tunggu sampai player mendekati chest tersebut sebelum pindah ke chest berikutnya
+                                local startTime = tick()
+                                repeat
+                                    task.wait(0.2)
+                                    if not getCharacterRootPart() then break end
+                                    local dist = (getCharacterRootPart().Position - v.Position).Magnitude
+                                until dist < 8 or not v.Parent or tick() - startTime > 6
                             end
                         end
-                    end
-                    
-                    if nearestChest then
-                        smoothFlyTo(nearestChest.CFrame, "AutoChest")
                     end
                 end
             end
@@ -709,10 +698,10 @@ createToggle("Tampilkan Monitor Server", "MonitorVisible", nil)
 createSectionHeader("3. Auto Collect (Buah & Chest)")
 createToggle("Auto Teleport ke Buah Spawn", "AutoTeleportFruit", nil)
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
-createToggle("Auto Chest (Terbang Ambil Peti)", "AutoChest", nil)
-createToggle("Jalan di Atas Air (Anti Jatuh/Mati)", "WalkOnWater", nil)
+createToggle("Auto Chest (Ambil Semua Peti di Map)", "AutoChest", nil)
+createToggle("Jalan di Atas Air (Sempurna)", "WalkOnWater", nil)
 
--- 4. Target Player (Dengan Deteksi Level Asli Blox Fruits)
+-- 4. Target Player (Dengan Deteksi Level Asli Blox Fruits Universal)
 createSectionHeader("4. Target Player")
 createToggle("Auto Teleport ke Player", "AutoFlyPlayer", nil)
 
@@ -773,18 +762,31 @@ local function refreshPlayerList()
         if p ~= LocalPlayer then
             local pLevel = "?"
             pcall(function()
-                -- Mendukung berbagai struktur data level di Blox Fruits
+                -- Deteksi folder data dan leaderstats Blox Fruits secara menyeluruh
                 local leaderstats = p:FindFirstChild("leaderstats")
                 if leaderstats then
-                    local lvlVal = leaderstats:FindFirstChild("Level") or leaderstats:FindFirstChild("LVL") or leaderstats:FindFirstChild("level")
-                    if lvlVal then
-                        pLevel = tostring(lvlVal.Value)
+                    for _, stat in ipairs(leaderstats:GetChildren()) do
+                        local nameLower = stat.Name:lower()
+                        if nameLower:find("lvl") or nameLower:find("level") then
+                            pLevel = tostring(stat.Value)
+                            break
+                        end
                     end
                 end
-                if pLevel == "?" and p:FindFirstChild("Data") then
-                    local dataLvl = p.Data:FindFirstChild("Level") or p.Data:FindFirstChild("LVL")
-                    if dataLvl then
-                        pLevel = tostring(dataLvl.Value)
+                
+                if pLevel == "?" then
+                    for _, folderName in ipairs({"Data", "PlayerData", "Stats"}) do
+                        local folder = p:FindFirstChild(folderName)
+                        if folder then
+                            for _, stat in ipairs(folder:GetChildren()) do
+                                local nameLower = stat.Name:lower()
+                                if nameLower:find("lvl") or nameLower:find("level") then
+                                    pLevel = tostring(stat.Value)
+                                    break
+                                end
+                            end
+                        end
+                        if pLevel ~= "?" then break end
                     end
                 end
             end)
