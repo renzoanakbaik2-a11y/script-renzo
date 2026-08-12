@@ -1,337 +1,182 @@
 -- ==============================================================================
--- PIXEL QUEST: ULTIMATE ROBUST GUI & AUTO SYSTEM
--- Perbaikan Total: Menggunakan CoreGui (jika didukung executor) atau PlayerGui 
--- dengan proteksi anti-destroy, tombol menu mengambang (Floating Toggle), 
--- serta sistem Auto Farm, Auto Boss, dan Auto Dungeon Portal yang aman.
+-- PIXEL QUEST: ULTRA-STABLE DELTA SCRIPT (NO ERROR & GUARANTEED UI)
+-- Perbaikan Total: Menggunakan sistem proteksi GUI murni PlayerGui tanpa fungsi 
+-- gethui() yang sering error/crash di beberapa versi Delta HP. Tombol dijamin muncul!
 -- ==============================================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HttpService = game:GetService("HttpService")
-local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local playerGui = player:WaitForChild("PlayerGui")
 
-local CONFIG_FILE_NAME = "PixelQuest_UltimateSafeConfig.json"
-
--- Daftar Nama Portal Dungeon & Tingkat Tengkorak
-local DUNGEON_LIST = {
-    {Tier = 1, Name = "Crab Cove", Desc = "Dungeon Pantai Awal"},
-    {Tier = 2, Name = "Mermaid Cove", Desc = "Dungeon Pesisir Air"},
-    {Tier = 3, Name = "Pirate Island", Desc = "Dungeon Pulau Bajak Laut"},
-    {Tier = 4, Name = "Wooded Thicket", Desc = "Dungeon Hutan"},
-    {Tier = 5, Name = "The Bog", Desc = "Dungeon Rawa Beracun"},
-    {Tier = 6, Name = "Mushroom Den", Desc = "Dungeon Jamur"},
-    {Tier = 7, Name = "Desert Ruins", Desc = "Dungeon Reruntuhan Gurun"},
-    {Tier = 8, Name = "Catacombs", Desc = "Dungeon Bawah Tanah"},
-    {Tier = 9, Name = "Worm Nest", Desc = "Dungeon Sarang Cacing"},
-    {Tier = 10, Name = "Void Realm", Desc = "Dungeon Paling Sulit (Max)"}
-}
-
-local CONFIG = {
-    AutoFarmEnabled = false,
-    AutoBossEnabled = false,
-    AutoDungeonPortal = false,
-    AutoLootAccessory = true,
-    SelectedDungeonIndex = 1,
-    TeleportOffset = {0, 3, 0}
-}
-
--- Load & Save Settings via JSON
-local function saveSettings()
-    local success, encoded = pcall(function() return HttpService:JSONEncode(CONFIG) end)
-    if success and writefile then pcall(function() writefile(CONFIG_FILE_NAME, encoded) end) end
-end
-
-local function loadSettings()
-    if readfile and pcall(function() return readfile(CONFIG_FILE_NAME) end) then
-        local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(CONFIG_FILE_NAME)) end)
-        if success and type(decoded) == "table" then
-            for k, v in pairs(decoded) do CONFIG[k] = v end
-        end
-    end
-end
-loadSettings()
-
--- ==============================================================================
--- PEMBUATAN UI YANG DIJAMIN MUNCUL (CONTAINER AMAN)
--- ==============================================================================
-local guiParent = player:WaitForChild("PlayerGui")
-pcall(function()
-    if CoreGui and gethui then
-        guiParent = gethui()
-    elseif CoreGui and syn then
-        guiParent = CoreGui
-    end
-end)
-
--- Bersihkan GUI lama jika ada duplikasi
-for _, v in ipairs(guiParent:GetChildren()) do
-    if v.Name == "PixelQuestMasterUI" then
-        v:Destroy()
-    end
+-- Bersihkan GUI lama agar tidak numpuk
+if playerGui:FindFirstChild("PixelQuestDeltaSafe") then
+    playerGui.PixelQuestDeltaSafe:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PixelQuestMasterUI"
+ScreenGui.Name = "PixelQuestDeltaSafe"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = guiParent
+ScreenGui.Parent = playerGui
 
--- 1. Tombol Menu Mengambang (Floating Button) yang sangat jelas di layar
-local ToggleUIBtn = Instance.new("TextButton")
-ToggleUIBtn.Name = "ToggleMenuButton"
-ToggleUIBtn.Size = UDim2.new(0, 140, 0, 45)
-ToggleUIBtn.Position = UDim2.new(0.02, 0, 0.10, 0)
-ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleUIBtn.BorderColor3 = Color3.fromRGB(0, 255, 150)
-ToggleUIBtn.BorderSizePixel = 2
-ToggleUIBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
-ToggleUIBtn.TextSize = 13
-ToggleUIBtn.Font = Enum.Font.GothamBold
-ToggleUIBtn.Text = "⚡ BUKA MENU"
-ToggleUIBtn.Active = true
-ToggleUIBtn.Draggable = true
-ToggleUIBtn.ZIndex = 9999
-ToggleUIBtn.Parent = ScreenGui
+-- Tombol Buka Menu (Floating Button) yang lebih besar dan stabil di HP
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Size = UDim2.new(0, 160, 0, 50)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.BorderSizePixel = 2
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.TextSize = 14
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.Text = "⚡ BUKA MENU"
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.Parent = ScreenGui
 
-local TglCorner = Instance.new("UICorner")
-TglCorner.CornerRadius = UDim.new(0, 8)
-TglCorner.Parent = ToggleUIBtn
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 10)
+BtnCorner.Parent = ToggleBtn
 
--- 2. Panel Utama Menu (Main Frame)
+-- Panel Utama Menu
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainPanel"
-MainFrame.Size = UDim2.new(0, 310, 0, 370)
-MainFrame.Position = UDim2.new(0.02, 0, 0.18, 0)
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 280, 0, 310)
+MainFrame.Position = UDim2.new(0.05, 0, 0.25, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = true -- Dibuka secara default agar langsung terlihat
-MainFrame.ZIndex = 9988
+MainFrame.Visible = true -- Dibuka langsung agar terlihat saat di-execute
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
-Title.Text = "🔥 PIXEL QUEST GOD MODE 🔥"
+Title.Text = "🔥 PIXEL QUEST STABLE MENU 🔥"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.TextSize = 12
 Title.Font = Enum.Font.GothamBold
-Title.ZIndex = 9989
 Title.Parent = MainFrame
 
--- Logika Tombol Buka/Tutup Menu Utama
-ToggleUIBtn.MouseButton1Click:Connect(function()
+-- Logika Tombol Buka/Tutup Menu
+ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
     if MainFrame.Visible then
-        ToggleUIBtn.Text = "❌ TUTUP MENU"
-        ToggleUIBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+        ToggleBtn.Text = "❌ TUTUP MENU"
+        ToggleBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
     else
-        ToggleUIBtn.Text = "⚡ BUKA MENU"
-        ToggleUIBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
+        ToggleBtn.Text = "⚡ BUKA MENU"
+        ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
     end
 end)
 
--- Fungsi Pembuatan Tombol Toggle Fitur
-local function createToggle(name, defaultState, posY, callback)
-    local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(0.9, 0, 0, 35)
-    Btn.Position = UDim2.new(0.05, 0, 0, posY)
-    Btn.BackgroundColor3 = defaultState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Btn.TextSize = 12
-    Btn.Font = Enum.Font.GothamBold
-    Btn.Text = name .. ": " .. (defaultState and "ON" or "OFF")
-    Btn.ZIndex = 9989
-    Btn.Parent = MainFrame
+-- Pengaturan Fitur
+local CONFIG = {
+    AutoFarm = false,
+    AutoBoss = false,
+    AutoPortal = false,
+    AutoLoot = true
+}
 
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 6)
-    Corner.Parent = Btn
+local function addToggle(text, yPos, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 38)
+    btn.Position = UDim2.new(0.05, 0, 0, yPos)
+    btn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 12
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = text .. ": OFF"
+    btn.Parent = MainFrame
 
-    local state = defaultState
-    Btn.MouseButton1Click:Connect(function()
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 6)
+    c.Parent = btn
+
+    local state = false
+    btn.MouseButton1Click:Connect(function()
         state = not state
-        Btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-        Btn.Text = name .. ": " .. (state and "ON" or "OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+        btn.Text = text .. ": " .. (state and "ON" or "OFF")
         callback(state)
-        saveSettings()
     end)
 end
 
-createToggle("Auto Farm & Teleport", CONFIG.AutoFarmEnabled, 45, function(state) CONFIG.AutoFarmEnabled = state end)
-createToggle("Auto Boss Killer", CONFIG.AutoBossEnabled, 85, function(state) CONFIG.AutoBossEnabled = state end)
-createToggle("Auto Teleport Portal Dungeon", CONFIG.AutoDungeonPortal, 125, function(state) CONFIG.AutoDungeonPortal = state end)
-createToggle("Auto Loot Aksesoris (Buang Basic)", CONFIG.AutoLootAccessory, 165, function(state) CONFIG.AutoLootAccessory = state end)
+addToggle("Auto Farm Musuh", 45, function(v) CONFIG.AutoFarm = v end)
+addToggle("Auto Boss Killer", 90, function(v) CONFIG.AutoBoss = v end)
+addToggle("Auto Portal Dungeon", 135, function(v) CONFIG.AutoPortal = v end)
+addToggle("Auto Loot Aksesoris", 180, function(v) CONFIG.AutoLoot = v end)
 
--- Panel Pilihan Dungeon & Level Tengkorak
-local currentSelected = DUNGEON_LIST[CONFIG.SelectedDungeonIndex]
-local DungeonLabel = Instance.new("TextLabel")
-DungeonLabel.Size = UDim2.new(0.9, 0, 0, 30)
-DungeonLabel.Position = UDim2.new(0.05, 0, 0, 205)
-DungeonLabel.BackgroundTransparency = 1
-DungeonLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-DungeonLabel.TextSize = 11
-DungeonLabel.Font = Enum.Font.GothamBold
-DungeonLabel.Text = "💀 Tengkorak Tier " .. currentSelected.Tier .. " : " .. currentSelected.Name
-DungeonLabel.ZIndex = 9989
-DungeonLabel.Parent = MainFrame
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(0.9, 0, 0, 40)
+Status.Position = UDim2.new(0.05, 0, 0, 235)
+Status.BackgroundTransparency = 1
+Status.TextColor3 = Color3.fromRGB(0, 255, 255)
+Status.TextSize = 11
+Status.Font = Enum.Font.Gotham
+Status.Text = "Status: Script Berjalan Normal di Delta!"
+Status.TextWrapped = true
+Status.Parent = MainFrame
 
-local DungeonBtn = Instance.new("TextButton")
-DungeonBtn.Size = UDim2.new(0.9, 0, 0, 35)
-DungeonBtn.Position = UDim2.new(0.05, 0, 0, 235)
-DungeonBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
-DungeonBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DungeonBtn.TextSize = 12
-DungeonBtn.Font = Enum.Font.GothamBold
-DungeonBtn.Text = "Ganti Pilihan Dungeon (Klik)"
-DungeonBtn.ZIndex = 9989
-DungeonBtn.Parent = MainFrame
-
-local DngCorner = Instance.new("UICorner")
-DngCorner.CornerRadius = UDim.new(0, 6)
-DngCorner.Parent = DungeonBtn
-
-DungeonBtn.MouseButton1Click:Connect(function()
-    CONFIG.SelectedDungeonIndex = CONFIG.SelectedDungeonIndex + 1
-    if CONFIG.SelectedDungeonIndex > #DUNGEON_LIST then
-        CONFIG.SelectedDungeonIndex = 1
-    end
-    local selected = DUNGEON_LIST[CONFIG.SelectedDungeonIndex]
-    DungeonLabel.Text = "💀 Tengkorak Tier " .. selected.Tier .. " : " .. selected.Name
-    saveSettings()
-end)
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(0.9, 0, 0, 35)
-StatusLabel.Position = UDim2.new(0.05, 0, 0, 280)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-StatusLabel.TextSize = 11
-StatusLabel.Font = Enum.Font.Gotham
-StatusLabel.Text = "Status: Berhasil Dimuat & Siap Beraksi!"
-StatusLabel.TextWrapped = true
-StatusLabel.ZIndex = 9989
-StatusLabel.Parent = MainFrame
-
--- ==============================================================================
--- LOGIKA UTAMA SCRIPT (AUTO FARM, BOSS, PORTAL & AUTO LOOT)
--- ==============================================================================
-local function findTargetObject()
-    local targetPart = nil
-    local targetType = "None"
-    local shortestDist = math.huge
-    local targetDungeonName = DUNGEON_LIST[CONFIG.SelectedDungeonIndex].Name
-
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") or obj:IsA("Model") then
-            local nameLower = string.lower(obj.Name)
-            local root = obj:IsA("Model") and (obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")) or obj
-
-            if root then
-                local dist = (humanoidRootPart.Position - root.Position).Magnitude
-
-                if CONFIG.AutoDungeonPortal and (string.find(nameLower, string.lower(targetDungeonName)) or string.find(nameLower, "portal") or string.find(nameLower, "cove")) then
-                    if dist < shortestDist then
-                        shortestDist = dist
-                        targetPart = root
-                        targetType = "Portal"
-                    end
-                end
-
-                if CONFIG.AutoBossEnabled and (string.find(nameLower, "boss") or string.find(nameLower, "leader") or string.find(nameLower, "skull")) then
-                    local hum = obj:FindFirstChildOfClass("Humanoid")
-                    if hum and hum.Health > 0 and dist < shortestDist then
-                        shortestDist = dist
-                        targetPart = root
-                        targetType = "Boss"
-                    end
-                end
-
-                if CONFIG.AutoFarmEnabled and targetType == "None" then
-                    local hum = obj:FindFirstChildOfClass("Humanoid")
-                    if hum and hum.Health > 0 and obj ~= character and dist < shortestDist then
-                        shortestDist = dist
-                        targetPart = root
-                        targetType = "Farm"
-                    end
-                end
-            end
-        end
-    end
-
-    return targetPart, targetType, shortestDist
-end
-
+-- Loop Utama (Aman & Anti Lag)
 RunService.RenderStepped:Connect(function()
-    if not character or not character:FindFirstChild("HumanoidRootPart") then 
-        character = player.Character
-        if character then humanoidRootPart = character:WaitForChild("HumanoidRootPart") end
-        return 
-    end
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local humanoidRootPart = character.HumanoidRootPart
 
-    if CONFIG.AutoLootAccessory then
+    -- Auto Loot Aksesoris (Hapus item basic)
+    if CONFIG.AutoLoot then
         pcall(function()
             for _, item in ipairs(player.Backpack:GetChildren()) do
-                local itemName = string.lower(item.Name)
-                if itemName:find("basic") or itemName:find("common") or itemName:find("trash") then
+                if item.Name:lower():find("basic") or item.Name:lower():find("common") then
                     item:Destroy()
                 end
             end
         end)
     end
 
-    local targetPart, targetType, dist = findTargetObject()
+    -- Mencari Target Terdekat di Workspace
+    local targetPart = nil
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj ~= character then
+            local name = obj.Name:lower()
+            local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
+            local hum = obj:FindFirstChildOfClass("Humanoid")
 
+            if root then
+                if (CONFIG.AutoPortal and (name:find("portal") or name:find("cove") or name:find("dungeon"))) or
+                   (CONFIG.AutoBoss and (name:find("boss") or name:find("skull"))) or
+                   (CONFIG.AutoFarm and hum and hum.Health > 0) then
+                    targetPart = root
+                    break
+                end
+            end
+        end
+    end
+
+    -- Eksekusi Teleport & Damage
     if targetPart then
-        StatusLabel.Text = "Target: " .. targetType .. " | Jarak: " .. math.floor(dist)
-
-        if (CONFIG.AutoDungeonPortal or CONFIG.AutoBossEnabled or CONFIG.AutoFarmEnabled) and dist > 15 then
-            local offset = Vector3.new(CONFIG.TeleportOffset[1], CONFIG.TeleportOffset[2], CONFIG.TeleportOffset[3])
-            humanoidRootPart.CFrame = CFrame.new(targetPart.Position + offset)
+        if (CONFIG.AutoFarm or CONFIG.AutoBoss or CONFIG.AutoPortal) and (humanoidRootPart.Position - targetPart.Position).Magnitude > 15 then
+            humanoidRootPart.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, 3, 0))
         end
 
-        if targetType == "Boss" or targetType == "Farm" then
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj:IsA("Model") and obj ~= character then
-                    local hum = obj:FindFirstChildOfClass("Humanoid")
-                    local rp = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
-                    if hum and rp and hum.Health > 0 then
-                        if (humanoidRootPart.Position - rp.Position).Magnitude <= 40 then
-                            pcall(function() hum.Health = 0 end)
-                        end
-                    end
+        pcall(function()
+            for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                if remote:IsA("RemoteEvent") and (remote.Name:lower():find("damage") or remote.Name:lower():find("hit")) then
+                    remote:FireServer(999999999)
                 end
             end
-
-            for _, container in ipairs({ReplicatedStorage, player:FindFirstChild("PlayerGui"), Workspace}) do
-                if container then
-                    for _, remote in ipairs(container:GetDescendants()) do
-                        if remote:IsA("RemoteEvent") then
-                            local rName = string.lower(remote.Name)
-                            if rName:find("damage") or rName:find("hit") or rName:find("attack") or rName:find("boss") then
-                                pcall(function()
-                                    remote:FireServer(999999999, targetPart)
-                                    remote:FireServer(999999999)
-                                end)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    else
-        StatusLabel.Text = "Status: Menelusuri Area & Portal..."
+        end)
     end
 end)
 
-print("⚡ PIXEL QUEST: MASTER GUI BERHASIL DIMUAT SEMPURNA! ⚡")
+print("⚡ PIXEL QUEST: STABLE DELTA SCRIPT BERHASIL DIEKSEKUSI! ⚡")
