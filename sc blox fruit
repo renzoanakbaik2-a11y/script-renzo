@@ -1,5 +1,5 @@
 -- ==============================================================================
--- DEWA CODING: PREMIUM BRAINROT FARMER V2 (GUI VERSION)
+-- DEWA CODING: LIVE ESP BOX & NAME SCANNER (VISUAL HACKER MODE)
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -7,75 +7,97 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- SETUP GUI
+-- SETUP UI MENU UTAMA
 local ScreenGui = Instance.new("ScreenGui", playerGui)
-ScreenGui.Name = "DewaCodingMenu"
+ScreenGui.Name = "LiveScannerESP"
 
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 200, 0, 150)
-MainFrame.Position = UDim2.new(0.5, -100, 0.5, -75)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Active = true
-MainFrame.Draggable = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+local ToggleBtn = Instance.new("TextButton", ScreenGui)
+ToggleBtn.Size = UDim2.new(0, 130, 0, 40)
+ToggleBtn.Position = UDim2.new(0, 20, 0.5, -20)
+ToggleBtn.Text = "ESP SCANNER: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.BorderSizePixel = 2
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 11
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 6)
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "DEWA CODING FARMER"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.BackgroundTransparency = 1
+-- CONTAINER UNTUK VISUAL KOTAK BIRU & NAMA
+local ESPFolder = Instance.new("Folder", ScreenGui)
+ESPFolder.Name = "ESP_Container"
 
--- BUTTONS
-local DigBtn = Instance.new("TextButton", MainFrame)
-DigBtn.Size = UDim2.new(0.8, 0, 0, 35)
-DigBtn.Position = UDim2.new(0.1, 0, 0.3, 0)
-DigBtn.Text = "Instant Dig: OFF"
-DigBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-Instance.new("UICorner", DigBtn)
+local Config = {
+    Active = false
+}
 
-local CollectBtn = Instance.new("TextButton", MainFrame)
-CollectBtn.Size = UDim2.new(0.8, 0, 0, 35)
-CollectBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
-CollectBtn.Text = "Auto Collect: OFF"
-CollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-Instance.new("UICorner", CollectBtn)
-
--- LOGIC
-local Config = {Dig = false, Collect = false}
-
-DigBtn.MouseButton1Click:Connect(function()
-    Config.Dig = not Config.Dig
-    DigBtn.Text = "Instant Dig: " .. (Config.Dig and "ON" or "OFF")
-    DigBtn.BackgroundColor3 = Config.Dig and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
-CollectBtn.MouseButton1Click:Connect(function()
-    Config.Collect = not Config.Collect
-    CollectBtn.Text = "Auto Collect: " .. (Config.Collect and "ON" or "OFF")
-    CollectBtn.BackgroundColor3 = Config.Collect and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
--- ENGINE
-RunService.Heartbeat:Connect(function()
-    if Config.Dig then
-        local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
-        if tool then
-            pcall(function() tool:Activate() end)
-        end
-    end
+ToggleBtn.MouseButton1Click:Connect(function()
+    Config.Active = not Config.Active
+    ToggleBtn.Text = "ESP SCANNER: " .. (Config.Active and "ON" or "OFF")
+    ToggleBtn.BackgroundColor3 = Config.Active and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
     
-    if Config.Collect then
-        local eggs = workspace:FindFirstChild("Eggs") or workspace:FindFirstChild("SpawnedEggs")
-        local base = workspace:FindFirstChild("Base") or workspace:FindFirstChild("Hatchery")
-        if eggs and base then
-            for _, egg in pairs(eggs:GetChildren()) do
-                if egg:IsA("Model") or egg:FindFirstChild("Handle") then
-                    egg:PivotTo(base:GetPivot())
+    if not Config.Active then
+        ESPFolder:ClearAllChildren()
+    end
+end)
+
+-- FUNGSI MEMBUAT KOTAK BIRU DAN TEKS NAMA DI LAYAR
+local function createESP(obj)
+    if ESPFolder:FindFirstChild(obj.Name .. "_ESP") then return end
+    
+    -- Membuat Kotak Garis (Box) Biru di 3D World
+    local box = Instance.new("SelectionBox")
+    box.Name = obj.Name .. "_ESP"
+    box.Adornee = obj
+    box.Color3 = Color3.fromRGB(0, 170, 255) -- Warna Biru Menyala
+    box.LineThickness = 0.05
+    box.Parent = ESPFolder
+    
+    -- Membuat Teks Nama Objek di Atas Kotaknya
+    local bill = Instance.new("BillboardGui")
+    bill.Name = obj.Name .. "_Tag"
+    bill.Adornee = obj
+    bill.Size = UDim2.new(0, 100, 0, 40)
+    bill.StudsOffset = Vector3.new(0, 3, 0)
+    bill.AlwaysOnVisible = true
+    bill.Parent = ESPFolder
+    
+    local txt = Instance.new("TextLabel", bill)
+    txt.Size = UDim2.new(1, 0, 1, 0)
+    txt.BackgroundTransparency = 1
+    txt.TextColor3 = Color3.fromRGB(0, 255, 255)
+    txt.TextStrokeTransparency = 0 -- Biar tulisannya ada garis hitam pinggirannya jadi jelas dibaca
+    txt.Font = Enum.Font.GothamBold
+    txt.TextSize = 12
+    txt.Text = obj.Name
+end
+
+-- ENGINE SCANNER REAL-TIME
+RunService.Heartbeat:Connect(function()
+    if not Config.Active then return end
+    
+    pcall(function()
+        -- Bersihkan ESP yang objeknya sudah hancur/hilang dari game
+        for _, child in pairs(ESPFolder:GetChildren()) do
+            local adornee = child:IsA("SelectionBox") and child.Adornee or (child:IsA("BillboardGui") and child.Adornee)
+            if not adornee or not adornee.Parent then
+                child:Destroy()
+            end
+        end
+        
+        -- Memindai seluruh Workspace untuk mendeteksi objek fisik kecil (seperti telur/item galian)
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and not obj.Anchored and obj ~= player.Character and not obj:IsDescendantOf(player.Character) then
+                local size = obj.Size
+                -- Filter ukuran: Hanya melabeli objek berukuran kecil (mirip telur/item)
+                if size.X < 6 and size.Y < 6 and size.Z < 6 then
+                    createESP(obj)
                 end
             end
         end
-    end
+    end)
 end)
 
-print("⚡ DEWA CODING PREMIUM GUI LOADED ⚡")
+print("⚡ LIVE ESP SCANNER LOADED! ⚡")
