@@ -143,7 +143,7 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
---// Dedicated Flight & Chest Collection System (Using LinearVelocity for Guaranteed Movement)
+--// Sistem Terbang Terpisah (Fitur Terbang Aktif Duluan, Baru Cari & Collect Chest)
 task.spawn(function()
     local attachment, linearVelocity, alignOrientation
     
@@ -155,10 +155,10 @@ task.spawn(function()
             local humanoid = char and char:FindFirstChild("Humanoid")
             
             if Settings.AutoChest and hrp and humanoid and humanoid.Health > 0 then
-                -- Aktifkan mode terbang (PlatformStand agar tidak bentrok dengan animasi bawaan)
+                -- 1. Aktifkan mode terbang terlebih dahulu (PlatformStand)
                 humanoid.PlatformStand = true
                 
-                -- Setup Attachment & Physics Constraint jika belum ada
+                -- Setup Physics Constraint untuk Terbang
                 if not hrp:FindFirstChild("RootAttachmentCustom") then
                     attachment = Instance.new("Attachment")
                     attachment.Name = "RootAttachmentCustom"
@@ -189,7 +189,7 @@ task.spawn(function()
                     alignOrientation = hrp:FindFirstChild("CustomAlignOrientation")
                 end
                 
-                -- Cari Chest Terdekat (Bronze, Silver, Gold, Diamond, atau universal)
+                -- 2. Cari Chest (Bronze, Silver, Gold, Diamond, atau universal) setelah terbang aktif
                 local targetChest = nil
                 local shortestDistance = math.huge
                 
@@ -207,8 +207,8 @@ task.spawn(function()
                     end
                 end
                 
+                -- 3. Gerakkan karakter terbang menuju chest yang ditemukan
                 if targetChest and targetChest.Parent then
-                    -- Terbang mulus langsung menuju ke posisi chest
                     local targetPos = targetChest.Position + Vector3.new(0, 3, 0)
                     local direction = (targetPos - hrp.Position)
                     local distance = direction.Magnitude
@@ -220,11 +220,12 @@ task.spawn(function()
                         linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
                     end
                 else
-                    -- Jika tidak ada chest, terbang diam di tempat
-                    linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
+                    -- Jika belum ada chest terdekat, tetap terbang mengambang stabil di tempat
+                    linearVelocity.VectorVelocity = Vector3.new(0, 5, 0)
+                    alignOrientation.CFrame = hrp.CFrame
                 end
             else
-                -- Matikan sistem terbang saat fitur dimatikan atau karakter mati
+                -- Matikan sistem terbang jika fitur dimatikan atau karakter mati
                 if hrp then
                     if hrp:FindFirstChild("CustomLinearVelocity") then hrp.CustomLinearVelocity:Destroy() end
                     if hrp:FindFirstChild("CustomAlignOrientation") then hrp.CustomAlignOrientation:Destroy() end
