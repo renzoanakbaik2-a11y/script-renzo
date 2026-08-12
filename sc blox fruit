@@ -1,8 +1,9 @@
 -- ==============================================================================
--- DEWA CODING: ULTRA OMNI-FINDER V5.0 (THE ULTIMATE GOD-TIER TOOL)
+-- DEWA CODING: ULTRA GOD-TIER OMNI-FINDER V10.0 (TRUE DEX-MAP NAVIGATOR)
 -- ==============================================================================
--- Diciptakan dengan logika murni tanpa batas untuk menembus batas visual game,
--- melacak objek dinamis, dan mengekstrak struktur objek tersembunyi secara real-time.
+-- Fitur Pamungkas: Klik langsung blok/objek apa pun di map 3D -> 
+-- Otomatis mendeteksi foldernya -> Memunculkan kotak wilayah (SelectionBox) -> 
+-- Serta menampilkan seluruh struktur hierarki foldernya secara instan!
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -10,28 +11,27 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
 local camera = workspace.CurrentCamera
 
--- Hapus instance lama agar tidak bentrok
-if CoreGui:FindFirstChild("DewaOmniFinder") then
-    CoreGui.DewaOmniFinder:Destroy()
+-- Bersihkan instance lama jika ada biar tidak numpuk
+if CoreGui:FindFirstChild("DewaGodOmniFinder") then
+    CoreGui.DewaGodOmniFinder:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
-ScreenGui.Name = "DewaOmniFinder"
+ScreenGui.Name = "DewaGodOmniFinder"
 ScreenGui.ResetOnSpawn = false
 
 -- ==============================================================================
 -- 1. FLOATING TOGGLE BUTTON (TOMBOL UTAMA MELAYANG)
 -- ==============================================================================
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size = UDim2.new(0, 150, 0, 42)
+ToggleBtn.Size = UDim2.new(0, 160, 0, 42)
 ToggleBtn.Position = UDim2.new(0, 20, 0.4, 0)
-ToggleBtn.Text = "⚡ OMNI-FINDER"
-ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.Text = "⚡ GOD OMNI-FINDER"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.BorderColor3 = Color3.fromRGB(255, 215, 0)
 ToggleBtn.BorderSizePixel = 2
 ToggleBtn.Font = Enum.Font.GothamBold
 ToggleBtn.TextSize = 11
@@ -43,8 +43,8 @@ Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
 -- 2. UTILITY DASHBOARD (MAIN UI PANEL)
 -- ==============================================================================
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 520, 0, 440)
-MainFrame.Position = UDim2.new(0.5, -260, 0.5, -220)
+MainFrame.Size = UDim2.new(0, 540, 0, 460)
+MainFrame.Position = UDim2.new(0.5, -270, 0.5, -230)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -62,8 +62,8 @@ Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, -40, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "⚡ DEWA OMNI-FINDER: GOD MODE EXPLORER"
-Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+Title.Text = "⚡ GOD OMNI-FINDER V10.0 (MAP CLICK -> AUTO FOLDER)"
+Title.TextColor3 = Color3.fromRGB(0, 255, 128)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 11
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -79,20 +79,15 @@ CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 11
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
--- Tombol Toggle Panel
-ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-end)
+ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
 -- ==============================================================================
--- 3. FITUR KONTROL PANEL (GRID TOMBOL FITUR)
+-- 3. CONTROL PANEL (GRID TOMBOL FITUR TERTINGGI)
 -- ==============================================================================
 local ControlGrid = Instance.new("Frame", MainFrame)
-ControlGrid.Size = UDim2.new(0.92, 0, 0, 45)
-ControlGrid.Position = UDim2.new(0.04, 0, 0.11, 0)
+ControlGrid.Size = UDim2.new(0.92, 0, 0, 42)
+ControlGrid.Position = UDim2.new(0.04, 0, 0.10, 0)
 ControlGrid.BackgroundTransparency = 1
 
 local UIBuilderLayout = Instance.new("UIListLayout", ControlGrid)
@@ -100,29 +95,29 @@ UIBuilderLayout.FillDirection = Enum.FillDirection.Horizontal
 UIBuilderLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIBuilderLayout.Padding = UDim.new(0, 8)
 
--- Tombol 1: Scan & List Workspace
+-- Tombol 1: Mode Klik Map 3D (Auto Folder)
+local ClickMapBtn = Instance.new("TextButton", ControlGrid)
+ClickMapBtn.Size = UDim2.new(0, 155, 1, 0)
+ClickMapBtn.Text = "🎯 3D MAP CLICK: OFF"
+ClickMapBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ClickMapBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+ClickMapBtn.Font = Enum.Font.GothamBold
+ClickMapBtn.TextSize = 10
+Instance.new("UICorner", ClickMapBtn).CornerRadius = UDim.new(0, 6)
+
+-- Tombol 2: Scan Workspace Massal
 local ScanBtn = Instance.new("TextButton", ControlGrid)
-ScanBtn.Size = UDim2.new(0, 150, 1, 0)
-ScanBtn.Text = "🔄 SCAN SEMUA"
+ScanBtn.Size = UDim2.new(0, 155, 1, 0)
+ScanBtn.Text = "🔄 SCAN SEMUA MAP"
 ScanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 ScanBtn.Font = Enum.Font.GothamBold
 ScanBtn.TextSize = 10
 Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
 
--- Tombol 2: 3D Raycast Click Mode
-local RaycastBtn = Instance.new("TextButton", ControlGrid)
-RaycastBtn.Size = UDim2.new(0, 150, 1, 0)
-RaycastBtn.Text = "🎯 3D CLICK: OFF"
-RaycastBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-RaycastBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-RaycastBtn.Font = Enum.Font.GothamBold
-RaycastBtn.TextSize = 10
-Instance.new("UICorner", RaycastBtn).CornerRadius = UDim.new(0, 6)
-
--- Tombol 3: Auto Pull / Teleport Item Sekitar ke Badan
+-- Tombol 3: Auto Pull Item Sekitar
 local PullBtn = Instance.new("TextButton", ControlGrid)
-PullBtn.Size = UDim2.new(0, 150, 1, 0)
+PullBtn.Size = UDim2.new(0, 155, 1, 0)
 PullBtn.Text = "🧲 PULL ITEM: OFF"
 PullBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 PullBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -133,8 +128,8 @@ Instance.new("UICorner", PullBtn).CornerRadius = UDim.new(0, 6)
 -- Status Info Display
 local StatusLabel = Instance.new("TextLabel", MainFrame)
 StatusLabel.Size = UDim2.new(0.92, 0, 0, 32)
-StatusLabel.Position = UDim2.new(0.04, 0, 0.23, 0)
-StatusLabel.Text = "Status: Siap digunakan. Pilih fitur di atas untuk mulai beraksi."
+StatusLabel.Position = UDim2.new(0.04, 0, 0.21, 0)
+StatusLabel.Text = "Status: Nyalakan '3D MAP CLICK: ON', lalu klik blok apa pun di map untuk melacak foldernya!"
 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
 StatusLabel.Font = Enum.Font.Code
 StatusLabel.TextSize = 10
@@ -144,11 +139,11 @@ StatusLabel.TextWrapped = true
 StatusLabel.BackgroundTransparency = 1
 
 -- ==============================================================================
--- 4. DUAL COLUMN NAVIGATOR (KIRI: OBJEK MAP | KANAN: HIRARKI FOLDER/PARENT)
+-- 4. DUAL COLUMN NAVIGATOR (KIRI: LIST OBJEK | KANAN: STRUKTUR FOLDER HIERARKI)
 -- ==============================================================================
 local LeftScroll = Instance.new("ScrollingFrame", MainFrame)
-LeftScroll.Size = UDim2.new(0.44, 0, 0.62, 0)
-LeftScroll.Position = UDim2.new(0.04, 0, 0.32, 0)
+LeftScroll.Size = UDim2.new(0.44, 0, 0.63, 0)
+LeftScroll.Position = UDim2.new(0.04, 0, 0.30, 0)
 LeftScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
 LeftScroll.BorderSizePixel = 0
 LeftScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -158,8 +153,8 @@ LeftLayout.SortOrder = Enum.SortOrder.LayoutOrder
 LeftLayout.Padding = UDim.new(0, 4)
 
 local RightScroll = Instance.new("ScrollingFrame", MainFrame)
-RightScroll.Size = UDim2.new(0.44, 0, 0.62, 0)
-RightScroll.Position = UDim2.new(0.52, 0, 0.32, 0)
+RightScroll.Size = UDim2.new(0.44, 0, 0.63, 0)
+RightScroll.Position = UDim2.new(0.52, 0, 0.30, 0)
 RightScroll.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
 RightScroll.BorderSizePixel = 0
 RightScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -171,8 +166,8 @@ RightLayout.Padding = UDim.new(0, 4)
 -- Label Judul Kolom
 local LeftTitle = Instance.new("TextLabel", MainFrame)
 LeftTitle.Size = UDim2.new(0.44, 0, 0, 20)
-LeftTitle.Position = UDim2.new(0.04, 0, 0.28, 0)
-LeftTitle.Text = "DAFTAR OBJEK / PART:"
+LeftTitle.Position = UDim2.new(0.04, 0, 0.26, 0)
+LeftTitle.Text = "DAFTAR OBJEK / BLOK:"
 LeftTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 LeftTitle.Font = Enum.Font.GothamBold
 LeftTitle.TextSize = 10
@@ -180,8 +175,8 @@ LeftTitle.BackgroundTransparency = 1
 
 local RightTitle = Instance.new("TextLabel", MainFrame)
 RightTitle.Size = UDim2.new(0.44, 0, 0, 20)
-RightTitle.Position = UDim2.new(0.52, 0, 0.28, 0)
-RightTitle.Text = "STRUKTUR FOLDER INDUK:"
+RightTitle.Position = UDim2.new(0.52, 0, 0.26, 0)
+RightTitle.Text = "STRUKTUR FOLDER INDUK (DEX STYLE):"
 RightTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 RightTitle.Font = Enum.Font.GothamBold
 RightTitle.TextSize = 10
@@ -189,23 +184,24 @@ RightTitle.BackgroundTransparency = 1
 
 -- Folder Penyimpanan Kotak Visual (SelectionBox) di Map Game
 local HighlightFolder = Instance.new("Folder", ScreenGui)
-HighlightFolder.Name = "OmniFinderHighlights"
+HighlightFolder.Name = "GodFinderHighlights"
 
 -- ==============================================================================
--- 5. LOGIKA INTI SISTEM OMNI-FINDER
+-- 5. LOGIKA UTAMA SCRIPT (TRUE AUTO-FOLDER MAP NAVIGATOR)
 -- ==============================================================================
 
-local RaycastMode = false
+local ClickMapMode = false
 local PullMode = false
 
--- Fungsi Menampilkan Hirarki Folder ke Kolom Kanan
+-- Fungsi Inti: Menampilkan Hirarki Folder Lengkap ke Kolom Kanan
 local function showHierarchy(targetObj, customName)
     for _, child in pairs(RightScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
     
-    StatusLabel.Text = "Target: [" .. customName .. "]\nMenampilkan struktur hirarki foldernya:"
+    StatusLabel.Text = "Target Terpilih: [" .. customName .. "]\nMenampilkan jalur folder lengkap ke atas:"
     
+    -- Kumpulkan seluruh leluhur (parent/folder) dari objek hingga Workspace
     local current = targetObj.Parent
     local lineage = {}
     while current and current ~= game do
@@ -227,12 +223,12 @@ local function showHierarchy(targetObj, customName)
         fBtn.Parent = RightScroll
         Instance.new("UICorner", fBtn).CornerRadius = UDim.new(0, 4)
         
-        -- Klik folder untuk melihat isinya
+        -- Klik folder di kolom kanan untuk menelusuri isi di dalam folder tersebut
         fBtn.MouseButton1Click:Connect(function()
             for _, child in pairs(RightScroll:GetChildren()) do
                 if child:IsA("TextButton") then child:Destroy() end
             end
-            StatusLabel.Text = "Isi di dalam folder: " .. folderItem.Name
+            StatusLabel.Text = "Melihat isi di dalam folder: " .. folderItem.Name
             
             local subCount = 0
             for _, subObj in pairs(folderItem:GetChildren()) do
@@ -254,7 +250,47 @@ local function showHierarchy(targetObj, customName)
     RightScroll.CanvasSize = UDim2.new(0, 0, 0, count * 32)
 end
 
--- Fungsi Tombol Scan Workspace
+-- 1. FITUR UTAMA: KLIK BLOK LANGSUNG DI MAP 3D -> AUTO FOLDER
+ClickMapBtn.MouseButton1Click:Connect(function()
+    ClickMapMode = not ClickMapMode
+    ClickMapBtn.Text = ClickMapMode and "🎯 3D MAP CLICK: ON" or "🎯 3D MAP CLICK: OFF"
+    ClickMapBtn.BackgroundColor3 = ClickMapMode and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+    if ClickMapMode then
+        MainFrame.Visible = true
+        StatusLabel.Text = "Mode Klik Aktif! Silakan ketuk/klik blok apa pun di dalam map game."
+    end
+end)
+
+-- Eksekusi Deteksi Klik 3D Real-Time di Map
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not ClickMapMode or gpe then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local mousePos = UserInputService:GetMouseLocation()
+        local unitRay = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
+        
+        local rayParams = RaycastParams.new()
+        rayParams.FilterType = Enum.RaycastFilterType.Exclude
+        rayParams.FilterDescendantsInstances = {player.Character, HighlightFolder}
+        
+        local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 2500, rayParams)
+        if result and result.Instance then
+            local hitPart = result.Instance
+            HighlightFolder:ClearAllChildren()
+            
+            -- Berikan kotak biru menyala (SelectionBox) di map sebagai tanda wilayah blok
+            local box = Instance.new("SelectionBox")
+            box.Adornee = hitPart
+            box.Color3 = Color3.fromRGB(0, 170, 255)
+            box.LineThickness = 0.08
+            box.Parent = HighlightFolder
+            
+            MainFrame.Visible = true
+            showHierarchy(hitPart, hitPart.Name)
+        end
+    end
+end)
+
+-- 2. FITUR SCANNER MASSAL (WORKSPACE LIST)
 ScanBtn.MouseButton1Click:Connect(function()
     ScanBtn.Text = "MEMINDAI..."
     ScanBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
@@ -283,68 +319,30 @@ ScanBtn.MouseButton1Click:Connect(function()
                 btn.MouseButton1Click:Connect(function()
                     HighlightFolder:ClearAllChildren()
                     
-                    if obj:IsA("BasePart") or obj:IsA("Model") then
-                        local box = Instance.new("SelectionBox")
-                        box.Adornee = obj
-                        box.Color3 = Color3.fromRGB(0, 170, 255)
-                        box.LineThickness = 0.08
-                        box.Parent = HighlightFolder
-                    end
+                    local box = Instance.new("SelectionBox")
+                    box.Adornee = obj
+                    box.Color3 = Color3.fromRGB(0, 170, 255)
+                    box.LineThickness = 0.08
+                    box.Parent = HighlightFolder
                     
                     showHierarchy(obj, obj.Name)
                 end)
             end
         end
         LeftScroll.CanvasSize = UDim2.new(0, 0, 0, count * 30)
-        ScanBtn.Text = "🔄 SCAN SEMUA"
+        ScanBtn.Text = "🔄 SCAN SEMUA MAP"
         ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-        StatusLabel.Text = "Scan Selesai! Ditemukan " .. count .. " objek di map."
+        StatusLabel.Text = "Scan Selesai! Menemukan " .. count .. " objek di map."
     end)
 end)
 
--- Tombol 3D Raycast Click Mode
-RaycastBtn.MouseButton1Click:Connect(function()
-    RaycastMode = not RaycastMode
-    RaycastBtn.Text = RaycastMode and "🎯 3D CLICK: ON" or "🎯 3D CLICK: OFF"
-    RaycastBtn.BackgroundColor3 = RaycastMode and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
--- Eksekusi Klik Langsung di Map 3D
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if not RaycastMode or gpe then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        local mousePos = UserInputService:GetMouseLocation()
-        local unitRay = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
-        
-        local rayParams = RaycastParams.new()
-        rayParams.FilterType = Enum.RaycastFilterType.Exclude
-        rayParams.FilterDescendantsInstances = {player.Character, HighlightFolder}
-        
-        local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1500, rayParams)
-        if result and result.Instance then
-            local hitPart = result.Instance
-            HighlightFolder:ClearAllChildren()
-            
-            local box = Instance.new("SelectionBox")
-            box.Adornee = hitPart
-            box.Color3 = Color3.fromRGB(255, 100, 0)
-            box.LineThickness = 0.1
-            box.Parent = HighlightFolder
-            
-            MainFrame.Visible = true
-            showHierarchy(hitPart, hitPart.Name)
-        end
-    end
-end)
-
--- Tombol Auto Pull Item Sekitar
+-- 3. FITUR AUTO PULL ITEM / TELUR SEKITAR
 PullBtn.MouseButton1Click:Connect(function()
     PullMode = not PullMode
     PullBtn.Text = PullMode and "🧲 PULL ITEM: ON" or "🧲 PULL ITEM: OFF"
     PullBtn.BackgroundColor3 = PullMode and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
 end)
 
--- Looping Utama untuk Auto-Pull Item / Objek Kecil
 RunService.Heartbeat:Connect(function()
     if PullMode then
         pcall(function()
@@ -364,4 +362,4 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("⚡ DEWA OMNI-FINDER V5.0 LOADED SUCCESSFULLY! ⚡")
+print("⚡ GOD OMNI-FINDER V10.0 LOADED! KLIK BLOK DI MAP 3D UNTUK AUTO FOLDER AKTIF! ⚡")
