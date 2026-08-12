@@ -1,90 +1,139 @@
 -- ==============================================================================
--- DEWA CODING: ULTRA SIMPLE SCANNER (ANTI-LAG & DIJAMIN JALAN)
+-- DEWA CODING: CUSTOM IN-GAME EXPLORER (LIGHTWEIGHT DEX STYLE)
 -- ==============================================================================
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 1. BIKIN TAMPILAN MENU
+-- Hapus UI lama jika ada biar tidak numpuk
+if playerGui:FindFirstChild("DewaDexViewer") then
+    playerGui.DewaDexViewer:Destroy()
+end
+
+-- SETUP MAIN GUI
 local ScreenGui = Instance.new("ScreenGui", playerGui)
-ScreenGui.Name = "UltraScannerUI"
+ScreenGui.Name = "DewaDexViewer"
+ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 260, 0, 220)
-MainFrame.Position = UDim2.new(0.5, -130, 0.4, -110)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Size = UDim2.new(0, 380, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -190, 0.4, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.Text = "⚡ SCANNER PANEL ⚡"
-Title.TextColor3 = Color3.fromRGB(0, 255, 128)
+-- Header Bar
+local TopBar = Instance.new("Frame", MainFrame)
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+TopBar.BorderSizePixel = 0
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.Text = "📁 DEWA OBJECT EXPLORER"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
--- Tombol Scan
-local ScanBtn = Instance.new("TextButton", MainFrame)
-ScanBtn.Size = UDim2.new(0.9, 0, 0, 35)
-ScanBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
-ScanBtn.Text = "KLIK BUAT SCAN NAMA"
-ScanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-ScanBtn.Font = Enum.Font.GothamBold
-ScanBtn.TextSize = 11
-Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
+local CloseBtn = Instance.new("TextButton", TopBar)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 11
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
--- Kotak Hitam Tempat Munculin Teks Hasil Scan
-local ScrollingText = Instance.new("ScrollingFrame", MainFrame)
-ScrollingText.Size = UDim2.new(0.9, 0, 0.5, 0)
-ScrollingText.Position = UDim2.new(0.05, 0, 0.42, 0)
-ScrollingText.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-ScrollingText.BorderSizePixel = 0
-ScrollingText.CanvasSize = UDim2.new(0, 0, 5, 0)
-Instance.new("UICorner", ScrollingText).CornerRadius = UDim.new(0, 6)
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
 
-local ResultLabel = Instance.new("TextLabel", ScrollingText)
-ResultLabel.Size = UDim2.new(1, 0, 1, 0)
-ResultLabel.Position = UDim2.new(0, 5, 0, 5)
-ResultLabel.Text = "Klik tombol biru di atas untuk mulai membaca nama objek di sekitar..."
-ResultLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-ResultLabel.TextSize = 10
-ResultLabel.Font = Enum.Font.Code
-ResultLabel.BackgroundTransparency = 1
-ResultLabel.TextXAlignment = Enum.TextXAlignment.Left
-ResultLabel.TextYAlignment = Enum.TextYAlignment.Top
-ResultLabel.TextWrapped = true
+-- Tombol Refresh / Scan Workspace
+local RefreshBtn = Instance.new("TextButton", MainFrame)
+RefreshBtn.Size = UDim2.new(0.92, 0, 0, 35)
+RefreshBtn.Position = UDim2.new(0.04, 0, 0.15, 0)
+RefreshBtn.Text = "🔄 AMBIL & TAMPILKAN SEMUA NAMA OBJEK"
+RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+RefreshBtn.Font = Enum.Font.GothamBold
+RefreshBtn.TextSize = 11
+Instance.new("UICorner", RefreshBtn).CornerRadius = UDim.new(0, 6)
 
--- 2. LOGIKA SCANNER AMAN (TIDAK BIKIN LAG)
-ScanBtn.MouseButton1Click:Connect(function()
-    ScanBtn.Text = "SEDANG SCAN..."
-    ScanBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
+-- Scrolling Container untuk List Nama
+local ScrollContainer = Instance.new("ScrollingFrame", MainFrame)
+ScrollContainer.Size = UDim2.new(0.92, 0, 0.65, 0)
+ScrollContainer.Position = UDim2.new(0.04, 0, 0.3, 0)
+ScrollContainer.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+ScrollContainer.BorderSizePixel = 0
+ScrollContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", ScrollContainer).CornerRadius = UDim.new(0, 6)
+
+local UIListLayout = Instance.new("UIListLayout", ScrollContainer)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 4)
+
+-- Fungsi untuk memperbarui daftar isi Workspace
+local function loadObjects()
+    -- Bersihkan list sebelumnya
+    for _, child in pairs(ScrollContainer:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
     
+    local count = 0
+    local uniqueNames = {}
+    
+    -- Ambil semua objek di Workspace
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj.Name and not uniqueNames[obj.Name] then
+            uniqueNames[obj.Name] = true
+            count = count + 1
+            
+            -- Buat baris tombol untuk setiap nama objek
+            local itemBtn = Instance.new("TextButton")
+            itemBtn.Size = UDim2.new(1, -10, 0, 28)
+            itemBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            itemBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+            itemBtn.Font = Enum.Font.Code
+            itemBtn.TextSize = 11
+            itemBtn.Text = "  • " .. obj.Name .. " [" .. obj.ClassName .. "]"
+            itemBtn.TextXAlignment = Enum.TextXAlignment.Left
+            itemBtn.Parent = ScrollContainer
+            Instance.new("UICorner", itemBtn).CornerRadius = UDim.new(0, 4)
+            
+            -- Efek klik untuk menyalin nama objek ke clipboard / print
+            itemBtn.MouseButton1Click:Connect(function()
+                print("DewaDex - Nama Dipilih: " .. obj.Name)
+                itemBtn.Text = "  [TERPILIH] " .. obj.Name
+                itemBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
+                task.wait(1)
+                itemBtn.Text = "  • " .. obj.Name .. " [" .. obj.ClassName .. "]"
+                itemBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+            end)
+        end
+    end
+    
+    -- Sesuaikan tinggi scrolling berdasarkan jumlah item
+    ScrollContainer.CanvasSize = UDim2.new(0, 0, 0, count * 32)
+end
+
+RefreshBtn.MouseButton1Click:Connect(function()
+    RefreshBtn.Text = "SEDANG MEMINDAI..."
+    RefreshBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
     task.spawn(function()
-        local foundNames = {}
-        local textOutput = ""
-        
-        -- Ambil data dari workspace dengan aman
-        for _, obj in pairs(workspace:GetChildren()) do
-            if obj.Name then
-                -- Masukkan nama objek unik ke dalam tabel
-                foundNames[obj.Name] = true
-            end
-        end
-        
-        -- Susun teksnya
-        for name, _ in pairs(foundNames) do
-            textOutput = textOutput .. "- " .. name .. "\n"
-        end
-        
-        -- Tampilkan di kotak UI game
-        ResultLabel.Text = textOutput ~= "" and textOutput else "Tidak ada objek yang terbaca."
-        ScanBtn.Text = "KLIK BUAT SCAN LAGI"
-        ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+        loadObjects()
+        RefreshBtn.Text = "🔄 AMBIL & TAMPILKAN SEMUA NAMA OBJEK"
+        RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
     end)
 end)
 
-print("⚡ ULTRA SCANNER READY! ⚡")
+print("⚡ DEWA EXPLORER READY! ⚡")
