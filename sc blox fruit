@@ -1,110 +1,78 @@
 -- ==============================================================================
--- SAMBUNG KATA: OMEGA ULTIMATE BYPASS (FINAL REVISION)
--- Pembaruan total: Menggunakan pendeteksi teks universal berbasis string UI
--- untuk membaca huruf aktif di layar dan mengirim jawaban secara instan.
+-- SAMBUNG KATA: EXECUTOR SAFE VERSION (NO ERROR)
 -- ==============================================================================
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CoreGui = game:GetService("CoreGui")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Kamus Kata Bahasa Indonesia Lengkap A-Z
 local Dictionary = {
-    ["a"] = {"api", "anak", "alam", "apel", "akar", "atap", "arah", "asin", "abu", "amplop", "andalan", "angsa", "anting", "artis"},
-    ["b"] = {"bola", "buku", "batu", "bunga", "burung", "bulan", "botol", "besi", "baju", "balon", "banjir", "bantal", "barang"},
-    ["c"] = {"cabe", "cinta", "cermin", "cicak", "cuka", "catur", "cangkir", "cacar", "cacing", "cahaya", "cair", "cakap"},
-    ["d"] = {"daun", "dasi", "daging", "desa", "dahi", "domba", "dapur", "dadu", "daerah", "daftar", "dagang"},
-    ["e"] = {"emas", "ember", "elang", "enam", "esok", "ekor", "embun", "edisi", "edukasi", "efek", "efisien"},
-    ["f"] = {"foto", "fajar", "fakir", "format", "faedah", "faham", "faksi", "faktor", "fantasi"},
-    ["g"] = {"gigi", "guru", "garpu", "gajah", "gelas", "garam", "gedung", "gabah", "gadis", "gagal", "gagah"},
-    ["h"] = {"hati", "hutan", "hujan", "harimau", "hiu", "handuk", "helm", "habis", "hadap", "hafal", "hajat"},
-    ["i"] = {"ikan", "itik", "intan", "istana", "ilmu", "irama", "ialah", "ide", "identitas", "ijazah"},
-    ["j"] = {"jeruk", "jarum", "jalan", "janggut", "jagung", "jendela", "jabat", "jadi", "jaga", "jago", "jahat"},
-    ["k"] = {"kucing", "kuda", "kayu", "kipas", "kertas", "kancil", "kabar", "kabel", "kabin", "kacamata"},
-    ["l"] = {"lilin", "lampu", "lidah", "lebah", "lorong", "langit", "lemari", "laba", "lada", "ladang", "laga"},
-    ["m"] = {"makan", "mangga", "meja", "mobil", "mata", "macan", "merpati", "maaf", "mabuk", "macet", "madu"},
-    ["n"] = {"nasi", "nenek", "nangka", "nilai", "nyamuk", "napas", "nampan", "nabi", "nada", "naik", "nama"},
-    ["o"] = {"obat", "ombak", "otak", "ojek", "ongkos", "ons", "organ", "oasis", "objek", "obral", "obor"},
-    ["p"] = {"pintu", "pohon", "paku", "pisang", "piring", "paus", "pedang", "pabrik", "pacar", "padang", "pagar"},
-    ["q"] = {"quran", "qariah", "qari", "qunut"},
-    ["r"] = {"rumah", "rusa", "roti", "rambut", "raja", "ranting", "ronda", "raba", "rabu", "racun", "radar"},
-    ["s"] = {"susu", "sapi", "sendok", "sabun", "sepatu", "sungai", "sawah", "sabar", "sabda", "satu", "sayur"},
-    ["t"] = {"tikus", "topi", "tinta", "taman", "tali", "tulis", "tomat", "taat", "tabah", "tahu", "tahun"},
-    ["u"] = {"ular", "uang", "udang", "ubi", "unta", "ukiran", "uap", "ubah", "uban", "ucap", "udara"},
-    ["v"] = {"vila", "vaksin", "voli", "vokal", "vakum", "valid", "vampir", "variasi", "vas", "vektor", "virus"},
-    ["w"] = {"wajan", "waktu", "warga", "warna", "wortel", "wisata", "wadah", "waduk", "wafat", "wajah", "wajib"},
-    ["y"] = {"yoyo", "yodium", "yaki", "yakult", "yakin", "yayasan", "yoga", "yoni"},
-    ["z"] = {"zaitun", "zebra", "zaman", "zona", "zakat", "zakar", "zat", "zenit", "zero", "ziarah"}
+    ["a"] = {"api", "anak", "alam", "apel", "akar", "atap", "arah", "asin"},
+    ["b"] = {"bola", "buku", "batu", "bunga", "burung", "bulan", "botol"},
+    ["c"] = {"cabe", "cinta", "cermin", "cicak", "cuka", "catur"},
+    ["d"] = {"daun", "dasi", "daging", "desa", "dahi", "domba"},
+    ["e"] = {"emas", "ember", "elang", "enam", "esok"},
+    ["f"] = {"foto", "fajar", "fakir", "format"},
+    ["g"] = {"gigi", "guru", "garpu", "gajah", "gelas"},
+    ["h"] = {"hati", "hutan", "hujan", "harimau", "hiu"},
+    ["i"] = {"ikan", "itik", "intan", "istana", "ilmu"},
+    ["j"] = {"jeruk", "jarum", "jalan", "janggut", "jagung"},
+    ["k"] = {"kucing", "kuda", "kayu", "kipas", "kertas"},
+    ["l"] = {"lilin", "lampu", "lidah", "lebah", "lorong"},
+    ["m"] = {"makan", "mangga", "meja", "mobil", "mata"},
+    ["n"] = {"nasi", "nenek", "nangka", "nilai", "nyamuk"},
+    ["o"] = {"obat", "ombak", "otak", "ojek"},
+    ["p"] = {"pintu", "pohon", "paku", "pisang", "piring"},
+    ["q"] = {"quran", "qariah"},
+    ["r"] = {"rumah", "rusa", "roti", "rambut", "raja"},
+    ["s"] = {"susu", "sapi", "sendok", "sabun", "sepatu"},
+    ["t"] = {"tikus", "topi", "tinta", "taman", "tali"},
+    ["u"] = {"ular", "uang", "udang", "ubi"},
+    ["v"] = {"vila", "vaksin", "voli"},
+    ["w"] = {"wajan", "waktu", "warga", "warna"},
+    ["y"] = {"yoyo", "yodium", "yakin"},
+    ["z"] = {"zaitun", "zebra", "zaman"}
 }
 
--- Bersihkan GUI lama
-if playerGui:FindFirstChild("OmegaSambungKata") then
-    playerGui.OmegaSambungKata:Destroy()
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "OmegaSambungKata"
+-- Simple UI Button untuk Toggle
+local ScreenGui = Instance.new("ScreenGui", playerGui)
+ScreenGui.Name = "SimpleSambungKata"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = playerGui
 
--- Tombol Menu Utama (Ujung Kiri Tengah)
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 90, 0, 45)
-ToggleBtn.Position = UDim2.new(0, 0, 0.4, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-ToggleBtn.BorderColor3 = Color3.fromRGB(255, 0, 0)
-ToggleBtn.BorderSizePixel = 2
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 0, 0)
-ToggleBtn.TextSize = 14
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.Text = "OFF"
-ToggleBtn.Active = true
-ToggleBtn.Draggable = true
-ToggleBtn.Parent = ScreenGui
+local Btn = Instance.new("TextButton", ScreenGui)
+Btn.Size = UDim2.new(0, 100, 0, 50)
+Btn.Position = UDim2.new(0, 50, 0, 200)
+Btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Btn.TextColor3 = Color3.fromRGB(0, 255, 0)
+Btn.TextSize = 16
+Btn.Font = Enum.Font.SourceSansBold
+Btn.Text = "STATUS: OFF"
+Btn.Active = true
+Btn.Draggable = true
 
-local isRunning = false
-ToggleBtn.MouseButton1Click:Connect(function()
-    isRunning = not isRunning
-    ToggleBtn.TextColor3 = isRunning and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    ToggleBtn.BorderColor3 = isRunning and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    ToggleBtn.Text = isRunning and "ON" else "OFF"
+local active = false
+Btn.MouseButton1Click:Connect(function()
+    active = not active
+    Btn.TextColor3 = active and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    Btn.Text = active and "STATUS: ON" or "STATUS: OFF"
 end)
 
--- Sistem Universal Text Scanner & Auto Sender
+-- Main Loop Aman Eksekutor
 task.spawn(function()
     while true do
-        task.wait(0.4)
-        if isRunning then
+        task.wait(0.5)
+        if active then
             pcall(function()
-                -- Pindai semua elemen teks di layar (TextLabel, TextButton, TextBox)
-                for _, ui in ipairs(playerGui:GetDescendants()) do
-                    local targetText = ""
-                    if ui:IsA("TextBox") or ui:IsA("TextLabel") or ui:IsA("TextButton") then
-                        targetText = ui.Text or ""
-                    end
-
-                    -- Jika mendeteksi karakter/huruf di kotak game
-                    if #targetText > 0 and #targetText <= 5 then
-                        local lastChar = string.sub(targetText, -1):lower()
-                        
-                        if Dictionary[lastChar] then
-                            local words = Dictionary[lastChar]
-                            local chosenWord = words[math.random(1, #words)]
-                            
-                            if ui:IsA("TextBox") then
-                                ui.Text = chosenWord
+                for _, v in ipairs(playerGui:GetDescendants()) do
+                    if v:IsA("TextBox") and v.Visible then
+                        local txt = v.Text or ""
+                        if #txt > 0 and #txt <= 4 then
+                            local last = string.sub(txt, -1):lower()
+                            if Dictionary[last] then
+                                local list = Dictionary[last]
+                                local kata = list[math.random(1, #list)]
+                                v.Text = kata
                             end
-                            
-                            -- Kirim perintah Enter secara virtual agar tersubmit otomatis oleh game
-                            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-                            task.wait(0.05)
-                            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-                            
-                            task.wait(1.2) -- Jeda aman agar tidak spam server
                         end
                     end
                 end
@@ -112,5 +80,3 @@ task.spawn(function()
         end
     end
 end)
-
-print("⚡ OMEGA SAMBUNG KATA LOADED ⚡")
