@@ -10,7 +10,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHubTabbedFinal.json"
+local FileName = "BloxFruitsHubStructuredFinal.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -54,7 +54,7 @@ local function saveSettings()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubTabbed"
+ScreenGui.Name = "BloxFruitsHubStructured"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -255,11 +255,11 @@ local function isRealSpawnedFruit(obj)
 end
 
 -- ==========================================
--- 3. JALAN DI ATAS AIR
+-- 3. JALAN DI ATAS AIR (DISEMPURNAKAN & STABIL)
 -- ==========================================
 local WaterPlatform = nil
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.2) do
         pcall(function()
             local character = LocalPlayer.Character
             local rootPart = getCharacterRootPart()
@@ -268,8 +268,8 @@ task.spawn(function()
             if Settings.WalkOnWater and rootPart and humanoid then
                 if not WaterPlatform or not WaterPlatform.Parent then
                     WaterPlatform = Instance.new("Part")
-                    WaterPlatform.Name = "WaterPlatform"
-                    WaterPlatform.Size = Vector3.new(20, 0.6, 20)
+                    WaterPlatform.Name = "WaterPlatformOptimized"
+                    WaterPlatform.Size = Vector3.new(35, 1, 35)
                     WaterPlatform.Anchored = true
                     WaterPlatform.CanCollide = true
                     WaterPlatform.Transparency = 1
@@ -277,8 +277,9 @@ task.spawn(function()
                 end
                 
                 local pos = rootPart.Position
-                if pos.Y <= 5.5 and pos.Y > -10 then
-                    WaterPlatform.Position = Vector3.new(pos.X, 2.7, pos.Z)
+                -- Deteksi permukaan air Blox Fruits secara presisi (Y sekitar -2 sampai 4)
+                if pos.Y <= 6 and pos.Y > -15 then
+                    WaterPlatform.Position = Vector3.new(pos.X, 1.8, pos.Z)
                     WaterPlatform.CanCollide = true
                 else
                     WaterPlatform.CanCollide = false
@@ -294,7 +295,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- 4. AUTO STORE FRUIT & AUTO CHEST
+-- 4. AUTO STORE FRUIT & AUTO CHEST (TERBANG HALUS)
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -319,17 +320,28 @@ local function autoStoreFruits()
     end)
 end
 
+-- Auto Chest menggunakan sistem terbang halus agar tidak patah-patah/lag
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(1) do
         pcall(function()
-            if Settings.AutoChest then
+            if Settings.AutoChest and not activeFlyConnection then
                 local rootPart = getCharacterRootPart()
                 if rootPart then
+                    local nearestChest = nil
+                    local shortestDist = math.huge
+                    
                     for _, v in ipairs(Workspace:GetDescendants()) do
                         if v.Name:lower():find("chest") and v:IsA("BasePart") then
-                            rootPart.CFrame = v.CFrame
-                            task.wait(0.2)
+                            local dist = (rootPart.Position - v.Position).Magnitude
+                            if dist < shortestDist then
+                                shortestDist = dist
+                                nearestChest = v
+                            end
                         end
+                    end
+                    
+                    if nearestChest then
+                        smoothFlyTo(nearestChest.CFrame, "AutoChest")
                     end
                 end
             end
@@ -508,7 +520,7 @@ end
 if Settings.FpsBoost then applyFpsBoost(true) end
 
 -- ==========================================
--- 9. TAMPILAN MENU UTAMA (SISTEM TAB / HALAMAN BUKU)
+-- 9. TAMPILAN MENU UTAMA (SATU HALAMAN, TERSUSUN BERDASARKAN KELOMPOK)
 -- ==========================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -529,8 +541,8 @@ OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 440, 0, 340)
-MainFrame.Position = UDim2.new(0.5, -220, 0.5, -170)
+MainFrame.Size = UDim2.new(0, 420, 0, 360)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -180)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
@@ -581,88 +593,37 @@ CloseCorner.Parent = CloseButton
 OpenButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 CloseButton.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
--- Tombol Tab / Halaman Buku di Atas (Bagian Menu)
-local TabBar = Instance.new("Frame")
-TabBar.Size = UDim2.new(1, -16, 0, 32)
-TabBar.Position = UDim2.new(0, 8, 0, 40)
-TabBar.BackgroundTransparency = 1
-TabBar.ZIndex = 101
-TabBar.Parent = MainFrame
+-- Satu Kontainer Utama (Sistem Gulir Satu Halaman Tersusun Rapi)
+local Container = Instance.new("ScrollingFrame")
+Container.Size = UDim2.new(1, 0, 1, -35)
+Container.Position = UDim2.new(0, 0, 0, 35)
+Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0, 0, 0, 850)
+Container.ScrollBarThickness = 4
+Container.ZIndex = 101
+Container.Parent = MainFrame
 
-local function createTabButton(posX, sizeX, text, pageIndex)
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 6)
+UIListLayout.Parent = Container
+
+local function createSectionHeader(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.9, 0, 0, 28)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(0, 200, 255)
+    lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.ZIndex = 102
+    lbl.Parent = Container
+    return lbl
+end
+
+local function createToggle(text, settingKey, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, sizeX, 1, 0)
-    btn.Position = UDim2.new(0, posX, 0, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 35, 48)
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    btn.TextSize, btn.Font = 10, Enum.Font.GothamBold
-    btn.ZIndex = 102
-    btn.Parent = TabBar
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 6)
-    c.Parent = btn
-    return btn
-end
-
--- Kontainer Halaman (Buku)
-local PagesFolder = Instance.new("Folder")
-PagesFolder.Name = "PagesFolder"
-PagesFolder.Parent = MainFrame
-
-local function createPage()
-    local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, -16, 1, -85)
-    page.Position = UDim2.new(0, 8, 0, 78)
-    page.BackgroundTransparency = 1
-    page.CanvasSize = UDim2.new(0, 0, 0, 350)
-    page.ScrollBarThickness = 4
-    page.Visible = false
-    page.ZIndex = 101
-    page.Parent = PagesFolder
-
-    local layout = Instance.new("UIListLayout")
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 8)
-    layout.Parent = page
-    return page
-end
-
-local Page1 = createPage() -- Fitur Utama & Buah
-local Page2 = createPage() -- Target & Level Player
-local Page3 = createPage() -- Pengaturan Tim & FPS
-
-local Tab1Btn = createTabButton(0, 134, "Halaman 1: Fitur Buah", 1)
-local Tab2Btn = createTabButton(140, 134, "Halaman 2: Level Player", 2)
-local Tab3Btn = createTabButton(280, 134, "Halaman 3: Tim & FPS", 3)
-
-local function switchPage(activePage, activeBtn)
-    Page1.Visible = false
-    Page2.Visible = false
-    Page3.Visible = false
-    
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(30, 35, 48)
-    Tab1Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(30, 35, 48)
-    Tab2Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Tab3Btn.BackgroundColor3 = Color3.fromRGB(30, 35, 48)
-    Tab3Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-
-    activePage.Visible = true
-    activeBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-    activeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-end
-
-Tab1Btn.MouseButton1Click:Connect(function() switchPage(Page1, Tab1Btn) end)
-Tab2Btn.MouseButton1Click:Connect(function() switchPage(Page2, Tab2Btn) end)
-Tab3Btn.MouseButton1Click:Connect(function() switchPage(Page3, Tab3Btn) end)
-
-switchPage(Page1, Tab1Btn) -- Buka halaman pertama saat menu dibuka
-
-local function createToggleInPage(parentPage, text, settingKey, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.Size = UDim2.new(0.9, 0, 0, 32)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 11
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -671,7 +632,7 @@ local function createToggleInPage(parentPage, text, settingKey, callback)
     local state = Settings[settingKey]
     btn.Text = text .. ": " .. (state and "ON" or "OFF")
     btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
-    btn.Parent = parentPage
+    btn.Parent = Container
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
@@ -689,56 +650,91 @@ local function createToggleInPage(parentPage, text, settingKey, callback)
 end
 
 -- ==========================================
--- ISI HALAMAN 1 (FITUR UTAMA & BUAH)
+-- PENYUSUNAN MENU SESUAI PERMINTAAN
 -- ==========================================
-createToggleInPage(Page1, "Fruit Notifier", "FruitNotifier", nil)
-createToggleInPage(Page1, "Tampilkan Monitor", "MonitorVisible", nil)
-createToggleInPage(Page1, "Auto Teleport ke Buah Spawn", "AutoTeleportFruit", nil)
-createToggleInPage(Page1, "Auto Store Buah ke Tas", "AutoStoreFruit", nil)
-createToggleInPage(Page1, "Auto Chest (Ambil Peti)", "AutoChest", nil)
-createToggleInPage(Page1, "Jalan di Atas Air", "WalkOnWater", nil)
 
--- ==========================================
--- ISI HALAMAN 2 (TARGET & LEVEL PLAYER)
--- ==========================================
-createToggleInPage(Page2, "Auto Teleport ke Player", "AutoFlyPlayer", nil)
+-- 1. Auto Join Tim
+createSectionHeader("1. Auto Join Tim & Server")
+createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
+    if state then joinTeam() end
+end)
+
+local TeamSelectBtn = Instance.new("TextButton")
+TeamSelectBtn.Size = UDim2.new(0.9, 0, 0, 32)
+TeamSelectBtn.BackgroundColor3 = Color3.fromRGB(41, 128, 185)
+TeamSelectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeamSelectBtn.Text = "Pilih Tim: " .. Settings.SelectedTeam
+TeamSelectBtn.TextSize, TeamSelectBtn.Font = 11, Enum.Font.GothamBold
+TeamSelectBtn.ZIndex = 102
+TeamSelectBtn.Parent = Container
+
+local tsCorner = Instance.new("UICorner")
+tsCorner.CornerRadius = UDim.new(0, 6)
+tsCorner.Parent = TeamSelectBtn
+
+TeamSelectBtn.MouseButton1Click:Connect(function()
+    if Settings.SelectedTeam == "Pirates" then
+        Settings.SelectedTeam = "Marines"
+    else
+        Settings.SelectedTeam = "Pirates"
+    end
+    TeamSelectBtn.Text = "Pilih Tim: " .. Settings.SelectedTeam
+    saveSettings()
+    joinTeam()
+end)
+
+-- 2. Notifikasi
+createSectionHeader("2. Notifikasi & Monitor")
+createToggle("Fruit Notifier (Notif Buah)", "FruitNotifier", nil)
+createToggle("Tampilkan Monitor Server", "MonitorVisible", nil)
+
+-- 3. Auto Terbang & Koleksi (Buah & Chest)
+createSectionHeader("3. Auto Collect (Buah & Chest)")
+createToggle("Auto Teleport ke Buah Spawn", "AutoTeleportFruit", nil)
+createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
+createToggle("Auto Chest (Terbang Ambil Peti)", "AutoChest", nil)
+createToggle("Jalan di Atas Air (Sempurna)", "WalkOnWater", nil)
+
+-- 4. Target Player
+createSectionHeader("4. Target Player")
+createToggle("Auto Teleport ke Player", "AutoFlyPlayer", nil)
 
 local TargetStatusLabel = Instance.new("TextLabel")
-TargetStatusLabel.Size = UDim2.new(1, 0, 0, 20)
+TargetStatusLabel.Size = UDim2.new(0.9, 0, 0, 20)
 TargetStatusLabel.BackgroundTransparency = 1
 TargetStatusLabel.Text = "Target: " .. (Settings.TargetPlayerName == "" and "[ Terdekat ]" or Settings.TargetPlayerName)
 TargetStatusLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
 TargetStatusLabel.TextSize, TargetStatusLabel.Font = 10, Enum.Font.GothamBold
 TargetStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 TargetStatusLabel.ZIndex = 102
-TargetStatusLabel.Parent = Page2
+TargetStatusLabel.Parent = Container
 
 local PlayerListScroll = Instance.new("ScrollingFrame")
-PlayerListScroll.Size = UDim2.new(1, 0, 0, 110)
+PlayerListScroll.Size = UDim2.new(0.9, 0, 0, 110)
 PlayerListScroll.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
 PlayerListScroll.BorderSizePixel = 0
 PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 PlayerListScroll.ScrollBarThickness = 4
 PlayerListScroll.ZIndex = 102
-PlayerListScroll.Parent = Page2
+PlayerListScroll.Parent = Container
 
 local plsCorner = Instance.new("UICorner")
 plsCorner.CornerRadius = UDim.new(0, 6)
 plsCorner.Parent = PlayerListScroll
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 4)
-UIListLayout.Parent = PlayerListScroll
+local PlayerListLayout = Instance.new("UIListLayout")
+PlayerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+PlayerListLayout.Padding = UDim.new(0, 4)
+PlayerListLayout.Parent = PlayerListScroll
 
 local ResetTargetBtn = Instance.new("TextButton")
-ResetTargetBtn.Size = UDim2.new(1, 0, 0, 30)
+ResetTargetBtn.Size = UDim2.new(0.9, 0, 0, 30)
 ResetTargetBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 ResetTargetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ResetTargetBtn.Text = "Reset Target (Jadi Player Terdekat)"
 ResetTargetBtn.TextSize, ResetTargetBtn.Font = 10, Enum.Font.GothamBold
 ResetTargetBtn.ZIndex = 102
-ResetTargetBtn.Parent = Page2
+ResetTargetBtn.Parent = Container
 
 local rtbCorner = Instance.new("UICorner")
 rtbCorner.CornerRadius = UDim.new(0, 6)
@@ -797,37 +793,8 @@ refreshPlayerList()
 Players.PlayerAdded:Connect(refreshPlayerList)
 Players.PlayerRemoving:Connect(refreshPlayerList)
 
--- ==========================================
--- ISI HALAMAN 3 (TIM & FPS)
--- ==========================================
-createToggleInPage(Page3, "Auto Join Tim", "AutoJoinEnabled", function(state)
-    if state then joinTeam() end
-end)
-
-local TeamSelectBtn = Instance.new("TextButton")
-TeamSelectBtn.Size = UDim2.new(1, 0, 0, 35)
-TeamSelectBtn.BackgroundColor3 = Color3.fromRGB(41, 128, 185)
-TeamSelectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TeamSelectBtn.Text = "Pilih Tim: " .. Settings.SelectedTeam
-TeamSelectBtn.TextSize, TeamSelectBtn.Font = 11, Enum.Font.GothamBold
-TeamSelectBtn.ZIndex = 102
-TeamSelectBtn.Parent = Page3
-
-local tsCorner = Instance.new("UICorner")
-tsCorner.CornerRadius = UDim.new(0, 6)
-tsCorner.Parent = TeamSelectBtn
-
-TeamSelectBtn.MouseButton1Click:Connect(function()
-    if Settings.SelectedTeam == "Pirates" then
-        Settings.SelectedTeam = "Marines"
-    else
-        Settings.SelectedTeam = "Pirates"
-    end
-    TeamSelectBtn.Text = "Pilih Tim: " .. Settings.SelectedTeam
-    saveSettings()
-    joinTeam()
-end)
-
-createToggleInPage(Page3, "FPS Boost (Anti Lag)", "FpsBoost", function(state)
+-- 5. Pengaturan FPS
+createSectionHeader("5. Pengaturan FPS & Performa")
+createToggle("FPS Boost (Anti Lag)", "FpsBoost", function(state)
     applyFpsBoost(state)
 end)
