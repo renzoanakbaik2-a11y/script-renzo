@@ -143,9 +143,8 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
---// Auto Collect Chest Logic (Using BodyVelocity / LinearVelocity for direct physical movement)
+--// Auto Collect Chest Logic (Fixed Precise Names & Direct Physics Movement)
 task.spawn(function()
-    local bv, bg
     while true do
         task.wait(0.1)
         pcall(function()
@@ -159,8 +158,8 @@ task.spawn(function()
                     local shortestDistance = math.huge
                     
                     for _, obj in pairs(Workspace:GetDescendants()) do
-                        local nameLower = obj.Name:lower()
-                        if (nameLower:find("chest") or nameLower:find("box")) and (obj:IsA("Model") or obj:IsA("BasePart")) then
+                        local name = obj.Name
+                        if name == "Bronze Chest" or name == "Silver Chest" or name == "Gold Chest" or name == "Diamond Chest" or name:lower():find("chest") then
                             local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
                             if part then
                                 local dist = (hrp.Position - part.Position).Magnitude
@@ -175,39 +174,36 @@ task.spawn(function()
                     if targetChest then
                         humanoid.PlatformStand = true
                         
-                        -- Setup BodyVelocity & BodyGyro untuk terbang mulus langsung ke target
-                        if not hrp:FindFirstChild("CustomChestFlyBV") then
+                        local bv = hrp:FindFirstChild("ChestFlyVelocity")
+                        if not bv then
                             bv = Instance.new("BodyVelocity")
-                            bv.Name = "CustomChestFlyBV"
+                            bv.Name = "ChestFlyVelocity"
                             bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-                            bv.Velocity = Vector3.new(0, 0, 0)
                             bv.Parent = hrp
-                        else
-                            bv = hrp:FindFirstChild("CustomChestFlyBV")
                         end
                         
-                        if not hrp:FindFirstChild("CustomChestFlyBG") then
+                        local bg = hrp:FindFirstChild("ChestFlyGyro")
+                        if not bg then
                             bg = Instance.new("BodyGyro")
-                            bg.Name = "CustomChestFlyBG"
+                            bg.Name = "ChestFlyGyro"
                             bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-                            bg.P = 10000
+                            bg.P = 20000
                             bg.Parent = hrp
-                        else
-                            bg = hrp:FindFirstChild("CustomChestFlyBG")
                         end
                         
-                        while Settings.AutoChest and targetChest.Parent and (hrp.Position - targetChest.Position).Magnitude > 4 do
-                            local direction = (targetChest.Position - hrp.Position).Unit
-                            bv.Velocity = direction * 250
-                            bg.CFrame = CFrame.new(hrp.Position, targetChest.Position)
+                        while Settings.AutoChest and targetChest.Parent and (hrp.Position - targetChest.Position).Magnitude > 3 do
+                            local targetPos = targetChest.Position + Vector3.new(0, 2, 0)
+                            local direction = (targetPos - hrp.Position).Unit
+                            bv.Velocity = direction * 300
+                            bg.CFrame = CFrame.new(hrp.Position, targetPos)
                             task.wait(0.05)
                         end
                         
                         if bv then bv.Velocity = Vector3.new(0, 0, 0) end
                         humanoid.PlatformStand = false
                     else
-                        if hrp:FindFirstChild("CustomChestFlyBV") then hrp.CustomChestFlyBV:Destroy() end
-                        if hrp:FindFirstChild("CustomChestFlyBG") then hrp.CustomChestFlyBG:Destroy() end
+                        if hrp:FindFirstChild("ChestFlyVelocity") then hrp.ChestFlyVelocity:Destroy() end
+                        if hrp:FindFirstChild("ChestFlyGyro") then hrp.ChestFlyGyro:Destroy() end
                         humanoid.PlatformStand = false
                     end
                 end
@@ -216,8 +212,8 @@ task.spawn(function()
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 local humanoid = char and char:FindFirstChild("Humanoid")
                 if hrp then
-                    if hrp:FindFirstChild("CustomChestFlyBV") then hrp.CustomChestFlyBV:Destroy() end
-                    if hrp:FindFirstChild("CustomChestFlyBG") then hrp.CustomChestFlyBG:Destroy() end
+                    if hrp:FindFirstChild("ChestFlyVelocity") then hrp.ChestFlyVelocity:Destroy() end
+                    if hrp:FindFirstChild("ChestFlyGyro") then hrp.ChestFlyGyro:Destroy() end
                 end
                 if humanoid then
                     humanoid.PlatformStand = false
