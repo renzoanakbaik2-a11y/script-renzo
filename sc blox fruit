@@ -221,77 +221,92 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
 end
 
 -- ==========================================
--- FUNGSI AUTO STORE FRUIT
+-- FUNGSI DETEKSI DEVIL FRUIT YANG KETAT
+-- ==========================================
+local function isDevilFruit(obj)
+    local name = obj.Name:lower()
+    
+    local validFruits = {
+        "rocket", "spin", "spring", "chop", "spike", "flame", "falcon", "ice", 
+        "sand", "dark", "diamond", "light", "rubber", "barrier", "ghost", 
+        "magma", "quake", "buddha", "love", "spider", "sound", "phoenix", 
+        "portal", "pain", "blizzard", "gravity", "mammoth", "trex", "dough", 
+        "shadow", "venom", "control", "spirit", "dragon", "leopard", "kitsune", "fruit", "blox"
+    }
+    
+    local invalidKeywords = {"sword", "gun", "musket", "rifle", "cutlass", "pistol", "blade", "katana", "dagger", "staff"}
+    
+    for _, word in ipairs(invalidKeywords) do
+        if name:find(word) then return false end
+    end
+    
+    for _, fruitName in ipairs(validFruits) do
+        if name:find(fruitName) then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- ==========================================
+-- REVISI AUTO STORE FRUIT (Lebih Stabil)
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
+    
     pcall(function()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        if not remotes or not remotes:FindFirstChild("CommF_") then return end
+        
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         local character = LocalPlayer.Character
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
         
-        local containers = {backpack, character}
-        for _, container in ipairs(containers) do
-            if container then
-                for _, item in ipairs(container:GetChildren()) do
-                    if item:IsA("Tool") then
-                        local nameLower = item.Name:lower()
-                        if nameLower:find("fruit") or nameLower:find("blox") or nameLower:find("rocket") or nameLower:find("spin") or nameLower:find("spring") or nameLower:find("chop") or nameLower:find("spike") or nameLower:find("flame") or nameLower:find("falcon") or nameLower:find("ice") or nameLower:find("sand") or nameLower:find("dark") or nameLower:find("diamond") or nameLower:find("light") or nameLower:find("rubber") or nameLower:find("barrier") or nameLower:find("ghost") or nameLower:find("magma") or nameLower:find("quake") or nameLower:find("buddha") or nameLower:find("love") or nameLower:find("spider") or nameLower:find("sound") or nameLower:find("phoenix") or nameLower:find("portal") or nameLower:find("pain") or nameLower:find("blizzard") or nameLower:find("gravity") or nameLower:find("mammoth") or nameLower:find("trex") or nameLower:find("dough") or nameLower:find("shadow") or nameLower:find("venom") or nameLower:find("control") or nameLower:find("spirit") or nameLower:find("dragon") or nameLower:find("leopard") or nameLower:find("kitsune") then
-                            if remotes and remotes:FindFirstChild("CommF_") then
-                                remotes.CommF_:InvokeServer("StoreFruit", item.Name)
-                            end
-                        end
-                    end
-                end
+        local allItems = {}
+        if backpack then
+            for _, item in ipairs(backpack:GetChildren()) do table.insert(allItems, item) end
+        end
+        if character then
+            for _, item in ipairs(character:GetChildren()) do table.insert(allItems, item) end
+        end
+        
+        for _, item in ipairs(allItems) do
+            if item:IsA("Tool") and isDevilFruit(item) then
+                remotes.CommF_:InvokeServer("StoreFruit", item.Name)
+                task.wait(0.8)
             end
         end
     end)
 end
 
 -- ==========================================
--- SISTEM JALAN DI AIR (WALK ON WATER) - REVISED
+-- REVISI SISTEM JALAN DI AIR (Mirip Redz Hub)
 -- ==========================================
 local WaterPart = nil
 
 local function updateWaterWalk()
     pcall(function()
-        if Settings.WalkOnWater then
-            local rootPart = getCharacterRootPart()
-            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local character = LocalPlayer.Character
+        local rootPart = getCharacterRootPart()
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        
+        if Settings.WalkOnWater and rootPart and humanoid then
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
             
-            if rootPart then
-                local currentY = rootPart.Position.Y
-                
-                -- Hanya aktif di permukaan air (Y <= 15 agar di daratan tinggi pulau platform tidak muncul)
-                if currentY <= 15 then
-                    if not WaterPart or not WaterPart.Parent then
-                        WaterPart = Instance.new("Part")
-                        WaterPart.Name = "WaterWalkPlatform"
-                        WaterPart.Size = Vector3.new(100, 1, 100)
-                        WaterPart.Anchored = true
-                        WaterPart.Transparency = 1 
-                        WaterPart.CanCollide = true
-                        WaterPart.Parent = Workspace
-                    end
-                    
-                    -- Kunci posisi platform datar di ketinggian air standar Blox Fruits (Y = 3.5)
-                    WaterPart.Position = Vector3.new(rootPart.Position.X, 3.5, rootPart.Position.Z)
-                    
-                    if humanoid then
-                        humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
-                    end
-                else
-                    if WaterPart then
-                        WaterPart:Destroy()
-                        WaterPart = nil
-                    end
-                    if humanoid then
-                        humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
-                    end
-                end
+            if not WaterPart or not WaterPart.Parent then
+                WaterPart = Instance.new("Part")
+                WaterPart.Name = "RedzStyleWaterWalk"
+                WaterPart.Size = Vector3.new(50, 1, 50)
+                WaterPart.Anchored = true
+                WaterPart.CanQuery = false
+                WaterPart.Transparency = 1 
+                WaterPart.CanCollide = true
+                WaterPart.Parent = Workspace
             end
+            
+            local currentPos = rootPart.Position
+            WaterPart.Position = Vector3.new(currentPos.X, 3.5, currentPos.Z)
         else
-            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
             end
@@ -354,7 +369,7 @@ local function getChestIslands()
 end
 
 -- ==========================================
--- BACKGROUND SYSTEM (NOTIFIKASI HANYA BUAH & AUTO FARM)
+-- BACKGROUND SYSTEM (NOTIFIKASI HANYA BUAH & AUTO SYSTEM)
 -- ==========================================
 task.spawn(function()
     local lastCount = 0
@@ -378,27 +393,8 @@ task.spawn(function()
                 end
 
                 if not isInsidePlayer then
-                    if (obj:IsA("Tool") or obj:IsA("Model")) and (obj:FindFirstChild("Handle") or obj.PrimaryPart or obj:IsA("Tool")) then
-                        local nameLower = obj.Name:lower()
-                        
-                        -- Filter ketat agar HANYA MENDETEKSI BUAH SAJA (Mencegah pedang/senjata ikut terdeteksi)
-                        local isRealFruit = false
-                        local validFruitKeywords = {
-                            "fruit", "blox", "rocket", "spin", "spring", "chop", "spike", "flame", 
-                            "falcon", "ice", "sand", "dark", "diamond", "light", "rubber", "barrier", 
-                            "ghost", "magma", "quake", "buddha", "love", "spider", "sound", "phoenix", 
-                            "portal", "pain", "blizzard", "gravity", "mammoth", "trex", "dough", 
-                            "shadow", "venom", "control", "spirit", "dragon", "leopard", "kitsune"
-                        }
-                        
-                        for _, keyword in ipairs(validFruitKeywords) do
-                            if nameLower:find(keyword) then
-                                isRealFruit = true
-                                break
-                            end
-                        end
-                        
-                        if isRealFruit and not nameLower:find("sword") and not nameLower:find("gun") and not nameLower:find("musket") and not nameLower:find("rifle") and not nameLower:find("cutlass") then
+                    if (obj:IsA("Tool") or obj:IsA("Model")) then
+                        if isDevilFruit(obj) then
                             table.insert(fruitList, obj.Name)
                             
                             if not collectedFruits[obj] and targetFruitObj == nil then
