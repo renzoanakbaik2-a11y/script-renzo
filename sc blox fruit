@@ -46,7 +46,6 @@ local function loadSettings()
         end
     end
 end
-
 loadSettings()
 
 -- Fungsi Save Settings
@@ -221,20 +220,25 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
 end
 
 -- ==========================================
--- FUNGSI DETEKSI DEVIL FRUIT YANG KETAT
+-- FUNGSI DETEKSI DEVIL FRUIT YANG AMAN & BERSIH
 -- ==========================================
 local function isDevilFruit(obj)
     local name = obj.Name:lower()
     
+    -- Mencegah objek suara (Sound) atau audio game terdeteksi sebagai buah
+    if obj:IsA("Sound") or name:find("sound") or name:find("music") or name:find("audio") then 
+        return false 
+    end
+    
     local validFruits = {
         "rocket", "spin", "spring", "chop", "spike", "flame", "falcon", "ice", 
         "sand", "dark", "diamond", "light", "rubber", "barrier", "ghost", 
-        "magma", "quake", "buddha", "love", "spider", "sound", "phoenix", 
+        "magma", "quake", "buddha", "love", "spider", "phoenix", 
         "portal", "pain", "blizzard", "gravity", "mammoth", "trex", "dough", 
         "shadow", "venom", "control", "spirit", "dragon", "leopard", "kitsune", "fruit", "blox"
     }
     
-    local invalidKeywords = {"sword", "gun", "musket", "rifle", "cutlass", "pistol", "blade", "katana", "dagger", "staff"}
+    local invalidKeywords = {"sword", "gun", "musket", "rifle", "cutlass", "pistol", "blade", "katana", "dagger", "staff", "sound"}
     
     for _, word in ipairs(invalidKeywords) do
         if name:find(word) then return false end
@@ -250,7 +254,7 @@ local function isDevilFruit(obj)
 end
 
 -- ==========================================
--- REVISI AUTO STORE FRUIT (Lebih Stabil)
+-- AUTO STORE FRUIT
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -280,9 +284,9 @@ local function autoStoreFruits()
 end
 
 -- ==========================================
--- REVISI SISTEM JALAN DI AIR (Mirip Redz Hub)
+-- REVISI TOTAL: JALAN DI AIR (Walk on Water)
 -- ==========================================
-local WaterPart = nil
+local WaterPlatform = nil
 
 local function updateWaterWalk()
     pcall(function()
@@ -291,28 +295,31 @@ local function updateWaterWalk()
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
         
         if Settings.WalkOnWater and rootPart and humanoid then
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
-            
-            if not WaterPart or not WaterPart.Parent then
-                WaterPart = Instance.new("Part")
-                WaterPart.Name = "RedzStyleWaterWalk"
-                WaterPart.Size = Vector3.new(50, 1, 50)
-                WaterPart.Anchored = true
-                WaterPart.CanQuery = false
-                WaterPart.Transparency = 1 
-                WaterPart.CanCollide = true
-                WaterPart.Parent = Workspace
+            -- Buat platform padat transparan di bawah kaki pemain
+            if not WaterPlatform or not WaterPlatform.Parent then
+                WaterPlatform = Instance.new("Part")
+                WaterPlatform.Name = "FixedWaterWalkPlatform"
+                WaterPlatform.Size = Vector3.new(15, 1, 15)
+                WaterPlatform.Anchored = true
+                WaterPlatform.CanCollide = true
+                WaterPlatform.Transparency = 1
+                WaterPlatform.Parent = Workspace
             end
             
-            local currentPos = rootPart.Position
-            WaterPart.Position = Vector3.new(currentPos.X, 3.5, currentPos.Z)
+            -- Deteksi jika posisi Y pemain mendekati atau di bawah permukaan air laut Blox Fruits (Y sekitar 3)
+            local pos = rootPart.Position
+            if pos.Y <= 6 then
+                -- Kunci platform tepat di bawah kaki pemain pada ketinggian air
+                WaterPlatform.Position = Vector3.new(pos.X, 2.8, pos.Z)
+                WaterPlatform.CanCollide = true
+            else
+                -- Jika pemain sedang di daratan tinggi, nonaktifkan colider agar tidak mengganggu lompatan
+                WaterPlatform.CanCollide = false
+            end
         else
-            if humanoid then
-                humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
-            end
-            if WaterPart then
-                WaterPart:Destroy()
-                WaterPart = nil
+            if WaterPlatform then
+                WaterPlatform:Destroy()
+                WaterPlatform = nil
             end
         end
     end)
@@ -369,7 +376,7 @@ local function getChestIslands()
 end
 
 -- ==========================================
--- BACKGROUND SYSTEM (NOTIFIKASI HANYA BUAH & AUTO SYSTEM)
+-- BACKGROUND SYSTEM (NOTIFIKASI & AUTO SYSTEM)
 -- ==========================================
 task.spawn(function()
     local lastCount = 0
@@ -377,7 +384,7 @@ task.spawn(function()
 
     while task.wait(0.5) do
         if Settings.FruitNotifier then
-            local fruitList = {}
+            local fruitListRaw = {}
             local targetFruitObj = nil
             local targetFruitHandle = nil
 
@@ -395,7 +402,7 @@ task.spawn(function()
                 if not isInsidePlayer then
                     if (obj:IsA("Tool") or obj:IsA("Model")) then
                         if isDevilFruit(obj) then
-                            table.insert(fruitList, obj.Name)
+                            table.insert(fruitListRaw, obj.Name)
                             
                             if not collectedFruits[obj] and targetFruitObj == nil then
                                 targetFruitObj = obj
@@ -406,6 +413,16 @@ task.spawn(function()
                 end
             end
             
+            -- Filter duplikasi nama buah agar tidak spam di layar (Unique items list)
+            local fruitList = {}
+            local checkDuplicate = {}
+            for _, name in ipairs(fruitListRaw) do
+                if not checkDuplicate[name] then
+                    checkDuplicate[name] = true
+                    table.insert(fruitList, name)
+                end
+            end
+
             local currentCount = #fruitList
             if currentCount > 0 then
                 local combinedNames = table.concat(fruitList, ", ")
