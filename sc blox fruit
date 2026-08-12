@@ -1,60 +1,59 @@
 -- ==============================================================================
--- DEWA CODING: DEX EXPLORER (DENGAN TOMBOL MENU UTAMA YANG JELAS & BESAR)
+-- DEWA CODING: 3D WORLD CLICK-TO-FOLDER (KLIK LANGSUNG OBJEK DI MAP)
 -- ==============================================================================
 
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local camera = workspace.CurrentCamera
 
-if playerGui:FindFirstChild("DewaDexExplorerFix") then
-    playerGui.DewaDexExplorerFix:Destroy()
+if playerGui:FindFirstChild("DewaWorldClicker") then
+    playerGui.DewaWorldClicker:Destroy()
 end
 
+-- SETUP UI UTAMA & MENU
 local ScreenGui = Instance.new("ScreenGui", playerGui)
-ScreenGui.Name = "DewaDexExplorerFix"
+ScreenGui.Name = "DewaWorldClicker"
 ScreenGui.ResetOnSpawn = false
 
--- ==========================================
--- 1. TOMBOL BUKA/TUTUP MENU (DIBUAT BESAR & JELAS DI LAYAR)
--- ==========================================
+-- Tombol Toggle Buka/Tutup Menu Utama di Atas Layar
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size = UDim2.new(0, 160, 0, 45)
-ToggleBtn.Position = UDim2.new(0.5, -80, 0, 10) -- Posisi di tengah atas layar biar langsung kelihatan!
-ToggleBtn.Text = "📁 BUKA MENU DEX"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleBtn.Size = UDim2.new(0, 180, 0, 45)
+ToggleBtn.Position = UDim2.new(0.5, -90, 0, 10)
+ToggleBtn.Text = "🎯 MODE KLIK MAP: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 ToggleBtn.BorderColor3 = Color3.fromRGB(255, 215, 0)
 ToggleBtn.BorderSizePixel = 2
 ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 12
+ToggleBtn.TextSize = 11
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
 
--- ==========================================
--- 2. SETUP PANEL UTAMA (MENU DEX)
--- ==========================================
+-- Panel Utama (UI Tampilan Struktur Folder)
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 480, 0, 420)
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -210)
+MainFrame.Size = UDim2.new(0, 380, 0, 340)
+MainFrame.Position = UDim2.new(0.5, -190, 0.4, -170)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = false -- Mulai tertutup, tekan tombol di atas untuk membuka
+MainFrame.Visible = false
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
--- Header Bar
+-- Header Bar Panel
 local TopBar = Instance.new("Frame", MainFrame)
-TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.Size = UDim2.new(1, 0, 0, 35)
 TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 TopBar.BorderSizePixel = 0
 Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 
 local Title = Instance.new("TextLabel", TopBar)
-Title.Size = UDim2.new(1, -40, 1, 0)
-Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "📁 DEWA DEX EXPLORER"
+Title.Size = UDim2.new(1, -30, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "📁 STRUKTUR FOLDER OBJEK YANG DIKLIK"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 11
@@ -62,40 +61,20 @@ Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
 local CloseBtn = Instance.new("TextButton", TopBar)
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
+CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+CloseBtn.Position = UDim2.new(1, -30, 0.5, -12)
 CloseBtn.Text = "X"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 11
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+CloseBtn.TextSize = 10
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 5)
 
--- Logika Tombol Buka/Tutup
-ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-end)
-
--- Tombol Scan / Refresh
-local RefreshBtn = Instance.new("TextButton", MainFrame)
-RefreshBtn.Size = UDim2.new(0.92, 0, 0, 32)
-RefreshBtn.Position = UDim2.new(0.04, 0, 0.12, 0)
-RefreshBtn.Text = "🔄 SCAN SEMUA OBJEK MAP"
-RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-RefreshBtn.Font = Enum.Font.GothamBold
-RefreshBtn.TextSize = 11
-Instance.new("UICorner", RefreshBtn).CornerRadius = UDim.new(0, 6)
-
--- Status Info Folder
+-- Status Label
 local StatusLabel = Instance.new("TextLabel", MainFrame)
 StatusLabel.Size = UDim2.new(0.92, 0, 0, 35)
-StatusLabel.Position = UDim2.new(0.04, 0, 0.22, 0)
-StatusLabel.Text = "Status: Klik salah satu blok di kiri untuk melihat struktur foldernya di kanan."
+StatusLabel.Position = UDim2.new(0.04, 0, 0.13, 0)
+StatusLabel.Text = "Status: Nyalakan tombol di atas, lalu klik objek/blok apa saja di dalam game!"
 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
 StatusLabel.Font = Enum.Font.Code
 StatusLabel.TextSize = 10
@@ -104,61 +83,65 @@ StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
 StatusLabel.TextWrapped = true
 StatusLabel.BackgroundTransparency = 1
 
--- Kolom Kiri: Daftar Blok / Objek di Map
-local LeftScroll = Instance.new("ScrollingFrame", MainFrame)
-LeftScroll.Size = UDim2.new(0.44, 0, 0.58, 0)
-LeftScroll.Position = UDim2.new(0.04, 0, 0.33, 0)
-LeftScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-LeftScroll.BorderSizePixel = 0
-LeftScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-Instance.new("UICorner", LeftScroll).CornerRadius = UDim.new(0, 6)
-local LeftLayout = Instance.new("UIListLayout", LeftScroll)
-LeftLayout.SortOrder = Enum.SortOrder.LayoutOrder
-LeftLayout.Padding = UDim.new(0, 4)
+-- Scrolling Container untuk Menampilkan Folder/Hirarki
+local ScrollContainer = Instance.new("ScrollingFrame", MainFrame)
+ScrollContainer.Size = UDim2.new(0.92, 0, 0.65, 0)
+ScrollContainer.Position = UDim2.new(0.04, 0, 0.28, 0)
+ScrollContainer.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+ScrollContainer.BorderSizePixel = 0
+ScrollContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", ScrollContainer).CornerRadius = UDim.new(0, 6)
 
--- Kolom Kanan: Isi Struktur Folder / Parent-nya
-local RightScroll = Instance.new("ScrollingFrame", MainFrame)
-RightScroll.Size = UDim2.new(0.44, 0, 0.58, 0)
-RightScroll.Position = UDim2.new(0.52, 0, 0.33, 0)
-RightScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-RightScroll.BorderSizePixel = 0
-RightScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-Instance.new("UICorner", RightScroll).CornerRadius = UDim.new(0, 6)
-local RightLayout = Instance.new("UIListLayout", RightScroll)
-RightLayout.SortOrder = Enum.SortOrder.LayoutOrder
-RightLayout.Padding = UDim.new(0, 4)
+local UIListLayout = Instance.new("UIListLayout", ScrollContainer)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 4)
 
--- Judul Kolom
-local LeftTitle = Instance.new("TextLabel", MainFrame)
-LeftTitle.Size = UDim2.new(0.44, 0, 0, 20)
-LeftTitle.Position = UDim2.new(0.04, 0, 0.29, 0)
-LeftTitle.Text = "DAFTAR OBJEK / BLOK:"
-LeftTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-LeftTitle.Font = Enum.Font.GothamBold
-LeftTitle.TextSize = 10
-LeftTitle.BackgroundTransparency = 1
-
-local RightTitle = Instance.new("TextLabel", MainFrame)
-RightTitle.Size = UDim2.new(0.44, 0, 0, 20)
-RightTitle.Position = UDim2.new(0.52, 0, 0.29, 0)
-RightTitle.Text = "STRUKTUR FOLDER INDUK:"
-RightTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-RightTitle.Font = Enum.Font.GothamBold
-RightTitle.TextSize = 10
-RightTitle.BackgroundTransparency = 1
-
+-- Folder Penampung Kotak Visual (SelectionBox) di Map
 local ESPBoxFolder = Instance.new("Folder", ScreenGui)
-ESPBoxFolder.Name = "DexNavigatorHighlight"
+ESPBoxFolder.Name = "MapClickHighlight"
 
--- Fungsi Menampilkan Hierarki Folder di Kolom Kanan
-local function displayFolderHierarchy(targetObj, blockName)
-    for _, child in pairs(RightScroll:GetChildren()) do
+-- Konfigurasi Status
+local Config = {
+    Active = false
+}
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    Config.Active = not Config.Active
+    if Config.Active then
+        ToggleBtn.Text = "🎯 MODE KLIK MAP: ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+    else
+        ToggleBtn.Text = "🎯 MODE KLIK MAP: OFF"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        MainFrame.Visible = false
+        ESPBoxFolder:ClearAllChildren()
+    end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+end)
+
+-- Fungsi Menampilkan Hirarki Folder ke UI Menu
+local function showObjectFolders(targetObj)
+    -- Bersihkan isi menu sebelumnya
+    for _, child in pairs(ScrollContainer:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
+    ESPBoxFolder:ClearAllChildren()
     
-    StatusLabel.Text = "Blok terpilih: [" .. blockName .. "]\nMenampilkan isi dari folder induknya:"
+    -- Beri kotak biru penanda pada objek yang diklik di map
+    local box = Instance.new("SelectionBox")
+    box.Adornee = targetObj
+    box.Color3 = Color3.fromRGB(0, 170, 255)
+    box.LineThickness = 0.08
+    box.Parent = ESPBoxFolder
     
-    local current = targetObj.Parent
+    StatusLabel.Text = "Berhasil Klik: " .. targetObj.Name .. " (" .. targetObj.ClassName .. ")\nDaftar Folder & Parent-nya:"
+    MainFrame.Visible = true -- Otomatis munculkan menu saat objek di-klik
+    
+    -- Kumpulkan jalur hirarki dari objek ke Workspace
+    local current = targetObj
     local lineage = {}
     while current and current ~= game do
         table.insert(lineage, 1, current)
@@ -166,27 +149,28 @@ local function displayFolderHierarchy(targetObj, blockName)
     end
     
     local count = 0
-    for _, folderItem in ipairs(lineage) do
+    for _, item in ipairs(lineage) do
         count = count + 1
-        local folderBtn = Instance.new("TextButton")
-        folderBtn.Size = UDim2.new(1, -6, 0, 28)
-        folderBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-        folderBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
-        folderBtn.Font = Enum.Font.Code
-        folderBtn.TextSize = 10
-        folderBtn.Text = "📁 " .. folderItem.Name .. " (" .. folderItem.ClassName .. ")"
-        folderBtn.TextXAlignment = Enum.TextXAlignment.Left
-        folderBtn.Parent = RightScroll
-        Instance.new("UICorner", folderBtn).CornerRadius = UDim.new(0, 4)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -6, 0, 28)
+        btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        btn.TextColor3 = Color3.fromRGB(255, 215, 0)
+        btn.Font = Enum.Font.Code
+        btn.TextSize = 10
+        btn.Text = "📁 " .. item.Name .. " [" .. item.ClassName .. "]"
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.Parent = ScrollContainer
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
         
-        folderBtn.MouseButton1Click:Connect(function()
-            for _, child in pairs(RightScroll:GetChildren()) do
+        -- Klik folder di UI untuk melihat isi sub-foldernya
+        btn.MouseButton1Click:Connect(function()
+            for _, child in pairs(ScrollContainer:GetChildren()) do
                 if child:IsA("TextButton") then child:Destroy() end
             end
-            StatusLabel.Text = "Melihat isi dalam folder: " .. folderItem.Name
+            StatusLabel.Text = "Isi dari Folder: " .. item.Name
             
             local subCount = 0
-            for _, subObj in pairs(folderItem:GetChildren()) do
+            for _, sub in pairs(item:GetChildren()) do
                 subCount = subCount + 1
                 local subBtn = Instance.new("TextButton")
                 subBtn.Size = UDim2.new(1, -6, 0, 26)
@@ -194,67 +178,42 @@ local function displayFolderHierarchy(targetObj, blockName)
                 subBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
                 subBtn.Font = Enum.Font.Code
                 subBtn.TextSize = 10
-                subBtn.Text = "   - " .. subObj.Name .. " [" .. subObj.ClassName .. "]"
+                subBtn.Text = "   - " .. sub.Name .. " [" .. sub.ClassName .. "]"
                 subBtn.TextXAlignment = Enum.TextXAlignment.Left
-                subBtn.Parent = RightScroll
+                subBtn.Parent = ScrollContainer
                 Instance.new("UICorner", subBtn).CornerRadius = UDim.new(0, 4)
             end
-            RightScroll.CanvasSize = UDim2.new(0, 0, 0, subCount * 30)
+            ScrollContainer.CanvasSize = UDim2.new(0, 0, 0, subCount * 30)
         end)
     end
-    RightScroll.CanvasSize = UDim2.new(0, 0, 0, count * 32)
+    ScrollContainer.CanvasSize = UDim2.new(0, 0, 0, count * 32)
 end
 
--- Fungsi Scan Objek Map
-local function scanMapObjects()
-    for _, child in pairs(LeftScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    for _, child in pairs(RightScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    ESPBoxFolder:ClearAllChildren()
+-- Deteksi Klik Langsung ke Objek di Dalam Dunia Game (3D Map)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not Config.Active then return end
     
-    local count = 0
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj.Name and (obj:IsA("BasePart") or obj:IsA("Model")) then
-            count = count + 1
-            
-            local objBtn = Instance.new("TextButton")
-            objBtn.Size = UDim2.new(1, -6, 0, 26)
-            objBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-            objBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-            objBtn.Font = Enum.Font.Code
-            objBtn.TextSize = 10
-            objBtn.Text = "⬛ " .. obj.Name
-            objBtn.TextXAlignment = Enum.TextXAlignment.Left
-            objBtn.Parent = LeftScroll
-            Instance.new("UICorner", objBtn).CornerRadius = UDim.new(0, 4)
-            
-            objBtn.MouseButton1Click:Connect(function()
-                ESPBoxFolder:ClearAllChildren()
-                
-                local box = Instance.new("SelectionBox")
-                box.Adornee = obj
-                box.Color3 = Color3.fromRGB(0, 170, 255)
-                box.LineThickness = 0.08
-                box.Parent = ESPBoxFolder
-                
-                displayFolderHierarchy(obj, obj.Name)
-            end)
+    -- Mendeteksi klik mouse kiri atau tap layar HP
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        -- Jangan eksekusi jika pemain sedang mengetik atau mengklik tombol UI Menu
+        if gameProcessed then return end
+        
+        local mousePos = UserInputService:GetMouseLocation()
+        local unitRay = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
+        
+        -- Lakukan Raycast ke map
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        raycastParams.FilterDescendantsInstances = {player.Character}
+        
+        local raycastResult = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000, raycastParams)
+        
+        if raycastResult and raycastResult.Instance then
+            local hitPart = raycastResult.Instance
+            -- Tampilkan struktur foldernya secara otomatis
+            showObjectFolders(hitPart)
         end
     end
-    LeftScroll.CanvasSize = UDim2.new(0, 0, 0, count * 30)
-end
-
-RefreshBtn.MouseButton1Click:Connect(function()
-    RefreshBtn.Text = "SEDANG SCAN MAP..."
-    RefreshBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
-    task.spawn(function()
-        scanMapObjects()
-        RefreshBtn.Text = "🔄 SCAN SEMUA OBJEK MAP"
-        RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    end)
 end)
 
-print("⚡ TOMBOL MENU UTAMA SUDAH DIPASANG DI TENGAH ATAS LAYAR! ⚡")
+print("⚡ 3D WORLD CLICK-TO-FOLDER READY! ⚡")
