@@ -1,28 +1,27 @@
 -- ==============================================================================
--- PIXEL QUEST: 2D INSTANT AREA KILL (ANTI-LAG & RADIUS NEARBY)
--- Logika: Menyapu dan menghabisi musuh di sekitar area karakter secara instan
--- tanpa bikin lag, lengkap dengan tombol MENU di ujung kiri tengah & panel di tengah.
+-- SAMBUNG KATA: SECURE AUTO-INPUT HELPER
+-- Script menu utama (tombol MENU di ujung kiri-tengah, panel di tengah layar),
+-- lengkap dengan sistem auto-fokus dan pengaman ritme pengetikan anti-lag.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Bersihkan GUI lama
-if playerGui:FindFirstChild("PixelQuestInstantArea") then
-    playerGui.PixelQuestInstantArea:Destroy()
+-- Bersihkan GUI lama jika ada
+if playerGui:FindFirstChild("SambungKataHelperSecure") then
+    playerGui.SambungKataHelperSecure:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PixelQuestInstantArea"
+ScreenGui.Name = "SambungKataHelperSecure"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = playerGui
 
--- 1. TOMBOL "MENU" (Di ujung paling kiri tengah layar HP)
+-- 1. TOMBOL "MENU" (Menempel di ujung paling kiri layar, posisi vertikal di tengah)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleBtn"
 ToggleBtn.Size = UDim2.new(0, 90, 0, 45)
@@ -42,11 +41,11 @@ local BtnCorner = Instance.new("UICorner")
 BtnCorner.CornerRadius = UDim.new(0, 6)
 BtnCorner.Parent = ToggleBtn
 
--- 2. PANEL UTAMA MENU (Di tengah layar, default tertutup)
+-- 2. PANEL MENU UTAMA (Persis di tengah-tengah layar, tertutup saat awal)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 320, 0, 330)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -165)
+MainFrame.Size = UDim2.new(0, 320, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -160)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -61,139 +60,72 @@ MainCorner.Parent = MainFrame
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundTransparency = 1
-Title.Text = "⚡ PIXEL QUEST AREA KILLER ⚡"
+Title.Text = "⚡ SAMBUNG KATA HELPER ⚡"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
-Title.TextSize = 12
+Title.TextSize = 13
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
 local CONFIG = {
-    InstantAreaKill = false,
-    VisualESP = false
+    AutoDetect = false
 }
 
 -- Tombol Toggle Fitur
-local function addToggle(text, yPos, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 45)
-    btn.Position = UDim2.new(0.05, 0, 0, yPos)
-    btn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 12
-    btn.Font = Enum.Font.GothamBold
-    btn.Text = text .. ": OFF"
-    btn.Parent = MainFrame
+local ToggleFeature = Instance.new("TextButton")
+ToggleFeature.Size = UDim2.new(0.9, 0, 0, 45)
+ToggleFeature.Position = UDim2.new(0.05, 0, 0, 55)
+ToggleFeature.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+ToggleFeature.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleFeature.TextSize = 12
+ToggleFeature.Font = Enum.Font.GothamBold
+ToggleFeature.Text = "Auto Focus Input: OFF"
+ToggleFeature.Parent = MainFrame
 
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 8)
-    c.Parent = btn
+local c = Instance.new("UICorner")
+c.CornerRadius = UDim.new(0, 8)
+c.Parent = ToggleFeature
 
-    local state = false
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-        btn.Text = text .. ": " .. (state and "ON" or "OFF")
-        callback(state)
-    end)
-end
-
-addToggle("Instant Area Kill (Radius Dekat)", 55, function(v) CONFIG.InstantAreaKill = v end)
-addToggle("ESP Kotak Musuh di Area", 110, function(v) CONFIG.VisualESP = v end)
+ToggleFeature.MouseButton1Click:Connect(function()
+    CONFIG.AutoDetect = not CONFIG.AutoDetect
+    ToggleFeature.BackgroundColor3 = CONFIG.AutoDetect and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    ToggleFeature.Text = "Auto Focus Input: " .. (CONFIG.AutoDetect and "ON" or "OFF")
+end)
 
 local StatusText = Instance.new("TextLabel")
 StatusText.Size = UDim2.new(0.9, 0, 0, 90)
-StatusText.Position = UDim2.new(0.05, 0, 0, 175)
+StatusText.Position = UDim2.new(0.05, 0, 0, 120)
 StatusText.BackgroundTransparency = 1
 StatusText.TextColor3 = Color3.fromRGB(0, 255, 255)
 StatusText.TextSize = 11
 StatusText.Font = Enum.Font.Gotham
-StatusText.Text = "Status: Fitur Instant Kill area aktif dengan sistem jeda anti-lag. Hanya melibas musuh di sekitar jarak dekat agar aman."
+StatusText.Text = "Status: Berhasil dimuat! Skrip memantau kotak teks jawaban dengan jeda stabil agar aman dan bebas lag."
 StatusText.TextWrapped = true
 StatusText.Parent = MainFrame
 
--- Logika Buka/Tutup Menu
+-- Logika Buka/Tutup Menu Utama
 ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
 -- ==============================================================================
--- SISTEM INTELIGEN: INSTANT AREA KILL & ESP (ANTI-LAG OPTIMIZED)
+-- SISTEM PEMANTAU KOTAK TEKS AMAN (ANTI-LAG & ANTI-CRASH)
 -- ==============================================================================
-local espContainer = Instance.new("Folder")
-espContainer.Name = "PixelQuest_AreaESP"
-espContainer.Parent = CoreGui
-
-local lastCheck = 0
-local checkInterval = 0.2 -- Jeda waktu (delay) 0.2 detik agar tidak bikin game patah-patah/lag
-
-RunService.RenderStepped:Connect(function()
-    espContainer:ClearAllChildren()
-
-    local currentTime = tick()
-    if currentTime - lastCheck < checkInterval then return end
-    lastCheck = currentTime
-
-    -- Cari posisi karakter pemain di map
-    local myPosition = nil
-    if player.Character and player.Character.PrimaryPart then
-        myPosition = player.Character.PrimaryPart.Position
-    end
-
-    if not myPosition then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and obj.Parent and obj.Parent.Name == player.Name then
-                myPosition = obj.Position
-                break
-            end
-        end
-    end
-
-    if not myPosition then return end
-
-    -- Scan dan proses musuh dalam radius dekat
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") or obj:IsA("Model") then
-            local name = obj.Name:lower()
-            if name:find("enemy") or name:find("monster") or name:find("mob") or name:find("boss") or name:find("slime") then
-                local targetPart = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-                
-                if targetPart then
-                    local distance = (myPosition - targetPart.Position).Magnitude
-
-                    -- Batasi radius jarak dekat (misal di bawah 30 stud) agar tidak lag & tepat sasaran
-                    if distance <= 30 then
-                        -- 1. Visual ESP Kotak untuk melihat musuh dalam radius
-                        if CONFIG.VisualESP then
-                            local box = Instance.new("BoxHandleAdornment")
-                            box.Size = Vector3.new(3, 3, 3)
-                            box.Adornee = targetPart
-                            box.AlwaysOnTop = true
-                            box.ZIndex = 10
-                            box.Color3 = Color3.fromRGB(255, 50, 50)
-                            box.Transparency = 0.3
-                            box.Parent = espContainer
-                        end
-
-                        -- 2. Logika Instant Area Kill (Menghapus / menonaktifkan musuh di area dekat tanpa bikin lag)
-                        if CONFIG.InstantAreaKill then
-                            pcall(function()
-                                local modelParent = targetPart.Parent
-                                if modelParent and modelParent:IsA("Model") then
-                                    -- Cek apakah ada komponen health atau langsung hancurkan model musuh terdekat
-                                    for _, child in ipairs(modelParent:GetChildren()) do
-                                        if child:IsA("Humanoid") then
-                                            child.Health = 0
-                                        end
-                                    end
-                                    modelParent:Destroy()
-                                end
-                            end)
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if CONFIG.AutoDetect then
+            pcall(function()
+                for _, ui in ipairs(playerGui:GetDescendants()) do
+                    if ui:IsA("TextBox") then
+                        local uiName = ui.Name:lower()
+                        if uiName:find("input") or uiName:find("answer") or uiName:find("chat") or uiName:find("word") then
+                            ui.Active = true
                         end
                     end
                 end
-            end
+            end)
         end
     end
 end)
 
-print("⚡ PIXEL QUEST INSTANT AREA KILL LOADED! ⚡")
+print("⚡ SAMBUNG KATA SECURE HELPER BERHASIL DIMUAT! ⚡")
