@@ -1,4 +1,218 @@
 -- ==============================================================================
+-- DEWA CODING: OBJECT-TO-FOLDER NAVIGATOR (KLIK BLOK, LANGSUNG MASUK FOLDER)
+-- ==============================================================================
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+if playerGui:FindFirstChild("DewaObjectToFolder") then
+    playerGui.DewaObjectToFolder:Destroy()
+end
+
+-- SETUP MAIN GUI
+local ScreenGui = Instance.new("ScreenGui", playerGui)
+ScreenGui.Name = "DewaObjectToFolder"
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 420, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -210, 0.4, -200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+-- Header Bar
+local TopBar = Instance.new("Frame", MainFrame)
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TopBar.BorderSizePixel = 0
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.Text = "📁 KLIK BLOK -> MASUK KE FOLDER"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+
+local CloseBtn = Instance.new("TextButton", TopBar)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 11
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Tombol Scan / Refresh
+local RefreshBtn = Instance.new("TextButton", MainFrame)
+RefreshBtn.Size = UDim2.new(0.92, 0, 0, 32)
+RefreshBtn.Position = UDim2.new(0.04, 0, 0.12, 0)
+RefreshBtn.Text = "🔄 SCAN SEMUA BLOK"
+RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+RefreshBtn.Font = Enum.Font.GothamBold
+RefreshBtn.TextSize = 11
+Instance.new("UICorner", RefreshBtn).CornerRadius = UDim.new(0, 6)
+
+-- Kotak Status Info Folder Saat Ini
+local StatusLabel = Instance.new("TextLabel", MainFrame)
+StatusLabel.Size = UDim2.new(0.92, 0, 0, 35)
+StatusLabel.Position = UDim2.new(0.04, 0, 0.22, 0)
+StatusLabel.Text = "Status: Pilih salah satu blok di bawah untuk buka foldernya."
+StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextSize = 10
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
+StatusLabel.TextWrapped = true
+StatusLabel.BackgroundTransparency = 1
+
+-- Scrolling Container List (Menunya ada 2: Kiri untuk Blok, Kanan untuk Isi Folder)
+local LeftScroll = Instance.new("ScrollingFrame", MainFrame)
+LeftScroll.Size = UDim2.new(0.44, 0, 0.6, 0)
+LeftScroll.Position = UDim2.new(0.04, 0, 0.32, 0)
+LeftScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+LeftScroll.BorderSizePixel = 0
+LeftScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", LeftScroll).CornerRadius = UDim.new(0, 6)
+local LeftLayout = Instance.new("UIListLayout", LeftScroll)
+LeftLayout.SortOrder = Enum.SortOrder.LayoutOrder
+LeftLayout.Padding = UDim.new(0, 4)
+
+local RightScroll = Instance.new("ScrollingFrame", MainFrame)
+RightScroll.Size = UDim2.new(0.44, 0, 0.6, 0)
+RightScroll.Position = UDim2.new(0.52, 0, 0.32, 0)
+RightScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+RightScroll.BorderSizePixel = 0
+RightScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", RightScroll).CornerRadius = UDim.new(0, 6)
+local RightLayout = Instance.new("UIListLayout", RightScroll)
+RightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+RightLayout.Padding = UDim.new(0, 4)
+
+-- Label Judul Kolom
+local LeftTitle = Instance.new("TextLabel", MainFrame)
+LeftTitle.Size = UDim2.new(0.44, 0, 0, 20)
+LeftTitle.Position = UDim2.new(0.04, 0, 0.28, 0)
+LeftTitle.Text = "DAFTAR BLOK:"
+LeftTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+LeftTitle.Font = Enum.Font.GothamBold
+LeftTitle.TextSize = 10
+LeftTitle.BackgroundTransparency = 1
+
+local RightTitle = Instance.new("TextLabel", MainFrame)
+RightTitle.Size = UDim2.new(0.44, 0, 0, 20)
+RightTitle.Position = UDim2.new(0.52, 0, 0.28, 0)
+RightTitle.Text = "ISI FOLDER NYA:"
+RightTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+RightTitle.Font = Enum.Font.GothamBold
+RightTitle.TextSize = 10
+RightTitle.BackgroundTransparency = 1
+
+-- Folder Penampung Kotak Visual di Game
+local ESPBoxFolder = Instance.new("Folder", ScreenGui)
+ESPBoxFolder.Name = "NavigatorHighlight"
+
+-- Fungsi Menampilkan Isi Folder di Kolom Kanan
+local function openFolder(parentFolder, blockName)
+    for _, child in pairs(RightScroll:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    StatusLabel.Text = "Folder dari blok [" .. blockName .. "]:\n-> " .. parentFolder.Name
+    
+    local count = 0
+    for _, item in pairs(parentFolder:GetChildren()) do
+        count = count + 1
+        local itemBtn = Instance.new("TextButton")
+        itemBtn.Size = UDim2.new(1, -6, 0, 26)
+        itemBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        itemBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+        itemBtn.Font = Enum.Font.Code
+        itemBtn.TextSize = 10
+        itemBtn.Text = item.Name .. " (" .. item.ClassName .. ")"
+        itemBtn.TextXAlignment = Enum.TextXAlignment.Left
+        itemBtn.Parent = RightScroll
+        Instance.new("UICorner", itemBtn).CornerRadius = UDim.new(0, 4)
+    end
+    RightScroll.CanvasSize = UDim2.new(0, 0, 0, count * 30)
+end
+
+-- Fungsi Scan Utama
+local function scanBlocks()
+    for _, child in pairs(LeftScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    for _, child in pairs(RightScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    ESPBoxFolder:ClearAllChildren()
+    
+    local count = 0
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name then
+            count = count + 1
+            
+            local blockBtn = Instance.new("TextButton")
+            blockBtn.Size = UDim2.new(1, -6, 0, 26)
+            blockBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+            blockBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+            blockBtn.Font = Enum.Font.Code
+            blockBtn.TextSize = 10
+            blockBtn.Text = "⬛ " .. obj.Name
+            blockBtn.TextXAlignment = Enum.TextXAlignment.Left
+            blockBtn.Parent = LeftScroll
+            Instance.new("UICorner", blockBtn).CornerRadius = UDim.new(0, 4)
+            
+            -- KETIKA BLOK DI-KLIK: LANGSUNG DIARAHKAN KE FOLDER TEMPAT BLOK ITU BERADA
+            blockBtn.MouseButton1Click:Connect(function()
+                ESPBoxFolder:ClearAllChildren()
+                
+                -- Beri kotak biru di map
+                local box = Instance.new("SelectionBox")
+                box.Adornee = obj
+                box.Color3 = Color3.fromRGB(0, 170, 255)
+                box.LineThickness = 0.08
+                box.Parent = ESPBoxFolder
+                
+                -- Ambil folder induknya (Parent)
+                local parentFolder = obj.Parent
+                if parentFolder then
+                    openFolder(parentFolder, obj.Name)
+                else
+                	StatusLabel.Text = "Blok [" .. obj.Name .. "] tidak punya folder induk."
+                end
+            end)
+        end
+    end
+    LeftScroll.CanvasSize = UDim2.new(0, 0, 0, count * 30)
+end
+
+RefreshBtn.MouseButton1Click:Connect(function()
+    RefreshBtn.Text = "SEDANG SCAN BLOK..."
+    RefreshBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+    task.spawn(function()
+        scanBlocks()
+        RefreshBtn.Text = "🔄 SCAN SEMUA BLOK"
+        RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    end)
+end)
+
+print("⚡ OBJECT TO FOLDER NAVIGATOR READY! ⚡")-- ==============================================================================
 -- DEWA CODING: AUTO-SELECT FOLDER & OBJECT HOOKER (DIRECT TO FOLDER)
 -- ==============================================================================
 
