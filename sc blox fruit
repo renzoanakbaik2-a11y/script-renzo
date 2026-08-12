@@ -1,25 +1,24 @@
 -- ==============================================================================
--- DEWA CODING: CUSTOM IN-GAME EXPLORER (LIGHTWEIGHT DEX STYLE)
+-- DEWA CODING: AUTO-SELECT FOLDER & OBJECT HOOKER (DIRECT TO FOLDER)
 -- ==============================================================================
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Hapus UI lama jika ada biar tidak numpuk
-if playerGui:FindFirstChild("DewaDexViewer") then
-    playerGui.DewaDexViewer:Destroy()
+if playerGui:FindFirstChild("DewaFolderDirectDex") then
+    playerGui.DewaFolderDirectDex:Destroy()
 end
 
 -- SETUP MAIN GUI
 local ScreenGui = Instance.new("ScreenGui", playerGui)
-ScreenGui.Name = "DewaDexViewer"
+ScreenGui.Name = "DewaFolderDirectDex"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 380, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -190, 0.4, -160)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+MainFrame.Size = UDim2.new(0, 420, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -210, 0.4, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -28,14 +27,14 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 -- Header Bar
 local TopBar = Instance.new("Frame", MainFrame)
 TopBar.Size = UDim2.new(1, 0, 0, 40)
-TopBar.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 TopBar.BorderSizePixel = 0
 Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, -40, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "📁 DEWA OBJECT EXPLORER"
+Title.Text = "📁 DIRECT FOLDER & OBJECT SELECTOR"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 12
@@ -56,21 +55,34 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Tombol Refresh / Scan Workspace
+-- Tombol Refresh / Scan
 local RefreshBtn = Instance.new("TextButton", MainFrame)
-RefreshBtn.Size = UDim2.new(0.92, 0, 0, 35)
-RefreshBtn.Position = UDim2.new(0.04, 0, 0.15, 0)
-RefreshBtn.Text = "🔄 AMBIL & TAMPILKAN SEMUA NAMA OBJEK"
+RefreshBtn.Size = UDim2.new(0.92, 0, 0, 32)
+RefreshBtn.Position = UDim2.new(0.04, 0, 0.13, 0)
+RefreshBtn.Text = "🔄 AMBIL & PILIH FOLDER OBJEK"
 RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 RefreshBtn.Font = Enum.Font.GothamBold
 RefreshBtn.TextSize = 11
 Instance.new("UICorner", RefreshBtn).CornerRadius = UDim.new(0, 6)
 
--- Scrolling Container untuk List Nama
+-- Label Status Folder & Path
+local StatusLabel = Instance.new("TextLabel", MainFrame)
+StatusLabel.Size = UDim2.new(0.92, 0, 0, 45)
+StatusLabel.Position = UDim2.new(0.04, 0, 0.23, 0)
+StatusLabel.Text = "Folder: (Klik salah satu objek di bawah)"
+StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextSize = 10
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
+StatusLabel.TextWrapped = true
+StatusLabel.BackgroundTransparency = 1
+
+-- Scrolling Container List
 local ScrollContainer = Instance.new("ScrollingFrame", MainFrame)
-ScrollContainer.Size = UDim2.new(0.92, 0, 0.65, 0)
-ScrollContainer.Position = UDim2.new(0.04, 0, 0.3, 0)
+ScrollContainer.Size = UDim2.new(0.92, 0, 0.55, 0)
+ScrollContainer.Position = UDim2.new(0.04, 0, 0.38, 0)
 ScrollContainer.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 ScrollContainer.BorderSizePixel = 0
 ScrollContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -80,29 +92,40 @@ local UIListLayout = Instance.new("UIListLayout", ScrollContainer)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 4)
 
--- Fungsi untuk memperbarui daftar isi Workspace
-local function loadObjects()
-    -- Bersihkan list sebelumnya
+-- Folder Penampung Kotak Visual di Game
+local ESPBoxFolder = Instance.new("Folder", ScreenGui)
+ESPBoxFolder.Name = "DirectFolderSelection"
+
+-- Fungsi Menelusuri Path Folder Objek
+local function getFullPath(obj)
+    local path = obj.Name
+    local parent = obj.Parent
+    while parent and parent ~= workspace and parent ~= game do
+        path = parent.Name .. " -> " .. path
+        parent = parent.Parent
+    end
+    return "workspace -> " .. path
+end
+
+-- Fungsi Utama Load Objek & Direct Folder
+local function loadWorkspaceFolders()
     for _, child in pairs(ScrollContainer:GetChildren()) do
         if child:IsA("TextButton") then
             child:Destroy()
         end
     end
     
+    ESPBoxFolder:ClearAllChildren()
     local count = 0
-    local uniqueNames = {}
     
-    -- Ambil semua objek di Workspace
     for _, obj in pairs(workspace:GetDescendants()) do
-        if obj.Name and not uniqueNames[obj.Name] then
-            uniqueNames[obj.Name] = true
+        if obj.Name and (obj:IsA("BasePart") or obj:IsA("Model") or obj:IsA("Folder")) then
             count = count + 1
             
-            -- Buat baris tombol untuk setiap nama objek
             local itemBtn = Instance.new("TextButton")
             itemBtn.Size = UDim2.new(1, -10, 0, 28)
-            itemBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-            itemBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+            itemBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+            itemBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
             itemBtn.Font = Enum.Font.Code
             itemBtn.TextSize = 11
             itemBtn.Text = "  • " .. obj.Name .. " [" .. obj.ClassName .. "]"
@@ -110,30 +133,44 @@ local function loadObjects()
             itemBtn.Parent = ScrollContainer
             Instance.new("UICorner", itemBtn).CornerRadius = UDim.new(0, 4)
             
-            -- Efek klik untuk menyalin nama objek ke clipboard / print
+            -- LOGIKA KETIKA ITEM DI-KLIK: LANGSUNG PILIH FOLDER / LOKASI ASLINYA
             itemBtn.MouseButton1Click:Connect(function()
-                print("DewaDex - Nama Dipilih: " .. obj.Name)
-                itemBtn.Text = "  [TERPILIH] " .. obj.Name
-                itemBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
-                task.wait(1)
-                itemBtn.Text = "  • " .. obj.Name .. " [" .. obj.ClassName .. "]"
-                itemBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+                ESPBoxFolder:ClearAllChildren()
+                
+                -- Tampilkan jalur lengkap (Path Folder) di layar
+                local fullPath = getFullPath(obj)
+                StatusLabel.Text = "Target Dipilih:\n" .. fullPath
+                
+                -- Jika objek punya wujud fisik (Part atau Model), langsung tandai dengan kotak biru
+                if obj:IsA("BasePart") or obj:IsA("Model") then
+                    local box = Instance.new("SelectionBox")
+                    box.Adornee = obj
+                    box.Color3 = Color3.fromRGB(0, 170, 255)
+                    box.LineThickness = 0.08
+                    box.Parent = ESPBoxFolder
+                end
+                
+                -- Efek visual tombol
+                itemBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+                itemBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                task.wait(0.4)
+                itemBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+                itemBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
             end)
         end
     end
     
-    -- Sesuaikan tinggi scrolling berdasarkan jumlah item
     ScrollContainer.CanvasSize = UDim2.new(0, 0, 0, count * 32)
 end
 
 RefreshBtn.MouseButton1Click:Connect(function()
-    RefreshBtn.Text = "SEDANG MEMINDAI..."
+    RefreshBtn.Text = "SEDANG MEMINDAI FOLDER..."
     RefreshBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
     task.spawn(function()
-        loadObjects()
-        RefreshBtn.Text = "🔄 AMBIL & TAMPILKAN SEMUA NAMA OBJEK"
+        loadWorkspaceFolders()
+        RefreshBtn.Text = "🔄 AMBIL & PILIH FOLDER OBJEK"
         RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
     end)
 end)
 
-print("⚡ DEWA EXPLORER READY! ⚡")
+print("⚡ DEWA DIRECT FOLDER SELECTOR READY! ⚡")
