@@ -20,7 +20,7 @@ local Settings = {
     AutoChest = true,
     FlightSpeed = 150,  -- Kecepatan default (Maksimal 500)
     FlyHeight = 5,      -- Ketinggian default (Maksimal 10)
-    AutoTeleportFruit = false, 
+    AutoTeleportFruit = false,  
     AutoStoreFruit = false,    
     AutoFlyPlayer = false,     
     TargetPlayerName = "",
@@ -326,7 +326,7 @@ local function toggleWaterWalk(state)
 end
 
 -- ==========================================
--- 4. AUTO STORE FRUIT & AUTO CHEST (DIREVISI UNTUK DELTA)
+-- 4. AUTO STORE FRUIT & AUTO CHEST (DIREVISI UTUH UNTUK DELTA)
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -342,7 +342,7 @@ local function autoStoreFruits()
             for _, item in ipairs(backpack:GetChildren()) do
                 if item:IsA("Tool") and item.Name:lower():find("fruit") then
                     humanoid:EquipTool(item)
-                    task.wait(0.2)
+                    task.wait(0.3)
                     remotes.CommF_:InvokeServer("StoreFruit", item.Name)
                     task.wait(0.5)
                 end
@@ -847,59 +847,18 @@ local function refreshPlayerList()
     local activePlayers = Players:GetPlayers()
     for _, p in ipairs(activePlayers) do
         if p ~= LocalPlayer then
-            local pLevel = "?"
-            pcall(function()
-                local leaderstats = p:FindFirstChild("leaderstats")
-                if leaderstats then
-                    for _, stat in ipairs(leaderstats:GetChildren()) do
-                        local nameLower = stat.Name:lower()
-                        if nameLower:find("lvl") or nameLower:find("level") then
-                            pLevel = tostring(stat.Value)
-                            break
-                        end
-                    end
-                end
-                
-                if pLevel == "?" then
-                    for _, folderName in ipairs({"Data", "PlayerData", "Stats", "PlayerStats"}) do
-                        local folder = p:FindFirstChild(folderName)
-                        if folder then
-                            for _, stat in ipairs(folder:GetChildren()) do
-                                local nameLower = stat.Name:lower()
-                                if nameLower:find("lvl") or nameLower:find("level") then
-                                    pLevel = tostring(stat.Value)
-                                    break
-                                end
-                            end
-                        end
-                        if pLevel ~= "?" then break end
-                    end
-                end
-
-                if pLevel == "?" then
-                    for _, attrName in ipairs({"Level", "LVL", "level"}) do
-                        local attrVal = p:GetAttribute(attrName)
-                        if attrVal then
-                            pLevel = tostring(attrVal)
-                            break
-                        end
-                    end
-                end
-            end)
-
             local pBtn = Instance.new("TextButton")
-            pBtn.Size = UDim2.new(1, -6, 0, 30)
+            pBtn.Size = UDim2.new(1, -6, 0, 26)
             pBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
             pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            pBtn.Text = "  " .. p.Name .. "  [Lvl: " .. pLevel .. "]"
+            pBtn.Text = p.Name
             pBtn.TextSize, pBtn.Font = 10, Enum.Font.Gotham
-            pBtn.TextXAlignment = Enum.TextXAlignment.Left
             pBtn.ZIndex = 103
             pBtn.Parent = PlayerListScroll
 
-            local c = Instance.new("UICorner")
-            c.CornerRadius = UDim.new(0, 4)
-            c.Parent = pBtn
+            local pbCorner = Instance.new("UICorner")
+            pbCorner.CornerRadius = UDim.new(0, 4)
+            pbCorner.Parent = pBtn
 
             pBtn.MouseButton1Click:Connect(function()
                 Settings.TargetPlayerName = p.Name
@@ -908,14 +867,9 @@ local function refreshPlayerList()
             end)
         end
     end
-    PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, (#activePlayers - 1) * 34)
+    PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, #PlayerListScroll:GetChildren() * 30)
 end
 
 refreshPlayerList()
 Players.PlayerAdded:Connect(refreshPlayerList)
 Players.PlayerRemoving:Connect(refreshPlayerList)
-
-createSectionHeader("5. Pengaturan FPS & Performa")
-createToggle("FPS Boost (Anti Lag)", "FpsBoost", function(state)
-    applyFpsBoost(state)
-end)
