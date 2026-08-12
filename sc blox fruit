@@ -11,7 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHubFinalFixed.json"
+local FileName = "BloxFruitsHubCompleteFixed.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -58,7 +58,7 @@ end
 saveSettings()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubPureFruit"
+ScreenGui.Name = "BloxFruitsHubCompleteFixed"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -79,7 +79,7 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- 1. NOTIFIKASI BUAH (Turun -> Diam 5 Detik -> Naik Lagi)
+-- 1. NOTIFIKASI BUAH
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 380, 0, 50)
@@ -101,9 +101,9 @@ UIStroke.Parent = NotifFrame
 
 task.spawn(function()
     while true do
-        for i = 0, 1, 0.01 do
+        for i = 0, 1, 0.02 do
             UIStroke.Color = Color3.fromHSV(i, 1, 1)
-            task.wait(0.1)
+            task.wait(0.2)
         end
     end
 end)
@@ -164,7 +164,7 @@ local function getCharacterRootPart()
 end
 
 -- ==========================================
--- SISTEM TERBANG STABIL (MENGATASI KAMERA GOYANG / TIDAK STABIL)
+-- SISTEM TERBANG STABIL & HALUS (ANTI-LAG & KAMERA AMAN)
 -- ==========================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, checkSettingKey)
@@ -194,7 +194,7 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
     bodyGyro.CFrame = rootPart.CFrame
     bodyGyro.Parent = rootPart
 
-    activeFlyConnection = RunService.RenderStepped:Connect(function(dt)
+    activeFlyConnection = RunService.Heartbeat:Connect(function(dt)
         if checkSettingKey and not Settings[checkSettingKey] then
             if bodyVelocity then bodyVelocity:Destroy() end
             if bodyGyro then bodyGyro:Destroy() end
@@ -215,7 +215,6 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
         local currentPos = currentRoot.Position
         local targetPos = adjustedTarget
         
-        -- Jika target adalah player bergerak, update posisi target secara real-time
         if checkSettingKey == "AutoFlyPlayer" and Settings.TargetPlayerName ~= "" then
             local targetPlayer = Players:FindFirstChild(Settings.TargetPlayerName)
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -234,14 +233,13 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
             return
         end
 
-        local moveVector = direction.Unit * math.min(currentSpeed, distance / dt)
-        bodyVelocity.Velocity = moveVector
+        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 10)
         bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
     end)
 end
 
 -- ==========================================
--- 2. FILTER MURNI HANYA BUAH SPAWN / DROP ASLI (DIBERSIHKAN DARI POT CONTROLLER / MESSY)
+-- 2. FILTER MURNI HANYA BUAH ASLI (BEBAS POT CONTROLLER / MESSY)
 -- ==========================================
 local function isRealSpawnedFruit(obj)
     if not obj or not obj.Parent then return false end
@@ -284,7 +282,6 @@ local function isRealSpawnedFruit(obj)
 
     if not isMatch then return false end
 
-    -- Blokir tegas objek ngaco seperti pot controller, messy, dll
     if objNameLower:find("pot") or objNameLower:find("controller") or objNameLower:find("messy") or objNameLower:find("part") then
         return false
     end
@@ -300,37 +297,39 @@ end
 -- 3. JALAN DI ATAS AIR
 -- ==========================================
 local WaterPlatform = nil
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        local character = LocalPlayer.Character
-        local rootPart = getCharacterRootPart()
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        
-        if Settings.WalkOnWater and rootPart and humanoid then
-            if not WaterPlatform or not WaterPlatform.Parent then
-                WaterPlatform = Instance.new("Part")
-                WaterPlatform.Name = "NaturalWaterWalkPlatform"
-                WaterPlatform.Size = Vector3.new(20, 0.6, 20)
-                WaterPlatform.Anchored = true
-                WaterPlatform.CanCollide = true
-                WaterPlatform.Transparency = 1
-                WaterPlatform.Parent = Workspace
-            end
+task.spawn(function()
+    while task.wait(0.3) do
+        pcall(function()
+            local character = LocalPlayer.Character
+            local rootPart = getCharacterRootPart()
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
             
-            local pos = rootPart.Position
-            if pos.Y <= 5.5 and pos.Y > -10 then
-                WaterPlatform.Position = Vector3.new(pos.X, 2.7, pos.Z)
-                WaterPlatform.CanCollide = true
+            if Settings.WalkOnWater and rootPart and humanoid then
+                if not WaterPlatform or not WaterPlatform.Parent then
+                    WaterPlatform = Instance.new("Part")
+                    WaterPlatform.Name = "NaturalWaterWalkPlatform"
+                    WaterPlatform.Size = Vector3.new(20, 0.6, 20)
+                    WaterPlatform.Anchored = true
+                    WaterPlatform.CanCollide = true
+                    WaterPlatform.Transparency = 1
+                    WaterPlatform.Parent = Workspace
+                end
+                
+                local pos = rootPart.Position
+                if pos.Y <= 5.5 and pos.Y > -10 then
+                    WaterPlatform.Position = Vector3.new(pos.X, 2.7, pos.Z)
+                    WaterPlatform.CanCollide = true
+                else
+                    WaterPlatform.CanCollide = false
+                end
             else
-                WaterPlatform.CanCollide = false
+                if WaterPlatform then
+                    WaterPlatform:Destroy()
+                    WaterPlatform = nil
+                end
             end
-        else
-            if WaterPlatform then
-                WaterPlatform:Destroy()
-                WaterPlatform = nil
-            end
-        end
-    end)
+        end)
+    end
 end)
 
 -- ==========================================
@@ -447,33 +446,13 @@ MonitorContent.TextWrapped = true
 MonitorContent.ZIndex = 41
 MonitorContent.Parent = MonitorFrame
 
--- Draggable Monitor
-local dragging, dragStart, startPos
-MonitorTitle.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MonitorFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        MonitorFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
 -- ==========================================
--- 7. LOOP UTAMA (PENCARIAN BUAH BERSIH & STABIL)
+-- 7. LOOP UTAMA (ANTI-LAG & STABIL)
 -- ==========================================
 task.spawn(function()
     while task.wait(1.5) do
+        autoStoreFruits()
+
         local fruitListRaw = {}
         local targetFruitObj = nil
         local targetFruitHandle = nil
@@ -633,7 +612,7 @@ end
 if Settings.FpsBoost then applyFpsBoost(true) end
 
 -- ==========================================
--- 10. TAMPILAN UI MENU UTAMA
+-- 10. TAMPILAN UI MENU UTAMA LENGKAP
 -- ==========================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -822,7 +801,7 @@ createAutoToggle(280, "Custom Sound Buah", "CustomSoundEnabled", nil)
 
 createSectionHeader(330, "--- 3. FITUR AUTOMATION (FARM & TELEPORT) ---")
 createAutoToggle(355, "Auto Teleport ke Buah Spawn", "AutoTeleportFruit", nil)
-createAutoToggle(395, "Auto Store Buah ke Tas (Terpisah)", "AutoStoreFruit", nil)
+createAutoToggle(395, "Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 createAutoToggle(435, "Auto Farm / Ambil Peti (Chest)", "AutoFlyChest", nil)
 createAutoToggle(475, "Jalan di Atas Air (Walk on Water)", "WalkOnWater", nil)
 
@@ -960,7 +939,6 @@ local function refreshPlayerList()
     end
 
     local activePlayers = Players:GetPlayers()
-    -- Validasi apakah target pemain yang sedang dipilih masih ada di server, jika sudah keluar/tidak ada maka reset otomatis
     if Settings.TargetPlayerName ~= "" then
         local foundTarget = false
         for _, p in ipairs(activePlayers) do
