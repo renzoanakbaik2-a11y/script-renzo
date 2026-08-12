@@ -8,9 +8,9 @@ local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-
 local FileName = "BloxFruitsHubSettings.json"
 
 local Settings = {
@@ -58,7 +58,7 @@ end
 saveSettings()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHub"
+ScreenGui.Name = "BloxFruitsHubFixed"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -79,12 +79,12 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- 1. NOTIFIKASI BUAH DI LAYAR ATAS
+-- 1. NOTIFIKASI BUAH (Turun dari Atas Layar)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
-NotifFrame.Size = UDim2.new(0, 360, 0, 45)
+NotifFrame.Size = UDim2.new(0, 380, 0, 50)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0)
-NotifFrame.Position = UDim2.new(0.5, 0, 0, -60) 
+NotifFrame.Position = UDim2.new(0.5, 0, 0, -80) -- Sembunyi di atas
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 NotifFrame.BackgroundTransparency = 0.1
 NotifFrame.BorderSizePixel = 0
@@ -113,7 +113,7 @@ NotifText.Size = UDim2.new(1, 0, 1, 0)
 NotifText.BackgroundTransparency = 1
 NotifText.Text = ""
 NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
-NotifText.TextSize, NotifText.Font = 12, Enum.Font.GothamBold
+NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
 NotifText.ZIndex = 51
 NotifText.Parent = NotifFrame
 
@@ -131,7 +131,7 @@ local function animateNotifOut()
     if isNotifShown then
         isNotifShown = false
         TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Position = UDim2.new(0.5, 0, 0, -60)
+            Position = UDim2.new(0.5, 0, 0, -80)
         }):Play()
     end
 end
@@ -212,53 +212,61 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
 end
 
 -- ==========================================
--- 2. FILTER BUAH (Mendeteksi buah spawn/drop asli)
+-- 2. FILTER BUAH SPAWN MAP YANG AKURAT
 -- ==========================================
 local function isRealSpawnedFruit(obj)
+    -- Harus berupa Handle, Model Buah, atau BasePart yang valid di Workspace (bukan dalam player/backpack)
+    if not obj or not obj.Parent then return false end
+    
     local name = obj.Name:lower()
     
-    if obj:IsA("Sound") or name:find("sound") or name:find("music") or name:find("audio") then 
-        return false 
-    end
+    -- Hindari suara, part karakter player, GUI, atau backpack
+    if obj:IsA("Sound") or name:find("sound") or name:find("music") then return false end
     
     local ancestor = obj.Parent
     while ancestor and ancestor ~= game do
         if ancestor:IsA("Model") and Players:GetPlayerFromCharacter(ancestor) then
-            return false 
+            return false -- Bagian dari player, abaikan!
         end
-        if ancestor.Name == "Backpack" or ancestor.Name == "PlayerGui" then
-            return false
+        if ancestor.Name == "Backpack" or ancestor.Name == "PlayerGui" or ancestor.Name == "StarterGui" then
+            return false -- Di dalam inventory player, abaikan!
         end
         ancestor = ancestor.Parent
     end
-    
+
+    -- Daftar nama asli buah Blox Fruits
     local validFruits = {
         "rocket", "spin", "spring", "chop", "spike", "flame", "falcon", "ice", 
         "sand", "dark", "diamond", "light", "rubber", "barrier", "ghost", 
         "magma", "quake", "buddha", "love", "spider", "phoenix", 
         "portal", "pain", "blizzard", "gravity", "mammoth", "trex", "dough", 
-        "shadow", "venom", "control", "spirit", "dragon", "leopard", "kitsune", "fruit", "blox"
+        "shadow", "venom", "control", "spirit", "dragon", "leopard", "kitsune"
     }
-    
-    local invalidKeywords = {"sword", "gun", "musket", "rifle", "cutlass", "pistol", "blade", "katana", "dagger", "staff"}
-    for _, word in ipairs(invalidKeywords) do
-        if name:find(word) then return end
-    end
-    
-    for _, fruitName in ipairs(validFruits) do
-        if name:find(fruitName) then
-            return true
+
+    -- Harus mengandung salah satu kata kunci nama buah dan berakhiran "Fruit" atau ber-Handle
+    local isFruitNameMatch = false
+    for _, fName in ipairs(validFruits) do
+        if name:find(fName) then
+            isFruitNameMatch = true
+            break
         end
     end
-    
+
+    if not isFruitNameMatch then return false end
+
+    -- Pastikan objek tersebut memang fisik buah di map (punya Handle atau berupa MeshPart/Part buah)
+    if obj:IsA("Tool") or obj.Name:sub(-5):lower() == "fruit" or obj:FindFirstChild("Handle") or (obj:IsA("BasePart") and obj.Parent:IsA("Model") and obj.Parent.Name:lower():find("fruit")) then
+        return true
+    end
+
     return false
 end
 
 -- ==========================================
--- 3. JALAN DI AIR NATURAL (Tapak Air)
+-- 3. JALAN DI ATAS AIR NATURAL
 -- ==========================================
 local WaterPlatform = nil
-local function updateWaterWalk()
+RunService.RenderStepped:Connect(function()
     pcall(function()
         local character = LocalPlayer.Character
         local rootPart = getCharacterRootPart()
@@ -289,8 +297,7 @@ local function updateWaterWalk()
             end
         end
     end)
-end
-RunService.RenderStepped:Connect(updateWaterWalk)
+end)
 
 -- ==========================================
 -- 4. AUTO STORE FRUIT
@@ -356,10 +363,10 @@ local function getChestIslands()
 end
 
 -- ==========================================
--- 6. MONITOR STAT & BUAH (Draggable & Bisa Di-toggle)
+-- 6. MONITOR STAT & BUAH (Draggable & Akurat)
 -- ==========================================
 local MonitorFrame = Instance.new("Frame")
-MonitorFrame.Size = UDim2.new(0, 220, 0, 110)
+MonitorFrame.Size = UDim2.new(0, 230, 0, 110)
 MonitorFrame.Position = UDim2.new(0.02, 0, 0.5, 0)
 MonitorFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
 MonitorFrame.BackgroundTransparency = 0.2
@@ -403,8 +410,8 @@ MonitorContent.TextWrapped = true
 MonitorContent.ZIndex = 41
 MonitorContent.Parent = MonitorFrame
 
--- Sistem Draggable untuk Monitor
-local dragging, dragInput, dragStart, startPos
+-- Sistem Draggable Monitor
+local dragging, dragStart, startPos
 MonitorTitle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
@@ -418,7 +425,6 @@ MonitorTitle.InputBegan:Connect(function(input)
     end
 end)
 
-UserInputService = game:GetService("UserInputService")
 UserInputService.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
@@ -427,59 +433,51 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- ==========================================
--- 7. BACKGROUND SYSTEM (NOTIFIKASI & LOOP UTAMA)
+-- 7. BACKGROUND SYSTEM (LOOP UTAMA)
 -- ==========================================
 task.spawn(function()
     local lastCount = 0
     local collectedFruits = {}
 
     while task.wait(0.5) do
-        -- Update Monitor Status
-        MonitorFrame.Visible = Settings.MonitorVisible
-        if Settings.MonitorVisible then
-            local fruitCountLive = 0
-            local fruitNamesLive = {}
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if isRealSpawnedFruit(obj) then
-                    fruitCountLive = fruitCountLive + 1
-                    table.insert(fruitNamesLive, obj.Name)
+        -- Scan buah asli di map
+        local fruitListRaw = {}
+        local targetFruitObj = nil
+        local targetFruitHandle = nil
+
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if isRealSpawnedFruit(obj) then
+                table.insert(fruitListRaw, obj.Name)
+                if not targetFruitObj then
+                    targetFruitObj = obj
+                    targetFruitHandle = obj:FindFirstChild("Handle") or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildWhichIsA("BasePart")
                 end
             end
-            local playerCount = #Players:GetPlayers()
-            local fruitTextDisplay = fruitCountLive > 0 and table.concat(fruitNamesLive, ", ") or "Tidak ada"
-            MonitorContent.Text = string.format("• Player di Server: %d\n• Jumlah Buah: %d\n• Nama Buah: %s", playerCount, fruitCountLive, fruitTextDisplay)
         end
 
+        local fruitList = {}
+        local checkDuplicate = {}
+        for _, name in ipairs(fruitListRaw) do
+            if not checkDuplicate[name] then
+                checkDuplicate[name] = true
+                table.insert(fruitList, name)
+            end
+        end
+
+        local currentCount = #fruitList
+
+        -- Update Monitor Status (Sekarang Akurat & Bersih)
+        MonitorFrame.Visible = Settings.MonitorVisible
+        if Settings.MonitorVisible then
+            local playerCount = #Players:GetPlayers()
+            local fruitTextDisplay = currentCount > 0 and table.concat(fruitList, ", ") or "Tidak ada"
+            MonitorContent.Text = string.format("• Player di Server: %d\n• Buah Spawn di Map: %d\n• Nama Buah: %s", playerCount, currentCount, fruitTextDisplay)
+        end
+
+        -- Update Notifikasi Buah
         if Settings.FruitNotifier then
-            local fruitListRaw = {}
-            local targetFruitObj = nil
-            local targetFruitHandle = nil
-
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if isRealSpawnedFruit(obj) then
-                    table.insert(fruitListRaw, obj.Name)
-                    
-                    if not collectedFruits[obj] and targetFruitObj == nil then
-                        targetFruitObj = obj
-                        targetFruitHandle = obj:FindFirstChild("Handle") or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildWhichIsA("BasePart")
-                    end
-                end
-            end
-            
-            local fruitList = {}
-            local checkDuplicate = {}
-            for _, name in ipairs(fruitListRaw) do
-                if not checkDuplicate[name] then
-                    checkDuplicate[name] = true
-                    table.insert(fruitList, name)
-                end
-            end
-
-            local currentCount = #fruitList
             if currentCount > 0 then
-                local combinedNames = table.concat(fruitList, ", ")
-                NotifText.Text = "BUAH KETEMU: " .. combinedNames
-                
+                NotifText.Text = "BUAH SPAWN: " .. table.concat(fruitList, ", ")
                 animateNotifIn()
 
                 if currentCount > lastCount then
@@ -507,6 +505,7 @@ task.spawn(function()
             animateNotifOut()
         end
 
+        -- Auto Fly Chest
         if Settings.AutoFlyChest then
             local rootPart = getCharacterRootPart()
             if rootPart then
@@ -544,6 +543,7 @@ task.spawn(function()
             end
         end
 
+        -- Auto Fly Player Target
         if Settings.AutoFlyPlayer then
             local targetPlayer = nil
             if Settings.TargetPlayerName ~= "" then
@@ -752,7 +752,6 @@ local function createAutoToggle(posY, text, settingKey, callback)
     return btn
 end
 
--- Masukkan Menu & Komponen UI
 createSectionHeader(10, "--- 1. AUTO JOIN TIM ---")
 local TeamConfigBtn = Instance.new("TextButton")
 TeamConfigBtn.Size = UDim2.new(0.9, 0, 0, 35)
