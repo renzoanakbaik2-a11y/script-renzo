@@ -154,7 +154,7 @@ local function getCharacterRootPart()
 end
 
 -- ==========================================
--- SISTEM TERBANG STABIL & BATAS MAX (Speed: 500, Height: 10)
+-- SISTEM TERBANG ANTI-STUCK & TEMBUS RUMAH (NOCLIP OTOMATIS)
 -- ==========================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, checkSettingKey)
@@ -174,6 +174,19 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     if humanoid then humanoid.PlatformStand = true end
 
+    local noclipConnection
+    noclipConnection = RunService.Stepped:Connect(function()
+        pcall(function()
+            if character then
+                for _, part in ipairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end)
+
     local bodyVelocity = Instance.new("BodyVelocity")
     bodyVelocity.Velocity = Vector3.new(0, 0, 0)
     bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
@@ -186,6 +199,7 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
 
     activeFlyConnection = RunService.Heartbeat:Connect(function(dt)
         if checkSettingKey and not Settings[checkSettingKey] then
+            if noclipConnection then noclipConnection:Disconnect() end
             if bodyVelocity then bodyVelocity:Destroy() end
             if bodyGyro then bodyGyro:Destroy() end
             if humanoid then humanoid.PlatformStand = false end
@@ -195,6 +209,7 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
 
         local currentRoot = getCharacterRootPart()
         if not currentRoot or not character or not character.Parent then
+            if noclipConnection then noclipConnection:Disconnect() end
             if bodyVelocity then bodyVelocity:Destroy() end
             if bodyGyro then bodyGyro:Destroy() end
             if humanoid then humanoid.PlatformStand = false end
@@ -216,6 +231,7 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
         local distance = direction.Magnitude
 
         if distance < 4 then
+            if noclipConnection then noclipConnection:Disconnect() end
             if bodyVelocity then bodyVelocity:Destroy() end
             if bodyGyro then bodyGyro:Destroy() end
             if humanoid then humanoid.PlatformStand = false end
@@ -255,45 +271,63 @@ local function isRealSpawnedFruit(obj)
 end
 
 -- ==========================================
--- 3. JALAN DI ATAS AIR ULTRA MULUS (100% SEPERTI DI TANAH)
+-- 3. JALAN DI ATAS AIR ULTRA MULUS & ANTI-GETAR (DISEMPURNAKAN)
 -- ==========================================
-task.spawn(function()
-    RunService.RenderStepped:Connect(function()
-        pcall(function()
-            local character = LocalPlayer.Character
-            local rootPart = getCharacterRootPart()
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            
-            if Settings.WalkOnWater and rootPart and humanoid then
-                local pos = rootPart.Position
-                if pos.Y <= 4 and pos.Y > -35 then
-                    rootPart.CFrame = CFrame.new(pos.X, -2.5, pos.Z) * (rootPart.CFrame - rootPart.CFrame.Position)
-                    
-                    if rootPart:FindFirstChild("BodyVelocityWater") == nil then
-                        local bv = Instance.new("BodyVelocity")
-                        bv.Name = "BodyVelocityWater"
-                        bv.Velocity = Vector3.new(0, 0, 0)
-                        bv.MaxForce = Vector3.new(0, math.huge, 0)
-                        bv.Parent = rootPart
-                    end
-                    
-                    if humanoid:GetState() == Enum.HumanoidStateType.Freefall or humanoid:GetState() == Enum.HumanoidStateType.FallingDown then
-                        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+local waterWalkConnection = nil
+local function toggleWaterWalk(state)
+    if waterWalkConnection then
+        waterWalkConnection:Disconnect()
+        waterWalkConnection = nil
+    end
+
+    if state then
+        waterWalkConnection = RunService.RenderStepped:Connect(function()
+            pcall(function()
+                local character = LocalPlayer.Character
+                local rootPart = getCharacterRootPart()
+                local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                
+                if Settings.WalkOnWater and rootPart and humanoid and not activeFlyConnection then
+                    local pos = rootPart.Position
+                    if pos.Y <= 5 and pos.Y > -40 then
+                        -- Mengunci posisi Y tepat di atas permukaan air secara stabil (bebas getar)
+                        rootPart.CFrame = CFrame.new(pos.X, 3.2, pos.Z) * (rootPart.CFrame - rootPart.CFrame.Position)
+                        
+                        local bv = rootPart:FindFirstChild("BodyVelocityWater")
+                        if not bv then
+                            bv = Instance.new("BodyVelocity")
+                            bv.Name = "BodyVelocityWater"
+                            bv.Velocity = Vector3.new(0, 0, 0)
+                            bv.MaxForce = Vector3.new(0, math.huge, 0)
+                            bv.Parent = rootPart
+                        end
+                        
+                        if humanoid:GetState() == Enum.HumanoidStateType.Freefall or humanoid:GetState() == Enum.HumanoidStateType.FallingDown then
+                            humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                        end
+                    else
+                        local bv = rootPart:FindFirstChild("BodyVelocityWater")
+                        if bv then bv:Destroy() end
                     end
                 else
-                    local bv = rootPart:FindFirstChild("BodyVelocityWater")
+                    local bv = rootPart and rootPart:FindFirstChild("BodyVelocityWater")
                     if bv then bv:Destroy() end
                 end
-            else
-                local bv = rootPart and rootPart:FindFirstChild("BodyVelocityWater")
+            end)
+        end)
+    else
+        pcall(function()
+            local rootPart = getCharacterRootPart()
+            if rootPart then
+                local bv = rootPart:FindFirstChild("BodyVelocityWater")
                 if bv then bv:Destroy() end
             end
         end)
-    end)
-end)
+    end
+end
 
 -- ==========================================
--- 4. AUTO STORE FRUIT & AUTO CHEST (SEMUA PETI)
+-- 4. AUTO STORE FRUIT & AUTO CHEST (TEMBUS RUMAH & TEMBOK)
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -319,7 +353,7 @@ local function autoStoreFruits()
 end
 
 task.spawn(function()
-    while task.wait(0.8) do
+    while task.wait(0.5) do
         pcall(function()
             if Settings.AutoChest and not activeFlyConnection then
                 local rootPart = getCharacterRootPart()
@@ -333,10 +367,12 @@ task.spawn(function()
                                     smoothFlyTo(v.CFrame, "AutoChest")
                                     local startTime = tick()
                                     repeat
-                                        task.wait(0.2)
+                                        task.wait(0.15)
                                         if not getCharacterRootPart() then break end
-                                        local dist = (getCharacterRootPart().Position - v.Position).Magnitude
-                                    until dist < 7 or not v.Parent or tick() - startTime > 5
+                                        local currentRoot = getCharacterRootPart()
+                                        if not currentRoot then break end
+                                        local dist = (currentRoot.Position - v.Position).Magnitude
+                                    until dist < 6 or not v.Parent or tick() - startTime > 4
                                 end
                             end
                         end
@@ -686,8 +722,11 @@ createToggle("Tampilkan Monitor Server", "MonitorVisible", nil)
 createSectionHeader("3. Auto Collect (Buah & Chest)")
 createToggle("Auto Teleport ke Buah Spawn", "AutoTeleportFruit", nil)
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
-createToggle("Auto Chest (Semua Peti: Bronze/Silver/Gold/Diamond)", "AutoChest", nil)
-createToggle("Jalan di Atas Air (Ultra Mulus)", "WalkOnWater", nil)
+createToggle("Auto Chest (Tembus Rumah / Tembok)", "AutoChest", nil)
+createToggle("Jalan di Atas Air (Ultra Mulus)", "WalkOnWater", function(state)
+    toggleWaterWalk(state)
+end)
+if Settings.WalkOnWater then toggleWaterWalk(true) end
 
 createSectionHeader("Pengaturan Terbang (Speed Max 500, Height Max 10)")
 
