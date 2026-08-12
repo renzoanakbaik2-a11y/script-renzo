@@ -18,8 +18,8 @@ local Settings = {
     SelectedTeam = "Pirates",
     FpsBoost = false,
     AutoChest = true,
-    FlightSpeed = 150,
-    FlyHeight = 5,
+    FlightSpeed = 150,  -- Kecepatan default (Maksimal 500)
+    FlyHeight = 5,      -- Ketinggian default (Maksimal 10)
     AutoTeleportFruit = false, 
     AutoStoreFruit = false,    
     AutoFlyPlayer = false,     
@@ -154,7 +154,7 @@ local function getCharacterRootPart()
 end
 
 -- ==========================================
--- SISTEM TERBANG STABIL & ANTI MACET
+-- SISTEM TERBANG STABIL & BATAS MAX (Speed: 500, Height: 10)
 -- ==========================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, checkSettingKey)
@@ -166,7 +166,7 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
         activeFlyConnection = nil
     end
 
-    local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 1000)
+    local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
     local currentHeight = math.clamp(Settings.FlyHeight, 0, 10)
     local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
 
@@ -255,53 +255,45 @@ local function isRealSpawnedFruit(obj)
 end
 
 -- ==========================================
--- 3. JALAN DI ATAS AIR (REVISI TOTAL: 100% AMAN TANPA JATUH/MATI)
+-- 3. JALAN DI ATAS AIR ULTRA MULUS (100% SEPERTI DI TANAH)
 -- ==========================================
-local WaterPlatform = nil
 task.spawn(function()
-    while task.wait(0.05) do
+    RunService.RenderStepped:Connect(function()
         pcall(function()
             local character = LocalPlayer.Character
             local rootPart = getCharacterRootPart()
             local humanoid = character and character:FindFirstChildOfClass("Humanoid")
             
             if Settings.WalkOnWater and rootPart and humanoid then
-                if not WaterPlatform or not WaterPlatform.Parent then
-                    WaterPlatform = Instance.new("Part")
-                    WaterPlatform.Name = "SolidWaterPlatformFixed"
-                    WaterPlatform.Size = Vector3.new(40, 1, 40)
-                    WaterPlatform.Anchored = true
-                    WaterPlatform.CanCollide = true
-                    WaterPlatform.Transparency = 1
-                    WaterPlatform.Parent = Workspace
-                end
-                
                 local pos = rootPart.Position
-                -- Deteksi posisi air Blox Fruits (biasanya Y di sekitar 0 hingga -15)
-                if pos.Y <= 5 and pos.Y > -30 then
-                    -- Kunci posisi platform pas di bawah kaki player agar tidak lompat-lompat / jatuh ke air
-                    WaterPlatform.Position = Vector3.new(pos.X, pos.Y - 3.2, pos.Z)
-                    WaterPlatform.CanCollide = true
+                if pos.Y <= 4 and pos.Y > -35 then
+                    rootPart.CFrame = CFrame.new(pos.X, -2.5, pos.Z) * (rootPart.CFrame - rootPart.CFrame.Position)
                     
-                    -- Paksa state humanoid jadi Running/Standing agar tidak masuk fase freefall/mati jatuh
+                    if rootPart:FindFirstChild("BodyVelocityWater") == nil then
+                        local bv = Instance.new("BodyVelocity")
+                        bv.Name = "BodyVelocityWater"
+                        bv.Velocity = Vector3.new(0, 0, 0)
+                        bv.MaxForce = Vector3.new(0, math.huge, 0)
+                        bv.Parent = rootPart
+                    end
+                    
                     if humanoid:GetState() == Enum.HumanoidStateType.Freefall or humanoid:GetState() == Enum.HumanoidStateType.FallingDown then
                         humanoid:ChangeState(Enum.HumanoidStateType.Running)
                     end
                 else
-                    WaterPlatform.CanCollide = false
+                    local bv = rootPart:FindFirstChild("BodyVelocityWater")
+                    if bv then bv:Destroy() end
                 end
             else
-                if WaterPlatform then
-                    WaterPlatform:Destroy()
-                    WaterPlatform = nil
-                end
+                local bv = rootPart and rootPart:FindFirstChild("BodyVelocityWater")
+                if bv then bv:Destroy() end
             end
         end)
-    end
+    end)
 end)
 
 -- ==========================================
--- 4. AUTO STORE FRUIT & AUTO CHEST (KELiling SEMUA CHEST DI MAP)
+-- 4. AUTO STORE FRUIT & AUTO CHEST (SEMUA PETI)
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -326,27 +318,26 @@ local function autoStoreFruits()
     end)
 end
 
--- Auto Chest: Mengambil SEMUA chest yang ada di seluruh map secara berurutan tanpa macet
 task.spawn(function()
-    while task.wait(1) do
+    while task.wait(0.8) do
         pcall(function()
             if Settings.AutoChest and not activeFlyConnection then
                 local rootPart = getCharacterRootPart()
                 if rootPart then
-                    -- Cari semua chest di Workspace
                     for _, v in ipairs(Workspace:GetDescendants()) do
                         if not Settings.AutoChest then break end
-                        if v.Name:lower():find("chest") and v:IsA("BasePart") then
-                            -- Pastikan chest valid dan belum diambil / masih ada
-                            if v.Parent and v.Transparency < 1 then
-                                smoothFlyTo(v.CFrame, "AutoChest")
-                                -- Tunggu sampai player mendekati chest tersebut sebelum pindah ke chest berikutnya
-                                local startTime = tick()
-                                repeat
-                                    task.wait(0.2)
-                                    if not getCharacterRootPart() then break end
-                                    local dist = (getCharacterRootPart().Position - v.Position).Magnitude
-                                until dist < 8 or not v.Parent or tick() - startTime > 6
+                        if v:IsA("BasePart") then
+                            local nameLower = v.Name:lower()
+                            if nameLower:find("chest") or nameLower:find("bronze") or nameLower:find("silver") or nameLower:find("gold") or nameLower:find("diamond") then
+                                if v.Parent and v.Transparency < 1 then
+                                    smoothFlyTo(v.CFrame, "AutoChest")
+                                    local startTime = tick()
+                                    repeat
+                                        task.wait(0.2)
+                                        if not getCharacterRootPart() then break end
+                                        local dist = (getCharacterRootPart().Position - v.Position).Magnitude
+                                    until dist < 7 or not v.Parent or tick() - startTime > 5
+                                end
                             end
                         end
                     end
@@ -604,7 +595,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 880)
+Container.CanvasSize = UDim2.new(0, 0, 0, 1020)
 Container.ScrollBarThickness = 4
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -659,7 +650,6 @@ end
 -- PENYUSUNAN MENU TERSUSUN RAPI & AKURAT
 -- ==========================================
 
--- 1. Auto Join Tim
 createSectionHeader("1. Auto Join Tim & Server")
 createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
     if state then joinTeam() end
@@ -689,19 +679,72 @@ TeamSelectBtn.MouseButton1Click:Connect(function()
     joinTeam()
 end)
 
--- 2. Notifikasi
 createSectionHeader("2. Notifikasi & Monitor")
 createToggle("Fruit Notifier (Notif Buah)", "FruitNotifier", nil)
 createToggle("Tampilkan Monitor Server", "MonitorVisible", nil)
 
--- 3. Auto Terbang & Koleksi (Buah & Chest)
 createSectionHeader("3. Auto Collect (Buah & Chest)")
 createToggle("Auto Teleport ke Buah Spawn", "AutoTeleportFruit", nil)
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
-createToggle("Auto Chest (Ambil Semua Peti di Map)", "AutoChest", nil)
-createToggle("Jalan di Atas Air (Sempurna)", "WalkOnWater", nil)
+createToggle("Auto Chest (Semua Peti: Bronze/Silver/Gold/Diamond)", "AutoChest", nil)
+createToggle("Jalan di Atas Air (Ultra Mulus)", "WalkOnWater", nil)
 
--- 4. Target Player (Dengan Deteksi Level Asli Blox Fruits Universal)
+createSectionHeader("Pengaturan Terbang (Speed Max 500, Height Max 10)")
+
+local SpeedBtn = Instance.new("TextButton")
+SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
+SpeedBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
+SpeedBtn.TextSize, SpeedBtn.Font = 11, Enum.Font.GothamBold
+SpeedBtn.ZIndex = 102
+SpeedBtn.Parent = Container
+
+local sCorner = Instance.new("UICorner")
+sCorner.CornerRadius = UDim.new(0, 6)
+sCorner.Parent = SpeedBtn
+
+SpeedBtn.MouseButton1Click:Connect(function()
+    if Settings.FlightSpeed == 100 then
+        Settings.FlightSpeed = 200
+    elseif Settings.FlightSpeed == 200 then
+        Settings.FlightSpeed = 350
+    elseif Settings.FlightSpeed == 350 then
+        Settings.FlightSpeed = 500
+    else
+        Settings.FlightSpeed = 100
+    end
+    SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
+    saveSettings()
+end)
+
+local HeightBtn = Instance.new("TextButton")
+HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
+HeightBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
+HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs (Max 10)"
+HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
+HeightBtn.ZIndex = 102
+HeightBtn.Parent = Container
+
+local hCorner = Instance.new("UICorner")
+hCorner.CornerRadius = UDim.new(0, 6)
+hCorner.Parent = HeightBtn
+
+HeightBtn.MouseButton1Click:Connect(function()
+    if Settings.FlyHeight == 2 then
+        Settings.FlyHeight = 5
+    elseif Settings.FlyHeight == 5 then
+        Settings.FlyHeight = 8
+    elseif Settings.FlyHeight == 8 then
+        Settings.FlyHeight = 10
+    else
+        Settings.FlyHeight = 2
+    end
+    HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs (Max 10)"
+    saveSettings()
+end)
+
 createSectionHeader("4. Target Player")
 createToggle("Auto Teleport ke Player", "AutoFlyPlayer", nil)
 
@@ -762,7 +805,6 @@ local function refreshPlayerList()
         if p ~= LocalPlayer then
             local pLevel = "?"
             pcall(function()
-                -- Deteksi folder data dan leaderstats Blox Fruits secara menyeluruh
                 local leaderstats = p:FindFirstChild("leaderstats")
                 if leaderstats then
                     for _, stat in ipairs(leaderstats:GetChildren()) do
@@ -775,7 +817,7 @@ local function refreshPlayerList()
                 end
                 
                 if pLevel == "?" then
-                    for _, folderName in ipairs({"Data", "PlayerData", "Stats"}) do
+                    for _, folderName in ipairs({"Data", "PlayerData", "Stats", "PlayerStats"}) do
                         local folder = p:FindFirstChild(folderName)
                         if folder then
                             for _, stat in ipairs(folder:GetChildren()) do
@@ -787,6 +829,16 @@ local function refreshPlayerList()
                             end
                         end
                         if pLevel ~= "?" then break end
+                    end
+                end
+
+                if pLevel == "?" then
+                    for _, attrName in ipairs({"Level", "LVL", "level"}) do
+                        local attrVal = p:GetAttribute(attrName)
+                        if attrVal then
+                            pLevel = tostring(attrVal)
+                            break
+                        end
                     end
                 end
             end)
@@ -819,7 +871,6 @@ refreshPlayerList()
 Players.PlayerAdded:Connect(refreshPlayerList)
 Players.PlayerRemoving:Connect(refreshPlayerList)
 
--- 5. Pengaturan FPS
 createSectionHeader("5. Pengaturan FPS & Performa")
 createToggle("FPS Boost (Anti Lag)", "FpsBoost", function(state)
     applyFpsBoost(state)
