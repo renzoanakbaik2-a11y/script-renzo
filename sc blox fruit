@@ -1,25 +1,25 @@
 -- ==============================================================================
--- RACKET RIVALS: ADVANCED AUTO HIT & AUTO TELEPORT (UNIVERSAL SCANNER)
--- Menggunakan sistem pemindaian mendalam untuk mendeteksi bola/kok dinamis di game
+-- RACKET RIVALS: ADVANCED NET-CROSSING & AUTO HIT/TELEPORT SCRIPT
+-- Logika: Teleport ke bola SAAT bola melewati net (menyeberang ke area kita)
 -- ==============================================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
-local CONFIG_FILE_NAME = "RacketRivals_UltimateSettings.json"
+local CONFIG_FILE_NAME = "RacketRivals_NetLogicSettings.json"
 
 local CONFIG = {
     AutoHitEnabled = false,
     AutoTeleportEnabled = false,
-    HitDistance = 18,
-    TeleportDistance = 30,
-    TeleportOffset = {0, 2, -2}
+    HitDistance = 15,
+    TeleportOffset = {0, 3, -2} -- Posisi pas di belakang/bawah bola
 }
 
 -- Sistem Save & Load Pengaturan
@@ -51,14 +51,14 @@ loadSettings()
 -- USER INTERFACE (UI) MENU ON/OFF
 -- ==============================================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RacketRivalsUltimateUI"
+ScreenGui.Name = "RacketRivalsNetUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 240, 0, 240)
 MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -71,7 +71,7 @@ UICorner.Parent = MainFrame
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
-Title.Text = "Racket Rivals - Pro Menu"
+Title.Text = "Racket Rivals - Net Logic"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 15
 Title.Font = Enum.Font.GothamBold
@@ -106,7 +106,7 @@ createToggle("Auto Hit", CONFIG.AutoHitEnabled, 50, function(state)
     CONFIG.AutoHitEnabled = state
 end)
 
-createToggle("Auto Teleport", CONFIG.AutoTeleportEnabled, 100, function(state)
+createToggle("Auto Teleport (Net)", CONFIG.AutoTeleportEnabled, 100, function(state)
     CONFIG.AutoTeleportEnabled = state
 end)
 
@@ -129,21 +129,47 @@ ToggleUIBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==============================================================================
--- PENCARIAN OBJEK CERDAS (MENDETEKSI SEMUA KEMUNGKINAN NAMA BOLA/KOK)
+-- PENCARIAN OBJEK BOLA / KOK (DENGAN DETEKSI POSISI NET)
 -- ==============================================================================
-local function findActiveBall()
+local function findBallAndNetStatus()
     local targetBall = nil
+    local isCrossedNet = false
     local shortestDistance = math.huge
     
-    -- Memindai seluruh Workspace tanpa batasan nama spesifik agar tidak meleset
+    -- Mencari letak Net secara otomatis di lapangan untuk acuan batas
+    local netPositionZ = 0
+    local foundNet = false
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "net") then
+            netPositionZ = obj.Position.Z
+            foundNet = true
+            break
+        end
+    end
+
+    -- Memindai objek bola/kok di seluruh Workspace
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
             local nameLower = string.lower(obj.Name)
-            -- Mendeteksi kata kunci yang sering dipakai untuk bola/kok di game olahraga
-            if string.find(nameLower, "shuttle") or string.find(nameLower, "ball") or string.find(nameLower, "kok") or string.find(nameLower, "object") then
-                -- Memastikan objek tidak menyatu dengan karakter pemain sendiri
+            if string.find(nameLower, "shuttle") or string.find(nameLower, "ball") or string.find(nameLower, "kok") then
                 if not obj:IsDescendantOf(character) then
                     local distance = (humanoidRootPart.Position - obj.Position).Magnitude
+                    
+                    -- Logika Penentu Apakah Bola Sudah Lewat Batas Net ke Area Kita
+                    -- (Bergantung pada posisi Z net dan arah laju bola)
+                    if foundNet then
+                        -- Jika posisi Z bola sudah berada di sisi pemain (melewati garis net)
+                        local playerZ = humanoidRootPart.Position.Z
+                        -- Cek apakah bola bergerak ke arah sisi player
+                        if (playerZ > netPositionZ and obj.Position.Z > netPositionZ) or 
+                           (playerZ < netPositionZ and obj.Position.Z < netPositionZ) then
+                            isCrossedNet = true
+                        end
+                    else
+                        -- Jika net tidak terdeteksi spesifik, asumsikan aktif jika bola sudah mendekat
+                        isCrossedNet = true 
+                    end
+
                     if distance < shortestDistance then
                         shortestDistance = distance
                         targetBall = obj
@@ -153,11 +179,11 @@ local function findActiveBall()
         end
     end
     
-    return targetBall, shortestDistance
+    return targetBall, shortestDistance, isCrossedNet
 end
 
 -- ==============================================================================
--- EKsekusi UTAMA (AUTO TELEPORT & AUTO HIT)
+-- EKSEKUSI UTAMA (LOGIKA TELEPORT SAAT LEWAT NET & AUTO HIT)
 -- ==============================================================================
 RunService.RenderStepped:Connect(function()
     if not character or not character:FindFirstChild("HumanoidRootPart") then 
@@ -168,25 +194,26 @@ RunService.RenderStepped:Connect(function()
         return 
     end
 
-    local ball, distance = findActiveBall()
+    local ball, distance, crossedNet = findBallAndNetStatus()
     
     if ball then
-        -- 1. Logika Auto Teleport Presisi ke Arah Bola
-        if CONFIG.AutoTeleportEnabled and distance <= CONFIG.TeleportDistance and distance > CONFIG.HitDistance then
+        -- 1. Logika Auto Teleport: Hanya teleport saat bola sudah melewati batas net ke area kita
+        if CONFIG.AutoTeleportEnabled and crossedNet and distance > CONFIG.HitDistance then
             local offset = Vector3.new(CONFIG.TeleportOffset[1], CONFIG.TeleportOffset[2], CONFIG.TeleportOffset[3])
             humanoidRootPart.CFrame = CFrame.new(ball.Position + offset, ball.Position)
         end
         
-        -- 2. Logika Auto Hit Otomatis Saat Berada di Jangkauan
+        -- 2. Logika Auto Hit: Langsung pukul bola begitu masuk dalam jangkauan raket
         if CONFIG.AutoHitEnabled and distance <= CONFIG.HitDistance then
+            -- Eksekusi lewat Tool yang dipegang
             local tool = character:FindFirstChildOfClass("Tool")
             if tool then
                 tool:Activate()
             end
             
-            -- Trigger tambahan via RemoteEvent jika game menggunakan sistem server-sided click
+            -- Eksekusi cadangan lewat RemoteEvent server game (jika ada event pukul)
             for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                if remote:IsA("RemoteEvent") and (string.find(string.lower(remote.Name), "hit") or string.find(string.lower(remote.Name), "swing")) then
+                if remote:IsA("RemoteEvent") and (string.find(string.lower(remote.Name), "hit") or string.find(string.lower(remote.Name), "swing") or string.find(string.lower(remote.Name), "shot")) then
                     remote:FireServer(ball)
                 end
             end
@@ -194,4 +221,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("Racket Rivals Ultimate Script Loaded Successfully!")
+print("Racket Rivals Net-Crossing Logic Script Loaded Successfully!")
