@@ -143,22 +143,22 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
---// Sistem Terbang Terpisah (Fitur Terbang Aktif Duluan, Baru Cari & Collect Chest)
+--// Sistem Variabel Chest Murni, Terbang, dan Sentuh Otomatis
 task.spawn(function()
     local attachment, linearVelocity, alignOrientation
     
     while true do
-        task.wait(0.1)
+        task.wait(0.05)
         pcall(function()
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             local humanoid = char and char:FindFirstChild("Humanoid")
             
             if Settings.AutoChest and hrp and humanoid and humanoid.Health > 0 then
-                -- 1. Aktifkan mode terbang terlebih dahulu (PlatformStand)
+                -- 1. Set PlatformStand agar karakter melayang stabil
                 humanoid.PlatformStand = true
                 
-                -- Setup Physics Constraint untuk Terbang
+                -- 2. Buat Variabel Fisika Terbang (LinearVelocity & AlignOrientation)
                 if not hrp:FindFirstChild("RootAttachmentCustom") then
                     attachment = Instance.new("Attachment")
                     attachment.Name = "RootAttachmentCustom"
@@ -189,43 +189,45 @@ task.spawn(function()
                     alignOrientation = hrp:FindFirstChild("CustomAlignOrientation")
                 end
                 
-                -- 2. Cari Chest (Bronze, Silver, Gold, Diamond, atau universal) setelah terbang aktif
-                local targetChest = nil
+                -- 3. Cari Variabel Chest Berdasarkan Nama Pasti & Universal
+                local chas = nil
                 local shortestDistance = math.huge
                 
                 for _, obj in pairs(Workspace:GetDescendants()) do
-                    local name = obj.Name
-                    if name == "Bronze Chest" or name == "Silver Chest" or name == "Gold Chest" or name == "Diamond Chest" or name:lower():find("chest") then
+                    local n = obj.Name
+                    if n == "Bronze Chest" or n == "Silver Chest" or n == "Gold Chest" or n == "Diamond Chest" or n:lower():find("chest") then
                         local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
                         if part then
                             local dist = (hrp.Position - part.Position).Magnitude
                             if dist < shortestDistance then
                                 shortestDistance = dist
-                                targetChest = part
+                                chas = part
                             end
                         end
                     end
                 end
                 
-                -- 3. Gerakkan karakter terbang menuju chest yang ditemukan
-                if targetChest and targetChest.Parent then
-                    local targetPos = targetChest.Position + Vector3.new(0, 3, 0)
+                -- 4. Dekati Variabel chas dan Collect (Sentuh langsung posisinya)
+                if chas and chas.Parent then
+                    local targetPos = chas.Position
                     local direction = (targetPos - hrp.Position)
                     local distance = direction.Magnitude
                     
-                    if distance > 3 then
-                        linearVelocity.VectorVelocity = direction.Unit * 300
+                    if distance > 2 then
+                        linearVelocity.VectorVelocity = direction.Unit * 350
                         alignOrientation.CFrame = CFrame.new(hrp.Position, targetPos)
                     else
+                        -- Pas posisi tepat di atas/dalam chas agar otomatis terambil (collected)
                         linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
+                        hrp.CFrame = chas.CFrame
                     end
                 else
-                    -- Jika belum ada chest terdekat, tetap terbang mengambang stabil di tempat
-                    linearVelocity.VectorVelocity = Vector3.new(0, 5, 0)
+                    -- Jika chas belum/tidak ditemukan, tetap terbang melayang di tempat
+                    linearVelocity.VectorVelocity = Vector3.new(0, 2, 0)
                     alignOrientation.CFrame = hrp.CFrame
                 end
             else
-                -- Matikan sistem terbang jika fitur dimatikan atau karakter mati
+                -- Matikan terbang dan kembalikan kondisi normal saat tombol OFF atau karakter mati
                 if hrp then
                     if hrp:FindFirstChild("CustomLinearVelocity") then hrp.CustomLinearVelocity:Destroy() end
                     if hrp:FindFirstChild("CustomAlignOrientation") then hrp.CustomAlignOrientation:Destroy() end
