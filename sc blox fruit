@@ -7,7 +7,6 @@ local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
 
 --// FileName untuk Save Settings
 local SettingsFileName = "BloxFruits_Settings.json"
@@ -39,35 +38,45 @@ local function SaveSettings()
     end
 end
 
---// GUI Creation
+--// GUI Creation (Menggunakan PlayerGui agar aman dari deteksi CoreGui beberapa Executor)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsHub"
 ScreenGui.ResetOnSpawn = false
 pcall(function()
-    ScreenGui.Parent = CoreGui
+    if syn and syn.protect_gui then
+        syn.protect_gui(ScreenGui)
+        ScreenGui.Parent = CoreGui
+    elseif protectgui then
+        protectgui(ScreenGui)
+        ScreenGui.Parent = CoreGui
+    else
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
 end)
-if ScreenGui.Parent ~= CoreGui then
+if not ScreenGui.Parent then
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
---// Main Toggle Button (Buka/Tutup Menu)
+--// Main Toggle Button (Tombol Buka/Tutup Menu di Layar)
 local OpenButton = Instance.new("TextButton")
 OpenButton.Name = "OpenButton"
-OpenButton.Size = UDim2.new(0, 50, 0, 50)
-OpenButton.Position = UDim2.new(0, 20, 0, 20)
+OpenButton.Size = UDim2.new(0, 70, 0, 70)
+OpenButton.Position = UDim2.new(0, 30, 0, 150)
 OpenButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 OpenButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
 OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenButton.TextSize = 14
+OpenButton.TextSize = 16
 OpenButton.Font = Enum.Font.SourceSansBold
 OpenButton.Text = "MENU"
+OpenButton.Active = true
+OpenButton.Draggable = true
 OpenButton.Parent = ScreenGui
 
 local UICornerOpen = Instance.new("UICorner")
-UICornerOpen.CornerRadius = UDim.new(0, 8)
+UICornerOpen.CornerRadius = UDim.new(0, 12)
 UICornerOpen.Parent = OpenButton
 
---// Main Frame
+--// Main Frame (Menu Utama)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 300, 0, 200)
@@ -107,6 +116,7 @@ local UICornerChest = Instance.new("UICorner")
 UICornerChest.CornerRadius = UDim.new(0, 6)
 UICornerChest.Parent = ChestToggleBtn
 
+--// Event Handler untuk Tombol Menu
 OpenButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
@@ -186,7 +196,7 @@ task.spawn(function()
                     if targetChest then
                         humanoid.PlatformStand = true
                         local distance = (hrp.Position - targetChest.Position).Magnitude
-                        local speed = 250 -- Kecepatan terbang mulus
+                        local speed = 250
                         local timeTaken = distance / speed
                         
                         local tweenInfo = TweenInfo.new(timeTaken, Enum.EasingStyle.Linear)
