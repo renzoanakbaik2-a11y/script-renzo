@@ -1,32 +1,48 @@
 -- ==============================================================================
--- DEWA CODING: ULTRA SAFE STABLE FINDER V300.0 (ZERO ERROR)
+-- DEWA CODING: DELTA MOBILE SUPREME OMNI-HUD V500.0 (OPTIMIZED FOR DELTA EXECUTOR)
 -- ==============================================================================
 
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
--- Hapus GUI lama agar bersih
-if CoreGui:FindFirstChild("DewaSafeFinder") then
-    CoreGui.DewaSafeFinder:Destroy()
+-- Aman untuk Delta Mobile: Menggunakan proteksi pcall agar tidak crash total
+pcall(function()
+    if CoreGui:FindFirstChild("DewaDeltaSupremeHUD") then
+        CoreGui.DewaDeltaSupremeHUD:Destroy()
+    end
+end)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DewaDeltaSupremeHUD"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Masukkan ke CoreGui atau PlayerGui tergantung ketersediaan Delta
+pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not ScreenGui.Parent then
+    pcall(function()
+        ScreenGui.Parent = player:WaitForChild("PlayerGui")
+    end)
 end
 
-local ScreenGui = Instance.new("ScreenGui", CoreGui)
-ScreenGui.Name = "DewaSafeFinder"
-ScreenGui.ResetOnSpawn = false
-
--- 1. Tombol Utama Melayang (Bisa Digeser)
+-- ==============================================================================
+-- 1. TOMBOL MENU UTAMA (FLOATING BUTTON KHUSUS HP / DELTA)
+-- ==============================================================================
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size = UDim2.new(0, 160, 0, 45)
-ToggleBtn.Position = UDim2.new(0, 20, 0.3, 0)
-ToggleBtn.Text = "⚡ SAFE FINDER"
-ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.Size = UDim2.new(0, 140, 0, 45)
+ToggleBtn.Position = UDim2.new(0, 15, 0.25, 0)
+ToggleBtn.Text = "👑 MENU DEWA"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+ToggleBtn.BorderColor3 = Color3.fromRGB(255, 215, 0)
 ToggleBtn.BorderSizePixel = 2
 ToggleBtn.Font = Enum.Font.GothamBold
 ToggleBtn.TextSize = 12
@@ -34,138 +50,294 @@ ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
 
--- 2. Menu Panel Utama
+-- ==============================================================================
+-- 2. PANEL UTAMA (MENU KONTROL)
+-- ==============================================================================
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 480, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -180)
-MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+MainFrame.Size = UDim2.new(0, 360, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Visible = false
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
--- Header Bar
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Color = Color3.fromRGB(0, 255, 128)
+UIStroke.Thickness = 2
+
+-- Header Panel
 local TopBar = Instance.new("Frame", MainFrame)
-TopBar.Size = UDim2.new(1, 0, 0, 35)
-TopBar.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
 TopBar.BorderSizePixel = 0
-Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 12)
 
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, -40, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "⚡ SAFE FINDER V300.0 (ANTI ERROR)"
-Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+Title.Text = "👑 DEWA OMNI-HUD (DELTA VERSION)"
+Title.TextColor3 = Color3.fromRGB(0, 255, 128)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 11
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
 local CloseBtn = Instance.new("TextButton", TopBar)
-CloseBtn.Size = UDim2.new(0, 26, 0, 26)
-CloseBtn.Position = UDim2.new(1, -30, 0.5, -13)
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -34, 0.5, -14)
 CloseBtn.Text = "X"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 10
+CloseBtn.TextSize = 11
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
 ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
+
 CloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
 end)
 
--- 3. Kotak Status & Info
-local StatusLabel = Instance.new("TextLabel", MainFrame)
-StatusLabel.Size = UDim2.new(0.92, 0, 0, 50)
-StatusLabel.Position = UDim2.new(0.04, 0, 0.12, 0)
-StatusLabel.Text = "Status: Siap. Klik tombol di bawah untuk mulai mendeteksi objek di sekitar karakter."
-StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
-StatusLabel.Font = Enum.Font.Code
-StatusLabel.TextSize = 11
-StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
-StatusLabel.TextWrapped = true
-StatusLabel.BackgroundTransparency = 1
+-- ==============================================================================
+-- 3. TAB NAVIGASI (FITUR MENU ATAS)
+-- ==============================================================================
+local TabContainer = Instance.new("Frame", MainFrame)
+TabContainer.Size = UDim2.new(0.92, 0, 0, 35)
+TabContainer.Position = UDim2.new(0.04, 0, 0.12, 0)
+TabContainer.BackgroundTransparency = 1
 
--- 4. Daftar List Hasil Scan
-local ScrollFrame = Instance.new("ScrollingFrame", MainFrame)
-ScrollFrame.Size = UDim2.new(0.92, 0, 0.65, 0)
-ScrollFrame.Position = UDim2.new(0.04, 0, 0.28, 0)
-ScrollFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
-ScrollFrame.BorderSizePixel = 0
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-Instance.new("UICorner", ScrollFrame).CornerRadius = UDim.new(0, 6)
+local TabList = Instance.new("UIListLayout", TabContainer)
+TabList.FillDirection = Enum.FillDirection.Horizontal
+TabList.SortOrder = Enum.SortOrder.LayoutOrder
+TabList.Padding = UDim.new(0, 6)
 
-local UIList = Instance.new("UIListLayout", ScrollFrame)
-UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 4)
+local function createTabBtn(name)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.31, 0, 1, 0)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 10
+    btn.Parent = TabContainer
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    return btn
+end
 
--- Tombol Scan Cepat
-local ScanBtn = Instance.new("TextButton", MainFrame)
-ScanBtn.Size = UDim2.new(0.92, 0, 0, 35)
-ScanBtn.Position = UDim2.new(0.04, 0, 0.88, 0)
-ScanBtn.Text = "🔄 SCAN OBJEK SEKITAR"
+local Tab1Btn = createTabBtn("⚡ Fitur Utama")
+local Tab2Btn = createTabBtn("📁 Explorer")
+local Tab3Btn = createTabBtn("📖 Info")
+
+-- ==============================================================================
+-- 4. HALAMAN KONTEN (HALAMAN 1, 2, 3)
+-- ==============================================================================
+local PageContent = Instance.new("Frame", MainFrame)
+PageContent.Size = UDim2.new(0.92, 0, 0.70, 0)
+PageContent.Position = UDim2.new(0.04, 0, 0.22, 0)
+PageContent.BackgroundTransparency = 1
+
+-- HALAMAN 1: FITUR UTAMA (SPEED, JUMP, FULLBRIGHT, NOCLIP)
+local Page1 = Instance.new("ScrollingFrame", PageContent)
+Page1.Size = UDim2.new(1, 0, 1, 0)
+Page1.BackgroundTransparency = 1
+Page1.CanvasSize = UDim2.new(0, 0, 0, 220)
+Page1.ScrollBarThickness = 2
+local Page1Layout = Instance.new("UIListLayout", Page1)
+Page1Layout.SortOrder = Enum.SortOrder.LayoutOrder
+Page1Layout.Padding = UDim.new(0, 8)
+
+local function createFeatureToggle(name)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 42)
+    btn.Text = name .. ": OFF"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.Parent = Page1
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    return btn
+end
+
+local SpeedBtn = createFeatureToggle("🚀 SPEED 30")
+local JumpBtn = createFeatureToggle("🦘 SUPER JUMP")
+local FullbrightBtn = createFeatureToggle("💡 FULLBRIGHT MAP")
+local NoclipBtn = createFeatureToggle("👻 NOCLIP (TEMBUS TEMBOK)")
+
+-- HALAMAN 2: EXPLORER OBJEK SEKITAR
+local Page2 = Instance.new("Frame", PageContent)
+Page2.Size = UDim2.new(1, 0, 1, 0)
+Page2.BackgroundTransparency = 1
+Page2.Visible = false
+
+local ScanBtn = Instance.new("TextButton", Page2)
+ScanBtn.Size = UDim2.new(1, 0, 0, 35)
+ScanBtn.Text = "🔄 SCAN OBJEK WORKSPACE"
 ScanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 ScanBtn.Font = Enum.Font.GothamBold
 ScanBtn.TextSize = 11
+ScanBtn.Parent = Page2
 Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
 
--- Folder Kotak Visual
-local HighlightFolder = Instance.new("Folder", ScreenGui)
-HighlightFolder.Name = "SafeHighlights"
+local ResultScroll = Instance.new("ScrollingFrame", Page2)
+ResultScroll.Size = UDim2.new(1, 0, 0, 220)
+ResultScroll.Position = UDim2.new(0, 0, 0, 42)
+ResultScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+ResultScroll.BorderSizePixel = 0
+ResultScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", ResultScroll).CornerRadius = UDim.new(0, 6)
+local ResultLayout = Instance.new("UIListLayout", ResultScroll)
+ResultLayout.Padding = UDim.new(0, 3)
 
--- Logika Scan Aman (Menggunakan pcall agar tidak pernah error/crash)
+-- HALAMAN 3: INFO PANDUAN
+local Page3 = Instance.new("Frame", PageContent)
+Page3.Size = UDim2.new(1, 0, 1, 0)
+Page3.BackgroundTransparency = 1
+Page3.Visible = false
+
+local InfoLabel = Instance.new("TextLabel", Page3)
+InfoLabel.Size = UDim2.new(1, 0, 1, 0)
+InfoLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+InfoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+InfoLabel.Font = Enum.Font.Code
+InfoLabel.TextSize = 11
+InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+InfoLabel.TextYAlignment = Enum.TextYAlignment.Top
+InfoLabel.TextWrapped = true
+InfoLabel.Text = [[
+=================================
+📖 INFORMASI & CARA PAKAI (DELTA):
+=================================
+1. Tombol '👑 MENU DEWA' bisa digeser (drag) ke mana saja di layar HP kamu.
+2. Tab 'Fitur Utama' berisi cheat karakter dasar (Speed, Jump, Fullbright, Noclip) yang aman dijalankan.
+3. Tab 'Explorer' untuk memindai objek sekitar di game.
+4. Script ini dirancang khusus kompatibel dengan Delta Executor HP.
+]]
+Instance.new("UICorner", InfoLabel).CornerRadius = UDim.new(0, 6)
+
+-- Sistem Ganti Tab
+Tab1Btn.MouseButton1Click:Connect(function()
+    Page1.Visible = true; Page2.Visible = false; Page3.Visible = false
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    Tab3Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+end)
+
+Tab2Btn.MouseButton1Click:Connect(function()
+    Page1.Visible = false; Page2.Visible = true; Page3.Visible = false
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    Tab3Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+end)
+
+Tab3Btn.MouseButton1Click:Connect(function()
+    Page1.Visible = false; Page2.Visible = false; Page3.Visible = true
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    Tab3Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+end)
+
+Tab1Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255) -- Default aktif
+
+-- ==============================================================================
+-- 5. LOGIKA EKSEKUSI FITUR AMAN DELTA
+-- ==============================================================================
+local SpeedState = false
+local JumpState = false
+local FullbrightState = false
+local NoclipState = false
+
+SpeedBtn.MouseButton1Click:Connect(function()
+    SpeedState = not SpeedState
+    SpeedBtn.Text = "🚀 SPEED 30: " .. (SpeedState and "ON" or "OFF")
+    SpeedBtn.BackgroundColor3 = SpeedState and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+end)
+
+JumpStateBtn = JumpBtn
+JumpBtn.MouseButton1Click:Connect(function()
+    JumpState = not JumpState
+    JumpBtn.Text = "🦘 SUPER JUMP: " .. (JumpState and "ON" or "OFF")
+    JumpBtn.BackgroundColor3 = JumpState and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+end)
+
+FullbrightBtn.MouseButton1Click:Connect(function()
+    FullbrightState = not FullbrightState
+    FullbrightBtn.Text = "💡 FULLBRIGHT MAP: " .. (FullbrightState and "ON" or "OFF")
+    FullbrightBtn.BackgroundColor3 = FullbrightState and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+end)
+
+NoclipBtn.MouseButton1Click:Connect(function()
+    NoclipState = not NoclipState
+    NoclipBtn.Text = "👻 NOCLIP: " .. (NoclipState and "ON" or "OFF")
+    NoclipBtn.BackgroundColor3 = NoclipState and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+end)
+
+-- Scan Objek Workspace Aman
 ScanBtn.MouseButton1Click:Connect(function()
     ScanBtn.Text = "MEMINDAI..."
     ScanBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
     
     pcall(function()
-        for _, child in pairs(ScrollFrame:GetChildren()) do
+        for _, child in pairs(ResultScroll:GetChildren()) do
             if child:IsA("TextButton") then child:Destroy() end
         end
-        HighlightFolder:ClearAllChildren()
         
         local count = 0
         for _, obj in pairs(workspace:GetChildren()) do
-            if obj and obj.Name and (obj:IsA("BasePart") or obj:IsA("Model")) then
+            if obj and obj.Name then
                 count = count + 1
-                
-                local btn = Instance.new("TextButton")
-                btn.Size = UDim2.new(1, -6, 0, 28)
-                btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-                btn.TextColor3 = Color3.fromRGB(220, 220, 220)
-                btn.Font = Enum.Font.Code
-                btn.TextSize = 10
-                btn.Text = "📁 " .. obj.Name .. " [" .. obj.ClassName .. "]"
-                btn.TextXAlignment = Enum.TextXAlignment.Left
-                btn.Parent = ScrollFrame
-                Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-                
-                btn.MouseButton1Click:Connect(function()
-                    HighlightFolder:ClearAllChildren()
-                    pcall(function()
-                        local box = Instance.new("SelectionBox")
-                        box.Adornee = obj
-                        box.Color3 = Color3.fromRGB(0, 255, 128)
-                        box.LineThickness = 0.1
-                        box.Parent = HighlightFolder
-                    end)
-                    StatusLabel.Text = "Terpilih: " .. obj.Name .. " (Parent: " .. tostring(obj.Parent) .. ")"
-                end)
+                local itemBtn = Instance.new("TextButton")
+                itemBtn.Size = UDim2.new(1, -6, 0, 28)
+                itemBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+                itemBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+                itemBtn.Font = Enum.Font.Code
+                itemBtn.TextSize = 10
+                itemBtn.Text = "▪ " .. obj.Name .. " [" .. obj.ClassName .. "]"
+                itemBtn.TextXAlignment = Enum.TextXAlignment.Left
+                itemBtn.Parent = ResultScroll
+                Instance.new("UICorner", itemBtn).CornerRadius = UDim.new(0, 4)
             end
         end
-        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, count * 32)
-        StatusLabel.Text = "Scan Berhasil! Ditemukan " .. count .. " objek utama."
+        ResultScroll.CanvasSize = UDim2.new(0, 0, 0, count * 32)
     end)
     
-    ScanBtn.Text = "🔄 SCAN OBJEK SEKITAR"
+    ScanBtn.Text = "🔄 SCAN OBJEK WORKSPACE"
     ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 end)
 
-print("⚡ SAFE FINDER V300.0 LOADED SUCCESSFULLY! ⚡")
+-- Loop Utama (Heartbeat) untuk menjalankan efek cheat
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        local char = player.Character
+        if char and char:FindFirstChild("Humanoid") then
+            local humanoid = char.Humanoid
+            if SpeedState then
+                humanoid.WalkSpeed = 30
+            end
+            if JumpState then
+                humanoid.JumpPower = 100
+            end
+        end
+        
+        if FullbrightState then
+            Lighting.Brightness = 2
+            Lighting.ClockTime = 14
+            Lighting.GlobalShadows = false
+        end
+        
+        if NoclipState and char then
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+end)
+
+print("👑 DEWA DELTA SUPREME HUD LOADED SUCCESSFULLY! 👑")
