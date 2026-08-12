@@ -1,7 +1,7 @@
 -- ==============================================================================
--- PIXEL QUEST: MENU UTAMA (POSISI DI KIRI ATAS)
--- Tombol "MENU" diposisikan rapi di pojok kiri atas layar HP agar mudah dijangkau,
--- dan berfungsi untuk membuka/menutup panel utama tempat fitur-fitur berada.
+-- PIXEL QUEST: MENU UTAMA (POSISI DI KIRI TENGAH)
+-- Tombol "MENU" diposisikan di sisi tengah-kiri layar agar pas dan nyaman 
+-- disentuh saat bermain di HP, berfungsi untuk membuka/menutup panel utama.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -18,11 +18,11 @@ ScreenGui.Name = "PixelQuestMenuSystem"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = playerGui
 
--- 1. TOMBOL "MENU" (Diposisikan di pojok kiri atas layar)
+-- 1. TOMBOL "MENU" (Diposisikan di tengah layar sebelah kiri: Y = 0.5)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleBtn"
 ToggleBtn.Size = UDim2.new(0, 110, 0, 45)
-ToggleBtn.Position = UDim2.new(0.02, 0, 0.08, 0)
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.5, -22)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
 ToggleBtn.BorderSizePixel = 2
@@ -42,7 +42,7 @@ BtnCorner.Parent = ToggleBtn
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 300, 0, 320)
-MainFrame.Position = UDim2.new(0.02, 0, 0.18, 0)
+MainFrame.Position = UDim2.new(0.14, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -70,7 +70,7 @@ InfoText.BackgroundTransparency = 1
 InfoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 InfoText.TextSize = 11
 InfoText.Font = Enum.Font.Gotham
-InfoText.Text = "Tombol 'MENU' di kiri atas berhasil dipasang. Panel ini bisa disembunyikan dan dimunculkan kembali. Siap kita isi fitur selanjutnya!"
+InfoText.Text = "Tombol 'MENU' sekarang ada di sebelah kiri tengah layar. Pas banget buat diakses. Silakan dicek!"
 InfoText.TextWrapped = true
 InfoText.Parent = MainFrame
 
@@ -79,4 +79,4 @@ ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
-print("⚡ TOMBOL MENU DI KIRI ATAS BERHASIL DIMUAT! ⚡")
+print("⚡ TOMBOL MENU DI KIRI TENGAH BERHASIL DIMUAT! ⚡")
