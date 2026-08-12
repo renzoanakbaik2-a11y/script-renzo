@@ -1,6 +1,7 @@
 -- ==============================================================================
--- PIXEL QUEST: 2D BULLET HELL - SPECIAL FIXED AUTO FARM & MAP ESP
--- Dibuat khusus menyesuaikan struktur game Pixel Quest (2D Map & Custom Framework)
+-- PIXEL QUEST: 2D BULLET HELL - ULTIMATE MAP ESP & TARGET TRACKER
+-- Dibuat khusus melacak entitas musuh 2D dan menampilkan garis arah (Tracer) 
+-- di layar map secara real-time tanpa bikin karakter diam/bug.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -12,16 +13,16 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- Bersihkan GUI lama
-if playerGui:FindFirstChild("PixelQuest2DFix") then
-    playerGui.PixelQuest2DFix:Destroy()
+if playerGui:FindFirstChild("PixelQuest2DPro") then
+    playerGui.PixelQuest2DPro:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PixelQuest2DFix"
+ScreenGui.Name = "PixelQuest2DPro"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = playerGui
 
--- 1. TOMBOL "MENU" (Di ujung kiri tengah layar, mudah dijangkau di HP)
+-- 1. TOMBOL "MENU" (Di ujung kiri tengah layar HP)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleBtn"
 ToggleBtn.Size = UDim2.new(0, 90, 0, 45)
@@ -41,11 +42,11 @@ local BtnCorner = Instance.new("UICorner")
 BtnCorner.CornerRadius = UDim.new(0, 6)
 BtnCorner.Parent = ToggleBtn
 
--- 2. PANEL UTAMA MENU (Di tengah layar, default tertutup saat awal execute)
+-- 2. PANEL UTAMA MENU (Di tengah layar, default tertutup)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 320, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -160)
+MainFrame.Size = UDim2.new(0, 320, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -140)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -60,53 +61,45 @@ MainCorner.Parent = MainFrame
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundTransparency = 1
-Title.Text = "⚡ PIXEL QUEST 2D MENU ⚡"
+Title.Text = "⚡ PIXEL QUEST 2D TRACKER ⚡"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.TextSize = 13
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
 local CONFIG = {
-    AutoFarm = false,
-    MapESP = false
+    ESPMapLines = false
 }
 
--- Tombol Toggle Fitur
-local function addToggle(text, yPos, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 45)
-    btn.Position = UDim2.new(0.05, 0, 0, yPos)
-    btn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 12
-    btn.Font = Enum.Font.GothamBold
-    btn.Text = text .. ": OFF"
-    btn.Parent = MainFrame
+-- Tombol Toggle Fitur ESP Garis Map
+local ToggleESP = Instance.new("TextButton")
+ToggleESP.Size = UDim2.new(0.9, 0, 0, 45)
+ToggleESP.Position = UDim2.new(0.05, 0, 0, 55)
+ToggleESP.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+ToggleESP.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleESP.TextSize = 12
+ToggleESP.Font = Enum.Font.GothamBold
+ToggleESP.Text = "Garis ESP & Target Map: OFF"
+ToggleESP.Parent = MainFrame
 
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 8)
-    c.Parent = btn
+local c = Instance.new("UICorner")
+c.CornerRadius = UDim.new(0, 8)
+c.Parent = ToggleESP
 
-    local state = false
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-        btn.Text = text .. ": " .. (state and "ON" or "OFF")
-        callback(state)
-    end)
-end
-
-addToggle("Auto Farm 2D (Teleport ke Musuh)", 55, function(v) CONFIG.AutoFarm = v end)
-addToggle("ESP Garis & Kotak di Map", 110, function(v) CONFIG.MapESP = v end)
+ToggleESP.MouseButton1Click:Connect(function()
+    CONFIG.ESPMapLines = not CONFIG.ESPMapLines
+    ToggleESP.BackgroundColor3 = CONFIG.ESPMapLines and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    ToggleESP.Text = "Garis ESP & Target Map: " .. (CONFIG.ESPMapLines and "ON" or "OFF")
+end)
 
 local StatusText = Instance.new("TextLabel")
-StatusText.Size = UDim2.new(0.9, 0, 0, 70)
-StatusText.Position = UDim2.new(0.05, 0, 0, 175)
+StatusText.Size = StatusText.Size = UDim2.new(0.9, 0, 0, 80)
+StatusText.Position = UDim2.new(0.05, 0, 0, 120)
 StatusText.BackgroundTransparency = 1
 StatusText.TextColor3 = Color3.fromRGB(0, 255, 255)
 StatusText.TextSize = 11
 StatusText.Font = Enum.Font.Gotham
-StatusText.Text = "Status: Siap! Klik tombol 'MENU' di ujung kiri tengah untuk membuka panel."
+StatusText.Text = "Info: Gunakan senjata Panah agar kamu bisa menyerang dari jauh. Garis ESP akan menunjukkan letak musuh terdekat di map 2D!"
 StatusText.TextWrapped = true
 StatusText.Parent = MainFrame
 
@@ -116,110 +109,62 @@ ToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==============================================================================
--- SISTEM UTAMA: PENCARIAN PARTIKEL / OBJEK 2D DI MAP PIXEL QUEST
+-- SISTEM VISUAL MAP ESP & GARIS PANDUAN TARGET 2D
 -- ==============================================================================
-
--- Folder penampung kotak ESP visual di map
-local espFolder = Instance.new("Folder")
-espFolder.Name = "PixelQuestESP_Container"
-espFolder.Parent = CoreGui
-
-local function clearESP()
-    espFolder:ClearAllChildren()
-end
-
--- Fungsi mencari karakter pemain di map 2D Pixel Quest
-local function getMyCharacterPart()
-    -- Cek berbagai kemungkinan part karakter di game 2D
-    if player.Character then
-        local root = player.Character:FindFirstChild("HumanoidRootPart") or player.Character:FindFirstChild("Head") or player.Character.PrimaryPart
-        if root then return root end
-    end
-    -- Cari part aktif milik player di workspace
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and (obj.Name == "HumanoidRootPart" or obj.Name == "Head" or obj.Name == "Root") then
-            if obj.Parent and obj.Parent.Name == player.Name then
-                return obj
-            end
-        end
-    end
-    return nil
-end
-
--- Fungsi melacak musuh/monster di map 2D
-local function findPixelEnemies()
-    local enemies = {}
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") or obj:IsA("Model") then
-            local name = obj.Name:lower()
-            -- Karena ini game 2D bullet hell, musuh biasanya dinamai berdasarkan mob/enemy/bullet/npc
-            if name:find("enemy") or name:find("monster") or name:find("mob") or name:find("slime") or name:find("zombie") or name:find("boss") then
-                local targetPart = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head") or obj:FindFirstChildWhichIsA("BasePart")) or obj
-                if targetPart and targetPart ~= getMyCharacterPart() then
-                    table.insert(enemies, targetPart)
-                end
-            end
-        end
-    end
-    return enemies
-end
+local espContainer = Instance.new("Folder")
+espContainer.Name = "PixelQuest_ESP_Visuals"
+espContainer.Parent = CoreGui
 
 RunService.RenderStepped:Connect(function()
-    local myRoot = getMyCharacterPart()
-    if not myRoot then return end
+    espContainer:ClearAllChildren()
 
-    local enemies = findPixelEnemies()
+    if not CONFIG.ESPMapLines then return end
 
-    -- 1. FITUR ESP GARIS & KOTAK DI MAP
-    clearESP()
-    if CONFIG.MapESP then
-        for _, enemyPart in ipairs(enemies) do
-            if enemyPart and enemyPart.Parent then
-                -- Buat kotak penanda (Box ESP) di atas kepala musuh di map
-                local box = Instance.new("BoxHandleAdornment")
-                box.Size = Vector3.new(3, 3, 3)
-                box.Adornee = enemyPart
-                box.AlwaysOnTop = true
-                box.ZIndex = 10
-                box.Color3 = Color3.fromRGB(255, 0, 0)
-                box.Transparency = 0.3
-                box.Parent = espFolder
-
-                -- Buat garis penunjuk arah dari pemain ke musuh di map
-                local line = Instance.new("LineHandleAdornment")
-                line.Adornee = myRoot
-                line.Length = (myRoot.Position - enemyPart.Position).Magnitude
-                line.Color3 = Color3.fromRGB(0, 255, 128)
-                line.Thickness = 3
-                line.AlwaysOnTop = true
-                line.Transparency = 0.2
-                -- Arahkan garis ke posisi musuh
-                pcall(function()
-                    line.CFrame = CFrame.new(myRoot.Position, enemyPart.Position):ToObjectSpace(myRoot.CFrame):Inverse()
-                end)
-                line.Parent = espFolder
+    -- Cari posisi pemain (bisa berupa part atau model di game 2D)
+    local myPosition = nil
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name:lower():find("root") or obj.Name:lower():find("head") or obj.Name:lower():find("player")) then
+            if obj.Parent and obj.Parent.Name == player.Name then
+                myPosition = obj.Position
+                break
             end
         end
     end
 
-    -- 2. FITUR AUTO FARM (Teleport otomatis mendekati musuh terdekat di map 2D)
-    if CONFIG.AutoFarm and #enemies > 0 then
-        local closestEnemy = nil
-        local shortestDist = math.huge
+    if not myPosition and player.Character and player.Character.PrimaryPart then
+        myPosition = player.Character.PrimaryPart.Position
+    end
 
-        for _, enemyPart in ipairs(enemies) do
-            local dist = (myRoot.Position - enemyPart.Position).Magnitude
-            if dist < shortestDist then
-                shortestDist = dist
-                closestEnemy = enemyPart
+    if not myPosition then return end
+
+    -- Scan musuh di map 2D berdasarkan part aktif
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local name = obj.Name:lower()
+            -- Deteksi objek yang berpotensi sebagai musuh/mob di map 2D Pixel Quest
+            if name:find("enemy") or name:find("monster") or name:find("mob") or name:find("boss") or name:find("slime") then
+                -- Buat kotak penanda merah di atas musuh
+                local box = Instance.new("BoxHandleAdornment")
+                box.Size = Vector3.new(2.5, 2.5, 2.5)
+                box.Adornee = obj
+                box.AlwaysOnTop = true
+                box.ZIndex = 5
+                box.Color3 = Color3.fromRGB(255, 50, 50)
+                box.Transparency = 0.2
+                box.Parent = espContainer
+
+                -- Buat garis hijau penunjuk dari posisi kita ke musuh tersebut
+                local line = Instance.new("LineHandleAdornment")
+                line.Adornee = obj
+                line.Length = (myPosition - obj.Position).Magnitude
+                line.Color3 = Color3.fromRGB(0, 255, 128)
+                line.Thickness = 2
+                line.AlwaysOnTop = true
+                line.Transparency = 0.3
+                line.Parent = espContainer
             end
-        end
-
-        if closestEnemy and closestEnemy.Parent then
-            -- Teleport pas di dekat musuh
-            myRoot.CFrame = CFrame.new(closestEnemy.Position + Vector3.new(0, 2, 0))
         end
     end
 end)
 
-print("⚡ PIXEL QUEST 2D FIX SCRIPT BERHASIL DIMUAT! ⚡")
+print("⚡ PIXEL QUEST 2D TRACKER BERHASIL DIMUAT! ⚡")
