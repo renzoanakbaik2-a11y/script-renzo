@@ -1,7 +1,7 @@
 -- ==============================================================================
--- PIXEL QUEST: ULTIMATE DUNGEON PORTAL SELECTOR & AUTO FARM SCRIPT
--- Fitur: Pemilihan Portal Dungeon berdasarkan Level/Tengkorak, Auto Teleport,
--- Auto Boss Killer, Auto Loot Aksesoris Bagus, dan Menu UI Lengkap dengan Save JSON.
+-- PIXEL QUEST: FIXED UI TOGGLE & ULTIMATE DUNGEON PORTAL SCRIPT
+-- Perbaikan: Tombol Toggle Menu diperbaiki agar responsif, posisi aman di layar,
+-- serta sistem Auto Farm, Auto Boss, dan Auto Dungeon Portal.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -14,32 +14,32 @@ local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
-local CONFIG_FILE_NAME = "PixelQuest_UltimateDungeonConfig.json"
+local CONFIG_FILE_NAME = "PixelQuest_FixedConfig.json"
 
 -- Daftar Nama Portal Dungeon Berdasarkan Tingkat Tengkorak / Bioma
 local DUNGEON_LIST = {
-    {Tier = 1, Name = "Crab Cove", Desc = "Dungeon Pantai Awal (Low Tier)"},
+    {Tier = 1, Name = "Crab Cove", Desc = "Dungeon Pantai Awal"},
     {Tier = 2, Name = "Mermaid Cove", Desc = "Dungeon Pesisir Air"},
     {Tier = 3, Name = "Pirate Island", Desc = "Dungeon Pulau Bajak Laut"},
-    {Tier = 4, Name = "Wooded Thicket", Desc = "Dungeon Hutan Tingkat 4"},
+    {Tier = 4, Name = "Wooded Thicket", Desc = "Dungeon Hutan"},
     {Tier = 5, Name = "The Bog", Desc = "Dungeon Rawa Beracun"},
-    {Tier = 6, Name = "Mushroom Den", Desc = "Dungeon Jamur Misterius"},
+    {Tier = 6, Name = "Mushroom Den", Desc = "Dungeon Jamur"},
     {Tier = 7, Name = "Desert Ruins", Desc = "Dungeon Reruntuhan Gurun"},
-    {Tier = 8, Name = "Catacombs", Desc = "Dungeon Bawah Tanah Tengkorak"},
-    {Tier = 9, Name = "Worm Nest", Desc = "Dungeon Sarang Cacing Raksasa"},
-    {Tier = 10, Name = "Void Realm", Desc = "Dungeon Paling Sulit (Max Tier)"}
+    {Tier = 8, Name = "Catacombs", Desc = "Dungeon Bawah Tanah"},
+    {Tier = 9, Name = "Worm Nest", Desc = "Dungeon Sarang Cacing"},
+    {Tier = 10, Name = "Void Realm", Desc = "Dungeon Paling Sulit (Max)"}
 }
 
 local CONFIG = {
     AutoFarmEnabled = false,
     AutoBossEnabled = false,
     AutoDungeonPortal = false,
-    AutoLootAccessory = true, -- Auto ambil aksesoris bagus, buang basic
+    AutoLootAccessory = true,
     SelectedDungeonIndex = 1,
     TeleportOffset = {0, 3, 0}
 }
 
--- Sistem Save & Load Pengaturan (JSON)
+-- Load & Save Settings
 local function saveSettings()
     local success, encoded = pcall(function() return HttpService:JSONEncode(CONFIG) end)
     if success and writefile then pcall(function() writefile(CONFIG_FILE_NAME, encoded) end) end
@@ -56,34 +56,62 @@ end
 loadSettings()
 
 -- ==============================================================================
--- USER INTERFACE (UI) MENU ON/OFF & DRAGGABLE
+-- USER INTERFACE (UI) & TOMBOL BUKA/TUTUP MENU YANG DIPERBAIKI
 -- ==============================================================================
+local existingGui = player:WaitForChild("PlayerGui"):FindFirstChild("PixelQuestFixedUI")
+if existingGui then existingGui:Destroy() end
+
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PixelQuestDungeonUI"
+ScreenGui.Name = "PixelQuestFixedUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
+-- Tombol Mengambang (Floating Toggle Button) untuk Membuka/Menutup Menu Utama
+local ToggleUIBtn = Instance.new("TextButton")
+ToggleUIBtn.Size = UDim2.new(0, 130, 0, 40)
+ToggleUIBtn.Position = UDim2.new(0.02, 0, 0.12, 0)
+ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleUIBtn.BorderColor3 = Color3.fromRGB(0, 255, 200)
+ToggleUIBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
+ToggleUIBtn.TextSize = 13
+ToggleUIBtn.Font = Enum.Font.GothamBold
+ToggleUIBtn.Text = "⚙️ MENU UTAMA"
+ToggleUIBtn.Active = true
+ToggleUIBtn.Draggable = true
+ToggleUIBtn.Parent = ScreenGui
+
+local TglCorner = Instance.new("UICorner")
+TglCorner.CornerRadius = UDim.new(0, 8)
+TglCorner.Parent = ToggleUIBtn
+
+-- Panel Menu Utama (Main Frame)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 300, 0, 360)
-MainFrame.Position = UDim2.new(0.05, 0, 0.15, 0)
+MainFrame.Position = UDim2.new(0.02, 0, 0.20, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Visible = true -- Mulai dalam kondisi terbuka agar langsung terlihat
 MainFrame.Parent = ScreenGui
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
-UICorner.Parent = MainFrame
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
-Title.Text = "⚡ DUNGEON PORTAL & AUTO FARM ⚡"
+Title.Text = "⚡ PIXEL QUEST GOD MENU ⚡"
 Title.TextColor3 = Color3.fromRGB(0, 255, 200)
 Title.TextSize = 12
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
+
+-- Fungsi untuk menyambungkan tombol buka/tutup menu secara aman
+ToggleUIBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
 
 local function createToggle(name, defaultState, posY, callback)
     local Btn = Instance.new("TextButton")
@@ -112,7 +140,7 @@ end
 
 createToggle("Auto Farm & Teleport", CONFIG.AutoFarmEnabled, 45, function(state) CONFIG.AutoFarmEnabled = state end)
 createToggle("Auto Boss Killer", CONFIG.AutoBossEnabled, 85, function(state) CONFIG.AutoBossEnabled = state end)
-createToggle("Auto Teleport ke Portal Dungeon", CONFIG.AutoDungeonPortal, 125, function(state) CONFIG.AutoDungeonPortal = state end)
+createToggle("Auto Teleport Portal Dungeon", CONFIG.AutoDungeonPortal, 125, function(state) CONFIG.AutoDungeonPortal = state end)
 createToggle("Auto Loot Aksesoris (Buang Basic)", CONFIG.AutoLootAccessory, 165, function(state) CONFIG.AutoLootAccessory = state end)
 
 -- Panel Pilihan Dungeon & Level Tengkorak
@@ -158,28 +186,12 @@ StatusLabel.BackgroundTransparency = 1
 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
 StatusLabel.TextSize = 11
 StatusLabel.Font = Enum.Font.Gotham
-StatusLabel.Text = "Status: Siap Berburu Portal & Boss..."
+StatusLabel.Text = "Status: Menu Berhasil Dimuat!"
 StatusLabel.TextWrapped = true
 StatusLabel.Parent = MainFrame
 
-local ToggleUIBtn = Instance.new("TextButton")
-ToggleUIBtn.Size = UDim2.new(0, 100, 0, 25)
-ToggleUIBtn.Position = UDim2.new(0.05, 0, 0.02, 0)
-ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-ToggleUIBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleUIBtn.TextSize = 11
-ToggleUIBtn.Font = Enum.Font.GothamBold
-ToggleUIBtn.Text = "Toggle Menu"
-ToggleUIBtn.Parent = ScreenGui
-
-local TglCorner = Instance.new("UICorner")
-TglCorner.CornerRadius = UDim.new(0, 6)
-TglCorner.Parent = ToggleUIBtn
-
-ToggleUIBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-
 -- ==============================================================================
--- PENCARIAN OBJEK PORTAL, BOSS, & PENGELOLAAN ITEM/AKSESORIS
+-- LOGIKA UTAMA PENCARIAN TARGET & EKSEKUSI
 -- ==============================================================================
 local function findTargetObject()
     local targetPart = nil
@@ -195,7 +207,6 @@ local function findTargetObject()
             if root then
                 local dist = (humanoidRootPart.Position - root.Position).Magnitude
 
-                -- 1. Deteksi Portal Dungeon Sesuai Pilihan Menu
                 if CONFIG.AutoDungeonPortal and (string.find(nameLower, string.lower(targetDungeonName)) or string.find(nameLower, "portal") or string.find(nameLower, "cove")) then
                     if dist < shortestDist then
                         shortestDist = dist
@@ -204,7 +215,6 @@ local function findTargetObject()
                     end
                 end
 
-                -- 2. Deteksi Boss / Musuh Utama
                 if CONFIG.AutoBossEnabled and (string.find(nameLower, "boss") or string.find(nameLower, "leader") or string.find(nameLower, "skull")) then
                     local hum = obj:FindFirstChildOfClass("Humanoid")
                     if hum and hum.Health > 0 and dist < shortestDist then
@@ -214,7 +224,6 @@ local function findTargetObject()
                     end
                 end
 
-                -- 3. Auto Farm Musuh Biasa
                 if CONFIG.AutoFarmEnabled and targetType == "None" then
                     local hum = obj:FindFirstChildOfClass("Humanoid")
                     if hum and hum.Health > 0 and obj ~= character and dist < shortestDist then
@@ -230,9 +239,6 @@ local function findTargetObject()
     return targetPart, targetType, shortestDist
 end
 
--- ==============================================================================
--- LOGIKA UTAMA EKSEKUSI (RENDERSTEPPED)
--- ==============================================================================
 RunService.RenderStepped:Connect(function()
     if not character or not character:FindFirstChild("HumanoidRootPart") then 
         character = player.Character
@@ -240,13 +246,12 @@ RunService.RenderStepped:Connect(function()
         return 
     end
 
-    -- Fitur Auto Loot Aksesoris (Membersihkan item Basic, menyimpan Tier Bagus)
     if CONFIG.AutoLootAccessory then
         pcall(function()
             for _, item in ipairs(player.Backpack:GetChildren()) do
                 local itemName = string.lower(item.Name)
                 if itemName:find("basic") or itemName:find("common") or itemName:find("trash") then
-                    item:Destroy() -- Membuang item basic otomatis agar tas tidak penuh
+                    item:Destroy()
                 end
             end
         end)
@@ -257,13 +262,11 @@ RunService.RenderStepped:Connect(function()
     if targetPart then
         StatusLabel.Text = "Target: " .. targetType .. " | Jarak: " .. math.floor(dist)
 
-        -- Auto Teleport ke Portal Dungeon / Boss / Musuh
         if (CONFIG.AutoDungeonPortal or CONFIG.AutoBossEnabled or CONFIG.AutoFarmEnabled) and dist > 15 then
             local offset = Vector3.new(CONFIG.TeleportOffset[1], CONFIG.TeleportOffset[2], CONFIG.TeleportOffset[3])
             humanoidRootPart.CFrame = CFrame.new(targetPart.Position + offset)
         end
 
-        -- Instant Damage / Auto Kill jika berhadapan dengan Boss atau Musuh Farm
         if targetType == "Boss" or targetType == "Farm" then
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if obj:IsA("Model") and obj ~= character then
@@ -271,13 +274,12 @@ RunService.RenderStepped:Connect(function()
                     local rp = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
                     if hum and rp and hum.Health > 0 then
                         if (humanoidRootPart.Position - rp.Position).Magnitude <= 40 then
-                            pcall(function() hum.Health = 0 end) -- Instant Kill musuh terdekat
+                            pcall(function() hum.Health = 0 end)
                         end
                     end
                 end
             end
 
-            -- Spam RemoteEvent combat/damage game
             for _, container in ipairs({ReplicatedStorage, player:FindFirstChild("PlayerGui"), Workspace}) do
                 if container then
                     for _, remote in ipairs(container:GetDescendants()) do
@@ -295,8 +297,8 @@ RunService.RenderStepped:Connect(function()
             end
         end
     else
-        StatusLabel.Text = "Status: Menelusuri Portal Dungeon & Boss..."
+        StatusLabel.Text = "Status: Menelusuri Area & Portal..."
     end
 end)
 
-print("⚡ PIXEL QUEST: ULTIMATE DUNGEON PORTAL & AUTO FARM BERHASIL DIMUAT! ⚡")
+print("⚡ PIXEL QUEST: MENU UTAMA BERHASIL DIPERBAIKI & AKTIF! ⚡")
