@@ -10,7 +10,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHubStructuredFinal.json"
+local FileName = "BloxFruitsHubFixedUltimate.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -54,7 +54,7 @@ local function saveSettings()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubStructured"
+ScreenGui.Name = "BloxFruitsHubFixed"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -154,7 +154,7 @@ local function getCharacterRootPart()
 end
 
 -- ==========================================
--- SISTEM TERBANG STABIL & HALUS
+-- SISTEM TERBANG STABIL & ANTI MACET
 -- ==========================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, checkSettingKey)
@@ -166,7 +166,7 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
         activeFlyConnection = nil
     end
 
-    local currentSpeed = math.clamp(Settings.FlightSpeed, 20, 1000)
+    local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 1000)
     local currentHeight = math.clamp(Settings.FlyHeight, 0, 10)
     local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
 
@@ -210,12 +210,27 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 targetPos = targetPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, currentHeight, 0)
             end
+        elseif checkSettingKey == "AutoChest" then
+            local nearest = nil
+            local shortDist = math.huge
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if v.Name:lower():find("chest") and v:IsA("BasePart") then
+                    local d = (currentPos - v.Position).Magnitude
+                    if d < shortDist then
+                        shortDist = d
+                        nearest = v
+                    end
+                end
+            end
+            if nearest then
+                targetPos = nearest.Position + Vector3.new(0, 2, 0)
+            end
         end
 
         local direction = (targetPos - currentPos)
         local distance = direction.Magnitude
 
-        if distance < 5 then
+        if distance < 4 then
             if bodyVelocity then bodyVelocity:Destroy() end
             if bodyGyro then bodyGyro:Destroy() end
             if humanoid then humanoid.PlatformStand = false end
@@ -223,7 +238,7 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
             return
         end
 
-        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 10)
+        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 12)
         bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
     end)
 end
@@ -255,11 +270,11 @@ local function isRealSpawnedFruit(obj)
 end
 
 -- ==========================================
--- 3. JALAN DI ATAS AIR (DISEMPURNAKAN & STABIL)
+-- 3. JALAN DI ATAS AIR (ANTI MATI & SOLID)
 -- ==========================================
 local WaterPlatform = nil
 task.spawn(function()
-    while task.wait(0.2) do
+    while task.wait(0.1) do
         pcall(function()
             local character = LocalPlayer.Character
             local rootPart = getCharacterRootPart()
@@ -268,8 +283,8 @@ task.spawn(function()
             if Settings.WalkOnWater and rootPart and humanoid then
                 if not WaterPlatform or not WaterPlatform.Parent then
                     WaterPlatform = Instance.new("Part")
-                    WaterPlatform.Name = "WaterPlatformOptimized"
-                    WaterPlatform.Size = Vector3.new(35, 1, 35)
+                    WaterPlatform.Name = "SolidWaterPlatform"
+                    WaterPlatform.Size = Vector3.new(50, 3, 50)
                     WaterPlatform.Anchored = true
                     WaterPlatform.CanCollide = true
                     WaterPlatform.Transparency = 1
@@ -277,10 +292,13 @@ task.spawn(function()
                 end
                 
                 local pos = rootPart.Position
-                -- Deteksi permukaan air Blox Fruits secara presisi (Y sekitar -2 sampai 4)
-                if pos.Y <= 6 and pos.Y > -15 then
-                    WaterPlatform.Position = Vector3.new(pos.X, 1.8, pos.Z)
+                -- Memastikan platform stabil di permukaan air tanpa membuat player melompat-lompat atau mati karena jatuh
+                if pos.Y <= 10 and pos.Y > -25 then
+                    WaterPlatform.Position = Vector3.new(pos.X, 1.2, pos.Z)
                     WaterPlatform.CanCollide = true
+                    if humanoid:GetState() == Enum.HumanoidStateType.Freefall and pos.Y < 4 then
+                        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                    end
                 else
                     WaterPlatform.CanCollide = false
                 end
@@ -295,7 +313,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- 4. AUTO STORE FRUIT & AUTO CHEST (TERBANG HALUS)
+-- 4. AUTO STORE FRUIT & AUTO CHEST
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -320,9 +338,9 @@ local function autoStoreFruits()
     end)
 end
 
--- Auto Chest menggunakan sistem terbang halus agar tidak patah-patah/lag
+-- Auto Chest Terbang Halus & Konsisten (Tanpa Macet)
 task.spawn(function()
-    while task.wait(1) do
+    while task.wait(1.5) do
         pcall(function()
             if Settings.AutoChest and not activeFlyConnection then
                 local rootPart = getCharacterRootPart()
@@ -520,7 +538,7 @@ end
 if Settings.FpsBoost then applyFpsBoost(true) end
 
 -- ==========================================
--- 9. TAMPILAN MENU UTAMA (SATU HALAMAN, TERSUSUN BERDASARKAN KELOMPOK)
+-- 9. TAMPILAN MENU UTAMA (TERSUSUN RAPI)
 -- ==========================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -593,12 +611,11 @@ CloseCorner.Parent = CloseButton
 OpenButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 CloseButton.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
--- Satu Kontainer Utama (Sistem Gulir Satu Halaman Tersusun Rapi)
 local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 850)
+Container.CanvasSize = UDim2.new(0, 0, 0, 880)
 Container.ScrollBarThickness = 4
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -650,7 +667,7 @@ local function createToggle(text, settingKey, callback)
 end
 
 -- ==========================================
--- PENYUSUNAN MENU SESUAI PERMINTAAN
+-- PENYUSUNAN MENU TERSUSUN RAPI & AKURAT
 -- ==========================================
 
 -- 1. Auto Join Tim
@@ -693,9 +710,9 @@ createSectionHeader("3. Auto Collect (Buah & Chest)")
 createToggle("Auto Teleport ke Buah Spawn", "AutoTeleportFruit", nil)
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 createToggle("Auto Chest (Terbang Ambil Peti)", "AutoChest", nil)
-createToggle("Jalan di Atas Air (Sempurna)", "WalkOnWater", nil)
+createToggle("Jalan di Atas Air (Anti Jatuh/Mati)", "WalkOnWater", nil)
 
--- 4. Target Player
+-- 4. Target Player (Dengan Deteksi Level Asli Blox Fruits)
 createSectionHeader("4. Target Player")
 createToggle("Auto Teleport ke Player", "AutoFlyPlayer", nil)
 
@@ -756,11 +773,18 @@ local function refreshPlayerList()
         if p ~= LocalPlayer then
             local pLevel = "?"
             pcall(function()
+                -- Mendukung berbagai struktur data level di Blox Fruits
                 local leaderstats = p:FindFirstChild("leaderstats")
                 if leaderstats then
-                    local lvlVal = leaderstats:FindFirstChild("Level")
+                    local lvlVal = leaderstats:FindFirstChild("Level") or leaderstats:FindFirstChild("LVL") or leaderstats:FindFirstChild("level")
                     if lvlVal then
                         pLevel = tostring(lvlVal.Value)
+                    end
+                end
+                if pLevel == "?" and p:FindFirstChild("Data") then
+                    local dataLvl = p.Data:FindFirstChild("Level") or p.Data:FindFirstChild("LVL")
+                    if dataLvl then
+                        pLevel = tostring(dataLvl.Value)
                     end
                 end
             end)
