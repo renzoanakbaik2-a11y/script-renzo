@@ -1,7 +1,8 @@
 -- ==============================================================================
--- PIXEL QUEST: MENU DI TENGAH, TOMBOL DI KIRI TENGAH
--- Posisi tombol "MENU" berada di sebelah kiri-tengah layar, sedangkan 
--- panel utama (menu-nya) terbuka pas di tengah-tengah layar HP.
+-- PIXEL QUEST: MENU DI TENGAH, TERTUTUP SAAT AWAL EXECUT
+-- Sesuai permintaan: Saat pertama kali script di-execute, menu utamanya dalam 
+-- keadaan tertutup. Panel baru akan muncul di tengah layar pas tombol "MENU" 
+-- di ujung kiri tengah ditekan.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -18,11 +19,11 @@ ScreenGui.Name = "PixelQuestMenuSystem"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = playerGui
 
--- 1. TOMBOL "MENU" (Di sebelah kiri tengah layar)
+-- 1. TOMBOL "MENU" (Menempel di ujung paling kiri layar, posisi vertikal di tengah)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleBtn"
-ToggleBtn.Size = UDim2.new(0, 110, 0, 45)
-ToggleBtn.Position = UDim2.new(0.02, 0, 0.5, -22)
+ToggleBtn.Size = UDim2.new(0, 90, 0, 45)
+ToggleBtn.Position = UDim2.new(0, 0, 0.5, -22)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
 ToggleBtn.BorderSizePixel = 2
@@ -35,19 +36,19 @@ ToggleBtn.Draggable = true
 ToggleBtn.Parent = ScreenGui
 
 local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 8)
+BtnCorner.CornerRadius = UDim.new(0, 6)
 BtnCorner.Parent = ToggleBtn
 
--- 2. PANEL UTAMA / MENU (Pas di tengah-tengah layar)
+-- 2. PANEL MENU UTAMA (Persis di tengah-tengah layar, DISERTAN DITUTUP / Visible = false)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -160)
+MainFrame.Size = UDim2.new(0, 320, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -175)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = true
+MainFrame.Visible = false -- DISET FALSE AGAR TIDAK LANGSUNG KELUAR SAAT DI-EXECUTE
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -55,22 +56,22 @@ MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundTransparency = 1
-Title.Text = "⚡ PIXEL QUEST SCRIPT MENU ⚡"
+Title.Text = "⚡ PIXEL QUEST MENU UTAMA ⚡"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
-Title.TextSize = 12
+Title.TextSize = 13
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
 local InfoText = Instance.new("TextLabel")
-InfoText.Size = UDim2.new(0.9, 0, 0, 60)
+InfoText.Size = UDim2.new(0.9, 0, 0, 80)
 InfoText.Position = UDim2.new(0.05, 0, 0, 50)
 InfoText.BackgroundTransparency = 1
 InfoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 InfoText.TextSize = 11
 InfoText.Font = Enum.Font.Gotham
-InfoText.Text = "Tombol ada di kiri tengah, dan panel menu-nya pas di tengah layar. Sesuai request!"
+InfoText.Text = "Script berhasil dimuat! Menu tertutup otomatis saat awal, dan baru akan terbuka pas tombol 'MENU' di ujung kiri diklik."
 InfoText.TextWrapped = true
 InfoText.Parent = MainFrame
 
@@ -79,4 +80,4 @@ ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
-print("⚡ POSISI MENU DI TENGAH & TOMBOL DI KIRI TENGAH BERHASIL! ⚡")
+print("⚡ SCRIPT BERHASIL DIMUAT (MENU TERTUTUP AWAL) ⚡")
