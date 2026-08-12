@@ -1,881 +1,219 @@
--- Jalankan script ini menggunakan Executor Roblox (Delta, Hydrogen, Synapse, dll.)
-
+--// Services
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHubFixedUltimate.json"
+local Camera = Workspace.CurrentCamera
 
+--// FileName untuk Save Settings
+local SettingsFileName = "BloxFruits_Settings.json"
+
+--// Default Settings & State
 local Settings = {
-    FruitNotifier = true,
-    AutoJoinEnabled = true,
-    SelectedTeam = "Pirates",
-    FpsBoost = false,
-    AutoChest = true,
-    FlightSpeed = 150,  
-    FlyHeight = 5,      
-    AutoTeleportFruit = false,  
-    AutoStoreFruit = false,    
-    AutoFlyPlayer = false,     
-    TargetPlayerName = "",
-    WalkOnWater = false,
-    MonitorVisible = true
+    AutoChest = false
 }
 
-local function loadSettings()
-    if readfile and pcall(readfile, FileName) then
-        local success, data = pcall(function()
-            return HttpService:JSONDecode(readfile(FileName))
-        end)
-        if success and type(data) == "table" then
-            for k, v in pairs(data) do
-                Settings[k] = v
+--// Load Settings
+if writefile and readfile and isfile then
+    pcall(function()
+        if isfile(SettingsFileName) then
+            local data = HttpService:JSONDecode(readfile(SettingsFileName))
+            if type(data) == "table" then
+                for k, v in pairs(data) do
+                    Settings[k] = v
+                end
             end
         end
-    end
-end
-loadSettings()
-
-local function saveSettings()
-    if writefile then
-        local success, encoded = pcall(function()
-            return HttpService:JSONEncode(Settings)
-        end)
-        if success then
-            writefile(FileName, encoded)
-        end
-    end
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubFixed"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-pcall(function()
-    if syn and syn.protect_gui then
-        syn.protect_gui(ScreenGui)
-        ScreenGui.Parent = CoreGui
-    elseif gethui then
-        ScreenGui.Parent = gethui()
-    else
-        ScreenGui.Parent = CoreGui
-    end
-end)
-
-if not ScreenGui.Parent then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
--- ==========================================
--- 1. NOTIFIKASI BUAH (STANDAR)
--- ==========================================
-local NotifFrame = Instance.new("Frame")
-NotifFrame.Size = UDim2.new(0, 380, 0, 50)
-NotifFrame.AnchorPoint = Vector2.new(0.5, 0)
-NotifFrame.Position = UDim2.new(0.5, 0, 0, -80)
-NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-NotifFrame.BackgroundTransparency = 0.1
-NotifFrame.BorderSizePixel = 0
-NotifFrame.ZIndex = 50
-NotifFrame.Parent = ScreenGui
-
-local NotifCorner = Instance.new("UICorner")
-NotifCorner.CornerRadius = UDim.new(0, 8)
-NotifCorner.Parent = NotifFrame
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Thickness = 2
-UIStroke.Parent = NotifFrame
-
-task.spawn(function()
-    while true do
-        for i = 0, 1, 0.05 do
-            UIStroke.Color = Color3.fromHSV(i, 1, 1)
-            task.wait(0.5)
-        end
-    end
-end)
-
-local NotifText = Instance.new("TextLabel")
-NotifText.Size = UDim2.new(1, 0, 1, 0)
-NotifText.BackgroundTransparency = 1
-NotifText.Text = ""
-NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
-NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
-NotifText.ZIndex = 51
-NotifText.Parent = NotifFrame
-
-local isAnimatingNotif = false
-local function showFruitNotification(fruitNameText)
-    if isAnimatingNotif then return end
-    isAnimatingNotif = true
-
-    NotifText.Text = "BUAH SPAWN: " .. fruitNameText
-
-    TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0.5, 0, 0, 15)
-    }):Play()
-
-    task.wait(5)
-
-    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Position = UDim2.new(0.5, 0, 0, -80)
-    }):Play()
-
-    task.wait(0.5)
-    isAnimatingNotif = false
-end
-
-local function playFruitSound()
-    pcall(function()
-        local sound = Instance.new("Sound")
-        sound.SoundId = "rbxassetid://4590657391"
-        sound.Volume = 5
-        sound.Parent = Workspace
-        sound:Play()
-        game:GetService("Debris"):AddItem(sound, 10)
     end)
 end
 
-local function getCharacterRootPart()
-    local character = LocalPlayer.Character
-    if character then
-        return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
+local function SaveSettings()
+    if writefile then
+        pcall(function()
+            writefile(SettingsFileName, HttpService:JSONEncode(Settings))
+        end)
     end
-    return nil
 end
 
--- ==========================================
--- SISTEM TERBANG STABIL & KEBAL GROUND-CHECK
--- ==========================================
-local activeFlyConnection = nil
-local function smoothFlyTo(targetCFrame, checkSettingKey)
-    local rootPart = getCharacterRootPart()
-    if not rootPart then return end
+--// GUI Creation
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BloxFruitsHub"
+ScreenGui.ResetOnSpawn = false
+pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if ScreenGui.Parent ~= CoreGui then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
 
-    if activeFlyConnection then
-        activeFlyConnection:Disconnect()
-        activeFlyConnection = nil
+--// Main Toggle Button (Buka/Tutup Menu)
+local OpenButton = Instance.new("TextButton")
+OpenButton.Name = "OpenButton"
+OpenButton.Size = UDim2.new(0, 50, 0, 50)
+OpenButton.Position = UDim2.new(0, 20, 0, 20)
+OpenButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+OpenButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.TextSize = 14
+OpenButton.Font = Enum.Font.SourceSansBold
+OpenButton.Text = "MENU"
+OpenButton.Parent = ScreenGui
+
+local UICornerOpen = Instance.new("UICorner")
+UICornerOpen.CornerRadius = UDim.new(0, 8)
+UICornerOpen.Parent = OpenButton
+
+--// Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 300, 0, 200)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderColor3 = Color3.fromRGB(40, 40, 40)
+MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICornerMain = Instance.new("UICorner")
+UICornerMain.CornerRadius = UDim.new(0, 10)
+UICornerMain.Parent = MainFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 0, 40)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 16
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.Text = "Blox Fruits Hub"
+TitleLabel.Parent = MainFrame
+
+--// Toggle Item: Auto Chest
+local ChestToggleBtn = Instance.new("TextButton")
+ChestToggleBtn.Size = UDim2.new(0, 260, 0, 40)
+ChestToggleBtn.Position = UDim2.new(0.5, -130, 0, 60)
+ChestToggleBtn.BackgroundColor3 = Settings.AutoChest and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+ChestToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ChestToggleBtn.TextSize = 14
+ChestToggleBtn.Font = Enum.Font.SourceSansBold
+ChestToggleBtn.Text = "Auto Collect Chest: " .. (Settings.AutoChest and "ON" or "OFF")
+ChestToggleBtn.Parent = MainFrame
+
+local UICornerChest = Instance.new("UICorner")
+UICornerChest.CornerRadius = UDim.new(0, 6)
+UICornerChest.Parent = ChestToggleBtn
+
+OpenButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+ChestToggleBtn.MouseButton1Click:Connect(function()
+    Settings.AutoChest = not Settings.AutoChest
+    ChestToggleBtn.BackgroundColor3 = Settings.AutoChest and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+    ChestToggleBtn.Text = "Auto Collect Chest: " .. (Settings.AutoChest and "ON" or "OFF")
+    SaveSettings()
+end)
+
+--// Noclip & Smooth Flight System
+local activeTween = nil
+
+local function StopFlight()
+    if activeTween then
+        activeTween:Cancel()
+        activeTween = nil
     end
+    pcall(function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        end
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.PlatformStand = false
+        end
+    end)
+end
 
-    local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
-    local currentHeight = math.clamp(Settings.FlyHeight, 0, 10)
-    local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
-
-    local character = LocalPlayer.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    if humanoid then humanoid.PlatformStand = true end
-
-    local noclipConnection
-    noclipConnection = RunService.Stepped:Connect(function()
-        pcall(function()
-            if character then
-                for _, part in ipairs(character:GetDescendants()) do
+RunService.Stepped:Connect(function()
+    pcall(function()
+        if Settings.AutoChest then
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
                     if part:IsA("BasePart") then
                         part.CanCollide = false
                     end
                 end
             end
-        end)
-    end)
-
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyVelocity.Parent = rootPart
-
-    local bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bodyGyro.CFrame = rootPart.CFrame
-    bodyGyro.Parent = rootPart
-
-    activeFlyConnection = RunService.Heartbeat:Connect(function(dt)
-        if checkSettingKey and not Settings[checkSettingKey] then
-            if noclipConnection then noclipConnection:Disconnect() end
-            if bodyVelocity then bodyVelocity:Destroy() end
-            if bodyGyro then bodyGyro:Destroy() end
-            if humanoid then humanoid.PlatformStand = false end
-            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
-            return
-        end
-
-        local currentRoot = getCharacterRootPart()
-        if not currentRoot or not character or not character.Parent then
-            if noclipConnection then noclipConnection:Disconnect() end
-            if bodyVelocity then bodyVelocity:Destroy() end
-            if bodyGyro then bodyGyro:Destroy() end
-            if humanoid then humanoid.PlatformStand = false end
-            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
-            return
-        end
-
-        local currentPos = currentRoot.Position
-        local targetPos = adjustedTarget
-        
-        if checkSettingKey == "AutoFlyPlayer" and Settings.TargetPlayerName ~= "" then
-            local targetPlayer = Players:FindFirstChild(Settings.TargetPlayerName)
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                targetPos = targetPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, currentHeight, 0)
-            end
-        end
-
-        local direction = (targetPos - currentPos)
-        local distance = direction.Magnitude
-
-        if distance < 3 then
-            if noclipConnection then noclipConnection:Disconnect() end
-            if bodyVelocity then bodyVelocity:Destroy() end
-            if bodyGyro then bodyGyro:Destroy() end
-            if humanoid then humanoid.PlatformStand = false end
-            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
-            return
-        end
-
-        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 16)
-        bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
-    end)
-end
-
--- ==========================================
--- 2. FILTER BUAH RINGAN
--- ==========================================
-local function isRealSpawnedFruit(obj)
-    if not obj or not obj.Parent then return false end
-    if obj.Parent ~= Workspace then return false end
-
-    local officialFruits = {
-        "rocket", "spin", "spring", "chop", "spike", "flame", "falcon", "ice", 
-        "sand", "dark", "diamond", "light", "rubber", "barrier", "ghost", 
-        "magma", "quake", "buddha", "love", "spider", "phoenix", 
-        "portal", "pain", "blizzard", "gravity", "mammoth", "trex", "dough", 
-        "shadow", "venom", "control", "spirit", "dragon", "leopard", "kitsune"
-    }
-
-    local objNameLower = obj.Name:lower()
-    for _, fruitName in ipairs(officialFruits) do
-        if objNameLower:find(fruitName) then
-            if not objNameLower:find("pot") and not objNameLower:find("controller") then
-                return obj:IsA("Tool") or objNameLower:sub(-5) == "fruit" or obj:FindFirstChild("Handle")
-            end
-        end
-    end
-    return false
-end
-
--- ==========================================
--- 3. JALAN DI ATAS AIR ULTRA MULUS & ANTI-GETAR
--- ==========================================
-local waterWalkConnection = nil
-local function toggleWaterWalk(state)
-    if waterWalkConnection then
-        waterWalkConnection:Disconnect()
-        waterWalkConnection = nil
-    end
-
-    if state then
-        waterWalkConnection = RunService.RenderStepped:Connect(function()
-            pcall(function()
-                local character = LocalPlayer.Character
-                local rootPart = getCharacterRootPart()
-                local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-                
-                if Settings.WalkOnWater and rootPart and humanoid and not activeFlyConnection then
-                    local pos = rootPart.Position
-                    if pos.Y <= 5 and pos.Y > -40 then
-                        rootPart.CFrame = CFrame.new(pos.X, 3.2, pos.Z) * (rootPart.CFrame - rootPart.CFrame.Position)
-                        
-                        local bv = rootPart:FindFirstChild("BodyVelocityWater")
-                        if not bv then
-                            bv = Instance.new("BodyVelocity")
-                            bv.Name = "BodyVelocityWater"
-                            bv.Velocity = Vector3.new(0, 0, 0)
-                            bv.MaxForce = Vector3.new(0, math.huge, 0)
-                            bv.Parent = rootPart
-                        end
-                        
-                        if humanoid:GetState() == Enum.HumanoidStateType.Freefall or humanoid:GetState() == Enum.HumanoidStateType.FallingDown then
-                            humanoid:ChangeState(Enum.HumanoidStateType.Running)
-                        end
-                    else
-                        local bv = rootPart:FindFirstChild("BodyVelocityWater")
-                        if bv then bv:Destroy() end
-                    end
-                else
-                    local bv = rootPart and rootPart:FindFirstChild("BodyVelocityWater")
-                    if bv then bv:Destroy() end
-                end
-            end)
-        end)
-    else
-        pcall(function()
-            local rootPart = getCharacterRootPart()
-            if rootPart then
-                local bv = rootPart:FindFirstChild("BodyVelocityWater")
-                if bv then bv:Destroy() end
-            end
-        end)
-    end
-end
-
--- ==========================================
--- 4. AUTO STORE FRUIT & AUTO CHEST (DIREVISI TOTAL & NORMAL)
--- ==========================================
-local function autoStoreFruits()
-    if not Settings.AutoStoreFruit then return end
-    pcall(function()
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-        if not remotes or not remotes:FindFirstChild("CommF_") then return end
-        
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        local character = LocalPlayer.Character
-        
-        if backpack then
-            for _, item in ipairs(backpack:GetChildren()) do
-                if item:IsA("Tool") and (item.Name:lower():find("fruit") or item:FindFirstChild("Handle")) then
-                    remotes.CommF_:InvokeServer("StoreFruit", item.Name)
-                    task.wait(0.3)
-                end
-            end
-        end
-        
-        if character then
-            for _, item in ipairs(character:GetChildren()) do
-                if item:IsA("Tool") and (item.Name:lower():find("fruit") or item:FindFirstChild("Handle")) then
-                    remotes.CommF_:InvokeServer("StoreFruit", item.Name)
-                    task.wait(0.3)
-                end
-            end
         end
     end)
-end
+end)
 
+--// Auto Collect Chest Logic (Smooth Tween Flight)
 task.spawn(function()
-    while task.wait(0.4) do
+    while true do
+        task.wait(0.5)
         pcall(function()
-            if Settings.AutoChest and not activeFlyConnection then
-                local rootPart = getCharacterRootPart()
-                if rootPart then
-                    local targetChestPart = nil
-                    local shortestDist = math.huge
-
-                    for _, v in ipairs(Workspace:GetDescendants()) do
-                        if v:IsA("BasePart") or v:IsA("Model") then
-                            local nameLower = v.Name:lower()
-                            if nameLower:find("chest") or nameLower:find("bronze") or nameLower:find("silver") or nameLower:find("gold") or nameLower:find("diamond") then
-                                local partToCheck = v:IsA("Model") and (v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")) or v
-                                if partToCheck then
-                                    local dist = (rootPart.Position - partToCheck.Position).Magnitude
-                                    if dist < shortestDist and partToCheck.Transparency < 1 then
-                                        shortestDist = dist
-                                        targetChestPart = partToCheck
-                                    end
+            if Settings.AutoChest then
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local humanoid = char and char:FindFirstChild("Humanoid")
+                
+                if hrp and humanoid and humanoid.Health > 0 then
+                    local targetChest = nil
+                    local shortestDistance = math.huge
+                    
+                    for _, obj in pairs(Workspace:GetDescendants()) do
+                        if obj.Name:lower():find("chest") and (obj:IsA("Model") or obj:IsA("BasePart")) then
+                            local part = obj:IsA("Model") and obj.PrimaryPart or obj
+                            if not part and obj:IsA("Model") then
+                                part = obj:FindFirstChildWhichIsA("BasePart")
+                            end
+                            
+                            if part then
+                                local dist = (hrp.Position - part.Position).Magnitude
+                                if dist < shortestDistance then
+                                    shortestDistance = dist
+                                    targetChest = part
                                 end
                             end
                         end
                     end
-
-                    if targetChestPart then
-                        smoothFlyTo(targetChestPart.CFrame, "AutoChest")
-                        local startTime = tick()
-                        repeat
+                    
+                    if targetChest then
+                        humanoid.PlatformStand = true
+                        local distance = (hrp.Position - targetChest.Position).Magnitude
+                        local speed = 250 -- Kecepatan terbang mulus
+                        local timeTaken = distance / speed
+                        
+                        local tweenInfo = TweenInfo.new(timeTaken, Enum.EasingStyle.Linear)
+                        activeTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetChest.CFrame + Vector3.new(0, 3, 0)})
+                        activeTween:Play()
+                        
+                        local completed = false
+                        local connection
+                        connection = activeTween.Completed:Connect(function()
+                            completed = true
+                            if connection then connection:Disconnect() end
+                        end)
+                        
+                        while not completed and Settings.AutoChest and targetChest.Parent do
                             task.wait(0.1)
-                            local currentRoot = getCharacterRootPart()
-                            if not currentRoot or not targetChestPart.Parent then break end
-                            local dist = (currentRoot.Position - targetChestPart.Position).Magnitude
-                        until dist < 4 or not Settings.AutoChest or tick() - startTime > 3
+                        end
+                        
+                        if activeTween then
+                            activeTween:Cancel()
+                            activeTween = nil
+                        end
+                        humanoid.PlatformStand = false
                     end
                 end
+            else
+                StopFlight()
             end
         end)
     end
 end)
-
--- ==========================================
--- 5. MONITOR RINGAN
--- ==========================================
-local MonitorFrame = Instance.new("Frame")
-MonitorFrame.Size = UDim2.new(0, 230, 0, 95)
-MonitorFrame.Position = UDim2.new(0.02, 0, 0.5, 0)
-MonitorFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-MonitorFrame.BackgroundTransparency = 0.2
-MonitorFrame.BorderSizePixel = 0
-MonitorFrame.ZIndex = 40
-MonitorFrame.Parent = ScreenGui
-
-local MonitorCorner = Instance.new("UICorner")
-MonitorCorner.CornerRadius = UDim.new(0, 8)
-MonitorCorner.Parent = MonitorFrame
-
-local MonitorStroke = Instance.new("UIStroke")
-MonitorStroke.Color = Color3.fromRGB(0, 170, 255)
-MonitorStroke.Thickness = 1.5
-MonitorStroke.Parent = MonitorFrame
-
-local MonitorTitle = Instance.new("TextLabel")
-MonitorTitle.Size = UDim2.new(1, 0, 0, 25)
-MonitorTitle.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
-MonitorTitle.Text = "  📊 Blox Fruits Monitor"
-MonitorTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-MonitorTitle.TextSize, MonitorTitle.Font = 10, Enum.Font.GothamBold
-MonitorTitle.TextXAlignment = Enum.TextXAlignment.Left
-MonitorTitle.ZIndex = 41
-MonitorTitle.Parent = MonitorFrame
-
-local MonitorTitleCorner = Instance.new("UICorner")
-MonitorTitleCorner.CornerRadius = UDim.new(0, 8)
-MonitorTitleCorner.Parent = MonitorTitle
-
-local MonitorContent = Instance.new("TextLabel")
-MonitorContent.Size = UDim2.new(1, -10, 1, -30)
-MonitorContent.Position = UDim2.new(0, 5, 0, 28)
-MonitorContent.BackgroundTransparency = 1
-MonitorContent.Text = "Memindai..."
-MonitorContent.TextColor3 = Color3.fromRGB(240, 240, 240)
-MonitorContent.TextSize, MonitorContent.Font = 10, Enum.Font.Gotham
-MonitorContent.TextXAlignment = Enum.TextXAlignment.Left
-MonitorContent.TextYAlignment = Enum.TextYAlignment.Top
-MonitorContent.TextWrapped = true
-MonitorContent.ZIndex = 41
-MonitorContent.Parent = MonitorFrame
-
--- ==========================================
--- 6. LOOP UTAMA
--- ==========================================
-task.spawn(function()
-    while task.wait(2.5) do
-        autoStoreFruits()
-
-        local fruitListRaw = {}
-        local targetFruitObj = nil
-        local targetFruitHandle = nil
-
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            if isRealSpawnedFruit(obj) then
-                table.insert(fruitListRaw, obj.Name)
-                if not targetFruitObj then
-                    targetFruitObj = obj
-                    targetFruitHandle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                end
-            end
-        end
-
-        local fruitList = {}
-        local checkDuplicate = {}
-        for _, name in ipairs(fruitListRaw) do
-            if not checkDuplicate[name] then
-                checkDuplicate[name] = true
-                table.insert(fruitList, name)
-            end
-        end
-
-        local currentCount = #fruitList
-
-        MonitorFrame.Visible = Settings.MonitorVisible
-        if Settings.MonitorVisible then
-            local playerCount = #Players:GetPlayers()
-            local fruitTextDisplay = currentCount > 0 and table.concat(fruitList, ", ") or "Tidak ada"
-            MonitorContent.Text = string.format("• Player di Server: %d\n• Buah Spawn: %d\n• Nama: %s", playerCount, currentCount, fruitTextDisplay)
-        end
-
-        if Settings.FruitNotifier and currentCount > 0 then
-            local fruitNameStr = table.concat(fruitList, ", ")
-            playFruitSound()
-            task.spawn(function() showFruitNotification(fruitNameStr) end)
-
-            if Settings.AutoTeleportFruit and targetFruitObj and targetFruitHandle then
-                local rootPart = getCharacterRootPart()
-                if rootPart and not activeFlyConnection then
-                    smoothFlyTo(targetFruitHandle.CFrame, "AutoTeleportFruit")
-                end
-            end
-        end
-
-        if Settings.AutoFlyPlayer then
-            local targetPlayer = nil
-            if Settings.TargetPlayerName ~= "" then
-                targetPlayer = Players:FindFirstChild(Settings.TargetPlayerName)
-            else
-                local shortestDist = math.huge
-                local rootPart = getCharacterRootPart()
-                if rootPart then
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            local dist = (rootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
-                            if dist < shortestDist then
-                                shortestDist = dist
-                                targetPlayer = p
-                            end
-                        end
-                    end
-                end
-            end
-            
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and Settings.AutoFlyPlayer then
-                local rootPart = getCharacterRootPart()
-                if rootPart and not activeFlyConnection then
-                    smoothFlyTo(targetPlayer.Character.HumanoidRootPart.CFrame, "AutoFlyPlayer")
-                end
-            end
-        end
-    end
-end)
-
--- ==========================================
--- 7. AUTO JOIN TIM
--- ==========================================
-local function joinTeam()
-    if not Settings.AutoJoinEnabled then return end
-    pcall(function()
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-        if remotes and remotes:FindFirstChild("CommF_") then
-            remotes.CommF_:InvokeServer("SetTeam", Settings.SelectedTeam)
-        end
-    end)
-end
-
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(2)
-    joinTeam()
-end)
-task.spawn(function() task.wait(1) joinTeam() end)
-
--- ==========================================
--- 8. FPS BOOST
--- ==========================================
-local function applyFpsBoost(state)
-    if state then
-        Lighting.GlobalShadows = false
-        Lighting.FogEnd = 999999
-        for _, v in ipairs(Workspace:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.Material = Enum.Material.SmoothPlastic
-                v.Reflectance = 0
-            elseif v:IsA("Decal") or v:IsA("Texture") then
-                v.Transparency = 1
-            end
-        end
-    else
-        Lighting.GlobalShadows = true
-    end
-end
-if Settings.FpsBoost then applyFpsBoost(true) end
-
--- ==========================================
--- 9. TAMPILAN MENU UTAMA
--- ==========================================
-local OpenButton = Instance.new("ImageButton")
-OpenButton.Size = UDim2.new(0, 50, 0, 50)
-OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
-OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-OpenButton.Image = "rbxassetid://72916050815889"
-OpenButton.ScaleType = Enum.ScaleType.Crop
-OpenButton.ZIndex = 999
-OpenButton.Parent = ScreenGui
-
-local OpenCorner = Instance.new("UICorner")
-OpenCorner.CornerRadius = UDim.new(0, 12)
-OpenCorner.Parent = OpenButton
-
-local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Color = Color3.fromRGB(0, 200, 255)
-OpenStroke.Thickness = 2
-OpenStroke.Parent = OpenButton
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 420, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -180)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
-MainFrame.BorderSizePixel = 0
-MainFrame.Visible = false
-MainFrame.ZIndex = 100
-MainFrame.Parent = ScreenGui
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(0, 170, 255)
-MainStroke.Thickness = 2
-MainStroke.Parent = MainFrame
-
-local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(1, 0, 0, 35)
-TopBar.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
-TopBar.BorderSizePixel = 0
-TopBar.ZIndex = 101
-TopBar.Parent = MainFrame
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
-TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Speed Hub X | Blox Fruits Final"
-TitleLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.ZIndex = 102
-TitleLabel.Parent = TopBar
-
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 28, 0, 28)
-CloseButton.Position = UDim2.new(0.93, 0, 0.1, 0)
-CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextSize, CloseButton.Font = 12, Enum.Font.GothamBold
-CloseButton.ZIndex = 102
-CloseButton.Parent = TopBar
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
-CloseCorner.Parent = CloseButton
-
-OpenButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-CloseButton.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
-
-local Container = Instance.new("ScrollingFrame")
-Container.Size = UDim2.new(1, 0, 1, -35)
-Container.Position = UDim2.new(0, 0, 0, 35)
-Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 1020)
-Container.ScrollBarThickness = 4
-Container.ZIndex = 101
-Container.Parent = MainFrame
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 6)
-UIListLayout.Parent = Container
-
-local function createSectionHeader(text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(0.9, 0, 0, 28)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.TextColor3 = Color3.fromRGB(0, 200, 255)
-    lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.ZIndex = 102
-    lbl.Parent = Container
-    return lbl
-end
-
-local function createToggle(text, settingKey, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 32)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 11
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.ZIndex = 102
-    
-    local state = Settings[settingKey]
-    btn.Text = text .. ": " .. (state and "ON" or "OFF")
-    btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
-    btn.Parent = Container
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = btn
-
-    btn.MouseButton1Click:Connect(function()
-        Settings[settingKey] = not Settings[settingKey]
-        local newState = Settings[settingKey]
-        btn.Text = text .. ": " .. (newState and "ON" or "OFF")
-        btn.BackgroundColor3 = newState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
-        saveSettings()
-        if callback then callback(newState) end
-    end)
-    return btn
-end
-
-createSectionHeader("1. Auto Join Tim & Server")
-createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
-    if state then joinTeam() end
-end)
-
-local TeamSelectBtn = Instance.new("TextButton")
-TeamSelectBtn.Size = UDim2.new(0.9, 0, 0, 32)
-TeamSelectBtn.BackgroundColor3 = Color3.fromRGB(41, 128, 185)
-TeamSelectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TeamSelectBtn.Text = "Pilih Tim: " .. Settings.SelectedTeam
-TeamSelectBtn.TextSize, TeamSelectBtn.Font = 11, Enum.Font.GothamBold
-TeamSelectBtn.ZIndex = 102
-TeamSelectBtn.Parent = Container
-
-local tsCorner = Instance.new("UICorner")
-tsCorner.CornerRadius = UDim.new(0, 6)
-tsCorner.Parent = TeamSelectBtn
-
-TeamSelectBtn.MouseButton1Click:Connect(function()
-    if Settings.SelectedTeam == "Pirates" then
-        Settings.SelectedTeam = "Marines"
-    else
-        Settings.SelectedTeam = "Pirates"
-    end
-    TeamSelectBtn.Text = "Pilih Tim: " .. Settings.SelectedTeam
-    saveSettings()
-    joinTeam()
-end)
-
-createSectionHeader("2. Notifikasi & Monitor")
-createToggle("Fruit Notifier (Notif Buah)", "FruitNotifier", nil)
-createToggle("Tampilkan Monitor Server", "MonitorVisible", nil)
-
-createSectionHeader("3. Auto Collect (Buah & Chest)")
-createToggle("Auto Teleport ke Buah Spawn", "AutoTeleportFruit", nil)
-createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
-createToggle("Auto Chest (Tembus Rumah / Tembok)", "AutoChest", nil)
-createToggle("Jalan di Atas Air (Ultra Mulus)", "WalkOnWater", function(state)
-    toggleWaterWalk(state)
-end)
-if Settings.WalkOnWater then toggleWaterWalk(true) end
-
-createSectionHeader("Pengaturan Terbang (Speed Max 500, Height Max 10)")
-
-local SpeedBtn = Instance.new("TextButton")
-SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
-SpeedBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
-SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
-SpeedBtn.TextSize, SpeedBtn.Font = 11, Enum.Font.GothamBold
-SpeedBtn.ZIndex = 102
-SpeedBtn.Parent = Container
-
-local sCorner = Instance.new("UICorner")
-sCorner.CornerRadius = UDim.new(0, 6)
-sCorner.Parent = SpeedBtn
-
-SpeedBtn.MouseButton1Click:Connect(function()
-    if Settings.FlightSpeed == 100 then
-        Settings.FlightSpeed = 200
-    elseif Settings.FlightSpeed == 200 then
-        Settings.FlightSpeed = 350
-    elseif Settings.FlightSpeed == 350 then
-        Settings.FlightSpeed = 500
-    else
-        Settings.FlightSpeed = 100
-    end
-    SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
-    saveSettings()
-end)
-
-local HeightBtn = Instance.new("TextButton")
-HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
-HeightBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
-HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs (Max 10)"
-HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
-HeightBtn.ZIndex = 102
-HeightBtn.Parent = Container
-
-local hCorner = Instance.new("UICorner")
-hCorner.CornerRadius = UDim.new(0, 6)
-hCorner.Parent = HeightBtn
-
-HeightBtn.MouseButton1Click:Connect(function()
-    if Settings.FlyHeight == 2 then
-        Settings.FlyHeight = 5
-    elseif Settings.FlyHeight == 5 then
-        Settings.FlyHeight = 8
-    elseif Settings.FlyHeight == 8 then
-        Settings.FlyHeight = 10
-    else
-        Settings.FlyHeight = 2
-    end
-    HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs (Max 10)"
-    saveSettings()
-end)
-
-createSectionHeader("4. Target Player")
-createToggle("Auto Teleport ke Player", "AutoFlyPlayer", nil)
-
-local TargetStatusLabel = Instance.new("TextLabel")
-TargetStatusLabel.Size = UDim2.new(0.9, 0, 0, 20)
-TargetStatusLabel.BackgroundTransparency = 1
-TargetStatusLabel.Text = "Target: " .. (Settings.TargetPlayerName == "" and "[ Terdekat ]" or Settings.TargetPlayerName)
-TargetStatusLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-TargetStatusLabel.TextSize, TargetStatusLabel.Font = 10, Enum.Font.GothamBold
-TargetStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-TargetStatusLabel.ZIndex = 102
-TargetStatusLabel.Parent = Container
-
-local PlayerListScroll = Instance.new("ScrollingFrame")
-PlayerListScroll.Size = UDim2.new(0.9, 0, 0, 110)
-PlayerListScroll.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
-PlayerListScroll.BorderSizePixel = 0
-PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-PlayerListScroll.ScrollBarThickness = 4
-PlayerListScroll.ZIndex = 102
-PlayerListScroll.Parent = Container
-
-local plsCorner = Instance.new("UICorner")
-plsCorner.CornerRadius = UDim.new(0, 6)
-plsCorner.Parent = PlayerListScroll
-
-local PlayerListLayout = Instance.new("UIListLayout")
-PlayerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-PlayerListLayout.Padding = UDim.new(0, 4)
-PlayerListLayout.Parent = PlayerListScroll
-
-local ResetTargetBtn = Instance.new("TextButton")
-ResetTargetBtn.Size = UDim2.new(0.9, 0, 0, 30)
-ResetTargetBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-ResetTargetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ResetTargetBtn.Text = "Reset Target (Jadi Player Terdekat)"
-ResetTargetBtn.TextSize, ResetTargetBtn.Font = 10, Enum.Font.GothamBold
-ResetTargetBtn.ZIndex = 102
-ResetTargetBtn.Parent = Container
-
-local rtbCorner = Instance.new("UICorner")
-rtbCorner.CornerRadius = UDim.new(0, 6)
-rtbCorner.Parent = ResetTargetBtn
-
-ResetTargetBtn.MouseButton1Click:Connect(function()
-    Settings.TargetPlayerName = ""
-    TargetStatusLabel.Text = "Target: [ Terdekat ]"
-    saveSettings()
-end)
-
-local function refreshPlayerList()
-    for _, child in ipairs(PlayerListScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-
-    local activePlayers = Players:GetPlayers()
-    for _, p in ipairs(activePlayers) do
-        if p ~= LocalPlayer then
-            local pBtn = Instance.new("TextButton")
-            pBtn.Size = UDim2.new(1, -6, 0, 26)
-            pBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
-            pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            pBtn.Text = p.Name
-            pBtn.TextSize, pBtn.Font = 10, Enum.Font.Gotham
-            pBtn.ZIndex = 103
-            pBtn.Parent = PlayerListScroll
-
-            local pbCorner = Instance.new("UICorner")
-            pbCorner.CornerRadius = UDim.new(0, 4)
-            pbCorner.Parent = pBtn
-
-            pBtn.MouseButton1Click:Connect(function()
-                Settings.TargetPlayerName = p.Name
-                TargetStatusLabel.Text = "Target: " .. p.Name
-                saveSettings()
-            end)
-        end
-    end
-    PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, #PlayerListScroll:GetChildren() * 30)
-end
-
-refreshPlayerList()
-Players.PlayerAdded:Connect(refreshPlayerList)
-Players.PlayerRemoving:Connect(refreshPlayerList)
