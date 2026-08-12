@@ -1,242 +1,218 @@
---// Services
+-- ==============================================================================
+-- RACKET RIVALS: AUTO HIT, AUTO TELEPORT, UI MENU, & AUTO SAVE
+-- Simpan script ini sebagai LocalScript di dalam StarterPlayerScripts atau StarterGui
+-- ==============================================================================
+
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 
-local LocalPlayer = Players.LocalPlayer
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
---// FileName untuk Save Settings
-local SettingsFileName = "BloxFruits_Settings.json"
+-- Nama File untuk Menyimpan Pengaturan
+local CONFIG_FILE_NAME = "RacketRivals_Settings.json"
 
---// Default Settings & State
-local Settings = {
-    AutoChest = false
+-- Konfigurasi Default & Status Fitur
+local CONFIG = {
+    AutoHitEnabled = false,
+    AutoTeleportEnabled = false,
+    HitDistance = 15,
+    TeleportDistance = 25,
+    TeleportOffset = {0, 3, -3} -- Disimpan dalam bentuk array untuk JSON
 }
 
---// Load Settings
-if writefile and readfile and isfile then
-    pcall(function()
-        if isfile(SettingsFileName) then
-            local data = HttpService:JSONDecode(readfile(SettingsFileName))
-            if type(data) == "table" then
-                for k, v in pairs(data) do
-                    Settings[k] = v
-                end
-            end
-        end
+-- Fungsi untuk Menyimpan Pengaturan (Save Setting)
+local function saveSettings()
+    local success, encoded = pcall(function()
+        return HttpService:JSONEncode(CONFIG)
     end)
-end
-
-local function SaveSettings()
-    if writefile then
+    if success and writefile then
         pcall(function()
-            writefile(SettingsFileName, HttpService:JSONEncode(Settings))
+            writefile(CONFIG_FILE_NAME, encoded)
         end)
+        print("Pengaturan berhasil disimpan!")
     end
 end
 
---// GUI Creation
+-- Fungsi untuk Memuat Pengaturan yang Disimpan (Load Setting)
+local function loadSettings()
+    if readfile and pcall(function() return readfile(CONFIG_FILE_NAME) end) then
+        local success, decoded = pcall(function()
+            return HttpService:JSONDecode(readfile(CONFIG_FILE_NAME))
+        end)
+        if success and type(decoded) == "table" then
+            for k, v in pairs(decoded) do
+                CONFIG[k] = v
+            end
+            print("Pengaturan berhasil dimuat!")
+        end
+    end
+end
+
+-- Muat pengaturan saat script dijalankan
+loadSettings()
+
+-- ==============================================================================
+-- PEMBUATAN USER INTERFACE (UI) MENU ON / OFF
+-- ==============================================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHub"
+ScreenGui.Name = "RacketRivalsMenu"
 ScreenGui.ResetOnSpawn = false
-pcall(function()
-    if syn and syn.protect_gui then
-        syn.protect_gui(ScreenGui)
-        ScreenGui.Parent = CoreGui
-    elseif protectgui then
-        protectgui(ScreenGui)
-        ScreenGui.Parent = CoreGui
-    else
-        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
-end)
-if not ScreenGui.Parent then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
---// Main Toggle Button (Tombol Buka/Tutup Menu di Layar)
-local OpenButton = Instance.new("TextButton")
-OpenButton.Name = "OpenButton"
-OpenButton.Size = UDim2.new(0, 70, 0, 70)
-OpenButton.Position = UDim2.new(0, 30, 0, 150)
-OpenButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-OpenButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
-OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenButton.TextSize = 16
-OpenButton.Font = Enum.Font.SourceSansBold
-OpenButton.Text = "MENU"
-OpenButton.Active = true
-OpenButton.Draggable = true
-OpenButton.Parent = ScreenGui
-
-local UICornerOpen = Instance.new("UICorner")
-UICornerOpen.CornerRadius = UDim.new(0, 12)
-UICornerOpen.Parent = OpenButton
-
---// Main Frame (Menu Utama)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 200)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.BorderColor3 = Color3.fromRGB(40, 40, 40)
-MainFrame.Visible = false
+MainFrame.Size = UDim2.new(0, 240, 0, 260)
+MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true
+MainFrame.Draggable = true -- UI bisa digeser-geser
 MainFrame.Parent = ScreenGui
 
-local UICornerMain = Instance.new("UICorner")
-UICornerMain.CornerRadius = UDim.new(0, 10)
-UICornerMain.Parent = MainFrame
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, 0, 0, 40)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 16
-TitleLabel.Font = Enum.Font.SourceSansBold
-TitleLabel.Text = "Blox Fruits Hub"
-TitleLabel.Parent = MainFrame
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.Text = "Racket Rivals Menu"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = MainFrame
 
---// Toggle Item: Auto Chest
-local ChestToggleBtn = Instance.new("TextButton")
-ChestToggleBtn.Size = UDim2.new(0, 260, 0, 40)
-ChestToggleBtn.Position = UDim2.new(0.5, -130, 0, 60)
-ChestToggleBtn.BackgroundColor3 = Settings.AutoChest and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
-ChestToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ChestToggleBtn.TextSize = 14
-ChestToggleBtn.Font = Enum.Font.SourceSansBold
-ChestToggleBtn.Text = "Auto Collect Chest: " .. (Settings.AutoChest and "ON" or "OFF")
-ChestToggleBtn.Parent = MainFrame
+-- Fungsi Pembuat Tombol Toggle (ON/OFF)
+local function createToggleButton(name, defaultState, posY, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0.9, 0, 0, 40)
+    Button.Position = UDim2.new(0.05, 0, 0, posY)
+    Button.BackgroundColor3 = defaultState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize = 14
+    Button.Font = Enum.Font.SourceSansBold
+    Button.Text = name .. ": " .. (defaultState and "ON" or "OFF")
+    Button.Parent = MainFrame
 
-local UICornerChest = Instance.new("UICorner")
-UICornerChest.CornerRadius = UDim.new(0, 6)
-UICornerChest.Parent = ChestToggleBtn
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.Parent = Button
 
---// Event Handler untuk Tombol Menu
-OpenButton.MouseButton1Click:Connect(function()
+    local state = defaultState
+    Button.MouseButton1Click:Connect(function()
+        state = not state
+        Button.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+        Button.Text = name .. ": " .. (state and "ON" or "OFF")
+        callback(state)
+        saveSettings() -- Otomatis menyimpan setiap kali tombol diubah
+    end)
+    
+    return Button
+end
+
+-- Tombol 1: Auto Hit Toggle
+createToggleButton("Auto Hit", CONFIG.AutoHitEnabled, 50, function(state)
+    CONFIG.AutoHitEnabled = state
+end)
+
+-- Tombol 2: Auto Teleport Toggle
+createToggleButton("Auto Teleport", CONFIG.AutoTeleportEnabled, 100, function(state)
+    CONFIG.AutoTeleportEnabled = state
+end)
+
+-- Tombol Manual Save Setting Tambahan
+local SaveButton = Instance.new("TextButton")
+SaveButton.Size = UDim2.new(0.9, 0, 0, 35)
+SaveButton.Position = UDim2.new(0.05, 0, 0, 160)
+SaveButton.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+SaveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SaveButton.TextSize = 14
+SaveButton.Font = Enum.Font.SourceSansBold
+SaveButton.Text = "Save Settings"
+SaveButton.Parent = MainFrame
+
+local SaveCorner = Instance.new("UICorner")
+SaveCorner.CornerRadius = UDim.new(0, 6)
+SaveCorner.Parent = SaveButton
+
+SaveButton.MouseButton1Click:Connect(function()
+    saveSettings()
+    SaveButton.Text = "Saved!"
+    task.wait(1)
+    SaveButton.Text = "Save Settings"
+end)
+
+-- Tombol Minimize / Sembunyikan Menu Utama
+local ToggleMenuBtn = Instance.new("TextButton")
+ToggleMenuBtn.Size = UDim2.new(0, 120, 0, 30)
+ToggleMenuBtn.Position = UDim2.new(0.05, 0, 0.05, 0)
+ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ToggleMenuBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleMenuBtn.TextSize = 12
+ToggleMenuBtn.Font = Enum.Font.SourceSansBold
+ToggleMenuBtn.Text = "Toggle UI Menu"
+ToggleMenuBtn.Parent = ScreenGui
+
+local TglCorner = Instance.new("UICorner")
+TglCorner.CornerRadius = UDim.new(0, 6)
+TglCorner.Parent = ToggleMenuBtn
+
+ToggleMenuBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
-ChestToggleBtn.MouseButton1Click:Connect(function()
-    Settings.AutoChest = not Settings.AutoChest
-    ChestToggleBtn.BackgroundColor3 = Settings.AutoChest and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
-    ChestToggleBtn.Text = "Auto Collect Chest: " .. (Settings.AutoChest and "ON" or "OFF")
-    SaveSettings()
-end)
-
---// Noclip Loop
-RunService.Stepped:Connect(function()
-    pcall(function()
-        if Settings.AutoChest then
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in pairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
+-- ==============================================================================
+-- LOGIKA UTAMA: PENCARIAN OBJEK "SHUTTLE" + AUTO HIT & TELEPORT
+-- ==============================================================================
+local function findNearestShuttle()
+    local nearestShuttle = nil
+    local shortestDistance = math.huge
+    
+    -- Menggunakan GetDescendants agar bisa mencari sampai ke dalam folder di Workspace
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name == "Shuttle" or obj.Name == "Shuttlecock" or obj.Name == "Ball") then
+            local distance = (humanoidRootPart.Position - obj.Position).Magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                nearestShuttle = obj
             end
         end
-    end)
-end)
-
---// Sistem Variabel Chest Murni, Terbang, dan Sentuh Otomatis
-task.spawn(function()
-    local attachment, linearVelocity, alignOrientation
+    end
     
-    while true do
-        task.wait(0.05)
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            local humanoid = char and char:FindFirstChild("Humanoid")
-            
-            if Settings.AutoChest and hrp and humanoid and humanoid.Health > 0 then
-                -- 1. Set PlatformStand agar karakter melayang stabil
-                humanoid.PlatformStand = true
-                
-                -- 2. Buat Variabel Fisika Terbang (LinearVelocity & AlignOrientation)
-                if not hrp:FindFirstChild("RootAttachmentCustom") then
-                    attachment = Instance.new("Attachment")
-                    attachment.Name = "RootAttachmentCustom"
-                    attachment.Parent = hrp
-                else
-                    attachment = hrp:FindFirstChild("RootAttachmentCustom")
-                end
-                
-                if not hrp:FindFirstChild("CustomLinearVelocity") then
-                    linearVelocity = Instance.new("LinearVelocity")
-                    linearVelocity.Name = "CustomLinearVelocity"
-                    linearVelocity.Attachment0 = attachment
-                    linearVelocity.MaxForce = math.huge
-                    linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
-                    linearVelocity.Parent = hrp
-                else
-                    linearVelocity = hrp:FindFirstChild("CustomLinearVelocity")
-                end
-                
-                if not hrp:FindFirstChild("CustomAlignOrientation") then
-                    alignOrientation = Instance.new("AlignOrientation")
-                    alignOrientation.Name = "CustomAlignOrientation"
-                    alignOrientation.Attachment0 = attachment
-                    alignOrientation.MaxTorque = math.huge
-                    alignOrientation.Responsiveness = 200
-                    alignOrientation.Parent = hrp
-                else
-                    alignOrientation = hrp:FindFirstChild("CustomAlignOrientation")
-                end
-                
-                -- 3. Cari Variabel Chest Berdasarkan Nama Pasti & Universal
-                local chas = nil
-                local shortestDistance = math.huge
-                
-                for _, obj in pairs(Workspace:GetDescendants()) do
-                    local n = obj.Name
-                    if n == "Bronze Chest" or n == "Silver Chest" or n == "Gold Chest" or n == "Diamond Chest" or n:lower():find("chest") then
-                        local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-                        if part then
-                            local dist = (hrp.Position - part.Position).Magnitude
-                            if dist < shortestDistance then
-                                shortestDistance = dist
-                                chas = part
-                            end
-                        end
-                    end
-                end
-                
-                -- 4. Dekati Variabel chas dan Collect (Sentuh langsung posisinya)
-                if chas and chas.Parent then
-                    local targetPos = chas.Position
-                    local direction = (targetPos - hrp.Position)
-                    local distance = direction.Magnitude
-                    
-                    if distance > 2 then
-                        linearVelocity.VectorVelocity = direction.Unit * 350
-                        alignOrientation.CFrame = CFrame.new(hrp.Position, targetPos)
-                    else
-                        -- Pas posisi tepat di atas/dalam chas agar otomatis terambil (collected)
-                        linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
-                        hrp.CFrame = chas.CFrame
-                    end
-                else
-                    -- Jika chas belum/tidak ditemukan, tetap terbang melayang di tempat
-                    linearVelocity.VectorVelocity = Vector3.new(0, 2, 0)
-                    alignOrientation.CFrame = hrp.CFrame
-                end
-            else
-                -- Matikan terbang dan kembalikan kondisi normal saat tombol OFF atau karakter mati
-                if hrp then
-                    if hrp:FindFirstChild("CustomLinearVelocity") then hrp.CustomLinearVelocity:Destroy() end
-                    if hrp:FindFirstChild("CustomAlignOrientation") then hrp.CustomAlignOrientation:Destroy() end
-                    if hrp:FindFirstChild("RootAttachmentCustom") then hrp.RootAttachmentCustom:Destroy() end
-                end
-                if humanoid then
-                    humanoid.PlatformStand = false
-                end
+    return nearestShuttle, shortestDistance
+end
+
+RunService.RenderStepped:Connect(function()
+    if not character or not character:FindFirstChild("HumanoidRootPart") then 
+        character = player.Character
+        if character then
+            humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+        end
+        return 
+    end
+
+    local shuttle, distance = findNearestShuttle()
+    
+    if shuttle then
+        -- 1. Logika Auto Teleport mendekati Shuttle
+        if CONFIG.AutoTeleportEnabled and distance <= CONFIG.TeleportDistance and distance > CONFIG.HitDistance then
+            local offset = Vector3.new(CONFIG.TeleportOffset[1], CONFIG.TeleportOffset[2], CONFIG.TeleportOffset[3])
+            local targetPosition = shuttle.Position + offset
+            humanoidRootPart.CFrame = CFrame.new(targetPosition, shuttle.Position)
+        end
+        
+        -- 2. Logika Auto Hit ketika Shuttle berada di jangkauan pukul
+        if CONFIG.AutoHitEnabled and distance <= CONFIG.HitDistance then
+            local characterTool = character:FindFirstChildOfClass("Tool")
+            if characterTool then
+                characterTool:Activate()
             end
-        end)
+        end
     end
 end)
+
+print("Script Racket Rivals (Auto Hit, Teleport, UI Menu, & Auto Save) Berhasil Dimuat!")
