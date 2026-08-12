@@ -11,7 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHubSettings.json"
+local FileName = "BloxFruitsHubFinalFixed.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -58,7 +58,7 @@ end
 saveSettings()
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubFixed"
+ScreenGui.Name = "BloxFruitsHubPureFruit"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -79,12 +79,12 @@ if not ScreenGui.Parent then
 end
 
 -- ==========================================
--- 1. NOTIFIKASI BUAH (Turun dari Atas Layar)
+-- 1. NOTIFIKASI BUAH (Turun -> Diam 5 Detik -> Naik Lagi)
 -- ==========================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 380, 0, 50)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0)
-NotifFrame.Position = UDim2.new(0.5, 0, 0, -80) -- Sembunyi di atas
+NotifFrame.Position = UDim2.new(0.5, 0, 0, -80)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 NotifFrame.BackgroundTransparency = 0.1
 NotifFrame.BorderSizePixel = 0
@@ -103,7 +103,7 @@ task.spawn(function()
     while true do
         for i = 0, 1, 0.01 do
             UIStroke.Color = Color3.fromHSV(i, 1, 1)
-            task.wait(0.05)
+            task.wait(0.1)
         end
     end
 end)
@@ -117,23 +117,25 @@ NotifText.TextSize, NotifText.Font = 13, Enum.Font.GothamBold
 NotifText.ZIndex = 51
 NotifText.Parent = NotifFrame
 
-local isNotifShown = false
-local function animateNotifIn()
-    if not isNotifShown then
-        isNotifShown = true
-        TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Position = UDim2.new(0.5, 0, 0, 15)
-        }):Play()
-    end
-end
+local isAnimatingNotif = false
+local function showFruitNotification(fruitNameText)
+    if isAnimatingNotif then return end
+    isAnimatingNotif = true
 
-local function animateNotifOut()
-    if isNotifShown then
-        isNotifShown = false
-        TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Position = UDim2.new(0.5, 0, 0, -80)
-        }):Play()
-    end
+    NotifText.Text = "BUAH SPAWN: " .. fruitNameText
+
+    TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, 0, 0, 15)
+    }):Play()
+
+    task.wait(5)
+
+    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Position = UDim2.new(0.5, 0, 0, -80)
+    }):Play()
+
+    task.wait(0.5)
+    isAnimatingNotif = false
 end
 
 local function playFruitSound()
@@ -212,30 +214,32 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
 end
 
 -- ==========================================
--- 2. FILTER BUAH SPAWN MAP YANG AKURAT
+-- 2. FILTER MURNI HANYA BUAH SPAWN / DROP ASLI
 -- ==========================================
 local function isRealSpawnedFruit(obj)
-    -- Harus berupa Handle, Model Buah, atau BasePart yang valid di Workspace (bukan dalam player/backpack)
     if not obj or not obj.Parent then return false end
     
-    local name = obj.Name:lower()
-    
-    -- Hindari suara, part karakter player, GUI, atau backpack
-    if obj:IsA("Sound") or name:find("sound") or name:find("music") then return false end
-    
+    -- Pastikan objek berada langsung di Workspace atau dalam folder drop/spawn, tidak boleh di dalam Backpack/Player/Character
     local ancestor = obj.Parent
+    local isInWorkspaceDirectly = false
+    
     while ancestor and ancestor ~= game do
-        if ancestor:IsA("Model") and Players:GetPlayerFromCharacter(ancestor) then
-            return false -- Bagian dari player, abaikan!
+        if ancestor == Workspace then
+            isInWorkspaceDirectly = true
         end
-        if ancestor.Name == "Backpack" or ancestor.Name == "PlayerGui" or ancestor.Name == "StarterGui" then
-            return false -- Di dalam inventory player, abaikan!
+        if ancestor:IsA("Model") and Players:GetPlayerFromCharacter(ancestor) then
+            return false -- Milik player, abaikan!
+        end
+        if ancestor.Name == "Backpack" or ancestor.Name == "PlayerGui" or ancestor.Name == "StarterGui" or ancestor.Name == "Character" then
+            return false -- Bagian dari inventory/player, abaikan!
         end
         ancestor = ancestor.Parent
     end
 
-    -- Daftar nama asli buah Blox Fruits
-    local validFruits = {
+    if not isInWorkspaceDirectly then return false end
+
+    -- Daftar nama resmi buah Blox Fruits (huruf kecil)
+    local officialFruits = {
         "rocket", "spin", "spring", "chop", "spike", "flame", "falcon", "ice", 
         "sand", "dark", "diamond", "light", "rubber", "barrier", "ghost", 
         "magma", "quake", "buddha", "love", "spider", "phoenix", 
@@ -243,19 +247,21 @@ local function isRealSpawnedFruit(obj)
         "shadow", "venom", "control", "spirit", "dragon", "leopard", "kitsune"
     }
 
-    -- Harus mengandung salah satu kata kunci nama buah dan berakhiran "Fruit" atau ber-Handle
-    local isFruitNameMatch = false
-    for _, fName in ipairs(validFruits) do
-        if name:find(fName) then
-            isFruitNameMatch = true
+    local objNameLower = obj.Name:lower()
+    
+    -- Validasi ketat: Nama objek harus mengandung salah satu nama buah resmi DAN memiliki format penamaan buah spawn map Roblox (berakhiran "Fruit" atau memiliki Handle fisik drop)
+    local isMatch = false
+    for _, fruitName in ipairs(officialFruits) do
+        if objNameLower:find(fruitName) then
+            isMatch = true
             break
         end
     end
 
-    if not isFruitNameMatch then return false end
+    if not isMatch then return false end
 
-    -- Pastikan objek tersebut memang fisik buah di map (punya Handle atau berupa MeshPart/Part buah)
-    if obj:IsA("Tool") or obj.Name:sub(-5):lower() == "fruit" or obj:FindFirstChild("Handle") or (obj:IsA("BasePart") and obj.Parent:IsA("Model") and obj.Parent.Name:lower():find("fruit")) then
+    -- Harus berupa Tool drop atau Model/Part yang memiliki Handle buah
+    if obj:IsA("Tool") or objNameLower:sub(-5) == "fruit" or obj:FindFirstChild("Handle") then
         return true
     end
 
@@ -263,7 +269,7 @@ local function isRealSpawnedFruit(obj)
 end
 
 -- ==========================================
--- 3. JALAN DI ATAS AIR NATURAL
+-- 3. JALAN DI ATAS AIR
 -- ==========================================
 local WaterPlatform = nil
 RunService.RenderStepped:Connect(function()
@@ -300,7 +306,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ==========================================
--- 4. AUTO STORE FRUIT
+-- 4. AUTO STORE FRUIT (TERPISAH TOTAL)
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -316,9 +322,12 @@ local function autoStoreFruits()
         if character then for _, item in ipairs(character:GetChildren()) do table.insert(allItems, item) end end
         
         for _, item in ipairs(allItems) do
-            if item:IsA("Tool") and isRealSpawnedFruit(item) then
-                remotes.CommF_:InvokeServer("StoreFruit", item.Name)
-                task.wait(0.8)
+            if item:IsA("Tool") then
+                local nameLower = item.Name:lower()
+                if nameLower:find("fruit") then
+                    remotes.CommF_:InvokeServer("StoreFruit", item.Name)
+                    task.wait(0.8)
+                end
             end
         end
     end)
@@ -363,7 +372,7 @@ local function getChestIslands()
 end
 
 -- ==========================================
--- 6. MONITOR STAT & BUAH (Draggable & Akurat)
+-- 6. MONITOR STAT & BUAH (Murni Buah Map Asli)
 -- ==========================================
 local MonitorFrame = Instance.new("Frame")
 MonitorFrame.Size = UDim2.new(0, 230, 0, 110)
@@ -410,7 +419,7 @@ MonitorContent.TextWrapped = true
 MonitorContent.ZIndex = 41
 MonitorContent.Parent = MonitorFrame
 
--- Sistem Draggable Monitor
+-- Draggable Monitor
 local dragging, dragStart, startPos
 MonitorTitle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -433,14 +442,10 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- ==========================================
--- 7. BACKGROUND SYSTEM (LOOP UTAMA)
+-- 7. LOOP UTAMA (PENCARIAN BUAH BERSIH & AKURAT)
 -- ==========================================
 task.spawn(function()
-    local lastCount = 0
-    local collectedFruits = {}
-
-    while task.wait(0.5) do
-        -- Scan buah asli di map
+    while task.wait(1.5) do
         local fruitListRaw = {}
         local targetFruitObj = nil
         local targetFruitHandle = nil
@@ -450,7 +455,7 @@ task.spawn(function()
                 table.insert(fruitListRaw, obj.Name)
                 if not targetFruitObj then
                     targetFruitObj = obj
-                    targetFruitHandle = obj:FindFirstChild("Handle") or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildWhichIsA("BasePart")
+                    targetFruitHandle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
                 end
             end
         end
@@ -466,7 +471,7 @@ task.spawn(function()
 
         local currentCount = #fruitList
 
-        -- Update Monitor Status (Sekarang Akurat & Bersih)
+        -- Update Monitor Status (Hanya menghitung buah spawn map asli, dijamin 0 jika tidak ada)
         MonitorFrame.Visible = Settings.MonitorVisible
         if Settings.MonitorVisible then
             local playerCount = #Players:GetPlayers()
@@ -474,35 +479,21 @@ task.spawn(function()
             MonitorContent.Text = string.format("• Player di Server: %d\n• Buah Spawn di Map: %d\n• Nama Buah: %s", playerCount, currentCount, fruitTextDisplay)
         end
 
-        -- Update Notifikasi Buah
-        if Settings.FruitNotifier then
-            if currentCount > 0 then
-                NotifText.Text = "BUAH SPAWN: " .. table.concat(fruitList, ", ")
-                animateNotifIn()
+        -- Update Notifikasi Buah (Murni Buah Spawn)
+        if Settings.FruitNotifier and currentCount > 0 then
+            local fruitNameStr = table.concat(fruitList, ", ")
+            playFruitSound()
+            
+            task.spawn(function()
+                showFruitNotification(fruitNameStr)
+            end)
 
-                if currentCount > lastCount then
-                    playFruitSound()
+            if Settings.AutoTeleportFruit and targetFruitObj and targetFruitHandle then
+                local rootPart = getCharacterRootPart()
+                if rootPart then
+                    smoothFlyTo(targetFruitHandle.CFrame, "AutoTeleportFruit")
                 end
-                lastCount = currentCount
-
-                if Settings.AutoTeleportFruit and targetFruitObj and targetFruitHandle then
-                    local rootPart = getCharacterRootPart()
-                    if rootPart then
-                        smoothFlyTo(targetFruitHandle.CFrame, "AutoTeleportFruit")
-                        collectedFruits[targetFruitObj] = true
-                        task.wait(0.5)
-                        autoStoreFruits()
-                        task.wait(1)
-                    end
-                end
-            else
-                NotifText.Text = ""
-                animateNotifOut()
-                collectedFruits = {}
-                lastCount = 0
             end
-        else
-            animateNotifOut()
         end
 
         -- Auto Fly Chest
@@ -671,7 +662,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Speed Hub X | Blox Fruits Edition"
+TitleLabel.Text = "Speed Hub X | Pure Fruit Finder"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
 TitleLabel.TextSize, TitleLabel.Font = 11, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -782,10 +773,7 @@ end)
 createAutoToggle(75, "Status Auto Join Tim", "AutoJoinEnabled", function() joinTeam() end)
 
 createSectionHeader(125, "--- 2. NOTIFIKASI & MONITOR ---")
-createAutoToggle(150, "Fruit Notifier", "FruitNotifier", function(val)
-    if not val then animateNotifOut() end
-end)
-
+createAutoToggle(150, "Fruit Notifier", "FruitNotifier", nil)
 createAutoToggle(190, "Tampilkan Monitor Server/Buah", "MonitorVisible", nil)
 
 local SoundTextBox = Instance.new("TextBox")
@@ -813,8 +801,8 @@ end)
 createAutoToggle(280, "Custom Sound Buah", "CustomSoundEnabled", nil)
 
 createSectionHeader(330, "--- 3. FITUR AUTOMATION (FARM & TELEPORT) ---")
-createAutoToggle(355, "Auto Teleport & Store Buah", "AutoTeleportFruit", nil)
-createAutoToggle(395, "Auto Store Buah di Tas", "AutoStoreFruit", nil)
+createAutoToggle(355, "Auto Teleport ke Buah Spawn", "AutoTeleportFruit", nil)
+createAutoToggle(395, "Auto Store Buah ke Tas (Terpisah)", "AutoStoreFruit", nil)
 createAutoToggle(435, "Auto Farm / Ambil Peti (Chest)", "AutoFlyChest", nil)
 createAutoToggle(475, "Jalan di Atas Air (Walk on Water)", "WalkOnWater", nil)
 
@@ -987,7 +975,7 @@ local function refreshPlayerList()
 
             pBtn.MouseButton1Click:Connect(function()
                 Settings.TargetPlayerName = p.Name
-                TargetStatusLabel.Text = "Target Aktif: " .. p.Name
+                TargetStatusLabel.Text = "Target Aktif: p.Name"
                 saveSettings()
             end)
         end
