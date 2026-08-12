@@ -163,17 +163,22 @@ local function getCharacterRootPart()
     return nil
 end
 
+-- ==========================================
+-- SISTEM TERBANG STABIL (MENGATASI KAMERA GOYANG / TIDAK STABIL)
+-- ==========================================
+local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, checkSettingKey)
     local rootPart = getCharacterRootPart()
     if not rootPart then return end
 
+    if activeFlyConnection then
+        activeFlyConnection:Disconnect()
+        activeFlyConnection = nil
+    end
+
     local currentSpeed = math.clamp(Settings.FlightSpeed, 20, 1000)
     local currentHeight = math.clamp(Settings.FlyHeight, 0, 10)
-
-    local adjustedTargetCFrame = targetCFrame + Vector3.new(0, currentHeight, 0)
-    local distance = (rootPart.Position - adjustedTargetCFrame.Position).Magnitude
-    local duration = distance / currentSpeed
-    if duration < 0.02 then return end
+    local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
 
     local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -189,37 +194,58 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
     bodyGyro.CFrame = rootPart.CFrame
     bodyGyro.Parent = rootPart
 
-    local startTime = tick()
-    local startCFrame = rootPart.CFrame
+    activeFlyConnection = RunService.RenderStepped:Connect(function(dt)
+        if checkSettingKey and not Settings[checkSettingKey] then
+            if bodyVelocity then bodyVelocity:Destroy() end
+            if bodyGyro then bodyGyro:Destroy() end
+            if humanoid then humanoid.PlatformStand = false end
+            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
+            return
+        end
 
-    while tick() - startTime < duration do
-        if checkSettingKey and not Settings[checkSettingKey] then break end
-        if not rootPart or not character or not character.Parent then break end
+        local currentRoot = getCharacterRootPart()
+        if not currentRoot or not character or not character.Parent then
+            if bodyVelocity then bodyVelocity:Destroy() end
+            if bodyGyro then bodyGyro:Destroy() end
+            if humanoid then humanoid.PlatformStand = false end
+            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
+            return
+        end
+
+        local currentPos = currentRoot.Position
+        local targetPos = adjustedTarget
         
-        local alpha = math.clamp((tick() - startTime) / duration, 0, 1)
-        local smoothAlpha = alpha * (2 - alpha)
-        
-        rootPart.CFrame = startCFrame:Lerp(adjustedTargetCFrame, smoothAlpha)
-        bodyGyro.CFrame = rootPart.CFrame
-        RunService.RenderStepped:Wait()
-    end
+        -- Jika target adalah player bergerak, update posisi target secara real-time
+        if checkSettingKey == "AutoFlyPlayer" and Settings.TargetPlayerName ~= "" then
+            local targetPlayer = Players:FindFirstChild(Settings.TargetPlayerName)
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                targetPos = targetPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, currentHeight, 0)
+            end
+        end
 
-    if not checkSettingKey or Settings[checkSettingKey] then
-        rootPart.CFrame = adjustedTargetCFrame
-    end
+        local direction = (targetPos - currentPos)
+        local distance = direction.Magnitude
 
-    if bodyVelocity then bodyVelocity:Destroy() end
-    if bodyGyro then bodyGyro:Destroy() end
-    if humanoid then humanoid.PlatformStand = false end
+        if distance < 5 then
+            if bodyVelocity then bodyVelocity:Destroy() end
+            if bodyGyro then bodyGyro:Destroy() end
+            if humanoid then humanoid.PlatformStand = false end
+            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
+            return
+        end
+
+        local moveVector = direction.Unit * math.min(currentSpeed, distance / dt)
+        bodyVelocity.Velocity = moveVector
+        bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
+    end)
 end
 
 -- ==========================================
--- 2. FILTER MURNI HANYA BUAH SPAWN / DROP ASLI
+-- 2. FILTER MURNI HANYA BUAH SPAWN / DROP ASLI (DIBERSIHKAN DARI POT CONTROLLER / MESSY)
 -- ==========================================
 local function isRealSpawnedFruit(obj)
     if not obj or not obj.Parent then return false end
     
-    -- Pastikan objek berada langsung di Workspace atau dalam folder drop/spawn, tidak boleh di dalam Backpack/Player/Character
     local ancestor = obj.Parent
     local isInWorkspaceDirectly = false
     
@@ -227,18 +253,17 @@ local function isRealSpawnedFruit(obj)
         if ancestor == Workspace then
             isInWorkspaceDirectly = true
         end
-        if ancestor:IsA("Model") and Players:GetPlayerFromCharacter(ancestor) then
-            return false -- Milik player, abaikan!
+        if ancestor:IsA("Model") and (Players:GetPlayerFromCharacter(ancestor) or ancestor:FindFirstChild("Humanoid")) then
+            return false 
         end
         if ancestor.Name == "Backpack" or ancestor.Name == "PlayerGui" or ancestor.Name == "StarterGui" or ancestor.Name == "Character" then
-            return false -- Bagian dari inventory/player, abaikan!
+            return false 
         end
         ancestor = ancestor.Parent
     end
 
     if not isInWorkspaceDirectly then return false end
 
-    -- Daftar nama resmi buah Blox Fruits (huruf kecil)
     local officialFruits = {
         "rocket", "spin", "spring", "chop", "spike", "flame", "falcon", "ice", 
         "sand", "dark", "diamond", "light", "rubber", "barrier", "ghost", 
@@ -249,7 +274,6 @@ local function isRealSpawnedFruit(obj)
 
     local objNameLower = obj.Name:lower()
     
-    -- Validasi ketat: Nama objek harus mengandung salah satu nama buah resmi DAN memiliki format penamaan buah spawn map Roblox (berakhiran "Fruit" atau memiliki Handle fisik drop)
     local isMatch = false
     for _, fruitName in ipairs(officialFruits) do
         if objNameLower:find(fruitName) then
@@ -260,7 +284,11 @@ local function isRealSpawnedFruit(obj)
 
     if not isMatch then return false end
 
-    -- Harus berupa Tool drop atau Model/Part yang memiliki Handle buah
+    -- Blokir tegas objek ngaco seperti pot controller, messy, dll
+    if objNameLower:find("pot") or objNameLower:find("controller") or objNameLower:find("messy") or objNameLower:find("part") then
+        return false
+    end
+
     if obj:IsA("Tool") or objNameLower:sub(-5) == "fruit" or obj:FindFirstChild("Handle") then
         return true
     end
@@ -306,7 +334,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ==========================================
--- 4. AUTO STORE FRUIT (TERPISAH TOTAL)
+-- 4. AUTO STORE FRUIT
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -372,7 +400,7 @@ local function getChestIslands()
 end
 
 -- ==========================================
--- 6. MONITOR STAT & BUAH (Murni Buah Map Asli)
+-- 6. MONITOR STAT & BUAH
 -- ==========================================
 local MonitorFrame = Instance.new("Frame")
 MonitorFrame.Size = UDim2.new(0, 230, 0, 110)
@@ -442,7 +470,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- ==========================================
--- 7. LOOP UTAMA (PENCARIAN BUAH BERSIH & AKURAT)
+-- 7. LOOP UTAMA (PENCARIAN BUAH BERSIH & STABIL)
 -- ==========================================
 task.spawn(function()
     while task.wait(1.5) do
@@ -471,7 +499,6 @@ task.spawn(function()
 
         local currentCount = #fruitList
 
-        -- Update Monitor Status (Hanya menghitung buah spawn map asli, dijamin 0 jika tidak ada)
         MonitorFrame.Visible = Settings.MonitorVisible
         if Settings.MonitorVisible then
             local playerCount = #Players:GetPlayers()
@@ -479,7 +506,6 @@ task.spawn(function()
             MonitorContent.Text = string.format("• Player di Server: %d\n• Buah Spawn di Map: %d\n• Nama Buah: %s", playerCount, currentCount, fruitTextDisplay)
         end
 
-        -- Update Notifikasi Buah (Murni Buah Spawn)
         if Settings.FruitNotifier and currentCount > 0 then
             local fruitNameStr = table.concat(fruitList, ", ")
             playFruitSound()
@@ -490,16 +516,15 @@ task.spawn(function()
 
             if Settings.AutoTeleportFruit and targetFruitObj and targetFruitHandle then
                 local rootPart = getCharacterRootPart()
-                if rootPart then
+                if rootPart and not activeFlyConnection then
                     smoothFlyTo(targetFruitHandle.CFrame, "AutoTeleportFruit")
                 end
             end
         end
 
-        -- Auto Fly Chest
         if Settings.AutoFlyChest then
             local rootPart = getCharacterRootPart()
-            if rootPart then
+            if rootPart and not activeFlyConnection then
                 local islands = getChestIslands()
                 if #islands == 0 then
                     DeadChests = {}
@@ -534,16 +559,10 @@ task.spawn(function()
             end
         end
 
-        -- Auto Fly Player Target
         if Settings.AutoFlyPlayer then
             local targetPlayer = nil
             if Settings.TargetPlayerName ~= "" then
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and string.find(p.Name:lower(), Settings.TargetPlayerName:lower()) then
-                        targetPlayer = p
-                        break
-                    end
-                end
+                targetPlayer = Players:FindFirstChild(Settings.TargetPlayerName)
             else
                 local shortestDist = math.huge
                 local rootPart = getCharacterRootPart()
@@ -559,9 +578,10 @@ task.spawn(function()
                     end
                 end
             end
+            
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and Settings.AutoFlyPlayer then
                 local rootPart = getCharacterRootPart()
-                if rootPart then
+                if rootPart and not activeFlyConnection then
                     smoothFlyTo(targetPlayer.Character.HumanoidRootPart.CFrame, "AutoFlyPlayer")
                 end
             end
@@ -939,7 +959,24 @@ local function refreshPlayerList()
         if child:IsA("TextButton") then child:Destroy() end
     end
 
-    for _, p in ipairs(Players:GetPlayers()) do
+    local activePlayers = Players:GetPlayers()
+    -- Validasi apakah target pemain yang sedang dipilih masih ada di server, jika sudah keluar/tidak ada maka reset otomatis
+    if Settings.TargetPlayerName ~= "" then
+        local foundTarget = false
+        for _, p in ipairs(activePlayers) do
+            if p.Name == Settings.TargetPlayerName then
+                foundTarget = true
+                break
+            end
+        end
+        if not foundTarget then
+            Settings.TargetPlayerName = ""
+            TargetStatusLabel.Text = "Target Aktif: [ Terdekat / Otomatis ] (Keluar Server)"
+            saveSettings()
+        end
+    end
+
+    for _, p in ipairs(activePlayers) do
         if p ~= LocalPlayer then
             local pLevel = "?"
             local pFruit = "Tidak Ada Buah"
@@ -975,12 +1012,12 @@ local function refreshPlayerList()
 
             pBtn.MouseButton1Click:Connect(function()
                 Settings.TargetPlayerName = p.Name
-                TargetStatusLabel.Text = "Target Aktif: p.Name"
+                TargetStatusLabel.Text = "Target Aktif: " .. p.Name
                 saveSettings()
             end)
         end
     end
-    PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, (#Players:GetPlayers() - 1) * 39)
+    PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, (#activePlayers - 1) * 39)
 end
 
 refreshPlayerList()
