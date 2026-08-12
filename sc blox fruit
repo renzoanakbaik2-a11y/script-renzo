@@ -2,7 +2,6 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 
@@ -128,25 +127,7 @@ ChestToggleBtn.MouseButton1Click:Connect(function()
     SaveSettings()
 end)
 
---// Noclip & Smooth Flight System
-local activeTween = nil
-
-local function StopFlight()
-    if activeTween then
-        activeTween:Cancel()
-        activeTween = nil
-    end
-    pcall(function()
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        end
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.PlatformStand = false
-        end
-    end)
-end
-
+--// Noclip Loop
 RunService.Stepped:Connect(function()
     pcall(function()
         if Settings.AutoChest then
@@ -162,10 +143,11 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
---// Auto Collect Chest Logic (Fixed Path & Detection)
+--// Auto Collect Chest Logic (Using BodyVelocity / LinearVelocity for direct physical movement)
 task.spawn(function()
+    local bv, bg
     while true do
-        task.wait(0.2)
+        task.wait(0.1)
         pcall(function()
             if Settings.AutoChest then
                 local char = LocalPlayer.Character
@@ -176,21 +158,15 @@ task.spawn(function()
                     local targetChest = nil
                     local shortestDistance = math.huge
                     
-                    -- Pencarian universal untuk struktur Chest di map Blox Fruits
-                    local containers = {Workspace, Workspace:FindFirstChild("Map"), Workspace:FindFirstChild("ChestFolders")}
-                    for _, folder in pairs(containers) do
-                        if folder then
-                            for _, obj in pairs(folder:GetDescendants()) do
-                                local nameLower = obj.Name:lower()
-                                if (nameLower:find("chest") or nameLower:find("wrath") or nameLower:find("box")) and (obj:IsA("Model") or obj:IsA("BasePart")) then
-                                    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-                                    if part then
-                                        local dist = (hrp.Position - part.Position).Magnitude
-                                        if dist < shortestDistance then
-                                            shortestDistance = dist
-                                            targetChest = part
-                                        end
-                                    end
+                    for _, obj in pairs(Workspace:GetDescendants()) do
+                        local nameLower = obj.Name:lower()
+                        if (nameLower:find("chest") or nameLower:find("box")) and (obj:IsA("Model") or obj:IsA("BasePart")) then
+                            local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                            if part then
+                                local dist = (hrp.Position - part.Position).Magnitude
+                                if dist < shortestDistance then
+                                    shortestDistance = dist
+                                    targetChest = part
                                 end
                             end
                         end
@@ -198,34 +174,54 @@ task.spawn(function()
                     
                     if targetChest then
                         humanoid.PlatformStand = true
-                        local distance = (hrp.Position - targetChest.Position).Magnitude
-                        local speed = 300
-                        local timeTaken = math.clamp(distance / speed, 0.1, 5)
                         
-                        local tweenInfo = TweenInfo.new(timeTaken, Enum.EasingStyle.Linear)
-                        activeTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetChest.CFrame + Vector3.new(0, 2, 0)})
-                        activeTween:Play()
+                        -- Setup BodyVelocity & BodyGyro untuk terbang mulus langsung ke target
+                        if not hrp:FindFirstChild("CustomChestFlyBV") then
+                            bv = Instance.new("BodyVelocity")
+                            bv.Name = "CustomChestFlyBV"
+                            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                            bv.Velocity = Vector3.new(0, 0, 0)
+                            bv.Parent = hrp
+                        else
+                            bv = hrp:FindFirstChild("CustomChestFlyBV")
+                        end
                         
-                        local completed = false
-                        local connection
-                        connection = activeTween.Completed:Connect(function()
-                            completed = true
-                            if connection then connection:Disconnect() end
-                        end)
+                        if not hrp:FindFirstChild("CustomChestFlyBG") then
+                            bg = Instance.new("BodyGyro")
+                            bg.Name = "CustomChestFlyBG"
+                            bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                            bg.P = 10000
+                            bg.Parent = hrp
+                        else
+                            bg = hrp:FindFirstChild("CustomChestFlyBG")
+                        end
                         
-                        while not completed and Settings.AutoChest and targetChest.Parent and (hrp.Position - targetChest.Position).Magnitude > 5 do
+                        while Settings.AutoChest and targetChest.Parent and (hrp.Position - targetChest.Position).Magnitude > 4 do
+                            local direction = (targetChest.Position - hrp.Position).Unit
+                            bv.Velocity = direction * 250
+                            bg.CFrame = CFrame.new(hrp.Position, targetChest.Position)
                             task.wait(0.05)
                         end
                         
-                        if activeTween then
-                            activeTween:Cancel()
-                            activeTween = nil
-                        end
+                        if bv then bv.Velocity = Vector3.new(0, 0, 0) end
+                        humanoid.PlatformStand = false
+                    else
+                        if hrp:FindFirstChild("CustomChestFlyBV") then hrp.CustomChestFlyBV:Destroy() end
+                        if hrp:FindFirstChild("CustomChestFlyBG") then hrp.CustomChestFlyBG:Destroy() end
                         humanoid.PlatformStand = false
                     end
                 end
             else
-                StopFlight()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local humanoid = char and char:FindFirstChild("Humanoid")
+                if hrp then
+                    if hrp:FindFirstChild("CustomChestFlyBV") then hrp.CustomChestFlyBV:Destroy() end
+                    if hrp:FindFirstChild("CustomChestFlyBG") then hrp.CustomChestFlyBG:Destroy() end
+                end
+                if humanoid then
+                    humanoid.PlatformStand = false
+                end
             end
         end)
     end
