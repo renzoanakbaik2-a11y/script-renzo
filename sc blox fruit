@@ -1,7 +1,7 @@
 -- ==============================================================================
--- PIXEL QUEST: MENU UTAMA (POSISI DI KIRI TENGAH)
--- Tombol "MENU" diposisikan di sisi tengah-kiri layar agar pas dan nyaman 
--- disentuh saat bermain di HP, berfungsi untuk membuka/menutup panel utama.
+-- PIXEL QUEST: MENU DI TENGAH, TOMBOL DI KIRI TENGAH
+-- Posisi tombol "MENU" berada di sebelah kiri-tengah layar, sedangkan 
+-- panel utama (menu-nya) terbuka pas di tengah-tengah layar HP.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -18,7 +18,7 @@ ScreenGui.Name = "PixelQuestMenuSystem"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = playerGui
 
--- 1. TOMBOL "MENU" (Diposisikan di tengah layar sebelah kiri: Y = 0.5)
+-- 1. TOMBOL "MENU" (Di sebelah kiri tengah layar)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleBtn"
 ToggleBtn.Size = UDim2.new(0, 110, 0, 45)
@@ -38,11 +38,11 @@ local BtnCorner = Instance.new("UICorner")
 BtnCorner.CornerRadius = UDim.new(0, 8)
 BtnCorner.Parent = ToggleBtn
 
--- 2. PANEL UTAMA (Tempat fitur-fitur nanti)
+-- 2. PANEL UTAMA / MENU (Pas di tengah-tengah layar)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 300, 0, 320)
-MainFrame.Position = UDim2.new(0.14, 0, 0.3, 0)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -160)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -70,7 +70,7 @@ InfoText.BackgroundTransparency = 1
 InfoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 InfoText.TextSize = 11
 InfoText.Font = Enum.Font.Gotham
-InfoText.Text = "Tombol 'MENU' sekarang ada di sebelah kiri tengah layar. Pas banget buat diakses. Silakan dicek!"
+InfoText.Text = "Tombol ada di kiri tengah, dan panel menu-nya pas di tengah layar. Sesuai request!"
 InfoText.TextWrapped = true
 InfoText.Parent = MainFrame
 
@@ -79,4 +79,4 @@ ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
-print("⚡ TOMBOL MENU DI KIRI TENGAH BERHASIL DIMUAT! ⚡")
+print("⚡ POSISI MENU DI TENGAH & TOMBOL DI KIRI TENGAH BERHASIL! ⚡")
