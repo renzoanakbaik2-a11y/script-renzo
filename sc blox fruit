@@ -1,56 +1,89 @@
 -- ==============================================================================
--- PIXEL QUEST: ISOLATED TEST UI (KHUSUS CEK TOMBOL MENU DI DELTA)
--- Hanya menampilkan tombol menu saja untuk memastikan apakah UI-nya 
--- muncul dan bisa disentuh dengan benar di executor kamu.
+-- PIXEL QUEST: CLEAN TOGGLE MENU (TOMBOL BUKA/TUTUP UTAMA)
+-- Tombol ini berfungsi untuk memunculkan atau menyembunyikan menu utama 
+-- tempat kita nanti meletakkan semua fitur (Auto Farm, Dungeon, dll).
 -- ==============================================================================
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Bersihkan GUI uji coba sebelumnya jika ada
-if playerGui:FindFirstChild("PixelQuestTestUI") then
-    playerGui.PixelQuestTestUI:Destroy()
+-- Bersihkan GUI uji coba sebelumnya
+if playerGui:FindFirstChild("PixelQuestMenuSystem") then
+    playerGui.PixelQuestMenuSystem:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PixelQuestTestUI"
+ScreenGui.Name = "PixelQuestMenuSystem"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = playerGui
 
--- Tombol Utama (Floating Button)
+-- 1. TOMBOL UTAMA UNTUK MEMBUKA/MENUTUP MENU (Diposisikan di tengah atas)
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Name = "TestButton"
-ToggleBtn.Size = UDim2.new(0, 200, 0, 60)
-ToggleBtn.Position = UDim2.new(0.05, 0, 0.20, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Size = UDim2.new(0, 180, 0, 50)
+ToggleBtn.Position = UDim2.new(0.5, -90, 0.02, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
 ToggleBtn.BorderSizePixel = 3
 ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
-ToggleBtn.TextSize = 16
+ToggleBtn.TextSize = 14
 ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.Text = "KLIK AKU (TEST)"
+ToggleBtn.Text = "❌ TUTUP MENU"
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 ToggleBtn.Parent = ScreenGui
 
 local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 12)
+BtnCorner.CornerRadius = UDim.new(0, 10)
 BtnCorner.Parent = ToggleBtn
 
--- Status Text di dalam tombol saat diklik
-local clicked = false
+-- 2. PANEL UTAMA TEMPAT FITUR-FITUR NANTI
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 300, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -150, 0.15, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.Text = "⚡ PIXEL QUEST SCRIPT MENU ⚡"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+Title.TextSize = 12
+Title.Font = Enum.Font.GothamBold
+Title.Parent = MainFrame
+
+local InfoText = Instance.new("TextLabel")
+InfoText.Size = UDim2.new(0.9, 0, 0, 60)
+InfoText.Position = UDim2.new(0.05, 0, 0, 50)
+InfoText.BackgroundTransparency = 1
+InfoText.TextColor3 = Color3.fromRGB(200, 200, 200)
+InfoText.TextSize = 11
+InfoText.Font = Enum.Font.Gotham
+InfoText.Text = "Menu utama berhasil dibuat. Tombol di atas berfungsi menyembunyikan/memunculkan panel ini. Siap diisi fitur!"
+InfoText.TextWrapped = true
+InfoText.Parent = MainFrame
+
+-- Logika Tombol Buka/Tutup Menu
 ToggleBtn.MouseButton1Click:Connect(function()
-    clicked = not clicked
-    if clicked then
-        ToggleBtn.Text = "BERHASIL KLIK! 🎉"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-        ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MainFrame.Visible = not MainFrame.Visible
+    if MainFrame.Visible then
+        ToggleBtn.Text = "❌ TUTUP MENU"
+        ToggleBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
     else
-        ToggleBtn.Text = "KLIK AKU (TEST)"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        ToggleBtn.Text = "⚡ BUKA MENU"
         ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
     end
 end)
 
-print("⚡ TEST UI BERHASIL DIMUAT! Cek apakah tombol 'KLIK AKU (TEST)' muncul di layar HP kamu. ⚡")
+print("⚡ MENU UTAMA BERHASIL DIMUAT! ⚡")
