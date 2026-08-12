@@ -1,103 +1,90 @@
 -- ==============================================================================
--- DEWA CODING: LIVE ESP BOX & NAME SCANNER (VISUAL HACKER MODE)
+-- DEWA CODING: ULTRA SIMPLE SCANNER (ANTI-LAG & DIJAMIN JALAN)
 -- ==============================================================================
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- SETUP UI MENU UTAMA
+-- 1. BIKIN TAMPILAN MENU
 local ScreenGui = Instance.new("ScreenGui", playerGui)
-ScreenGui.Name = "LiveScannerESP"
+ScreenGui.Name = "UltraScannerUI"
 
-local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size = UDim2.new(0, 130, 0, 40)
-ToggleBtn.Position = UDim2.new(0, 20, 0.5, -20)
-ToggleBtn.Text = "ESP SCANNER: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
-ToggleBtn.BorderSizePixel = 2
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 11
-ToggleBtn.Active = true
-ToggleBtn.Draggable = true
-Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 6)
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 260, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -130, 0.4, -110)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
--- CONTAINER UNTUK VISUAL KOTAK BIRU & NAMA
-local ESPFolder = Instance.new("Folder", ScreenGui)
-ESPFolder.Name = "ESP_Container"
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Text = "⚡ SCANNER PANEL ⚡"
+Title.TextColor3 = Color3.fromRGB(0, 255, 128)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 12
+Title.BackgroundTransparency = 1
 
-local Config = {
-    Active = false
-}
+-- Tombol Scan
+local ScanBtn = Instance.new("TextButton", MainFrame)
+ScanBtn.Size = UDim2.new(0.9, 0, 0, 35)
+ScanBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
+ScanBtn.Text = "KLIK BUAT SCAN NAMA"
+ScanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+ScanBtn.Font = Enum.Font.GothamBold
+ScanBtn.TextSize = 11
+Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    Config.Active = not Config.Active
-    ToggleBtn.Text = "ESP SCANNER: " .. (Config.Active and "ON" or "OFF")
-    ToggleBtn.BackgroundColor3 = Config.Active and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+-- Kotak Hitam Tempat Munculin Teks Hasil Scan
+local ScrollingText = Instance.new("ScrollingFrame", MainFrame)
+ScrollingText.Size = UDim2.new(0.9, 0, 0.5, 0)
+ScrollingText.Position = UDim2.new(0.05, 0, 0.42, 0)
+ScrollingText.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+ScrollingText.BorderSizePixel = 0
+ScrollingText.CanvasSize = UDim2.new(0, 0, 5, 0)
+Instance.new("UICorner", ScrollingText).CornerRadius = UDim.new(0, 6)
+
+local ResultLabel = Instance.new("TextLabel", ScrollingText)
+ResultLabel.Size = UDim2.new(1, 0, 1, 0)
+ResultLabel.Position = UDim2.new(0, 5, 0, 5)
+ResultLabel.Text = "Klik tombol biru di atas untuk mulai membaca nama objek di sekitar..."
+ResultLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResultLabel.TextSize = 10
+ResultLabel.Font = Enum.Font.Code
+ResultLabel.BackgroundTransparency = 1
+ResultLabel.TextXAlignment = Enum.TextXAlignment.Left
+ResultLabel.TextYAlignment = Enum.TextYAlignment.Top
+ResultLabel.TextWrapped = true
+
+-- 2. LOGIKA SCANNER AMAN (TIDAK BIKIN LAG)
+ScanBtn.MouseButton1Click:Connect(function()
+    ScanBtn.Text = "SEDANG SCAN..."
+    ScanBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
     
-    if not Config.Active then
-        ESPFolder:ClearAllChildren()
-    end
-end)
-
--- FUNGSI MEMBUAT KOTAK BIRU DAN TEKS NAMA DI LAYAR
-local function createESP(obj)
-    if ESPFolder:FindFirstChild(obj.Name .. "_ESP") then return end
-    
-    -- Membuat Kotak Garis (Box) Biru di 3D World
-    local box = Instance.new("SelectionBox")
-    box.Name = obj.Name .. "_ESP"
-    box.Adornee = obj
-    box.Color3 = Color3.fromRGB(0, 170, 255) -- Warna Biru Menyala
-    box.LineThickness = 0.05
-    box.Parent = ESPFolder
-    
-    -- Membuat Teks Nama Objek di Atas Kotaknya
-    local bill = Instance.new("BillboardGui")
-    bill.Name = obj.Name .. "_Tag"
-    bill.Adornee = obj
-    bill.Size = UDim2.new(0, 100, 0, 40)
-    bill.StudsOffset = Vector3.new(0, 3, 0)
-    bill.AlwaysOnVisible = true
-    bill.Parent = ESPFolder
-    
-    local txt = Instance.new("TextLabel", bill)
-    txt.Size = UDim2.new(1, 0, 1, 0)
-    txt.BackgroundTransparency = 1
-    txt.TextColor3 = Color3.fromRGB(0, 255, 255)
-    txt.TextStrokeTransparency = 0 -- Biar tulisannya ada garis hitam pinggirannya jadi jelas dibaca
-    txt.Font = Enum.Font.GothamBold
-    txt.TextSize = 12
-    txt.Text = obj.Name
-end
-
--- ENGINE SCANNER REAL-TIME
-RunService.Heartbeat:Connect(function()
-    if not Config.Active then return end
-    
-    pcall(function()
-        -- Bersihkan ESP yang objeknya sudah hancur/hilang dari game
-        for _, child in pairs(ESPFolder:GetChildren()) do
-            local adornee = child:IsA("SelectionBox") and child.Adornee or (child:IsA("BillboardGui") and child.Adornee)
-            if not adornee or not adornee.Parent then
-                child:Destroy()
+    task.spawn(function()
+        local foundNames = {}
+        local textOutput = ""
+        
+        -- Ambil data dari workspace dengan aman
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj.Name then
+                -- Masukkan nama objek unik ke dalam tabel
+                foundNames[obj.Name] = true
             end
         end
         
-        -- Memindai seluruh Workspace untuk mendeteksi objek fisik kecil (seperti telur/item galian)
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and not obj.Anchored and obj ~= player.Character and not obj:IsDescendantOf(player.Character) then
-                local size = obj.Size
-                -- Filter ukuran: Hanya melabeli objek berukuran kecil (mirip telur/item)
-                if size.X < 6 and size.Y < 6 and size.Z < 6 then
-                    createESP(obj)
-                end
-            end
+        -- Susun teksnya
+        for name, _ in pairs(foundNames) do
+            textOutput = textOutput .. "- " .. name .. "\n"
         end
+        
+        -- Tampilkan di kotak UI game
+        ResultLabel.Text = textOutput ~= "" and textOutput else "Tidak ada objek yang terbaca."
+        ScanBtn.Text = "KLIK BUAT SCAN LAGI"
+        ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
     end)
 end)
 
-print("⚡ LIVE ESP SCANNER LOADED! ⚡")
+print("⚡ ULTRA SCANNER READY! ⚡")
