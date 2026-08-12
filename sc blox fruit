@@ -18,8 +18,8 @@ local Settings = {
     SelectedTeam = "Pirates",
     FpsBoost = false,
     AutoChest = true,
-    FlightSpeed = 150,  -- Kecepatan default (Maksimal 500)
-    FlyHeight = 5,      -- Ketinggian default (Maksimal 10)
+    FlightSpeed = 150,  
+    FlyHeight = 5,      
     AutoTeleportFruit = false,  
     AutoStoreFruit = false,    
     AutoFlyPlayer = false,     
@@ -154,7 +154,7 @@ local function getCharacterRootPart()
 end
 
 -- ==========================================
--- SISTEM TERBANG ANTI-STUCK & TEMBUS RUMAH (NOCLIP OTOMATIS)
+-- SISTEM TERBANG STABIL & KEBAL GROUND-CHECK
 -- ==========================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, checkSettingKey)
@@ -230,7 +230,7 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
         local direction = (targetPos - currentPos)
         local distance = direction.Magnitude
 
-        if distance < 4 then
+        if distance < 3 then
             if noclipConnection then noclipConnection:Disconnect() end
             if bodyVelocity then bodyVelocity:Destroy() end
             if bodyGyro then bodyGyro:Destroy() end
@@ -239,7 +239,7 @@ local function smoothFlyTo(targetCFrame, checkSettingKey)
             return
         end
 
-        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 12)
+        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 16)
         bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
     end)
 end
@@ -326,7 +326,7 @@ local function toggleWaterWalk(state)
 end
 
 -- ==========================================
--- 4. AUTO STORE FRUIT & AUTO CHEST (DIREVISI UTUH UNTUK DELTA)
+-- 4. AUTO STORE FRUIT & AUTO CHEST (DIREVISI TOTAL & NORMAL)
 -- ==========================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -334,17 +334,23 @@ local function autoStoreFruits()
         local remotes = ReplicatedStorage:FindFirstChild("Remotes")
         if not remotes or not remotes:FindFirstChild("CommF_") then return end
         
-        local character = LocalPlayer.Character
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
         local backpack = LocalPlayer:FindFirstChild("Backpack")
+        local character = LocalPlayer.Character
         
-        if backpack and humanoid then
+        if backpack then
             for _, item in ipairs(backpack:GetChildren()) do
-                if item:IsA("Tool") and item.Name:lower():find("fruit") then
-                    humanoid:EquipTool(item)
-                    task.wait(0.3)
+                if item:IsA("Tool") and (item.Name:lower():find("fruit") or item:FindFirstChild("Handle")) then
                     remotes.CommF_:InvokeServer("StoreFruit", item.Name)
-                    task.wait(0.5)
+                    task.wait(0.3)
+                end
+            end
+        end
+        
+        if character then
+            for _, item in ipairs(character:GetChildren()) do
+                if item:IsA("Tool") and (item.Name:lower():find("fruit") or item:FindFirstChild("Handle")) then
+                    remotes.CommF_:InvokeServer("StoreFruit", item.Name)
+                    task.wait(0.3)
                 end
             end
         end
@@ -352,7 +358,7 @@ local function autoStoreFruits()
 end
 
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.4) do
         pcall(function()
             if Settings.AutoChest and not activeFlyConnection then
                 local rootPart = getCharacterRootPart()
@@ -380,11 +386,11 @@ task.spawn(function()
                         smoothFlyTo(targetChestPart.CFrame, "AutoChest")
                         local startTime = tick()
                         repeat
-                            task.wait(0.15)
+                            task.wait(0.1)
                             local currentRoot = getCharacterRootPart()
                             if not currentRoot or not targetChestPart.Parent then break end
                             local dist = (currentRoot.Position - targetChestPart.Position).Magnitude
-                        until dist < 6 or not Settings.AutoChest or tick() - startTime > 4
+                        until dist < 4 or not Settings.AutoChest or tick() - startTime > 3
                     end
                 end
             end
