@@ -38,7 +38,7 @@ local function SaveSettings()
     end
 end
 
---// GUI Creation (Menggunakan PlayerGui agar aman dari deteksi CoreGui beberapa Executor)
+--// GUI Creation
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsHub"
 ScreenGui.ResetOnSpawn = false
@@ -162,10 +162,10 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
---// Auto Collect Chest Logic (Smooth Tween Flight)
+--// Auto Collect Chest Logic (Fixed Path & Detection)
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(0.2)
         pcall(function()
             if Settings.AutoChest then
                 local char = LocalPlayer.Character
@@ -176,18 +176,21 @@ task.spawn(function()
                     local targetChest = nil
                     local shortestDistance = math.huge
                     
-                    for _, obj in pairs(Workspace:GetDescendants()) do
-                        if obj.Name:lower():find("chest") and (obj:IsA("Model") or obj:IsA("BasePart")) then
-                            local part = obj:IsA("Model") and obj.PrimaryPart or obj
-                            if not part and obj:IsA("Model") then
-                                part = obj:FindFirstChildWhichIsA("BasePart")
-                            end
-                            
-                            if part then
-                                local dist = (hrp.Position - part.Position).Magnitude
-                                if dist < shortestDistance then
-                                    shortestDistance = dist
-                                    targetChest = part
+                    -- Pencarian universal untuk struktur Chest di map Blox Fruits
+                    local containers = {Workspace, Workspace:FindFirstChild("Map"), Workspace:FindFirstChild("ChestFolders")}
+                    for _, folder in pairs(containers) do
+                        if folder then
+                            for _, obj in pairs(folder:GetDescendants()) do
+                                local nameLower = obj.Name:lower()
+                                if (nameLower:find("chest") or nameLower:find("wrath") or nameLower:find("box")) and (obj:IsA("Model") or obj:IsA("BasePart")) then
+                                    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                                    if part then
+                                        local dist = (hrp.Position - part.Position).Magnitude
+                                        if dist < shortestDistance then
+                                            shortestDistance = dist
+                                            targetChest = part
+                                        end
+                                    end
                                 end
                             end
                         end
@@ -196,11 +199,11 @@ task.spawn(function()
                     if targetChest then
                         humanoid.PlatformStand = true
                         local distance = (hrp.Position - targetChest.Position).Magnitude
-                        local speed = 250
-                        local timeTaken = distance / speed
+                        local speed = 300
+                        local timeTaken = math.clamp(distance / speed, 0.1, 5)
                         
                         local tweenInfo = TweenInfo.new(timeTaken, Enum.EasingStyle.Linear)
-                        activeTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetChest.CFrame + Vector3.new(0, 3, 0)})
+                        activeTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetChest.CFrame + Vector3.new(0, 2, 0)})
                         activeTween:Play()
                         
                         local completed = false
@@ -210,8 +213,8 @@ task.spawn(function()
                             if connection then connection:Disconnect() end
                         end)
                         
-                        while not completed and Settings.AutoChest and targetChest.Parent do
-                            task.wait(0.1)
+                        while not completed and Settings.AutoChest and targetChest.Parent and (hrp.Position - targetChest.Position).Magnitude > 5 do
+                            task.wait(0.05)
                         end
                         
                         if activeTween then
