@@ -1,35 +1,35 @@
 -- ==============================================================================
--- DEWA CODING: DEX-STYLE EXPLORER (DENGAN TOMBOL MENU UTAMA & FOLDER NAVIGATOR)
+-- DEWA CODING: DEX EXPLORER (DENGAN TOMBOL MENU UTAMA YANG JELAS & BESAR)
 -- ==============================================================================
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-if playerGui:FindFirstChild("DewaDexExplorer") then
-    playerGui.DewaDexExplorer:Destroy()
+if playerGui:FindFirstChild("DewaDexExplorerFix") then
+    playerGui.DewaDexExplorerFix:Destroy()
 end
 
--- ==========================================
--- 1. TOMBOL UTAMA UNTUK BUKA/TUTUP MENU (FLOATING BUTTON)
--- ==========================================
 local ScreenGui = Instance.new("ScreenGui", playerGui)
-ScreenGui.Name = "DewaDexExplorer"
+ScreenGui.Name = "DewaDexExplorerFix"
 ScreenGui.ResetOnSpawn = false
 
+-- ==========================================
+-- 1. TOMBOL BUKA/TUTUP MENU (DIBUAT BESAR & JELAS DI LAYAR)
+-- ==========================================
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size = UDim2.new(0, 130, 0, 40)
-ToggleBtn.Position = UDim2.new(0, 20, 0.5, -20)
-ToggleBtn.Text = "📁 BUKA DEX MENU"
-ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.Size = UDim2.new(0, 160, 0, 45)
+ToggleBtn.Position = UDim2.new(0.5, -80, 0, 10) -- Posisi di tengah atas layar biar langsung kelihatan!
+ToggleBtn.Text = "📁 BUKA MENU DEX"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleBtn.BorderColor3 = Color3.fromRGB(255, 215, 0)
 ToggleBtn.BorderSizePixel = 2
 ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 11
+ToggleBtn.TextSize = 12
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
-Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
 
 -- ==========================================
 -- 2. SETUP PANEL UTAMA (MENU DEX)
@@ -41,7 +41,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = false -- Mulai dalam keadaan tertutup, dibuka lewat tombol di atas
+MainFrame.Visible = false -- Mulai tertutup, tekan tombol di atas untuk membuka
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
 -- Header Bar
@@ -54,7 +54,7 @@ Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, -40, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "📁 DEWA DEX EXPLORER (KLIK BLOK -> LIHAT FOLDER)"
+Title.Text = "📁 DEWA DEX EXPLORER"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 11
@@ -71,7 +71,7 @@ CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 11
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
--- Tombol Buka/Tutup Menu Utama
+-- Logika Tombol Buka/Tutup
 ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
@@ -147,11 +147,10 @@ RightTitle.Font = Enum.Font.GothamBold
 RightTitle.TextSize = 10
 RightTitle.BackgroundTransparency = 1
 
--- Folder Penampung Kotak Visual (SelectionBox) di Map
 local ESPBoxFolder = Instance.new("Folder", ScreenGui)
 ESPBoxFolder.Name = "DexNavigatorHighlight"
 
--- Fungsi Menampilkan Hierarki Folder di Kolom Kanan ala Dex
+-- Fungsi Menampilkan Hierarki Folder di Kolom Kanan
 local function displayFolderHierarchy(targetObj, blockName)
     for _, child in pairs(RightScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
@@ -159,7 +158,6 @@ local function displayFolderHierarchy(targetObj, blockName)
     
     StatusLabel.Text = "Blok terpilih: [" .. blockName .. "]\nMenampilkan isi dari folder induknya:"
     
-    -- Kumpulkan seluruh leluhur / parent dari objek tersebut sampai ke Workspace
     local current = targetObj.Parent
     local lineage = {}
     while current and current ~= game do
@@ -168,7 +166,6 @@ local function displayFolderHierarchy(targetObj, blockName)
     end
     
     local count = 0
-    -- Tampilkan hirarki foldernya di kolom kanan
     for _, folderItem in ipairs(lineage) do
         count = count + 1
         local folderBtn = Instance.new("TextButton")
@@ -182,7 +179,6 @@ local function displayFolderHierarchy(targetObj, blockName)
         folderBtn.Parent = RightScroll
         Instance.new("UICorner", folderBtn).CornerRadius = UDim.new(0, 4)
         
-        -- Klik folder di kanan untuk melihat isi di dalam folder tersebut
         folderBtn.MouseButton1Click:Connect(function()
             for _, child in pairs(RightScroll:GetChildren()) do
                 if child:IsA("TextButton") then child:Destroy() end
@@ -209,7 +205,7 @@ local function displayFolderHierarchy(targetObj, blockName)
     RightScroll.CanvasSize = UDim2.new(0, 0, 0, count * 32)
 end
 
--- Fungsi Memindai Seluruh Objek Map ke Kolom Kiri
+-- Fungsi Scan Objek Map
 local function scanMapObjects()
     for _, child in pairs(LeftScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
@@ -235,18 +231,15 @@ local function scanMapObjects()
             objBtn.Parent = LeftScroll
             Instance.new("UICorner", objBtn).CornerRadius = UDim.new(0, 4)
             
-            -- KETIKA BLOK DI MAP DI-KLIK:
             objBtn.MouseButton1Click:Connect(function()
                 ESPBoxFolder:ClearAllChildren()
                 
-                -- Munculkan kotak biru di objek aslinya dalam game
                 local box = Instance.new("SelectionBox")
                 box.Adornee = obj
                 box.Color3 = Color3.fromRGB(0, 170, 255)
                 box.LineThickness = 0.08
                 box.Parent = ESPBoxFolder
                 
-                -- Langsung tampilkan struktur foldernya di kolom sebelah kanan ala Dex
                 displayFolderHierarchy(obj, obj.Name)
             end)
         end
@@ -264,4 +257,4 @@ RefreshBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
-print("⚡ DEWA DEX EXPLORER DENGAN TOMBOL MENU SIAP DIGUNAKAN! ⚡")
+print("⚡ TOMBOL MENU UTAMA SUDAH DIPASANG DI TENGAH ATAS LAYAR! ⚡")
