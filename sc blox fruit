@@ -19,6 +19,8 @@ local Settings = {
     FruitESP = false,
     AutoCollectFruit = false,
     AutoStoreFruit = false,
+    AutoJoinTeam = false, -- Status Auto Join Team
+    SelectedTeam = "Pirates", -- Pilihan default: Pirates atau Marines
     MenuSize = "Medium"
 }
 
@@ -242,6 +244,77 @@ UIPaddingStore.PaddingLeft = UDim.new(0, 12)
 UIPaddingStore.Parent = StoreToggleBtn
 Instance.new("UICorner", StoreToggleBtn).CornerRadius = UDim.new(0, 6)
 
+--// Toggle Item 5: Auto Join Team
+local TeamToggleBtn = Instance.new("TextButton")
+TeamToggleBtn.Size = UDim2.new(1, -30, 0, 34)
+TeamToggleBtn.BackgroundColor3 = Settings.AutoJoinTeam and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+TeamToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeamToggleBtn.TextSize = 13
+TeamToggleBtn.Font = Enum.Font.SourceSansBold
+TeamToggleBtn.Text = "Auto Join Team: " .. (Settings.AutoJoinTeam and "On" or "Off")
+TeamToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+TeamToggleBtn.LayoutOrder = 5
+TeamToggleBtn.Parent = ScrollingContainer
+
+local UIPaddingTeam = Instance.new("UIPadding")
+UIPaddingTeam.PaddingLeft = UDim.new(0, 12)
+UIPaddingTeam.Parent = TeamToggleBtn
+Instance.new("UICorner", TeamToggleBtn).CornerRadius = UDim.new(0, 6)
+
+--// Pilihan Tim (Pirates / Marines)
+local TeamLabel = Instance.new("TextLabel")
+TeamLabel.Size = UDim2.new(1, -30, 0, 20)
+TeamLabel.BackgroundTransparency = 1
+TeamLabel.TextColor3 = Color3.fromRGB(180, 210, 240)
+TeamLabel.TextSize = 12
+TeamLabel.Font = Enum.Font.SourceSansBold
+TeamLabel.Text = "Pilih Tim Tujuan:"
+TeamLabel.TextXAlignment = Enum.TextXAlignment.Left
+TeamLabel.LayoutOrder = 6
+TeamLabel.Parent = ScrollingContainer
+
+local TeamButtonContainer = Instance.new("Frame")
+TeamButtonContainer.Size = UDim2.new(1, -30, 0, 28)
+TeamButtonContainer.BackgroundTransparency = 1
+TeamButtonContainer.LayoutOrder = 7
+TeamButtonContainer.Parent = ScrollingContainer
+
+local UIHorizLayoutTeam = Instance.new("UIListLayout")
+UIHorizLayoutTeam.FillDirection = Enum.FillDirection.Horizontal
+UIHorizLayoutTeam.Padding = UDim.new(0, 10)
+UIHorizLayoutTeam.Parent = TeamButtonContainer
+
+local PirateBtn = Instance.new("TextButton")
+PirateBtn.Size = UDim2.new(0.5, -5, 1, 0)
+PirateBtn.BackgroundColor3 = Settings.SelectedTeam == "Pirates" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
+PirateBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PirateBtn.TextSize = 12
+PirateBtn.Font = Enum.Font.SourceSansBold
+PirateBtn.Text = "Pirates"
+PirateBtn.Parent = TeamButtonContainer
+Instance.new("UICorner", PirateBtn).CornerRadius = UDim.new(0, 5)
+
+local MarineBtn = Instance.new("TextButton")
+MarineBtn.Size = UDim2.new(0.5, -5, 1, 0)
+MarineBtn.BackgroundColor3 = Settings.SelectedTeam == "Marines" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
+MarineBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MarineBtn.TextSize = 12
+MarineBtn.Font = Enum.Font.SourceSansBold
+MarineBtn.Text = "Marines"
+MarineBtn.Parent = TeamButtonContainer
+Instance.new("UICorner", MarineBtn).CornerRadius = UDim.new(0, 5)
+
+local function ApplySelectedTeam(teamName)
+    Settings.SelectedTeam = teamName
+    SaveSettings()
+    
+    PirateBtn.BackgroundColor3 = (teamName == "Pirates") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
+    MarineBtn.BackgroundColor3 = (teamName == "Marines") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
+end
+
+PirateBtn.MouseButton1Click:Connect(function() ApplySelectedTeam("Pirates") end)
+MarineBtn.MouseButton1Click:Connect(function() ApplySelectedTeam("Marines") end)
+
 --// Bagian Pengaturan Ukuran Menu
 local SizeLabel = Instance.new("TextLabel")
 SizeLabel.Size = UDim2.new(1, -30, 0, 20)
@@ -251,14 +324,14 @@ SizeLabel.TextSize = 12
 SizeLabel.Font = Enum.Font.SourceSansBold
 SizeLabel.Text = "Ukuran Menu:"
 SizeLabel.TextXAlignment = Enum.TextXAlignment.Left
-SizeLabel.LayoutOrder = 5
+SizeLabel.LayoutOrder = 8
 SizeLabel.Parent = ScrollingContainer
 
 --// Container Tombol Ukuran (Small, Medium, Big)
 local SizeButtonContainer = Instance.new("Frame")
 SizeButtonContainer.Size = UDim2.new(1, -30, 0, 28)
 SizeButtonContainer.BackgroundTransparency = 1
-SizeButtonContainer.LayoutOrder = 6
+SizeButtonContainer.LayoutOrder = 9
 SizeButtonContainer.Parent = ScrollingContainer
 
 local UIHorizLayout = Instance.new("UIListLayout")
@@ -363,6 +436,31 @@ StoreToggleBtn.MouseButton1Click:Connect(function()
     StoreToggleBtn.BackgroundColor3 = Settings.AutoStoreFruit and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
     StoreToggleBtn.Text = "Auto Store Fruit: " .. (Settings.AutoStoreFruit and "On" or "Off")
     SaveSettings()
+end)
+
+TeamToggleBtn.MouseButton1Click:Connect(function()
+    Settings.AutoJoinTeam = not Settings.AutoJoinTeam
+    TeamToggleBtn.BackgroundColor3 = Settings.AutoJoinTeam and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+    TeamToggleBtn.Text = "Auto Join Team: " .. (Settings.AutoJoinTeam and "On" or "Off")
+    SaveSettings()
+end)
+
+--// Logika Auto Join Team (Blox Fruits Remotes)
+task.spawn(function()
+    while true do
+        task.wait(1)
+        pcall(function()
+            if Settings.AutoJoinTeam then
+                -- Memeriksa apakah pemain masih belum punya tim (biasanya tim kosong / Spectator / netral)
+                if LocalPlayer.Team == nil then
+                    local comm = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+                    if comm then
+                        comm:InvokeServer("SetTeam", Settings.SelectedTeam)
+                    end
+                end
+            end
+        end)
+    end
 end)
 
 --// Logika Mode Cepat (FPS Boost)
