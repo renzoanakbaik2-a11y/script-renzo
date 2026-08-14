@@ -1,105 +1,99 @@
 -- =====================================================================
--- BRAINROT SURVIVAL HUB - ELITE EDITION (OPTIMIZED & STYLISH)
+-- BRAINROT SURVIVAL HUB - STREAMLINED ELITE
 -- =====================================================================
-
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
-local Settings = {
+_G.BrainrotSettings = {
     AutoCollect = false,
     AntiPlayer = false
 }
 
--- [UI DESIGN: Sleek & Dark Theme]
+-- [1. UI DESIGN]
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
-ScreenGui.Name = "BrainrotHub"
-
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 280, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 250, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -125, 0.5, -125)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.BorderSizePixel = 0
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
 
-local TopBar = Instance.new("Frame", MainFrame)
-TopBar.Size = UDim2.new(1, 0, 0, 50)
-TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 15)
+local Container = Instance.new("UIListLayout", MainFrame)
+Container.Padding = UDim.new(0, 15)
+Container.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Container.Padding = UDim.new(0, 20)
 
-local Title = Instance.new("TextLabel", TopBar)
-Title.Size = UDim2.new(1, 0, 1, 0)
-Title.Text = "BRAINROT ELITE"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
-Title.BackgroundTransparency = 1
-
-local Container = Instance.new("ScrollingFrame", MainFrame)
-Container.Size = UDim2.new(1, -20, 1, -70)
-Container.Position = UDim2.new(0, 10, 0, 60)
-Container.BackgroundTransparency = 1
-Container.ScrollBarThickness = 0
-Instance.new("UIListLayout", Container).Padding = UDim.new(0, 15)
-
--- [LOGIC: Optimized Auto Collect]
-local ArenaFolder = Workspace:WaitForChild("World"):WaitForChild("Arena")
-
--- Filter agar tidak menyentuh folder milik pemain
-local function isSafe(obj)
-    local path = obj:GetFullName()
-    return not (path:find("PlayerZones") or path:find("Plot") or path:find("Base"))
-end
-
-task.spawn(function()
-    while task.wait(0.4) do
-        if Settings.AutoCollect and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local bestCube, highestRarity = nil, -1
-            for _, obj in pairs(ArenaFolder:GetDescendants()) do
-                if (obj:IsA("BasePart")) and isSafe(obj) and obj.Name:lower():find("cube") then
-                    local rarity = tonumber(obj.Name:match("%d+")) or 1
-                    if rarity > highestRarity then
-                        highestRarity = rarity
-                        bestCube = obj
-                    end
-                end
-            end
-            if bestCube then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = bestCube.CFrame * CFrame.new(0, 2, 0)
-            end
-        end
-    end
-end)
-
--- [UI Component: Button Creator]
 local function createButton(text, settingKey)
-    local btn = Instance.new("TextButton", Container)
-    btn.Size = UDim2.new(1, 0, 0, 50)
+    local btn = Instance.new("TextButton", MainFrame)
+    btn.Size = UDim2.new(0.9, 0, 0, 60)
     btn.Text = text .. " [OFF]"
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    btn.Font = Enum.Font.Gotham
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
     
     btn.MouseButton1Click:Connect(function()
-        Settings[settingKey] = not Settings[settingKey]
-        btn.Text = text .. (Settings[settingKey] and " [ON]" or " [OFF]")
-        btn.BackgroundColor3 = Settings[settingKey] and Color3.fromRGB(60, 179, 113) or Color3.fromRGB(40, 40, 40)
+        _G.BrainrotSettings[settingKey] = not _G.BrainrotSettings[settingKey]
+        btn.Text = text .. (_G.BrainrotSettings[settingKey] and " [ON]" or " [OFF]")
+        btn.BackgroundColor3 = _G.BrainrotSettings[settingKey] and Color3.fromRGB(60, 179, 113) or Color3.fromRGB(40, 40, 40)
     end)
 end
 
 createButton("Auto Collect", "AutoCollect")
 createButton("Anti Player", "AntiPlayer")
 
--- [Open/Close Toggle]
-local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size = UDim2.new(0, 100, 0, 40)
-ToggleBtn.Position = UDim2.new(0, 20, 0, 20)
-ToggleBtn.Text = "MENU"
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 10)
-ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+-- [2. LOGIKA UTAMA (Satu Loop Efisien)]
+local function isSafe(obj)
+    local path = obj:GetFullName()
+    return not (path:find("PlayerZones") or path:find("Plot") or path:find("Base"))
+end
 
-print("Brainrot Elite Loaded Successfully.")
+local function collect(part)
+    if not part then return end
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = part.CFrame * CFrame.new(0, 2, 0)
+        if firetouchinterest then
+            firetouchinterest(char.HumanoidRootPart, part, 0)
+            task.wait(0.05)
+            firetouchinterest(char.HumanoidRootPart, part, 1)
+        end
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.3) do
+        local Arena = Workspace:FindFirstChild("World") and Workspace.World:FindFirstChild("Arena")
+        if not Arena then continue end
+
+        -- Auto Collect (Cube, Brainrot, Fruit, Apple digabung)
+        if _G.BrainrotSettings.AutoCollect then
+            for _, obj in pairs(Arena:GetDescendants()) do
+                if obj:IsA("BasePart") and isSafe(obj) then
+                    local name = obj.Name:lower()
+                    -- Mengecek semua keyword dalam satu kondisi
+                    if name:find("cube") or name:find("brainrot") or name:find("fruit") or name:find("apple") then
+                        collect(obj)
+                        break -- Ambil satu objek terdekat lalu loop lagi
+                    end
+                end
+            end
+        end
+
+        -- Anti Player
+        if _G.BrainrotSettings.AntiPlayer then
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        if (hrp.Position - p.Character.HumanoidRootPart.Position).Magnitude < 25 then
+                            hrp.Velocity = Vector3.new(0, 150, 0)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+print("Brainrot Survival Hub Streamlined!")
