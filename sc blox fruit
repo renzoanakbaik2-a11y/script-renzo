@@ -1,343 +1,431 @@
--- ==============================================================================
--- DEWA CODING: DELTA MOBILE SUPREME OMNI-HUD V500.0 (OPTIMIZED FOR DELTA EXECUTOR)
--- ==============================================================================
-
-local CoreGui = game:GetService("CoreGui")
+--// Services
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
 
-local player = Players.LocalPlayer
-local camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
--- Aman untuk Delta Mobile: Menggunakan proteksi pcall agar tidak crash total
-pcall(function()
-    if CoreGui:FindFirstChild("DewaDeltaSupremeHUD") then
-        CoreGui.DewaDeltaSupremeHUD:Destroy()
-    end
-end)
+--// FileName untuk Save Settings
+local SettingsFileName = "BloxFruits_UltimateHub_Settings.json"
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DewaDeltaSupremeHUD"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+--// Default Settings & State
+local Settings = {
+    FPSBoost = false,
+    FruitESP = false,
+    AutoCollectFruit = false
+}
 
--- Masukkan ke CoreGui atau PlayerGui tergantung ketersediaan Delta
-pcall(function()
-    ScreenGui.Parent = CoreGui
-end)
-if not ScreenGui.Parent then
+--// Load Settings
+if writefile and readfile and isfile then
     pcall(function()
-        ScreenGui.Parent = player:WaitForChild("PlayerGui")
+        if isfile(SettingsFileName) then
+            local data = HttpService:JSONDecode(readfile(SettingsFileName))
+            if type(data) == "table" then
+                for k, v in pairs(data) do
+                    Settings[k] = v
+                end
+            end
+        end
     end)
 end
 
--- ==============================================================================
--- 1. TOMBOL MENU UTAMA (FLOATING BUTTON KHUSUS HP / DELTA)
--- ==============================================================================
-local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size = UDim2.new(0, 140, 0, 45)
-ToggleBtn.Position = UDim2.new(0, 15, 0.25, 0)
-ToggleBtn.Text = "👑 MENU DEWA"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-ToggleBtn.BorderColor3 = Color3.fromRGB(255, 215, 0)
-ToggleBtn.BorderSizePixel = 2
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 12
-ToggleBtn.Active = true
-ToggleBtn.Draggable = true
-Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
+local function SaveSettings()
+    if writefile then
+        pcall(function()
+            writefile(SettingsFileName, HttpService:JSONEncode(Settings))
+        end)
+    end
+end
 
--- ==============================================================================
--- 2. PANEL UTAMA (MENU KONTROL)
--- ==============================================================================
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 360, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -180, 0.5, -200)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MainFrame.BorderSizePixel = 0
+--// GUI Creation
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BloxFruitsUltimateHub"
+ScreenGui.ResetOnSpawn = false
+pcall(function()
+    if syn and syn.protect_gui then
+        syn.protect_gui(ScreenGui)
+        ScreenGui.Parent = CoreGui
+    elseif protectgui then
+        protectgui(ScreenGui)
+        ScreenGui.Parent = CoreGui
+    else
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
+end)
+if not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+--// Main Toggle Button (Tombol Buka/Tutup Menu di Layar)
+local OpenButton = Instance.new("TextButton")
+OpenButton.Name = "OpenButton"
+OpenButton.Size = UDim2.new(0, 70, 0, 70)
+OpenButton.Position = UDim2.new(0, 30, 0, 150)
+OpenButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+OpenButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.TextSize = 16
+OpenButton.Font = Enum.Font.SourceSansBold
+OpenButton.Text = "MENU"
+OpenButton.Active = true
+OpenButton.Draggable = true
+OpenButton.Parent = ScreenGui
+
+local UICornerOpen = Instance.new("UICorner")
+UICornerOpen.CornerRadius = UDim.new(0, 12)
+UICornerOpen.Parent = OpenButton
+
+--// Main Frame (Menu Utama)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 320, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -130)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderColor3 = Color3.fromRGB(40, 40, 40)
+MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = false
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+MainFrame.Parent = ScreenGui
 
-local UIStroke = Instance.new("UIStroke", MainFrame)
-UIStroke.Color = Color3.fromRGB(0, 255, 128)
-UIStroke.Thickness = 2
+local UICornerMain = Instance.new("UICorner")
+UICornerMain.CornerRadius = UDim.new(0, 10)
+UICornerMain.Parent = MainFrame
 
--- Header Panel
-local TopBar = Instance.new("Frame", MainFrame)
-TopBar.Size = UDim2.new(1, 0, 0, 40)
-TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-TopBar.BorderSizePixel = 0
-Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 12)
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 0, 40)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 16
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.Text = "Blox Fruits Ultimate Hub"
+TitleLabel.Parent = MainFrame
 
-local Title = Instance.new("TextLabel", TopBar)
-Title.Size = UDim2.new(1, -40, 1, 0)
-Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "👑 DEWA OMNI-HUD (DELTA VERSION)"
-Title.TextColor3 = Color3.fromRGB(0, 255, 128)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 11
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.BackgroundTransparency = 1
+--// Toggle Item 1: FPS Boost
+local FPSToggleBtn = Instance.new("TextButton")
+FPSToggleBtn.Size = UDim2.new(0, 280, 0, 35)
+FPSToggleBtn.Position = UDim2.new(0.5, -140, 0, 50)
+FPSToggleBtn.BackgroundColor3 = Settings.FPSBoost and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+FPSToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FPSToggleBtn.TextSize = 14
+FPSToggleBtn.Font = Enum.Font.SourceSansBold
+FPSToggleBtn.Text = "FPS Boost: " .. (Settings.FPSBoost and "ON" or "OFF")
+FPSToggleBtn.Parent = MainFrame
 
-local CloseBtn = Instance.new("TextButton", TopBar)
-CloseBtn.Size = UDim2.new(0, 28, 0, 28)
-CloseBtn.Position = UDim2.new(1, -34, 0.5, -14)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 11
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+local UICornerFPS = Instance.new("UICorner")
+UICornerFPS.CornerRadius = UDim.new(0, 6)
+UICornerFPS.Parent = FPSToggleBtn
 
-ToggleBtn.MouseButton1Click:Connect(function()
+--// Toggle Item 2: Fruit ESP
+local ESPToggleBtn = Instance.new("TextButton")
+ESPToggleBtn.Size = UDim2.new(0, 280, 0, 35)
+ESPToggleBtn.Position = UDim2.new(0.5, -140, 0, 95)
+ESPToggleBtn.BackgroundColor3 = Settings.FruitESP and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+ESPToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPToggleBtn.TextSize = 14
+ESPToggleBtn.Font = Enum.Font.SourceSansBold
+ESPToggleBtn.Text = "Fruit ESP: " .. (Settings.FruitESP and "ON" or "OFF")
+ESPToggleBtn.Parent = MainFrame
+
+local UICornerESP = Instance.new("UICorner")
+UICornerESP.CornerRadius = UDim.new(0, 6)
+UICornerESP.Parent = ESPToggleBtn
+
+--// Toggle Item 3: Auto Collect Fruit
+local CollectToggleBtn = Instance.new("TextButton")
+CollectToggleBtn.Size = UDim2.new(0, 280, 0, 35)
+CollectToggleBtn.Position = UDim2.new(0.5, -140, 0, 140)
+CollectToggleBtn.BackgroundColor3 = Settings.AutoCollectFruit and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+CollectToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CollectToggleBtn.TextSize = 14
+CollectToggleBtn.Font = Enum.Font.SourceSansBold
+CollectToggleBtn.Text = "Auto Collect Fruit: " .. (Settings.AutoCollectFruit and "ON" or "OFF")
+CollectToggleBtn.Parent = MainFrame
+
+local UICornerCollect = Instance.new("UICorner")
+UICornerCollect.CornerRadius = UDim.new(0, 6)
+UICornerCollect.Parent = CollectToggleBtn
+
+--// Status Label Info
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -20, 0, 35)
+StatusLabel.Position = UDim2.new(0, 10, 0, 190)
+StatusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatusLabel.TextSize = 12
+StatusLabel.Font = Enum.Font.SourceSans
+StatusLabel.Text = "Status: Ready"
+StatusLabel.Parent = MainFrame
+
+local UICornerStatus = Instance.new("UICorner")
+UICornerStatus.CornerRadius = UDim.new(0, 6)
+UICornerStatus.Parent = StatusLabel
+
+--// Event Handlers
+OpenButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
+FPSToggleBtn.MouseButton1Click:Connect(function()
+    Settings.FPSBoost = not Settings.FPSBoost
+    FPSToggleBtn.BackgroundColor3 = Settings.FPSBoost and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+    FPSToggleBtn.Text = "FPS Boost: " .. (Settings.FPSBoost and "ON" or "OFF")
+    SaveSettings()
 end)
 
--- ==============================================================================
--- 3. TAB NAVIGASI (FITUR MENU ATAS)
--- ==============================================================================
-local TabContainer = Instance.new("Frame", MainFrame)
-TabContainer.Size = UDim2.new(0.92, 0, 0, 35)
-TabContainer.Position = UDim2.new(0.04, 0, 0.12, 0)
-TabContainer.BackgroundTransparency = 1
-
-local TabList = Instance.new("UIListLayout", TabContainer)
-TabList.FillDirection = Enum.FillDirection.Horizontal
-TabList.SortOrder = Enum.SortOrder.LayoutOrder
-TabList.Padding = UDim.new(0, 6)
-
-local function createTabBtn(name)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.31, 0, 1, 0)
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 10
-    btn.Parent = TabContainer
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    return btn
-end
-
-local Tab1Btn = createTabBtn("⚡ Fitur Utama")
-local Tab2Btn = createTabBtn("📁 Explorer")
-local Tab3Btn = createTabBtn("📖 Info")
-
--- ==============================================================================
--- 4. HALAMAN KONTEN (HALAMAN 1, 2, 3)
--- ==============================================================================
-local PageContent = Instance.new("Frame", MainFrame)
-PageContent.Size = UDim2.new(0.92, 0, 0.70, 0)
-PageContent.Position = UDim2.new(0.04, 0, 0.22, 0)
-PageContent.BackgroundTransparency = 1
-
--- HALAMAN 1: FITUR UTAMA (SPEED, JUMP, FULLBRIGHT, NOCLIP)
-local Page1 = Instance.new("ScrollingFrame", PageContent)
-Page1.Size = UDim2.new(1, 0, 1, 0)
-Page1.BackgroundTransparency = 1
-Page1.CanvasSize = UDim2.new(0, 0, 0, 220)
-Page1.ScrollBarThickness = 2
-local Page1Layout = Instance.new("UIListLayout", Page1)
-Page1Layout.SortOrder = Enum.SortOrder.LayoutOrder
-Page1Layout.Padding = UDim.new(0, 8)
-
-local function createFeatureToggle(name)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 42)
-    btn.Text = name .. ": OFF"
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 11
-    btn.Parent = Page1
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    return btn
-end
-
-local SpeedBtn = createFeatureToggle("🚀 SPEED 30")
-local JumpBtn = createFeatureToggle("🦘 SUPER JUMP")
-local FullbrightBtn = createFeatureToggle("💡 FULLBRIGHT MAP")
-local NoclipBtn = createFeatureToggle("👻 NOCLIP (TEMBUS TEMBOK)")
-
--- HALAMAN 2: EXPLORER OBJEK SEKITAR
-local Page2 = Instance.new("Frame", PageContent)
-Page2.Size = UDim2.new(1, 0, 1, 0)
-Page2.BackgroundTransparency = 1
-Page2.Visible = false
-
-local ScanBtn = Instance.new("TextButton", Page2)
-ScanBtn.Size = UDim2.new(1, 0, 0, 35)
-ScanBtn.Text = "🔄 SCAN OBJEK WORKSPACE"
-ScanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-ScanBtn.Font = Enum.Font.GothamBold
-ScanBtn.TextSize = 11
-ScanBtn.Parent = Page2
-Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
-
-local ResultScroll = Instance.new("ScrollingFrame", Page2)
-ResultScroll.Size = UDim2.new(1, 0, 0, 220)
-ResultScroll.Position = UDim2.new(0, 0, 0, 42)
-ResultScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
-ResultScroll.BorderSizePixel = 0
-ResultScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-Instance.new("UICorner", ResultScroll).CornerRadius = UDim.new(0, 6)
-local ResultLayout = Instance.new("UIListLayout", ResultScroll)
-ResultLayout.Padding = UDim.new(0, 3)
-
--- HALAMAN 3: INFO PANDUAN
-local Page3 = Instance.new("Frame", PageContent)
-Page3.Size = UDim2.new(1, 0, 1, 0)
-Page3.BackgroundTransparency = 1
-Page3.Visible = false
-
-local InfoLabel = Instance.new("TextLabel", Page3)
-InfoLabel.Size = UDim2.new(1, 0, 1, 0)
-InfoLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
-InfoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-InfoLabel.Font = Enum.Font.Code
-InfoLabel.TextSize = 11
-InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
-InfoLabel.TextYAlignment = Enum.TextYAlignment.Top
-InfoLabel.TextWrapped = true
-InfoLabel.Text = [[
-=================================
-📖 INFORMASI & CARA PAKAI (DELTA):
-=================================
-1. Tombol '👑 MENU DEWA' bisa digeser (drag) ke mana saja di layar HP kamu.
-2. Tab 'Fitur Utama' berisi cheat karakter dasar (Speed, Jump, Fullbright, Noclip) yang aman dijalankan.
-3. Tab 'Explorer' untuk memindai objek sekitar di game.
-4. Script ini dirancang khusus kompatibel dengan Delta Executor HP.
-]]
-Instance.new("UICorner", InfoLabel).CornerRadius = UDim.new(0, 6)
-
--- Sistem Ganti Tab
-Tab1Btn.MouseButton1Click:Connect(function()
-    Page1.Visible = true; Page2.Visible = false; Page3.Visible = false
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    Tab3Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+ESPToggleBtn.MouseButton1Click:Connect(function()
+    Settings.FruitESP = not Settings.FruitESP
+    ESPToggleBtn.BackgroundColor3 = Settings.FruitESP and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+    ESPToggleBtn.Text = "Fruit ESP: " .. (Settings.FruitESP and "ON" or "OFF")
+    SaveSettings()
 end)
 
-Tab2Btn.MouseButton1Click:Connect(function()
-    Page1.Visible = false; Page2.Visible = true; Page3.Visible = false
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    Tab3Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+CollectToggleBtn.MouseButton1Click:Connect(function()
+    Settings.AutoCollectFruit = not Settings.AutoCollectFruit
+    CollectToggleBtn.BackgroundColor3 = Settings.AutoCollectFruit and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+    CollectToggleBtn.Text = "Auto Collect Fruit: " .. (Settings.AutoCollectFruit and "ON" or "OFF")
+    SaveSettings()
 end)
 
-Tab3Btn.MouseButton1Click:Connect(function()
-    Page1.Visible = false; Page2.Visible = false; Page3.Visible = true
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    Tab3Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-end)
-
-Tab1Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255) -- Default aktif
-
--- ==============================================================================
--- 5. LOGIKA EKSEKUSI FITUR AMAN DELTA
--- ==============================================================================
-local SpeedState = false
-local JumpState = false
-local FullbrightState = false
-local NoclipState = false
-
-SpeedBtn.MouseButton1Click:Connect(function()
-    SpeedState = not SpeedState
-    SpeedBtn.Text = "🚀 SPEED 30: " .. (SpeedState and "ON" or "OFF")
-    SpeedBtn.BackgroundColor3 = SpeedState and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
-JumpStateBtn = JumpBtn
-JumpBtn.MouseButton1Click:Connect(function()
-    JumpState = not JumpState
-    JumpBtn.Text = "🦘 SUPER JUMP: " .. (JumpState and "ON" or "OFF")
-    JumpBtn.BackgroundColor3 = JumpState and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
-FullbrightBtn.MouseButton1Click:Connect(function()
-    FullbrightState = not FullbrightState
-    FullbrightBtn.Text = "💡 FULLBRIGHT MAP: " .. (FullbrightState and "ON" or "OFF")
-    FullbrightBtn.BackgroundColor3 = FullbrightState and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
-NoclipBtn.MouseButton1Click:Connect(function()
-    NoclipState = not NoclipState
-    NoclipBtn.Text = "👻 NOCLIP: " .. (NoclipState and "ON" or "OFF")
-    NoclipBtn.BackgroundColor3 = NoclipState and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
--- Scan Objek Workspace Aman
-ScanBtn.MouseButton1Click:Connect(function()
-    ScanBtn.Text = "MEMINDAI..."
-    ScanBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
-    
+--// Logika FPS Boost
+RunService.Stepped:Connect(function()
     pcall(function()
-        for _, child in pairs(ResultScroll:GetChildren()) do
-            if child:IsA("TextButton") then child:Destroy() end
-        end
-        
-        local count = 0
-        for _, obj in pairs(workspace:GetChildren()) do
-            if obj and obj.Name then
-                count = count + 1
-                local itemBtn = Instance.new("TextButton")
-                itemBtn.Size = UDim2.new(1, -6, 0, 28)
-                itemBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-                itemBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-                itemBtn.Font = Enum.Font.Code
-                itemBtn.TextSize = 10
-                itemBtn.Text = "▪ " .. obj.Name .. " [" .. obj.ClassName .. "]"
-                itemBtn.TextXAlignment = Enum.TextXAlignment.Left
-                itemBtn.Parent = ResultScroll
-                Instance.new("UICorner", itemBtn).CornerRadius = UDim.new(0, 4)
-            end
-        end
-        ResultScroll.CanvasSize = UDim2.new(0, 0, 0, count * 32)
-    end)
-    
-    ScanBtn.Text = "🔄 SCAN OBJEK WORKSPACE"
-    ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-end)
-
--- Loop Utama (Heartbeat) untuk menjalankan efek cheat
-RunService.Heartbeat:Connect(function()
-    pcall(function()
-        local char = player.Character
-        if char and char:FindFirstChild("Humanoid") then
-            local humanoid = char.Humanoid
-            if SpeedState then
-                humanoid.WalkSpeed = 30
-            end
-            if JumpState then
-                humanoid.JumpPower = 100
-            end
-        end
-        
-        if FullbrightState then
-            Lighting.Brightness = 2
-            Lighting.ClockTime = 14
+        if Settings.FPSBoost then
             Lighting.GlobalShadows = false
-        end
-        
-        if NoclipState and char then
-            for _, part in pairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
+            Lighting.FogEnd = 9e9
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    v.CastShadow = false
+                elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                    v.Enabled = false
                 end
             end
         end
     end)
 end)
 
-print("👑 DEWA DELTA SUPREME HUD LOADED SUCCESSFULLY! 👑")
+--// Noclip untuk Karakter saat Auto Collect Aktif
+RunService.Stepped:Connect(function()
+    pcall(function()
+        if Settings.AutoCollectFruit then
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+--// Fungsi Deteksi Pulau
+local function GetIslandName(pos)
+    if pos.Z > 20000 then
+        return "Third Sea Island"
+    elseif pos.Z < -10000 and pos.Z > -30000 then
+        return "Second Sea Island"
+    else
+        return "First Sea Island / Main Area"
+    end
+end
+
+--// Logika Fruit ESP & Sistem Notifikasi Popup Beranimasi (Tween)
+local function ShowFruitPopup(fruitName)
+    pcall(function()
+        local popupGui = Instance.new("ScreenGui")
+        popupGui.Name = "FruitPopupNotification"
+        popupGui.Parent = CoreGui
+        
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(0, 280, 0, 60)
+        frame.Position = UDim2.new(0.5, -140, 0, -80)
+        frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+        frame.BorderColor3 = Color3.fromRGB(255, 215, 0)
+        frame.Parent = popupGui
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = frame
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.TextColor3 = Color3.fromRGB(255, 215, 0)
+        label.TextSize = 14
+        label.Font = Enum.Font.SourceSansBold
+        label.Text = "BUAH SPAWN!\n" .. fruitName
+        label.Parent = frame
+        
+        -- Animasi Masuk (Slide In)
+        local tweenIn = TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -140, 0, 30)})
+        tweenIn:Play()
+        
+        task.delay(3, function()
+            -- Animasi Keluar (Slide Out)
+            local tweenOut = TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -140, 0, -80)})
+            tweenOut:Play()
+            tweenOut.Completed:Connect(function()
+                popupGui:Destroy()
+            end)
+        end)
+    end)
+end
+
+--// Logika Utama: Fruit ESP & Auto Collect Terbang Mulus (Stabil, Tanpa Teleport & Kamera Aman)
+task.spawn(function()
+    local activeESPs = {}
+    local trackedNotif = {}
+    local attachment, linearVelocity, alignOrientation
+    
+    while true do
+        task.wait(0.2)
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char and char:FindFirstChild("Humanoid")
+            
+            -- Bersihkan ESP lama
+            for fruitObj, espGui in pairs(activeESPs) do
+                if not fruitObj or not fruitObj.Parent then
+                    if espGui then espGui:Destroy() end
+                    activeESPs[fruitObj] = nil
+                end
+            end
+            
+            local targetFruit = nil
+            local shortestDistance = math.huge
+            
+            for _, obj in pairs(Workspace:GetChildren()) do
+                if obj:IsA("Tool") or obj:IsA("Model") then
+                    if obj.Name:find("Fruit") then
+                        local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
+                        
+                        if part then
+                            -- Trigger Notifikasi Popup Beranimasi untuk buah baru
+                            if not trackedNotif[obj] then
+                                trackedNotif[obj] = true
+                                ShowFruitPopup(obj.Name)
+                            end
+                            
+                            -- Buat ESP Tag
+                            if not activeESPs[obj] then
+                                local bill = Instance.new("BillboardGui")
+                                bill.Name = "FruitESP_Tag"
+                                bill.Size = UDim2.new(0, 200, 0, 50)
+                                bill.AlwaysOnTop = true
+                                bill.StudsOffset = Vector3.new(0, 3, 0)
+                                
+                                local textLabel = Instance.new("TextLabel")
+                                textLabel.Size = UDim2.new(1, 0, 1, 0)
+                                textLabel.BackgroundTransparency = 1
+                                textLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+                                textLabel.TextStrokeTransparency = 0
+                                textLabel.TextSize = 14
+                                textLabel.Font = Enum.Font.SourceSansBold
+                                textLabel.Parent = bill
+                                
+                                bill.Parent = part
+                                activeESPs[obj] = bill
+                            end
+                            
+                            -- Update Teks ESP
+                            if activeESPs[obj] and hrp then
+                                local textLabel = activeESPs[obj]:FindFirstChild("TextLabel")
+                                if textLabel then
+                                    local dist = math.floor((hrp.Position - part.Position).Magnitude)
+                                    local island = GetIslandName(part.Position)
+                                    textLabel.Text = string.Format("[%s]\nJarak: %dm\nPulau: %s", obj.Name, dist, island)
+                                end
+                            end
+                            
+                            -- Cari buah terdekat untuk Auto Collect
+                            if Settings.AutoCollectFruit and hrp then
+                                local dist = (hrp.Position - part.Position).Magnitude
+                                if dist < shortestDistance then
+                                    shortestDistance = dist
+                                    targetFruit = part
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            -- Eksekusi Terbang Mulus ke Buah (Tanpa Teleport & Kamera Stabil)
+            if Settings.AutoCollectFruit and hrp and humanoid and humanoid.Health > 0 then
+                if targetFruit and targetFruit.Parent then
+                    humanoid.PlatformStand = true
+                    
+                    -- Setup Fisika Terbang Stabil
+                    if not hrp:FindFirstChild("FruitFlyAttachment") then
+                        attachment = Instance.new("Attachment")
+                        attachment.Name = "FruitFlyAttachment"
+                        attachment.Parent = hrp
+                    else
+                        attachment = hrp:FindFirstChild("FruitFlyAttachment")
+                    end
+                    
+                    if not hrp:FindFirstChild("FruitFlyVelocity") then
+                        linearVelocity = Instance.new("LinearVelocity")
+                        linearVelocity.Name = "FruitFlyVelocity"
+                        linearVelocity.Attachment0 = attachment
+                        linearVelocity.MaxForce = math.huge
+                        linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
+                        linearVelocity.Parent = hrp
+                    else
+                        linearVelocity = hrp:FindFirstChild("FruitFlyVelocity")
+                    end
+                    
+                    if not hrp:FindFirstChild("FruitFlyOrientation") then
+                        alignOrientation = Instance.new("AlignOrientation")
+                        alignOrientation.Name = "FruitFlyOrientation"
+                        alignOrientation.Attachment0 = attachment
+                        alignOrientation.MaxTorque = math.huge
+                        alignOrientation.Responsiveness = 200
+                        alignOrientation.Parent = hrp
+                    else
+                        alignOrientation = hrp:FindFirstChild("FruitFlyOrientation")
+                    end
+                    
+                    local targetPos = targetFruit.Position + Vector3.new(0, 2, 0)
+                    local direction = (targetPos - hrp.Position)
+                    local distance = direction.Magnitude
+                    
+                    if distance > 3 then
+                        linearVelocity.VectorVelocity = direction.Unit * 280
+                        alignOrientation.CFrame = CFrame.new(hrp.Position, targetPos)
+                        StatusLabel.Text = "Terbang ke Buah..."
+                    else
+                        linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
+                        StatusLabel.Text = "Mengambil Buah..."
+                    end
+                else
+                    -- Jika tidak ada buah, hapus physics terbang sementara
+                    if hrp:FindFirstChild("FruitFlyVelocity") then hrp.FruitFlyVelocity:Destroy() end
+                    if hrp:FindFirstChild("FruitFlyOrientation") then hrp.FruitFlyOrientation:Destroy() end
+                    if hrp:FindFirstChild("FruitFlyAttachment") then hrp.FruitFlyAttachment:Destroy() end
+                    humanoid.PlatformStand = false
+                    StatusLabel.Text = "Status: Menunggu Buah Spawn..."
+                end
+            else
+                -- Matikan fitur terbang jika toggle dimatikan atau karakter mati
+                if hrp then
+                    if hrp:FindFirstChild("FruitFlyVelocity") then hrp.FruitFlyVelocity:Destroy() end
+                    if hrp:FindFirstChild("FruitFlyOrientation") then hrp.FruitFlyOrientation:Destroy() end
+                    if hrp:FindFirstChild("FruitFlyAttachment") then hrp.FruitFlyAttachment:Destroy() end
+                end
+                if humanoid then
+                    humanoid.PlatformStand = false
+                end
+                if not Settings.FruitESP then
+                    StatusLabel.Text = "Status: Ready"
+                end
+            end
+        end)
+    end
+end)
