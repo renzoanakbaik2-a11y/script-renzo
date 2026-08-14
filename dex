@@ -1,0 +1,195 @@
+-- ==============================================================================
+-- DEWA CODING: MOBILE DEX-LITE EXPLORER V600.0 (SELECTION & HIGHLIGHT)
+-- ==============================================================================
+
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+pcall(function()
+    if CoreGui:FindFirstChild("DewaDexLite") then
+        CoreGui.DewaDexLite:Destroy()
+    end
+end)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DewaDexLite"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not ScreenGui.Parent then
+    pcall(function()
+        ScreenGui.Parent = player:WaitForChild("PlayerGui")
+    end)
+end
+
+-- Tombol Melayang Utama
+local ToggleBtn = Instance.new("TextButton", ScreenGui)
+ToggleBtn.Size = UDim2.new(0, 140, 0, 42)
+ToggleBtn.Position = UDim2.new(0, 15, 0.25, 0)
+ToggleBtn.Text = "📦 DEX-LITE EXPLORER"
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.BorderSizePixel = 2
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 11
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
+
+-- Panel Utama
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 420, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = false
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Color = Color3.fromRGB(0, 255, 128)
+UIStroke.Thickness = 1.5
+
+-- Top Bar
+local TopBar = Instance.new("Frame", MainFrame)
+TopBar.Size = UDim2.new(1, 0, 0, 35)
+TopBar.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+TopBar.BorderSizePixel = 0
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "📦 DEX-LITE: WORKSPACE INSPECTOR"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 10
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+
+local CloseBtn = Instance.new("TextButton", TopBar)
+CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+CloseBtn.Position = UDim2.new(1, -28, 0.5, -12)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 10
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+end)
+
+-- Status Info Detail Objek Terpilih
+local StatusLabel = Instance.new("TextLabel", MainFrame)
+StatusLabel.Size = UDim2.new(0.92, 0, 0, 45)
+StatusLabel.Position = UDim2.new(0.04, 0, 0.12, 0)
+StatusLabel.Text = "Info: Klik 'SCAN MAP' lalu pilih objek di list atau klik langsung di game."
+StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextSize = 10
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
+StatusLabel.TextWrapped = true
+StatusLabel.BackgroundTransparency = 1
+
+-- List Scrolling Frame
+local ScrollFrame = Instance.new("ScrollingFrame", MainFrame)
+ScrollFrame.Size = UDim2.new(0.92, 0, 0.58, 0)
+ScrollFrame.Position = UDim2.new(0.04, 0, 0.26, 0)
+ScrollFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", ScrollFrame).CornerRadius = UDim.new(0, 6)
+
+local UIList = Instance.new("UIListLayout", ScrollFrame)
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 3)
+
+-- Tombol Scan
+local ScanBtn = Instance.new("TextButton", MainFrame)
+ScanBtn.Size = UDim2.new(0.92, 0, 0, 32)
+ScanBtn.Position = UDim2.new(0.04, 0, 0.88, 0)
+ScanBtn.Text = "🔄 SCAN OBJEK WORKSPACE"
+ScanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+ScanBtn.Font = Enum.Font.GothamBold
+ScanBtn.TextSize = 10
+Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
+
+-- Folder & SelectionBox untuk Garis Batas Objek (Highlight)
+local HighlightFolder = Instance.new("Folder", ScreenGui)
+HighlightFolder.Name = "DewaHighlights"
+
+local function selectObject(obj)
+    HighlightFolder:ClearAllChildren()
+    if obj and obj:IsA("Instance") then
+        pcall(function()
+            local box = Instance.new("SelectionBox")
+            box.Adornee = obj
+            box.Color3 = Color3.fromRGB(0, 255, 128)
+            box.LineThickness = 0.08
+            box.Parent = HighlightFolder
+        end)
+        
+        -- Cari jalur folder aslinya (Path)
+        local success, path = pcall(function()
+            return obj:GetFullName()
+        end)
+        
+        StatusLabel.Text = "Terpilih:\nNama: " .. obj.Name .. "\nKelas: " .. obj.ClassName .. "\nPath: " .. (success and path or "Unknown")
+    end
+end
+
+-- Tombol Scan Workspace
+ScanBtn.MouseButton1Click:Connect(function()
+    ScanBtn.Text = "MEMINDAI..."
+    ScanBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+    
+    pcall(function()
+        for _, child in pairs(ScrollFrame:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+        HighlightFolder:ClearAllChildren()
+        
+        local count = 0
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj and obj.Name then
+                count = count + 1
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, -6, 0, 26)
+                btn.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+                btn.TextColor3 = Color3.fromRGB(210, 210, 210)
+                btn.Font = Enum.Font.Code
+                btn.TextSize = 9
+                btn.Text = "📁 " .. obj.Name .. " [" .. obj.ClassName .. "]"
+                btn.TextXAlignment = Enum.TextXAlignment.Left
+                btn.Parent = ScrollFrame
+                Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+                
+                -- Kalau tombol di menu diklik, arahkan garis kotak ke objek itu
+                btn.MouseButton1Click:Connect(function()
+                    selectObject(obj)
+                end)
+            end
+        end
+        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, count * 29)
+        StatusLabel.Text = "Scan Selesai! Ditemukan " .. count .. " objek."
+    end)
+    
+    ScanBtn.Text = "🔄 SCAN OBJEK WORKSPACE"
+    ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+end)
