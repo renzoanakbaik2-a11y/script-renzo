@@ -1,5 +1,5 @@
 -- =====================================================================
--- BRAINROT SURVIVAL HUB (EXACT ARENA PATH VERSION)
+-- BRAINROT SURVIVAL HUB (STRICT ARENA FILTER VERSION - FIXED)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -108,7 +108,7 @@ task.spawn(function()
     end
 end)
 
--- 3. Auto Collect Best Cube (Hanya cari di Workspace > World > Arena, dan skip PlayerZones)
+-- 3. Auto Collect Best Cube (REVISI FILTER KETAT AGAR TIDAK KE BASE PEMAIN)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -117,45 +117,44 @@ task.spawn(function()
                 local bestCubePart = nil
                 local highestRarity = -1
                 
-                -- Cari folder Arena secara spesifik
-                local arenaFolder = nil
-                local worldFolder = Workspace:FindFirstChild("World")
-                if worldFolder then
-                    arenaFolder = worldFolder:FindFirstChild("Arena")
-                end
-                
-                -- Jika folder Arena ketemu, kita sisir isinya tapi abaikan PlayerZones
-                if arenaFolder then
-                    for _, obj in pairs(arenaFolder:GetDescendants()) do
-                        -- Pastikan objek tidak berada di dalam folder PlayerZones atau base player
-                        local isPlayerZone = false
-                        local pCheck = obj.Parent
-                        while pCheck and pCheck ~= arenaFolder do
-                            if pCheck.Name == "PlayerZones" or pCheck.Name:lower():find("player") then
-                                isPlayerZone = true
-                                break
-                            end
-                            pCheck = pCheck.Parent
+                local function isValidSpawnObject(obj)
+                    local current = obj.Parent
+                    while current and current ~= Workspace do
+                        local nameLower = current.Name:lower()
+                        
+                        -- Blokir total jika berada di folder yang mengarah ke base/plot/penyimpanan player
+                        if nameLower:find("plot") or nameLower:find("base") or nameLower:find("owner") or nameLower:find("backpack") or nameLower:find("storage") then
+                            return false
                         end
                         
-                        if not isPlayerZone then
-                            local nameLower = obj.Name:lower()
-                            if nameLower:find("cube") or nameLower:find("brainrot") then
-                                local rarity = getCubeRarity(obj.Name)
-                                if rarity >= highestRarity then
-                                    highestRarity = rarity
-                                    if obj:IsA("BasePart") then
-                                        bestCubePart = obj
-                                    elseif obj:IsA("Model") then
-                                        bestCubePart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-                                    end
-                                end
+                        -- Blokir jika objek berada di dalam karakter player lain
+                        for _, p in pairs(Players:GetPlayers()) do
+                            if p.Character and current == p.Character then
+                                return false
+                            end
+                        end
+                        
+                        current = current.Parent
+                    end
+                    
+                    return true
+                end
+                
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    local nameLower = obj.Name:lower()
+                    if (nameLower:find("cube") or nameLower:find("brainrot")) and isValidSpawnObject(obj) then
+                        local rarity = getCubeRarity(obj.Name)
+                        if rarity >= highestRarity then
+                            highestRarity = rarity
+                            if obj:IsA("BasePart") then
+                                bestCubePart = obj
+                            elseif obj:IsA("Model") then
+                                bestCubePart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
                             end
                         end
                     end
                 end
                 
-                -- Teleport ke cube terbaik yang benar-benar ada di dalam Arena map
                 if bestCubePart and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     local hrp = LocalPlayer.Character.HumanoidRootPart
                     hrp.CFrame = bestCubePart.CFrame + Vector3.new(0, 2, 0)
@@ -209,7 +208,7 @@ TopCorner.CornerRadius = UDim.new(0, 10)
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 1, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Brainrot Hub | Arena Fixed"
+TitleLabel.Text = "Brainrot Hub | Full Version"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextSize = 12
@@ -266,4 +265,4 @@ createToggle("Auto Run Extraction", "AutoExtractRun")
 createToggle("Anti Player (High Fly)", "AntiPlayerHighFly")
 createToggle("Auto Collect Best Cube", "AutoCollectRareCube")
 
-print("Brainrot Hub Arena Fixed Version Loaded Successfully!")
+print("Brainrot Hub Full Version Loaded Successfully!")
