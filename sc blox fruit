@@ -1,6 +1,6 @@
 -- =====================================================================
 -- BLOX FRUITS ULTIMATE SCRIPT (DELTA & ALL EXECUTORS READY)
--- Fitur: Delay Loading Notif, Durasi Notif Diperlama & Lebih Mulus,
+-- Fitur: Delay Loading Notif 15 Detik, Durasi Notif Diperlama,
 -- Auto Collect Fruit, Dual Status Notif, GUI On/Off + Save JSON, dll.
 -- =====================================================================
 
@@ -14,7 +14,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Ultimate_v7.json"
+local FileName = "BloxFruitsHub_Ultimate_v8.json"
 
 -- Pengaturan Default
 local Settings = {
@@ -86,7 +86,7 @@ local function getCharacterRootPart()
 end
 
 -- =====================================================================
--- 1. SISTEM NOTIFIKASI (DELAY MASUK + DURASI LEBIH LAMA & MULUS)
+-- 1. SISTEM NOTIFIKASI
 -- =====================================================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 380, 0, 50)
@@ -132,12 +132,10 @@ local function showCustomNotification(messageText, textColor)
     NotifText.Text = messageText
     NotifText.TextColor3 = textColor or Color3.fromRGB(255, 255, 255)
 
-    -- Durasi naik/turun diperlambat jadi 0.8 detik agar sangat mulus (tidak ngebut)
     TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
         Position = UDim2.new(0.5, 0, 0, 15)
     }):Play()
 
-    -- Waktu baca teks di layar diperlama menjadi 7 detik (sebelumnya 4 detik)
     task.wait(7)
 
     TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
@@ -365,8 +363,8 @@ end)
 
 local lastFruitState = false
 task.spawn(function()
-    -- DELAY 7 DETIK SAAT PERTAMA KALI MASUK GAME (Biar nggak lag / bentrok sama loading awal)
-    task.wait(7)
+    -- DELAY 15 DETIK SAAT PERTAMA KALI MASUK GAME (Biar game benar-benar stabil & tidak terburu-buru)
+    task.wait(15)
 
     if Settings.FruitNotifier then
         showCustomNotification("STATUS: Memantau Map (Belum Ada Buah)", Color3.fromRGB(200, 200, 200))
@@ -436,10 +434,10 @@ local function joinTeam()
 end
 
 LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(3)
+    task.wait(4)
     joinTeam()
 end)
-task.spawn(function() task.wait(2) joinTeam() end)
+task.spawn(function() task.wait(3) joinTeam() end)
 
 -- =====================================================================
 -- 7. FPS BOOST
