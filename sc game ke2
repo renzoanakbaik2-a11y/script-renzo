@@ -1,89 +1,146 @@
 -- =====================================================================
--- BRAINROT SURVIVAL HUB - STREAMLINED ELITE
+-- BRAINROT SURVIVAL HUB - FULL ELITE VERSION (OPTIMIZED & STABLE)
 -- =====================================================================
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
-_G.BrainrotSettings = {
-    AutoCollect = false,
-    AntiPlayer = false
+_G.BrainrotSettings = { 
+    AutoCollect = false, 
+    AntiPlayer = false 
 }
 
--- [1. UI DESIGN]
+-- [1. UI SETUP: MENU UTAMA]
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "BrainrotHub"
+
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 250, 0, 250)
-MainFrame.Position = UDim2.new(0.5, -125, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 260, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -140)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderSizePixel = 0
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
 
-local Container = Instance.new("UIListLayout", MainFrame)
-Container.Padding = UDim.new(0, 15)
-Container.HorizontalAlignment = Enum.HorizontalAlignment.Center
-Container.Padding = UDim.new(0, 20)
+-- Top Bar / Judul Menu
+local TopBar = Instance.new("Frame", MainFrame)
+TopBar.Size = UDim2.new(1, 0, 0, 45)
+TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 15)
 
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.Text = "BRAINROT HUB"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Title.BackgroundTransparency = 1
+
+-- Container untuk Tombol-tombol Fitur
+local Container = Instance.new("ScrollingFrame", MainFrame)
+Container.Size = UDim2.new(1, -20, 1, -65)
+Container.Position = UDim2.new(0, 10, 0, 55)
+Container.BackgroundTransparency = 1
+Container.ScrollBarThickness = 0
+
+local UIList = Instance.new("UIListLayout", Container)
+UIList.Padding = UDim.new(0, 12)
+UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- Fungsi Pembuat Tombol di Menu
 local function createButton(text, settingKey)
-    local btn = Instance.new("TextButton", MainFrame)
-    btn.Size = UDim2.new(0.9, 0, 0, 60)
+    local btn = Instance.new("TextButton", Container)
+    btn.Size = UDim2.new(1, 0, 0, 45)
     btn.Text = text .. " [OFF]"
     btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 14
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
     
     btn.MouseButton1Click:Connect(function()
         _G.BrainrotSettings[settingKey] = not _G.BrainrotSettings[settingKey]
-        btn.Text = text .. (_G.BrainrotSettings[settingKey] and " [ON]" or " [OFF]")
-        btn.BackgroundColor3 = _G.BrainrotSettings[settingKey] and Color3.fromRGB(60, 179, 113) or Color3.fromRGB(40, 40, 40)
+        local state = _G.BrainrotSettings[settingKey]
+        btn.Text = text .. (state and " [ON]" or " [OFF]")
+        btn.BackgroundColor3 = state and Color3.fromRGB(60, 179, 113) or Color3.fromRGB(40, 40, 40)
     end)
 end
 
 createButton("Auto Collect", "AutoCollect")
 createButton("Anti Player", "AntiPlayer")
 
--- [2. LOGIKA UTAMA (Satu Loop Efisien)]
-local function isSafe(obj)
-    local path = obj:GetFullName()
-    return not (path:find("PlayerZones") or path:find("Plot") or path:find("Base"))
-end
+-- Tombol Toggle Menu (Muncul di Layar untuk Buka/Tutup Menu)
+local ToggleBtn = Instance.new("TextButton", ScreenGui)
+ToggleBtn.Size = UDim2.new(0, 90, 0, 35)
+ToggleBtn.Position = UDim2.new(0, 20, 0, 20)
+ToggleBtn.Text = "MENU"
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 12
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
 
-local function collect(part)
-    if not part then return end
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- [2. LOGIKA UTAMA: SCRIPT MESIN]
+local function getNearestTarget()
     local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = part.CFrame * CFrame.new(0, 2, 0)
-        if firetouchinterest then
-            firetouchinterest(char.HumanoidRootPart, part, 0)
-            task.wait(0.05)
-            firetouchinterest(char.HumanoidRootPart, part, 1)
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = char.HumanoidRootPart.Position
+
+    local closestPart = nil
+    local shortestDist = 150 -- Batas radius maksimal pencarian
+
+    -- Memindai Workspace secara global dengan aman & efisien
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local name = obj.Name:lower()
+            if name:find("cube") or name:find("fruit") or name:find("brainrot") then
+                
+                -- Pengecekan parent ringan (tanpa GetFullName yang bikin berat)
+                local p = obj.Parent
+                if p and not (p.Name == "PlayerZones" or p.Name == "Plot" or p.Name == "Base") then
+                    local dist = (obj.Position - myPos).Magnitude
+                    if dist < shortestDist then
+                        shortestDist = dist
+                        closestPart = obj
+                    end
+                end
+            end
         end
     end
+    return closestPart
 end
 
+-- Task Loop Utama
 task.spawn(function()
     while task.wait(0.3) do
-        local Arena = Workspace:FindFirstChild("World") and Workspace.World:FindFirstChild("Arena")
-        if not Arena then continue end
-
-        -- Auto Collect (Cube, Brainrot, Fruit, Apple digabung)
+        -- 1. Fitur Auto Collect
         if _G.BrainrotSettings.AutoCollect then
-            for _, obj in pairs(Arena:GetDescendants()) do
-                if obj:IsA("BasePart") and isSafe(obj) then
-                    local name = obj.Name:lower()
-                    -- Mengecek semua keyword dalam satu kondisi
-                    if name:find("cube") or name:find("brainrot") or name:find("fruit") or name:find("apple") then
-                        collect(obj)
-                        break -- Ambil satu objek terdekat lalu loop lagi
+            local target = getNearestTarget()
+            if target then
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    -- Teleport stabil dengan offset kecil anti-rubberband
+                    char.HumanoidRootPart.CFrame = target.CFrame + Vector3.new(0, 0.5, 0)
+                    
+                    -- Pemicu interaksi aman
+                    if target:FindFirstChild("TouchInterest") and firetouchinterest then
+                        firetouchinterest(char.HumanoidRootPart, target, 0)
+                        task.wait(0.05)
+                        firetouchinterest(char.HumanoidRootPart, target, 1)
                     end
                 end
             end
         end
 
-        -- Anti Player
+        -- 2. Fitur Anti Player
         if _G.BrainrotSettings.AntiPlayer then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
                 for _, p in pairs(Players:GetPlayers()) do
                     if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                         if (hrp.Position - p.Character.HumanoidRootPart.Position).Magnitude < 25 then
@@ -96,4 +153,4 @@ task.spawn(function()
     end
 end)
 
-print("Brainrot Survival Hub Streamlined!")
+print("Brainrot Survival Hub Full Elite Loaded Successfully!")
