@@ -11,7 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 --// FileName untuk Save Settings
-local SettingsFileName = "BloxFruits_UltimateHub_SizeSettings.json"
+local SettingsFileName = "BloxFruits_UltimateHub_Settings_v4.json"
 
 --// Default Settings & State
 local Settings = {
@@ -19,6 +19,7 @@ local Settings = {
     FruitESP = false,
     AutoCollectFruit = false,
     AutoStoreFruit = false,
+    Notifications = true, -- Status Notifikasi (On/Off)
     AutoJoinTeam = false, -- Status Auto Join Team
     SelectedTeam = "Pirates", -- Pilihan default: Pirates atau Marines
     MenuSize = "Medium"
@@ -70,7 +71,7 @@ local OpenButton = Instance.new("TextButton")
 OpenButton.Name = "OpenButton"
 OpenButton.Size = UDim2.new(0, 65, 0, 65)
 OpenButton.Position = UDim2.new(0, 30, 0, 150)
-OpenButton.BackgroundColor3 = Color3.fromRGB(15, 45, 80)
+OpenButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Background Hitam
 OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenButton.TextSize = 14
 OpenButton.Font = Enum.Font.SourceSansBold
@@ -83,6 +84,7 @@ local UICornerOpen = Instance.new("UICorner")
 UICornerOpen.CornerRadius = UDim.new(0, 10)
 UICornerOpen.Parent = OpenButton
 
+--// Bingkai Garis Pinggir Biru
 local UIStrokeOpen = Instance.new("UIStroke")
 UIStrokeOpen.Color = Color3.fromRGB(40, 120, 210)
 UIStrokeOpen.Thickness = 2.5
@@ -99,12 +101,12 @@ local function GetSizeDimensions(sizeType)
     end
 end
 
---// Main Frame (Menu Utama)
+--// Main Frame (Menu Utama - Background Hitam, Pinggiran Biru)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = GetSizeDimensions(Settings.MenuSize)
 MainFrame.Position = UDim2.new(0.5, -175, 0.5, -180)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 42, 75)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Background Hitam Sisa Tengah
 MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -115,6 +117,7 @@ local UICornerMain = Instance.new("UICorner")
 UICornerMain.CornerRadius = UDim.new(0, 10)
 UICornerMain.Parent = MainFrame
 
+--// Pinggiran Menu Utama Warna Biru
 local UIStrokeMain = Instance.new("UIStroke")
 UIStrokeMain.Color = Color3.fromRGB(40, 120, 210)
 UIStrokeMain.Thickness = 2.5
@@ -123,8 +126,13 @@ UIStrokeMain.Parent = MainFrame
 --// Header / Title Bar
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 45)
-TitleBar.BackgroundColor3 = Color3.fromRGB(20, 50, 90)
+TitleBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Background Hitam Title Bar
 TitleBar.Parent = MainFrame
+
+local TitleStroke = Instance.new("UIStroke")
+TitleStroke.Color = Color3.fromRGB(40, 120, 210)
+TitleStroke.Thickness = 1
+TitleStroke.Parent = TitleBar
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, -45, 1, 0)
@@ -152,7 +160,7 @@ local UICornerClose = Instance.new("UICorner")
 UICornerClose.CornerRadius = UDim.new(0, 6)
 UICornerClose.Parent = CloseButton
 
---// ScrollingFrame dengan AutomaticCanvasSize agar tidak terpotong / pendek
+--// ScrollingFrame dengan AutomaticCanvasSize agar tidak terpotong & Bisa di-scroll
 local ScrollingContainer = Instance.new("ScrollingFrame")
 ScrollingContainer.Size = UDim2.new(1, 0, 1, -45)
 ScrollingContainer.Position = UDim2.new(0, 0, 0, 45)
@@ -176,206 +184,82 @@ ScrollingPadding.PaddingBottom = UDim.new(0, 15)
 ScrollingPadding.PaddingLeft = UDim.new(0, 15)
 ScrollingPadding.Parent = ScrollingContainer
 
---// Toggle Item 1: Mode Cepat / FPS Boost
-local FPSToggleBtn = Instance.new("TextButton")
-FPSToggleBtn.Size = UDim2.new(1, -30, 0, 34)
-FPSToggleBtn.BackgroundColor3 = Settings.FPSBoost and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
-FPSToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-FPSToggleBtn.TextSize = 13
-FPSToggleBtn.Font = Enum.Font.SourceSansBold
-FPSToggleBtn.Text = "Mode Cepat (FPS Boost): " .. (Settings.FPSBoost and "On" or "Off")
-FPSToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-FPSToggleBtn.LayoutOrder = 1
-FPSToggleBtn.Parent = ScrollingContainer
+--// ==========================================
+--// KELOMPOK 1: PENGATURAN UMUM & MENU
+--// ==========================================
 
-local UIPaddingFPS = Instance.new("UIPadding")
-UIPaddingFPS.PaddingLeft = UDim.new(0, 12)
-UIPaddingFPS.Parent = FPSToggleBtn
-Instance.new("UICorner", FPSToggleBtn).CornerRadius = UDim.new(0, 6)
-
---// Toggle Item 2: Fruit ESP
-local ESPToggleBtn = Instance.new("TextButton")
-ESPToggleBtn.Size = UDim2.new(1, -30, 0, 34)
-ESPToggleBtn.BackgroundColor3 = Settings.FruitESP and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
-ESPToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ESPToggleBtn.TextSize = 13
-ESPToggleBtn.Font = Enum.Font.SourceSansBold
-ESPToggleBtn.Text = "Fruit ESP: " .. (Settings.FruitESP and "On" or "Off")
-ESPToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-ESPToggleBtn.LayoutOrder = 2
-ESPToggleBtn.Parent = ScrollingContainer
-
-local UIPaddingESP = Instance.new("UIPadding")
-UIPaddingESP.PaddingLeft = UDim.new(0, 12)
-UIPaddingESP.Parent = ESPToggleBtn
-Instance.new("UICorner", ESPToggleBtn).CornerRadius = UDim.new(0, 6)
-
---// Toggle Item 3: Auto Collect Fruit
-local CollectToggleBtn = Instance.new("TextButton")
-CollectToggleBtn.Size = UDim2.new(1, -30, 0, 34)
-CollectToggleBtn.BackgroundColor3 = Settings.AutoCollectFruit and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
-CollectToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CollectToggleBtn.TextSize = 13
-CollectToggleBtn.Font = Enum.Font.SourceSansBold
-CollectToggleBtn.Text = "Auto Collect Fruit: " .. (Settings.AutoCollectFruit and "On" or "Off")
-CollectToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-CollectToggleBtn.LayoutOrder = 3
-CollectToggleBtn.Parent = ScrollingContainer
-
-local UIPaddingCollect = Instance.new("UIPadding")
-UIPaddingCollect.PaddingLeft = UDim.new(0, 12)
-UIPaddingCollect.Parent = CollectToggleBtn
-Instance.new("UICorner", CollectToggleBtn).CornerRadius = UDim.new(0, 6)
-
---// Toggle Item 4: Auto Store Fruit
-local StoreToggleBtn = Instance.new("TextButton")
-StoreToggleBtn.Size = UDim2.new(1, -30, 0, 34)
-StoreToggleBtn.BackgroundColor3 = Settings.AutoStoreFruit and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
-StoreToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-StoreToggleBtn.TextSize = 13
-StoreToggleBtn.Font = Enum.Font.SourceSansBold
-StoreToggleBtn.Text = "Auto Store Fruit: " .. (Settings.AutoStoreFruit and "On" or "Off")
-StoreToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-StoreToggleBtn.LayoutOrder = 4
-StoreToggleBtn.Parent = ScrollingContainer
-
-local UIPaddingStore = Instance.new("UIPadding")
-UIPaddingStore.PaddingLeft = UDim.new(0, 12)
-UIPaddingStore.Parent = StoreToggleBtn
-Instance.new("UICorner", StoreToggleBtn).CornerRadius = UDim.new(0, 6)
-
---// Toggle Item 5: Auto Join Team
-local TeamToggleBtn = Instance.new("TextButton")
-TeamToggleBtn.Size = UDim2.new(1, -30, 0, 34)
-TeamToggleBtn.BackgroundColor3 = Settings.AutoJoinTeam and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
-TeamToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TeamToggleBtn.TextSize = 13
-TeamToggleBtn.Font = Enum.Font.SourceSansBold
-TeamToggleBtn.Text = "Auto Join Team: " .. (Settings.AutoJoinTeam and "On" or "Off")
-TeamToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-TeamToggleBtn.LayoutOrder = 5
-TeamToggleBtn.Parent = ScrollingContainer
-
-local UIPaddingTeam = Instance.new("UIPadding")
-UIPaddingTeam.PaddingLeft = UDim.new(0, 12)
-UIPaddingTeam.Parent = TeamToggleBtn
-Instance.new("UICorner", TeamToggleBtn).CornerRadius = UDim.new(0, 6)
-
---// Pilihan Tim (Pirates / Marines)
-local TeamLabel = Instance.new("TextLabel")
-TeamLabel.Size = UDim2.new(1, -30, 0, 20)
-TeamLabel.BackgroundTransparency = 1
-TeamLabel.TextColor3 = Color3.fromRGB(180, 210, 240)
-TeamLabel.TextSize = 12
-TeamLabel.Font = Enum.Font.SourceSansBold
-TeamLabel.Text = "Pilih Tim Tujuan:"
-TeamLabel.TextXAlignment = Enum.TextXAlignment.Left
-TeamLabel.LayoutOrder = 6
-TeamLabel.Parent = ScrollingContainer
-
-local TeamButtonContainer = Instance.new("Frame")
-TeamButtonContainer.Size = UDim2.new(1, -30, 0, 28)
-TeamButtonContainer.BackgroundTransparency = 1
-TeamButtonContainer.LayoutOrder = 7
-TeamButtonContainer.Parent = ScrollingContainer
-
-local UIHorizLayoutTeam = Instance.new("UIListLayout")
-UIHorizLayoutTeam.FillDirection = Enum.FillDirection.Horizontal
-UIHorizLayoutTeam.Padding = UDim.new(0, 10)
-UIHorizLayoutTeam.Parent = TeamButtonContainer
-
-local PirateBtn = Instance.new("TextButton")
-PirateBtn.Size = UDim2.new(0.5, -5, 1, 0)
-PirateBtn.BackgroundColor3 = Settings.SelectedTeam == "Pirates" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
-PirateBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PirateBtn.TextSize = 12
-PirateBtn.Font = Enum.Font.SourceSansBold
-PirateBtn.Text = "Pirates"
-PirateBtn.Parent = TeamButtonContainer
-Instance.new("UICorner", PirateBtn).CornerRadius = UDim.new(0, 5)
-
-local MarineBtn = Instance.new("TextButton")
-MarineBtn.Size = UDim2.new(0.5, -5, 1, 0)
-MarineBtn.BackgroundColor3 = Settings.SelectedTeam == "Marines" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
-MarineBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MarineBtn.TextSize = 12
-MarineBtn.Font = Enum.Font.SourceSansBold
-MarineBtn.Text = "Marines"
-MarineBtn.Parent = TeamButtonContainer
-Instance.new("UICorner", MarineBtn).CornerRadius = UDim.new(0, 5)
-
-local function ApplySelectedTeam(teamName)
-    Settings.SelectedTeam = teamName
-    SaveSettings()
-    
-    PirateBtn.BackgroundColor3 = (teamName == "Pirates") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
-    MarineBtn.BackgroundColor3 = (teamName == "Marines") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
-end
-
-PirateBtn.MouseButton1Click:Connect(function() ApplySelectedTeam("Pirates") end)
-MarineBtn.MouseButton1Click:Connect(function() ApplySelectedTeam("Marines") end)
-
---// Bagian Pengaturan Ukuran Menu
+--// Bagian Pengaturan Ukuran Menu (Sistem Pilih Model Scroll Horizontal ala iOS Picker)
 local SizeLabel = Instance.new("TextLabel")
 SizeLabel.Size = UDim2.new(1, -30, 0, 20)
 SizeLabel.BackgroundTransparency = 1
 SizeLabel.TextColor3 = Color3.fromRGB(180, 210, 240)
 SizeLabel.TextSize = 12
 SizeLabel.Font = Enum.Font.SourceSansBold
-SizeLabel.Text = "Ukuran Menu:"
+SizeLabel.Text = "Ukuran Menu (Small / Medium / Big):"
 SizeLabel.TextXAlignment = Enum.TextXAlignment.Left
-SizeLabel.LayoutOrder = 8
+SizeLabel.LayoutOrder = 1
 SizeLabel.Parent = ScrollingContainer
 
---// Container Tombol Ukuran (Small, Medium, Big)
-local SizeButtonContainer = Instance.new("Frame")
-SizeButtonContainer.Size = UDim2.new(1, -30, 0, 28)
-SizeButtonContainer.BackgroundTransparency = 1
-SizeButtonContainer.LayoutOrder = 9
-SizeButtonContainer.Parent = ScrollingContainer
+local SizeScrollFrame = Instance.new("ScrollingFrame")
+SizeScrollFrame.Size = UDim2.new(1, -30, 0, 34)
+SizeScrollFrame.BackgroundTransparency = 1
+SizeScrollFrame.BorderSizePixel = 0
+SizeScrollFrame.CanvasSize = UDim2.new(0, 270, 0, 0)
+SizeScrollFrame.ScrollBarThickness = 3
+SizeScrollFrame.LayoutOrder = 2
+SizeScrollFrame.Parent = ScrollingContainer
 
-local UIHorizLayout = Instance.new("UIListLayout")
-UIHorizLayout.FillDirection = Enum.FillDirection.Horizontal
-UIHorizLayout.Padding = UDim.new(0, 8)
-UIHorizLayout.Parent = SizeButtonContainer
+local SizeListLayout = Instance.new("UIListLayout")
+SizeListLayout.FillDirection = Enum.FillDirection.Horizontal
+SizeListLayout.Padding = UDim.new(0, 8)
+SizeListLayout.Parent = SizeScrollFrame
 
 local SmallBtn = Instance.new("TextButton")
 SmallBtn.Size = UDim2.new(0, 80, 1, 0)
-SmallBtn.BackgroundColor3 = Settings.MenuSize == "Small" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
+SmallBtn.BackgroundColor3 = Settings.MenuSize == "Small" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(20, 20, 20)
 SmallBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SmallBtn.TextSize = 12
 SmallBtn.Font = Enum.Font.SourceSansBold
 SmallBtn.Text = "Small"
-SmallBtn.Parent = SizeButtonContainer
+SmallBtn.Parent = SizeScrollFrame
 Instance.new("UICorner", SmallBtn).CornerRadius = UDim.new(0, 5)
+local SmallStroke = Instance.new("UIStroke", SmallBtn)
+SmallStroke.Color = Color3.fromRGB(40, 120, 210)
+SmallStroke.Thickness = 1.5
 
 local MediumBtn = Instance.new("TextButton")
 MediumBtn.Size = UDim2.new(0, 80, 1, 0)
-MediumBtn.BackgroundColor3 = Settings.MenuSize == "Medium" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
+MediumBtn.BackgroundColor3 = Settings.MenuSize == "Medium" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(20, 20, 20)
 MediumBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MediumBtn.TextSize = 12
 MediumBtn.Font = Enum.Font.SourceSansBold
 MediumBtn.Text = "Medium"
-MediumBtn.Parent = SizeButtonContainer
+MediumBtn.Parent = SizeScrollFrame
 Instance.new("UICorner", MediumBtn).CornerRadius = UDim.new(0, 5)
+local MedStroke = Instance.new("UIStroke", MediumBtn)
+MedStroke.Color = Color3.fromRGB(40, 120, 210)
+MedStroke.Thickness = 1.5
 
 local BigBtn = Instance.new("TextButton")
 BigBtn.Size = UDim2.new(0, 80, 1, 0)
-BigBtn.BackgroundColor3 = Settings.MenuSize == "Big" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
+BigBtn.BackgroundColor3 = Settings.MenuSize == "Big" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(20, 20, 20)
 BigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 BigBtn.TextSize = 12
 BigBtn.Font = Enum.Font.SourceSansBold
 BigBtn.Text = "Big"
-BigBtn.Parent = SizeButtonContainer
+BigBtn.Parent = SizeScrollFrame
 Instance.new("UICorner", BigBtn).CornerRadius = UDim.new(0, 5)
+local BigStroke = Instance.new("UIStroke", BigBtn)
+BigStroke.Color = Color3.fromRGB(40, 120, 210)
+BigStroke.Thickness = 1.5
 
 local function ApplyMenuSize(sizeName)
     Settings.MenuSize = sizeName
     SaveSettings()
     
-    SmallBtn.BackgroundColor3 = (sizeName == "Small") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
-    MediumBtn.BackgroundColor3 = (sizeName == "Medium") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
-    BigBtn.BackgroundColor3 = (sizeName == "Big") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(25, 55, 90)
+    SmallBtn.BackgroundColor3 = (sizeName == "Small") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(20, 20, 20)
+    MediumBtn.BackgroundColor3 = (sizeName == "Medium") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(20, 20, 20)
+    BigBtn.BackgroundColor3 = (sizeName == "Big") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(20, 20, 20)
     
     local targetSize = GetSizeDimensions(sizeName)
     TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = targetSize}):Play()
@@ -385,7 +269,252 @@ SmallBtn.MouseButton1Click:Connect(function() ApplyMenuSize("Small") end)
 MediumBtn.MouseButton1Click:Connect(function() ApplyMenuSize("Medium") end)
 BigBtn.MouseButton1Click:Connect(function() ApplyMenuSize("Big") end)
 
---// Animasi Membuka/Menutup Menu
+--// Toggle Item: Notifikasi (Pilihan Ada atau Tidak Ada)
+local NotifToggleBtn = Instance.new("TextButton")
+NotifToggleBtn.Size = UDim2.new(1, -30, 0, 34)
+NotifToggleBtn.BackgroundColor3 = Settings.Notifications and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+NotifToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NotifToggleBtn.TextSize = 13
+NotifToggleBtn.Font = Enum.Font.SourceSansBold
+NotifToggleBtn.Text = "Notifikasi Layar: " .. (Settings.Notifications and "Ada (On)" or "Tidak Ada (Off)")
+NotifToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+NotifToggleBtn.LayoutOrder = 3
+NotifToggleBtn.Parent = ScrollingContainer
+
+local UIPaddingNotif = Instance.new("UIPadding")
+UIPaddingNotif.PaddingLeft = UDim.new(0, 12)
+UIPaddingNotif.Parent = NotifToggleBtn
+Instance.new("UICorner", NotifToggleBtn).CornerRadius = UDim.new(0, 6)
+local NotifStroke = Instance.new("UIStroke", NotifToggleBtn)
+NotifStroke.Color = Color3.fromRGB(40, 120, 210)
+NotifStroke.Thickness = 1.5
+
+--// ==========================================
+--// KELOMPOK 2: AUTO JOIN TEAM (Disusun Sesuai Permintaan: On/Off di Atas, Pilihan Tim di Bawah)
+--// ==========================================
+
+--// 1. Tombol On/Off Auto Join Team (Paling Atas dalam Grup Tim)
+local TeamToggleBtn = Instance.new("TextButton")
+TeamToggleBtn.Size = UDim2.new(1, -30, 0, 34)
+TeamToggleBtn.BackgroundColor3 = Settings.AutoJoinTeam and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+TeamToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeamToggleBtn.TextSize = 13
+TeamToggleBtn.Font = Enum.Font.SourceSansBold
+TeamToggleBtn.Text = "Auto Join Team: " .. (Settings.AutoJoinTeam and "On" or "Off")
+TeamToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+TeamToggleBtn.LayoutOrder = 4
+TeamToggleBtn.Parent = ScrollingContainer
+
+local UIPaddingTeam = Instance.new("UIPadding")
+UIPaddingTeam.PaddingLeft = UDim.new(0, 12)
+UIPaddingTeam.Parent = TeamToggleBtn
+Instance.new("UICorner", TeamToggleBtn).CornerRadius = UDim.new(0, 6)
+local TeamToggleStroke = Instance.new("UIStroke", TeamToggleBtn)
+TeamToggleStroke.Color = Color3.fromRGB(40, 120, 210)
+TeamToggleStroke.Thickness = 1.5
+
+--// 2. Pilihan Tim (Model Scroll Horizontal: Pirates / Marines di Bawah On/Off)
+local TeamLabel = Instance.new("TextLabel")
+TeamLabel.Size = UDim2.new(1, -30, 0, 20)
+TeamLabel.BackgroundTransparency = 1
+TeamLabel.TextColor3 = Color3.fromRGB(180, 210, 240)
+TeamLabel.TextSize = 12
+TeamLabel.Font = Enum.Font.SourceSansBold
+TeamLabel.Text = "Pilih Tim Tujuan (Scroll):"
+TeamLabel.TextXAlignment = Enum.TextXAlignment.Left
+TeamLabel.LayoutOrder = 5
+TeamLabel.Parent = ScrollingContainer
+
+local TeamScrollFrame = Instance.new("ScrollingFrame")
+TeamScrollFrame.Size = UDim2.new(1, -30, 0, 34)
+TeamScrollFrame.BackgroundTransparency = 1
+TeamScrollFrame.BorderSizePixel = 0
+TeamScrollFrame.CanvasSize = UDim2.new(0, 180, 0, 0)
+TeamScrollFrame.ScrollBarThickness = 3
+TeamScrollFrame.LayoutOrder = 6
+TeamScrollFrame.Parent = ScrollingContainer
+
+local TeamListLayout = Instance.new("UIListLayout")
+TeamListLayout.FillDirection = Enum.FillDirection.Horizontal
+TeamListLayout.Padding = UDim.new(0, 8)
+TeamListLayout.Parent = TeamScrollFrame
+
+local PirateBtn = Instance.new("TextButton")
+PirateBtn.Size = UDim2.new(0, 95, 1, 0)
+PirateBtn.BackgroundColor3 = Settings.SelectedTeam == "Pirates" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(20, 20, 20)
+PirateBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PirateBtn.TextSize = 12
+PirateBtn.Font = Enum.Font.SourceSansBold
+PirateBtn.Text = "Pirates"
+PirateBtn.Parent = TeamScrollFrame
+Instance.new("UICorner", PirateBtn).CornerRadius = UDim.new(0, 5)
+local PirateStroke = Instance.new("UIStroke", PirateBtn)
+PirateStroke.Color = Color3.fromRGB(40, 120, 210)
+PirateStroke.Thickness = 1.5
+
+local MarineBtn = Instance.new("TextButton")
+MarineBtn.Size = UDim2.new(0, 95, 1, 0)
+MarineBtn.BackgroundColor3 = Settings.SelectedTeam == "Marines" and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(20, 20, 20)
+MarineBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MarineBtn.TextSize = 12
+MarineBtn.Font = Enum.Font.SourceSansBold
+MarineBtn.Text = "Marines"
+MarineBtn.Parent = TeamScrollFrame
+Instance.new("UICorner", MarineBtn).CornerRadius = UDim.new(0, 5)
+local MarineStroke = Instance.new("UIStroke", MarineBtn)
+MarineStroke.Color = Color3.fromRGB(40, 120, 210)
+MarineStroke.Thickness = 1.5
+
+local function ApplySelectedTeam(teamName)
+    Settings.SelectedTeam = teamName
+    SaveSettings()
+    
+    PirateBtn.BackgroundColor3 = (teamName == "Pirates") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(20, 20, 20)
+    MarineBtn.BackgroundColor3 = (teamName == "Marines") and Color3.fromRGB(45, 90, 150) or Color3.fromRGB(20, 20, 20)
+end
+
+PirateBtn.MouseButton1Click:Connect(function() ApplySelectedTeam("Pirates") end)
+MarineBtn.MouseButton1Click:Connect(function() ApplySelectedTeam("Marines") end)
+
+--// ==========================================
+--// KELOMPOK 3: FITUR FRUIT (ESP, COLLECT, STORE)
+--// ==========================================
+
+--// Toggle Item: Fruit ESP
+local ESPToggleBtn = Instance.new("TextButton")
+ESPToggleBtn.Size = UDim2.new(1, -30, 0, 34)
+ESPToggleBtn.BackgroundColor3 = Settings.FruitESP and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+ESPToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPToggleBtn.TextSize = 13
+ESPToggleBtn.Font = Enum.Font.SourceSansBold
+ESPToggleBtn.Text = "Fruit ESP: " .. (Settings.FruitESP and "On" or "Off")
+ESPToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+ESPToggleBtn.LayoutOrder = 7
+ESPToggleBtn.Parent = ScrollingContainer
+
+local UIPaddingESP = Instance.new("UIPadding")
+UIPaddingESP.PaddingLeft = UDim.new(0, 12)
+UIPaddingESP.Parent = ESPToggleBtn
+Instance.new("UICorner", ESPToggleBtn).CornerRadius = UDim.new(0, 6)
+local ESPStroke = Instance.new("UIStroke", ESPToggleBtn)
+ESPStroke.Color = Color3.fromRGB(40, 120, 210)
+ESPStroke.Thickness = 1.5
+
+--// Toggle Item: Auto Collect Fruit
+local CollectToggleBtn = Instance.new("TextButton")
+CollectToggleBtn.Size = UDim2.new(1, -30, 0, 34)
+CollectToggleBtn.BackgroundColor3 = Settings.AutoCollectFruit and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+CollectToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CollectToggleBtn.TextSize = 13
+CollectToggleBtn.Font = Enum.Font.SourceSansBold
+CollectToggleBtn.Text = "Auto Collect Fruit: " .. (Settings.AutoCollectFruit and "On" or "Off")
+CollectToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+CollectToggleBtn.LayoutOrder = 8
+CollectToggleBtn.Parent = ScrollingContainer
+
+local UIPaddingCollect = Instance.new("UIPadding")
+UIPaddingCollect.PaddingLeft = UDim.new(0, 12)
+UIPaddingCollect.Parent = CollectToggleBtn
+Instance.new("UICorner", CollectToggleBtn).CornerRadius = UDim.new(0, 6)
+local CollectStroke = Instance.new("UIStroke", CollectToggleBtn)
+CollectStroke.Color = Color3.fromRGB(40, 120, 210)
+CollectStroke.Thickness = 1.5
+
+--// Toggle Item: Auto Store Fruit
+local StoreToggleBtn = Instance.new("TextButton")
+StoreToggleBtn.Size = UDim2.new(1, -30, 0, 34)
+StoreToggleBtn.BackgroundColor3 = Settings.AutoStoreFruit and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+StoreToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+StoreToggleBtn.TextSize = 13
+StoreToggleBtn.Font = Enum.Font.SourceSansBold
+StoreToggleBtn.Text = "Auto Store Fruit: " .. (Settings.AutoStoreFruit and "On" or "Off")
+StoreToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+StoreToggleBtn.LayoutOrder = 9
+StoreToggleBtn.Parent = ScrollingContainer
+
+local UIPaddingStore = Instance.new("UIPadding")
+UIPaddingStore.PaddingLeft = UDim.new(0, 12)
+UIPaddingStore.Parent = StoreToggleBtn
+Instance.new("UICorner", StoreToggleBtn).CornerRadius = UDim.new(0, 6)
+local StoreStroke = Instance.new("UIStroke", StoreToggleBtn)
+StoreStroke.Color = Color3.fromRGB(40, 120, 210)
+StoreStroke.Thickness = 1.5
+
+--// ==========================================
+--// KELOMPOK 4: FPS BOOST
+--// ==========================================
+
+--// Toggle Item: Mode Cepat / FPS Boost
+local FPSToggleBtn = Instance.new("TextButton")
+FPSToggleBtn.Size = UDim2.new(1, -30, 0, 34)
+FPSToggleBtn.BackgroundColor3 = Settings.FPSBoost and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+FPSToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FPSToggleBtn.TextSize = 13
+FPSToggleBtn.Font = Enum.Font.SourceSansBold
+FPSToggleBtn.Text = "Mode Cepat (FPS Boost): " .. (Settings.FPSBoost and "On" or "Off")
+FPSToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+FPSToggleBtn.LayoutOrder = 10
+FPSToggleBtn.Parent = ScrollingContainer
+
+local UIPaddingFPS = Instance.new("UIPadding")
+UIPaddingFPS.PaddingLeft = UDim.new(0, 12)
+UIPaddingFPS.Parent = FPSToggleBtn
+Instance.new("UICorner", FPSToggleBtn).CornerRadius = UDim.new(0, 6)
+local FPSStroke = Instance.new("UIStroke", FPSToggleBtn)
+FPSStroke.Color = Color3.fromRGB(40, 120, 210)
+FPSStroke.Thickness = 1.5
+
+--// ==========================================
+--// EVENT HANDLERS & LOGIC
+--// ==========================================
+
+NotifToggleBtn.MouseButton1Click:Connect(function()
+    Settings.Notifications = not Settings.Notifications
+    NotifToggleBtn.BackgroundColor3 = Settings.Notifications and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+    NotifToggleBtn.Text = "Notifikasi Layar: " .. (Settings.Notifications and "Ada (On)" or "Tidak Ada (Off)")
+    SaveSettings()
+end)
+
+TeamToggleBtn.MouseButton1Click:Connect(function()
+    Settings.AutoJoinTeam = not Settings.AutoJoinTeam
+    TeamToggleBtn.BackgroundColor3 = Settings.AutoJoinTeam and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+    TeamToggleBtn.Text = "Auto Join Team: " .. (Settings.AutoJoinTeam and "On" or "Off")
+    SaveSettings()
+end)
+
+FPSToggleBtn.MouseButton1Click:Connect(function()
+    Settings.FPSBoost = not Settings.FPSBoost
+    FPSToggleBtn.BackgroundColor3 = Settings.FPSBoost and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+    FPSToggleBtn.Text = "Mode Cepat (FPS Boost): " .. (Settings.FPSBoost and "On" or "Off")
+    SaveSettings()
+end)
+
+ESPToggleBtn.MouseButton1Click:Connect(function()
+    Settings.FruitESP = not Settings.FruitESP
+    ESPToggleBtn.BackgroundColor3 = Settings.FruitESP and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+    ESPToggleBtn.Text = "Fruit ESP: " .. (Settings.FruitESP and "On" or "Off")
+    SaveSettings()
+end)
+
+CollectToggleBtn.MouseButton1Click:Connect(function()
+    Settings.AutoCollectFruit = not Settings.AutoCollectFruit
+    CollectToggleBtn.BackgroundColor3 = Settings.AutoCollectFruit and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+    CollectToggleBtn.Text = "Auto Collect Fruit: " .. (Settings.AutoCollectFruit and "On" or "Off")
+    SaveSettings()
+end)
+
+StoreToggleBtn.MouseButton1Click:Connect(function()
+    Settings.AutoCollectFruit = false
+    CollectToggleBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+    CollectToggleBtn.Text = "Auto Collect Fruit: Off"
+    
+    Settings.AutoStoreFruit = not Settings.AutoStoreFruit
+    StoreToggleBtn.BackgroundColor3 = Settings.AutoStoreFruit and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
+    StoreToggleBtn.Text = "Auto Store Fruit: " .. (Settings.AutoStoreFruit and "On" or "Off")
+    SaveSettings()
+end)
+
+--// Animasi Buka/Tutup Menu
 local isMenuOpen = false
 local function ToggleMenuAnimation()
     if not isMenuOpen then
@@ -409,53 +538,19 @@ end
 OpenButton.MouseButton1Click:Connect(ToggleMenuAnimation)
 CloseButton.MouseButton1Click:Connect(ToggleMenuAnimation)
 
---// Event Handler Toggle Fitur
-FPSToggleBtn.MouseButton1Click:Connect(function()
-    Settings.FPSBoost = not Settings.FPSBoost
-    FPSToggleBtn.BackgroundColor3 = Settings.FPSBoost and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
-    FPSToggleBtn.Text = "Mode Cepat (FPS Boost): " .. (Settings.FPSBoost and "On" or "Off")
-    SaveSettings()
-end)
-
-ESPToggleBtn.MouseButton1Click:Connect(function()
-    Settings.FruitESP = not Settings.FruitESP
-    ESPToggleBtn.BackgroundColor3 = Settings.FruitESP and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
-    ESPToggleBtn.Text = "Fruit ESP: " .. (Settings.FruitESP and "On" or "Off")
-    SaveSettings()
-end)
-
-CollectToggleBtn.MouseButton1Click:Connect(function()
-    Settings.AutoCollectFruit = not Settings.AutoCollectFruit
-    CollectToggleBtn.BackgroundColor3 = Settings.AutoCollectFruit and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
-    CollectToggleBtn.Text = "Auto Collect Fruit: " .. (Settings.AutoCollectFruit and "On" or "Off")
-    SaveSettings()
-end)
-
-StoreToggleBtn.MouseButton1Click:Connect(function()
-    Settings.AutoStoreFruit = not Settings.AutoStoreFruit
-    StoreToggleBtn.BackgroundColor3 = Settings.AutoStoreFruit and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
-    StoreToggleBtn.Text = "Auto Store Fruit: " .. (Settings.AutoStoreFruit and "On" or "Off")
-    SaveSettings()
-end)
-
-TeamToggleBtn.MouseButton1Click:Connect(function()
-    Settings.AutoJoinTeam = not Settings.AutoJoinTeam
-    TeamToggleBtn.BackgroundColor3 = Settings.AutoJoinTeam and Color3.fromRGB(40, 160, 40) or Color3.fromRGB(160, 40, 40)
-    TeamToggleBtn.Text = "Auto Join Team: " .. (Settings.AutoJoinTeam and "On" or "Off")
-    SaveSettings()
-end)
-
---// Logika Auto Join Team (Blox Fruits Remotes)
+--// Logika Auto Join Team (Disesuaikan dengan Remote Server Blox Fruits terbaru)
 task.spawn(function()
     while true do
         task.wait(1)
         pcall(function()
             if Settings.AutoJoinTeam then
-                -- Memeriksa apakah pemain masih belum punya tim (biasanya tim kosong / Spectator / netral)
                 if LocalPlayer.Team == nil then
-                    local comm = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-                    if comm then
-                        comm:InvokeServer("SetTeam", Settings.SelectedTeam)
+                    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                    if remotes then
+                        local commF = remotes:FindFirstChild("CommF_")
+                        if commF then
+                            commF:InvokeServer("SetTeam", Settings.SelectedTeam)
+                        end
                     end
                 end
             end
@@ -511,9 +606,11 @@ local function GetIslandName(pos)
     end
 end
 
---// Notifikasi Dinamis
+--// Notifikasi Dinamis (Hanya muncul jika Settings.Notifications == true)
 local function ShowDynamicPopup(titleText, isFound)
     pcall(function()
+        if not Settings.Notifications then return end
+        
         local popupGui = Instance.new("ScreenGui")
         popupGui.Name = "FruitDynamicNotification"
         popupGui.Parent = CoreGui
@@ -521,7 +618,7 @@ local function ShowDynamicPopup(titleText, isFound)
         local frame = Instance.new("Frame")
         frame.Size = UDim2.new(0, 460, 0, 50)
         frame.Position = UDim2.new(0.5, -230, 0, -80)
-        frame.BackgroundColor3 = Color3.fromRGB(15, 42, 75)
+        frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         frame.Parent = popupGui
         
         local corner = Instance.new("UICorner")
@@ -564,7 +661,7 @@ local function ShowDynamicPopup(titleText, isFound)
     end)
 end
 
---// Filter Validasi Buah
+--// Filter Validasi Buah Asli
 local function IsValidRealFruit(obj)
     if not obj or not obj.Parent then return false end
     if not obj.Name:find("Fruit") then return false end
@@ -584,7 +681,7 @@ end
 --// Logika Auto Store Buah
 task.spawn(function()
     while true do
-        task.wait(1.5)
+        task.wait(2)
         pcall(function()
             if Settings.AutoStoreFruit then
                 local backpack = LocalPlayer:FindFirstChild("Backpack")
@@ -595,11 +692,15 @@ task.spawn(function()
                     if container then
                         for _, item in pairs(container:GetChildren()) do
                             if item:IsA("Tool") and item.Name:find("Fruit") then
-                                local comm = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-                                if comm then
-                                    comm:InvokeServer("StoreFruit", item.Name, item)
-                                    ShowDynamicPopup("BERHASIL MENYIMPAN: " .. item.Name, true)
-                                    task.wait(1.5)
+                                local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                                if remotes then
+                                    local commF = remotes:FindFirstChild("CommF_")
+                                    if commF then
+                                        commF:InvokeServer("StoreFruit", item)
+                                        commF:InvokeServer("StoreFruit", item.Name)
+                                        ShowDynamicPopup("AUTO STORE: Menyimpan " .. item.Name, true)
+                                        task.wait(2)
+                                    end
                                 end
                             end
                         end
@@ -644,7 +745,7 @@ task.spawn(function()
                         
                         if not trackedNotif[obj] then
                             trackedNotif[obj] = true
-                            ShowDynamicPopup("BERHASIL KETEMU: " .. obj.Name, true)
+                            ShowDynamicPopup("BUAH KETEMU: " .. obj.Name, true)
                         end
                         
                         if Settings.FruitESP then
