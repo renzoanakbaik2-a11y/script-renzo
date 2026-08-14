@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION + FIXED SETTINGS & SCROLL SPEED)
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION + AUTO SERVER HOP v23)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -11,9 +11,10 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v22.json"
+local FileName = "BloxFruitsHub_Clean_v23.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -26,7 +27,8 @@ local Settings = {
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
-    HUDPosition = {X = 0.05, Y = 0.15}
+    HUDPosition = {X = 0.05, Y = 0.15},
+    AutoServerHop = true -- Default ON untuk fitur pindah server otomatis
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -84,6 +86,59 @@ local function getCharacterRootPart()
     end
     return nil
 end
+
+-- =====================================================================
+-- FUNGSI SERVER HOP ANTI ERROR 773
+-- =====================================================================
+local function serverHop()
+    if not Settings.AutoServerHop then return end
+    
+    local notification = Instance.new("Hint", CoreGui)
+    notification.Text = "🔄 Tidak ada buah, mencari server aman lain..."
+    
+    pcall(function()
+        local PlaceID = game.PlaceId
+        local Servers = {}
+        local Cursor = ""
+        
+        repeat
+            local Url = "https://games.roblox.com/v1/games/" .. PlaceID .. "/servers/Public?sortOrder=Asc&limit=100"
+            if Cursor ~= "" then Url = Url .. "&cursor=" .. Cursor end
+            
+            local Success, Response = pcall(function() return HttpService:JSONDecode(game:HttpGet(Url)) end)
+            
+            if Success and Response and Response.data then
+                for _, Server in ipairs(Response.data) do
+                    if type(Server) == "table" and Server.playing < Server.maxPlayers and Server.id ~= game.JobId then
+                        table.insert(Servers, Server.id)
+                    end
+                end
+                Cursor = Response.nextPageCursor or ""
+            else
+                break
+            end
+        until Cursor == "" or #Servers > 0
+        
+        if #Servers > 0 then
+            local TargetServer = Servers[math.random(1, #Servers)]
+            TeleportService:TeleportToPlaceInstance(PlaceID, TargetServer, LocalPlayer)
+        else
+            TeleportService:Teleport(PlaceID, LocalPlayer)
+        end
+    end)
+    
+    task.wait(5)
+    notification:Destroy()
+end
+
+-- Proteksi Anti Error Teleport (Error 773, dll)
+TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
+    if player == LocalPlayer then
+        warn("Teleport gagal (" .. tostring(errorMessage) + "), mencoba server lain...")
+        task.wait(2)
+        serverHop()
+    end
+end)
 
 -- =====================================================================
 -- 1. WIDGET STATISTIK BUAH & SERVER AKTIF
@@ -509,7 +564,7 @@ task.spawn(function()
 end)
 
 -- =====================================================================
--- 6. MONITORING STATUS & NOTIFIKASI (ANTI-SPAM)
+-- 6. MONITORING STATUS & AUTO SERVER HOP
 -- =====================================================================
 task.spawn(function()
     local lastStatus = nil 
@@ -537,6 +592,11 @@ task.spawn(function()
                     showCustomNotification("❌ Tidak ada buah di map.", Color3.fromRGB(231, 76, 60))
                 end
                 lastStatus = "Kosong"
+                
+                -- JALANKAN AUTO SERVER HOP JIKA TIDAK ADA BUAH
+                if Settings.AutoServerHop then
+                    serverHop()
+                end
             end
 
             if hasFruitNow then
@@ -641,7 +701,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v22"
+TitleLabel.Text = "Blox Fruits Hub | Clean v23 (Auto Hop)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -669,7 +729,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 750)
+Container.CanvasSize = UDim2.new(0, 0, 0, 850)
 Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -725,7 +785,7 @@ createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
     if state then joinTeam() end
 end)
 
-createSectionHeader("2. Notifikasi & Live Map Stats HUD")
+createSectionHeader("2. Notifikasi, Live HUD & Server Hop")
 createToggle("Fruit Notifier", "FruitNotifier", nil)
 createToggle("Live Fruit & Server HUD", "FruitStatsHUD", function(state)
     StatsHudFrame.Visible = state
@@ -733,6 +793,7 @@ end)
 createToggle("ESP Buah", "FruitESP", function(state)
     if not state then clearESP() end
 end)
+createToggle("Auto Server Hop (Pindah jika kosong)", "AutoServerHop", nil)
 
 createSectionHeader("3. Auto Collect & Store Fruit")
 createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
@@ -772,7 +833,6 @@ sCorner.CornerRadius = UDim.new(0, 6)
 sCorner.Parent = SpeedBtn
 
 SpeedBtn.MouseButton1Click:Connect(function()
-    -- Berputar sesuai pilihan: 100 -> 200 -> 300 -> 400 -> 500 -> kembali ke 100
     if Settings.FlightSpeed == 100 then
         Settings.FlightSpeed = 200
     elseif Settings.FlightSpeed == 200 then
@@ -823,3 +883,5 @@ createSectionHeader("6. Performa")
 createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state)
 end)
+
+print("Script Blox Fruits Hub Clean v23 + Auto Server Hop Berhasil Dimuat!")
