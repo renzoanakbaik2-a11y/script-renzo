@@ -1,5 +1,5 @@
 -- =====================================================================
--- BRAINROT SURVIVAL HUB | v35 (FULL INTEGRATED - DEEP DETECTION)
+-- BRAINROT SURVIVAL HUB | v37 (FIXED COLLECT & FULL MAIN SCRIPT)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -19,6 +19,8 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BrainrotHub_UI"
 ScreenGui.Parent = CoreGui
 
+-- Sistem Auto Save Settings
+local SaveFileName = "BrainrotHub_Config_v10.json"
 local Config = {
     AutoExtractRun = false,
     AntiPlayerHighFly = false,
@@ -26,95 +28,232 @@ local Config = {
     SmartStealRareCube = false
 }
 
--- Helper untuk membaca angka rarity dari nama "cube_XXX"
-local function getCubeRarity(name)
-    local num = name:match("cube_(%d+)")
-    return num and tonumber(num) or 0
+local function SaveSettings()
+    pcall(function()
+        if writefile then
+            writefile(SaveFileName, HttpService:JSONEncode(Config))
+        end
+    end)
+end
+
+local function LoadSettings()
+    pcall(function()
+        if readfile and isfile and isfile(SaveFileName) then
+            Config = HttpService:JSONDecode(readfile(SaveFileName))
+        end
+    end)
+end
+LoadSettings()
+
+local function createStroke(parent, thickness, color)
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = thickness or 2
+    stroke.Color = color or Color3.fromRGB(255, 100, 100)
+    stroke.Parent = parent
+    return stroke
 end
 
 -- =====================================================================
--- UI MENU SETUP
+-- 1. TOMBOL BUKA MENU (AWALNYA TERTUTUP)
+-- =====================================================================
+local OpenButton = Instance.new("ImageButton")
+OpenButton.Size = UDim2.new(0, 50, 0, 50)
+OpenButton.Position = UDim2.new(0.02, 0, 0.4, 0)
+OpenButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+OpenButton.Image = "rbxassetid://72916050815889"
+OpenButton.Active = true
+OpenButton.Draggable = true
+OpenButton.Parent = ScreenGui
+
+createStroke(OpenButton, 2, Color3.fromRGB(255, 100, 100))
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(0, 12)
+OpenCorner.Parent = OpenButton
+
+-- =====================================================================
+-- 2. MAIN MENU FRAME + TOMBOL CLOSE (X)
 -- =====================================================================
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 320, 0, 420)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -210)
+MainFrame.Size = UDim2.new(0, 320, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -190)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-MainFrame.Visible = true
+MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
+local mainStroke = createStroke(MainFrame, 3, Color3.fromRGB(255, 100, 100))
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+task.spawn(function()
+    local i = 0
+    while true do
+        mainStroke.Color = Color3.fromHSV(i, 1, 1)
+        i = i + 0.005
+        if i >= 1 then i = 0 end
+        task.wait(0.05)
+    end
+end)
+
+OpenButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
 local Title = Instance.new("TextLabel")
-Title.Text = "BRAINROT SURVIVAL HUB v35"
+Title.Text = "BRAINROT SURVIVAL HUB"
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
+Title.TextSize = 15
 Title.Parent = MainFrame
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 35, 0, 35)
+CloseButton.Position = UDim2.new(1, -40, 0, 5)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 14
+CloseButton.Parent = MainFrame
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 8)
+CloseCorner.Parent = CloseButton
+
+CloseButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+end)
 
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = MainFrame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 8)
 UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
+local Spacer = Instance.new("Frame")
+Spacer.Size = UDim2.new(1, 0, 0, 45)
+Spacer.BackgroundTransparency = 1
+Spacer.LayoutOrder = 0
+Spacer.Parent = MainFrame
+
 local function CreateToggleButton(name, configKey, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 290, 0, 40)
+    btn.Size = UDim2.new(0, 290, 0, 38)
     btn.BackgroundColor3 = Config[configKey] and Color3.fromRGB(50, 180, 90) or Color3.fromRGB(40, 40, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 14
     btn.Text = name .. ": " .. (Config[configKey] and "ON" or "OFF")
     btn.Parent = MainFrame
+
+    createStroke(btn, 1, Color3.fromRGB(100, 255, 100))
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+
+    task.spawn(function()
+        if Config[configKey] then
+            callback(true)
+        end
+    end)
+
     btn.MouseButton1Click:Connect(function()
         Config[configKey] = not Config[configKey]
-        btn.BackgroundColor3 = Config[configKey] and Color3.fromRGB(50, 180, 90) or Color3.fromRGB(40, 40, 50)
-        btn.Text = name .. ": " .. (Config[configKey] and "ON" or "OFF")
+        if Config[configKey] then
+            btn.BackgroundColor3 = Color3.fromRGB(50, 180, 90)
+            btn.Text = name .. ": ON"
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            btn.Text = name .. ": OFF"
+        end
+        SaveSettings()
         callback(Config[configKey])
     end)
 end
 
 -- =====================================================================
--- LOGIKA FITUR
+-- FUNGSI FINDER / PEMBACA RARITY CUBE YANG AKURAT
+-- =====================================================================
+local function getCubeRarity(name)
+    local num = name:match("cube_(%d+)")
+    if num then
+        return tonumber(num)
+    end
+    return 0
+end
+
+-- =====================================================================
+-- 3. IMPLEMENTASI FITUR (FIXED AUTO COLLECT & SMART STEAL)
 -- =====================================================================
 
--- 1. Auto Run Extraction
+-- Fitur 1: Auto Run Kilat ke Extraction
 CreateToggleButton("Auto Run Extraction", "AutoExtractRun", function(state)
     task.spawn(function()
         while Config.AutoExtractRun do
             task.wait(0.2)
             pcall(function()
                 local char = LocalPlayer.Character
-                local targetPart = nil
-                local world = Workspace:FindFirstChild("World")
-                if world and world:FindFirstChild("Arena") then
-                    local zone = world.Arena:FindFirstChild("ExtractionZone")
-                    if zone then
-                        for _, v in pairs(zone:GetDescendants()) do
-                            if v:IsA("BasePart") and v.Transparency < 0.8 then targetPart = v break end
+                if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                    local targetPart = nil
+                    local worldFolder = Workspace:FindFirstChild("World")
+                    if worldFolder then
+                        local arenaFolder = worldFolder:FindFirstChild("Arena")
+                        if arenaFolder then
+                            local extractZone = arenaFolder:FindFirstChild("ExtractionZone")
+                            if extractZone then
+                                for _, part in pairs(extractZone:GetDescendants()) do
+                                    if part:IsA("BasePart") and part.Transparency < 0.8 then
+                                        targetPart = part
+                                        break
+                                    end
+                                end
+                            end
                         end
                     end
-                end
-                if targetPart and char and char:FindFirstChild("HumanoidRootPart") then
-                    char.Humanoid.WalkSpeed = 160
-                    char.Humanoid:MoveTo(targetPart.Position)
+                    
+                    if targetPart then
+                        char.Humanoid.WalkSpeed = 160
+                        char.Humanoid:MoveTo(targetPart.Position)
+                    else
+                        char.Humanoid.WalkSpeed = 16
+                    end
                 end
             end)
         end
+        pcall(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid.WalkSpeed = 16
+            end
+        end)
     end)
 end)
 
--- 2. Anti Player (High Fly)
+-- Fitur 2: Anti Player (Terbang Tinggi)
 CreateToggleButton("Anti Player (High Fly)", "AntiPlayerHighFly", function(state)
     task.spawn(function()
         while Config.AntiPlayerHighFly do
             task.wait(0.1)
             pcall(function()
-                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local hrp = char.HumanoidRootPart
+                    local playerNearby = false
+                    
                     for _, p in pairs(Players:GetPlayers()) do
                         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            if (hrp.Position - p.Character.HumanoidRootPart.Position).Magnitude < 25 then
-                                hrp.Velocity = Vector3.new(0, 180, 0)
+                            local distance = (hrp.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                            if distance < 25 then
+                                playerNearby = true
+                                break
                             end
                         end
+                    end
+                    
+                    if playerNearby then
+                        hrp.Velocity = Vector3.new(hrp.Velocity.X, 180, hrp.Velocity.Z)
                     end
                 end
             end)
@@ -122,57 +261,81 @@ CreateToggleButton("Anti Player (High Fly)", "AntiPlayerHighFly", function(state
     end)
 end)
 
--- 3. Auto Collect Best Cube
+-- Fitur 3: Auto Collect Cube Berdasarkan Rarity Tertinggi (Finder Diperbaiki)
 CreateToggleButton("Auto Collect Best Cube", "AutoCollectRareCube", function(state)
     task.spawn(function()
         while Config.AutoCollectRareCube do
             task.wait(0.3)
             pcall(function()
-                local bestCube, highestRarity = nil, 0
+                local bestCubePart = nil
+                local highestRarity = 0
+                
+                -- Finder mencari seluruh objek yang mengandung kata "cube_" di workspace
                 for _, obj in pairs(Workspace:GetDescendants()) do
-                    local r = getCubeRarity(obj.Name)
-                    if r > highestRarity then highestRarity = r; bestCube = obj end
+                    if obj.Name:find("cube_") then
+                        local rarity = getCubeRarity(obj.Name)
+                        if rarity > highestRarity then
+                            highestRarity = rarity
+                            
+                            -- Ambil bagian fisik (BasePart) dari cube tersebut supaya bisa diteleporti
+                            if obj:IsA("BasePart") then
+                                bestCubePart = obj
+                            elseif obj:IsA("Model") then
+                                bestCubePart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                            end
+                        end
+                    end
                 end
-                if bestCube and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local target = bestCube:IsA("BasePart") and bestCube or bestCube:FindFirstChildWhichIsA("BasePart")
-                    if target then LocalPlayer.Character.HumanoidRootPart.CFrame = target.CFrame + Vector3.new(0, 2, 0) end
+                
+                -- Teleport instan langsung ke posisi cube paling bagus yang ditemukan
+                if bestCubePart and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    LocalPlayer.Character.HumanoidRootPart.CFrame = bestCubePart.CFrame + Vector3.new(0, 3, 0)
                 end
             end)
         end
     end)
 end)
 
--- 4. Smart Steal (Deep Detection Fix)
-CreateToggleButton("Smart Steal Best Cube", "SmartStealRareCube", function(state)
+-- Fitur 4: Smart Steal (Finder & Target Player Diperbaiki)
+CreateToggleButton("Smart Steal Best Cube Player", "SmartStealRareCube", function(state)
     task.spawn(function()
         while Config.SmartStealRareCube do
             task.wait(0.3)
             pcall(function()
-                local targetPlayer, highestPlayerRarity = nil, 0
+                local targetPlayer = nil
+                local highestPlayerRarity = 0
+                
+                -- Cari player lain yang membawa cube ber-rarity paling tinggi
                 for _, p in pairs(Players:GetPlayers()) do
                     if p ~= LocalPlayer and p.Character then
-                        -- Cek Character & Backpack
-                        local searchArea = {p.Character, p:FindFirstChild("Backpack")}
-                        for _, folder in pairs(searchArea) do
-                            if folder then
-                                for _, child in pairs(folder:GetDescendants()) do
-                                    local r = getCubeRarity(child.Name)
-                                    if r > highestPlayerRarity then highestPlayerRarity = r; targetPlayer = p end
+                        for _, child in pairs(p.Character:GetDescendants()) do
+                            if child.Name:find("cube_") then
+                                local rarity = getCubeRarity(child.Name)
+                                if rarity > highestPlayerRarity then
+                                    highestPlayerRarity = rarity
+                                    targetPlayer = p
                                 end
                             end
                         end
                     end
                 end
                 
+                -- Kejar player pemilik cube paling langka dan serang otomatis
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     local localChar = LocalPlayer.Character
                     if localChar and localChar:FindFirstChild("HumanoidRootPart") then
                         localChar.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 2.5)
+                        
                         for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
-                            if tool:IsA("Tool") then tool.Parent = localChar; tool:Activate() end
+                            if tool:IsA("Tool") then
+                                tool.Parent = localChar
+                            end
                         end
+                        
                         for _, tool in pairs(localChar:GetChildren()) do
-                            if tool:IsA("Tool") then tool:Activate() end
+                            if tool:IsA("Tool") then
+                                tool:Activate()
+                            end
                         end
                     end
                 end
@@ -181,4 +344,4 @@ CreateToggleButton("Smart Steal Best Cube", "SmartStealRareCube", function(state
     end)
 end)
 
-print("Brainrot Survival Hub v35 Loaded Successfully!")
+print("Brainrot Survival Hub v37 Loaded Successfully!")
