@@ -1,5 +1,5 @@
 -- =====================================================================
--- BRAINROT SURVIVAL HUB | v32 (EXACT PATH EXTRACTION & SMART SYSTEM)
+-- BRAINROT SURVIVAL HUB | v33 (DYNAMIC CUBE PATTERN FIX)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -20,10 +20,11 @@ ScreenGui.Name = "BrainrotHub_UI"
 ScreenGui.Parent = CoreGui
 
 -- Sistem Auto Save Settings
-local SaveFileName = "BrainrotHub_Config_v8.json"
+local SaveFileName = "BrainrotHub_Config_v9.json"
 local Config = {
     AutoExtractRun = false,
     AntiPlayerHighFly = false,
+    AutoCollectCube = false,
     SmartStealAndAttack = false
 }
 
@@ -73,8 +74,8 @@ OpenCorner.Parent = OpenButton
 -- 2. MAIN MENU FRAME + TOMBOL CLOSE (X)
 -- =====================================================================
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 320, 0, 340)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -170)
+MainFrame.Size = UDim2.new(0, 320, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -190)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.Visible = false
 MainFrame.Active = true
@@ -129,7 +130,7 @@ end)
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = MainFrame
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 10)
+UIListLayout.Padding = UDim.new(0, 8)
 UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 local Spacer = Instance.new("Frame")
@@ -140,7 +141,7 @@ Spacer.Parent = MainFrame
 
 local function CreateToggleButton(name, configKey, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 290, 0, 40)
+    btn.Size = UDim2.new(0, 290, 0, 38)
     btn.BackgroundColor3 = Config[configKey] and Color3.fromRGB(50, 180, 90) or Color3.fromRGB(40, 40, 50)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamSemibold
@@ -174,10 +175,10 @@ local function CreateToggleButton(name, configKey, callback)
 end
 
 -- =====================================================================
--- 3. IMPLEMENTASI FITUR v32 (EXACT PATH EXTRACTION & ATTACK)
+-- 3. IMPLEMENTASI FITUR v33 (CUBE PATTERN & FIXED STEAL/ATTACK)
 -- =====================================================================
 
--- Fitur 1: Auto Run Kilat ke Extraction (Menggunakan jalur folder spesifik World -> Arena -> ExtractionZone)
+-- Fitur 1: Auto Run Kilat ke Extraction
 CreateToggleButton("Auto Run Extraction", "AutoExtractRun", function(state)
     task.spawn(function()
         while Config.AutoExtractRun do
@@ -186,15 +187,12 @@ CreateToggleButton("Auto Run Extraction", "AutoExtractRun", function(state)
                 local char = LocalPlayer.Character
                 if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                     local targetPart = nil
-                    
-                    -- Mengikuti jalur akurat dari foto Dex: Workspace -> World -> Arena -> ExtractionZone
                     local worldFolder = Workspace:FindFirstChild("World")
                     if worldFolder then
                         local arenaFolder = worldFolder:FindFirstChild("Arena")
                         if arenaFolder then
                             local extractZone = arenaFolder:FindFirstChild("ExtractionZone")
                             if extractZone then
-                                -- Cari bagian di dalam ExtractionZone yang sedang aktif/terbuka
                                 for _, part in pairs(extractZone:GetDescendants()) do
                                     if part:IsA("BasePart") and part.Transparency < 0.8 then
                                         targetPart = part
@@ -222,7 +220,7 @@ CreateToggleButton("Auto Run Extraction", "AutoExtractRun", function(state)
     end)
 end)
 
--- Fitur 2: Anti Player (Terbang Tinggi Jika Ada Player Mendekat)
+-- Fitur 2: Anti Player (Terbang Tinggi)
 CreateToggleButton("Anti Player (High Fly)", "AntiPlayerHighFly", function(state)
     task.spawn(function()
         while Config.AntiPlayerHighFly do
@@ -252,41 +250,62 @@ CreateToggleButton("Anti Player (High Fly)", "AntiPlayerHighFly", function(state
     end)
 end)
 
--- Fitur 3: Smart Steal (Hanya kejar & pukul player yang memegang Brainrot langka)
-CreateToggleButton("Smart Steal Rare Brainrot", "SmartStealAndAttack", function(state)
+-- Fitur 3: Auto Collect Cube (Mengambil semua brainrot berawalan "cube_" di arena secara instan)
+CreateToggleButton("Auto Collect Cube Brainrot", "AutoCollectCube", function(state)
     task.spawn(function()
-        while Config.SmartStealAndAttack do
+        while Config.AutoCollectCube do
             task.wait(0.3)
             pcall(function()
-                local bestTargetPlayer = nil
-                local highestRankScore = 0
+                local targetCube = nil
                 
-                local function getBrainrotScore(name)
-                    name = name:lower()
-                    if name:find("trinity") then return 5000
-                    elseif name:find("infinity") then return 4000
-                    elseif name:find("admin") then return 3000
-                    elseif name:find("celestial") then return 2000
-                    else return 0
-                    end
-                end
-                
-                for _, p in pairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Character then
-                        for _, child in pairs(p.Character:GetChildren()) do
-                            local score = getBrainrotScore(child.Name)
-                            if score > highestRankScore then
-                                highestRankScore = score
-                                bestTargetPlayer = p
-                            end
+                -- Deteksi objek di Workspace yang namanya mengandung kata "cube_"
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj.Name:lower():find("cube_") then
+                        if obj:IsA("BasePart") then
+                            targetCube = obj
+                            break
+                        elseif obj:IsA("Model") and obj.PrimaryPart then
+                            targetCube = obj.PrimaryPart
+                            break
                         end
                     end
                 end
                 
-                if bestTargetPlayer and bestTargetPlayer.Character and bestTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                -- Teleport instan ke cube tersebut untuk mengambilnya
+                if targetCube and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    LocalPlayer.Character.HumanoidRootPart.CFrame = targetCube.CFrame + Vector3.new(0, 2, 0)
+                end
+            end)
+        end
+    end)
+end)
+
+-- Fitur 4: Smart Steal (Mendeteksi player lain yang membawa "cube_" di badannya, lalu kejar & pukul)
+CreateToggleButton("Smart Steal Cube Player", "SmartStealAndAttack", function(state)
+    task.spawn(function()
+        while Config.SmartStealAndAttack do
+            task.wait(0.3)
+            pcall(function()
+                local targetPlayer = nil
+                
+                -- Cari player lain yang di badannya ada objek berawalan "cube_"
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character then
+                        for _, child in pairs(p.Character:GetDescendants()) do
+                            if child.Name:lower():find("cube_") then
+                                targetPlayer = p
+                                break
+                            end
+                        end
+                    end
+                    if targetPlayer then break end
+                end
+                
+                -- Jika ketemu, teleport ke depannya, ambil tool, dan pukul otomatis
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     local localChar = LocalPlayer.Character
                     if localChar and localChar:FindFirstChild("HumanoidRootPart") then
-                        localChar.HumanoidRootPart.CFrame = bestTargetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 2.5)
+                        localChar.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 2.5)
                         
                         for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
                             if tool:IsA("Tool") then
@@ -306,4 +325,4 @@ CreateToggleButton("Smart Steal Rare Brainrot", "SmartStealAndAttack", function(
     end)
 end)
 
-print("Brainrot Survival Hub v32 Loaded Successfully!")
+print("Brainrot Survival Hub v33 Loaded Successfully!")
