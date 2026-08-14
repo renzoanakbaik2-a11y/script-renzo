@@ -1,7 +1,7 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (DELTA & ALL EXECUTORS READY)
+-- BLOX FRUITS ULTIMATE SCRIPT (FINAL VERSION - UI AUTO-CLICK HOP)
 -- Fitur: Live Fruit Counter, ESP, Auto Collect & Store, FPS Boost,
--- dan Auto Server Hop Bawaan Game (Timer 10 Detik Anti-Restricted)
+-- dan Final Server Hop (Metode Virtual Click & UI Bawaan Game - 10 Detik)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,9 +13,10 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Ultimate_v16.json"
+local FileName = "BloxFruitsHub_Final_v17.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -60,7 +61,7 @@ end
 
 -- Proteksi GUI untuk Executor
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubUltimate"
+ScreenGui.Name = "BloxFruitsHubFinal"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -106,7 +107,7 @@ HudCorner.CornerRadius = UDim.new(0, 8)
 HudCorner.Parent = StatsHudFrame
 
 local HudStroke = Instance.new("UIStroke")
-HudStroke.Color = Color3.fromRGB(0, 200, 255)
+HudStroke.Color = Color3.fromRGB(255, 100, 100)
 HudStroke.Thickness = 2
 HudStroke.Parent = StatsHudFrame
 
@@ -114,7 +115,7 @@ local HudTitle = Instance.new("TextLabel")
 HudTitle.Size = UDim2.new(1, 0, 0, 22)
 HudTitle.BackgroundTransparency = 1
 HudTitle.Text = "📊 LIVE MAP STATS"
-HudTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+HudTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
 HudTitle.TextSize, HudTitle.Font = 11, Enum.Font.GothamBold
 HudTitle.ZIndex = 81
 HudTitle.Parent = StatsHudFrame
@@ -448,7 +449,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. AUTO STORE & SERVER HOP (BAWAAN GAME - 10 DETIK TIMEOUT)
+-- 5. AUTO STORE & FINAL SERVER HOP (UI AUTO-CLICK & 10 SECONDS TIMEOUT)
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -479,23 +480,39 @@ local function autoStoreFruits()
     end)
 end
 
-local function triggerGameServerHop()
+local function simulateClick(x, y)
     pcall(function()
-        showCustomNotification("TIDAK ADA BUAH: MEMBUKA SERVER BROWSER...", Color3.fromRGB(230, 126, 34))
+        VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
+        task.wait(0.05)
+        VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
+    end)
+end
+
+local function triggerFinalServerHop()
+    pcall(function()
+        showCustomNotification("TIDAK ADA BUAH: MENGEKSEKUSI FINAL HOP...", Color3.fromRGB(230, 126, 34))
         
-        -- Panggil fungsi internal server browser / UI game Blox Fruits
+        -- 1. Munculkan UI Server Browser bawaan game
+        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if playerGui then
+            local main = playerGui:FindFirstChild("Main")
+            if main and main:FindFirstChild("ServerBrowser") then
+                main.ServerBrowser.Visible = true
+            end
+        end
+
+        -- 2. Panggil remote internal game
         local remotes = ReplicatedStorage:FindFirstChild("Remotes")
         if remotes and remotes:FindFirstChild("CommF_") then
             remotes.CommF_:InvokeServer("ServerHop")
         end
+
+        -- 3. Simulasi klik virtual ke tombol server browser & tombol join
+        task.wait(1.5)
+        simulateClick(Workspace.CurrentCamera.ViewportSize.X - 50, 30)
         
-        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if playerGui then
-            local mainGui = playerGui:FindFirstChild("Main")
-            if mainGui and mainGui:FindFirstChild("ServerBrowser") then
-                mainGui.ServerBrowser.Visible = true
-            end
-        end
+        task.wait(1)
+        simulateClick(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2 + 50)
     end)
 end
 
@@ -511,7 +528,7 @@ task.spawn(function()
                     count = count + 1
                 end
             end
-            FruitCountLabel.Text = "Buah di Map: " + count
+            FruitCountLabel.Text = "Buah di Map: " .. count
 
             local uptimeSeconds = math.floor(Workspace.DistributedGameTime)
             local hours = math.floor(uptimeSeconds / 3600)
@@ -522,12 +539,15 @@ task.spawn(function()
     end
 end)
 
--- Loop Utama Pemantau Buah & Logika Timer 10 Detik
+-- Loop Utama Pemantau Buah & Logika Anti-Reset Timer 10 Detik
 task.spawn(function()
     task.wait(10) 
     local noFruitTimer = 0
+    local isHopping = false
 
     while task.wait(1) do
+        if isHopping then continue end
+
         autoStoreFruits()
 
         local hasFruitNow = false
@@ -554,16 +574,18 @@ task.spawn(function()
             if Settings.AutoServerHop then
                 noFruitTimer = noFruitTimer + 1
                 
-                -- Hitung mundur 10 detik
-                if noFruitTimer <= 10 then
-                    local timeLeft = 10 - noFruitTimer
+                local timeLeft = 10 - noFruitTimer
+                if timeLeft > 0 then
                     showCustomNotification("Tidak ada buah. Hop dalam: " .. timeLeft .. "s", Color3.fromRGB(241, 196, 15))
-                end
-
-                if noFruitTimer >= 10 then
-                    triggerGameServerHop()
+                else
+                    isHopping = true
+                    showCustomNotification("Waktu habis! Menjalankan Server Hop...", Color3.fromRGB(231, 76, 60))
+                    
+                    triggerFinalServerHop()
+                    
+                    task.wait(20)
+                    isHopping = false
                     noFruitTimer = 0
-                    task.wait(15) -- Jeda agar tidak spam trigger beruntun
                 end
             else
                 noFruitTimer = 0
@@ -632,7 +654,7 @@ OpenCorner.CornerRadius = UDim.new(0, 12)
 OpenCorner.Parent = OpenButton
 
 local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Color = Color3.fromRGB(0, 200, 255)
+OpenStroke.Color = Color3.fromRGB(255, 100, 100)
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
@@ -650,7 +672,7 @@ MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(0, 170, 255)
+MainStroke.Color = Color3.fromRGB(255, 100, 100)
 MainStroke.Thickness = 2
 MainStroke.Parent = MainFrame
 
@@ -665,8 +687,8 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Ultimate v16 (Game Hop)"
-TitleLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+TitleLabel.Text = "Blox Fruits Hub | Final v17 (UI Click Hop)"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.ZIndex = 102
@@ -708,7 +730,7 @@ local function createSectionHeader(text)
     lbl.Size = UDim2.new(0.9, 0, 0, 28)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
-    lbl.TextColor3 = Color3.fromRGB(0, 200, 255)
+    lbl.TextColor3 = Color3.fromRGB(255, 100, 100)
     lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.ZIndex = 102
@@ -758,14 +780,14 @@ createToggle("ESP Buah", "FruitESP", function(state)
     if not state then clearESP() end
 end)
 
-createSectionHeader("3. Auto Server Hop (Timer 10 Detik)")
+createSectionHeader("3. Auto Server Hop (Final 10s Timer)")
 createToggle("Auto Server Hop (10s)", "AutoServerHop", nil)
 
 local HopNowBtn = Instance.new("TextButton")
 HopNowBtn.Size = UDim2.new(0.9, 0, 0, 32)
 HopNowBtn.BackgroundColor3 = Color3.fromRGB(142, 68, 173)
 HopNowBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HopNowBtn.Text = "🌐 Panggil Server Browser Sekarang"
+HopNowBtn.Text = "🌐 Jalankan Final Hop Sekarang"
 HopNowBtn.TextSize, HopNowBtn.Font = 11, Enum.Font.GothamBold
 HopNowBtn.ZIndex = 102
 HopNowBtn.Parent = Container
@@ -775,7 +797,7 @@ hopCorner.CornerRadius = UDim.new(0, 6)
 hopCorner.Parent = HopNowBtn
 
 HopNowBtn.MouseButton1Click:Connect(function()
-    triggerGameServerHop()
+    triggerFinalServerHop()
 end)
 
 createSectionHeader("4. Auto Collect & Store Fruit")
