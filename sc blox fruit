@@ -1,8 +1,7 @@
 -- =====================================================================
 -- BLOX FRUITS ULTIMATE SCRIPT (DELTA & ALL EXECUTORS READY)
--- Fitur: Draggable Live Fruit Counter & Server Uptime HUD (Save JSON),
--- Multi-Fruit Queue Notif, 3-Line ESP, Auto Collect & Store, Fix FPS Boost,
--- Auto Server Hop dengan Pilihan ON/OFF.
+-- Fitur: Live Fruit Counter, ESP, Auto Collect & Store, FPS Boost,
+-- dan Auto Server Hop yang disempurnakan (Anti-Error).
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -17,9 +16,8 @@ local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Ultimate_v14.json"
+local FileName = "BloxFruitsHub_Ultimate_v15.json"
 
--- Pengaturan Default (Termasuk Auto Server Hop)
 local Settings = {
     FruitNotifier = true,
     AutoJoinEnabled = true,
@@ -32,7 +30,7 @@ local Settings = {
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
-    AutoServerHop = false -- Status awal Auto Server Hop OFF
+    AutoServerHop = false
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -92,7 +90,7 @@ local function getCharacterRootPart()
 end
 
 -- =====================================================================
--- 1. WIDGET STATISTIK BUAH & SERVER AKTIF (BISA DIGESER & SAVE POSISI)
+-- 1. WIDGET STATISTIK BUAH & SERVER AKTIF
 -- =====================================================================
 local StatsHudFrame = Instance.new("Frame")
 StatsHudFrame.Size = UDim2.new(0, 190, 0, 75)
@@ -142,7 +140,7 @@ ServerTimeLabel.TextSize, ServerTimeLabel.Font = 10, Enum.Font.GothamBold
 ServerTimeLabel.ZIndex = 81
 ServerTimeLabel.Parent = StatsHudFrame
 
--- Fungsi Dragging / Geser Widget dengan Jempol
+-- Dragging Widget
 local dragging, dragInput, dragStart, startPos
 StatsHudFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -177,7 +175,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- =====================================================================
--- 2. SISTEM NOTIFIKASI GANDA BERUNTUN
+-- 2. SISTEM NOTIFIKASI
 -- =====================================================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 380, 0, 50)
@@ -261,7 +259,7 @@ local function playFruitSound()
 end
 
 -- =====================================================================
--- 3. DETEKSI NAMA PULAU (HANYA NAMA PULAU SAJA)
+-- 3. DETEKSI NAMA PULAU & ESP BUAH
 -- =====================================================================
 local function getIslandName(position)
     local x, z = position.X, position.Z
@@ -280,9 +278,6 @@ local function getIslandName(position)
     end
 end
 
--- =====================================================================
--- 4. FILTER BUAH & ESP 3 BARIS BERSIH
--- =====================================================================
 local function isRealSpawnedFruit(obj)
     if not obj or not obj.Parent then return false end
     if obj.Parent ~= Workspace then return false end
@@ -351,7 +346,7 @@ local function updateFruitESP()
 end
 
 -- =====================================================================
--- 5. SISTEM TERBANG & MULTI-COLLECT BUAH BERUNTUN
+-- 4. SISTEM TERBANG & AUTO COLLECT
 -- =====================================================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, onComplete)
@@ -454,7 +449,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 6. AUTO STORE FRUIT & AUTO SERVER HOPPING
+-- 5. AUTO STORE & AUTO SERVER HOP YANG AMAN (ANTI-ERROR)
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -485,11 +480,11 @@ local function autoStoreFruits()
     end)
 end
 
--- Fungsi Pindah Server Otomatis (Server Hop)
 local function hopServer()
     pcall(function()
-        showCustomNotification("MENCARI SERVER BARU...", Color3.fromRGB(230, 126, 34))
+        showCustomNotification("MENYAMBUNGKAN KE SERVER LAIN...", Color3.fromRGB(230, 126, 34))
         task.wait(1)
+        
         local placeId = game.PlaceId
         local serversUrl = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
         
@@ -499,25 +494,29 @@ local function hopServer()
         
         if success and result and result.data then
             for _, server in ipairs(result.data) do
+                -- Validasi server aktif dan belum penuh
                 if server.id ~= game.JobId and server.playing < server.maxPlayers then
-                    TeleportService:TeleportToPlaceInstance(placeId, server.id, LocalPlayer)
+                    pcall(function()
+                        TeleportService:TeleportToPlaceInstance(placeId, server.id, LocalPlayer)
+                    end)
                     return
                 end
             end
         end
         
-        -- Kalau gagal ambil dari API publik, fallback pakai Teleport biasa
-        TeleportService:Teleport(placeId, LocalPlayer)
+        -- Fallback pengaman jika API gagal: Teleport acak biasa tanpa error crash
+        pcall(function()
+            TeleportService:Teleport(placeId, LocalPlayer)
+        end)
     end)
 end
 
--- Loop ringan untuk update HUD Statistik & ESP
+-- Loop Statistik & ESP
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
             updateFruitESP()
 
-            -- Hitung jumlah buah real-time untuk Widget
             local count = 0
             for _, obj in ipairs(Workspace:GetChildren()) do
                 if isRealSpawnedFruit(obj) then
@@ -526,7 +525,6 @@ task.spawn(function()
             end
             FruitCountLabel.Text = "Buah di Map: " .. count
 
-            -- Hitung durasi server aktif
             local uptimeSeconds = math.floor(Workspace.DistributedGameTime)
             local hours = math.floor(uptimeSeconds / 3600)
             local minutes = math.floor((uptimeSeconds % 3600) / 60)
@@ -538,7 +536,7 @@ end)
 
 -- Loop Utama Pemantau Buah & Logika Auto Server Hop
 task.spawn(function()
-    task.wait(12) -- Jeda awal masuk game
+    task.wait(12) 
     local noFruitTimer = 0
 
     while task.wait(3) do
@@ -551,20 +549,11 @@ task.spawn(function()
             end
         end
 
-        local fruitList = {}
-        local checkDuplicate = {}
-        for _, name in ipairs(fruitListRaw) do
-            if not checkDuplicate[name] then
-                checkDuplicate[name] = true
-                table.insert(fruitList, name)
-            end
-        end
-
         local totalFruits = #fruitListRaw
         local hasFruitNow = (totalFruits > 0)
 
         if hasFruitNow then
-            noFruitTimer = 0 -- Reset timer kalau ada buah
+            noFruitTimer = 0 
             if Settings.AutoCollectFruit and not activeFlyConnection then
                 pcall(function()
                     collectNearestFruit()
@@ -573,16 +562,12 @@ task.spawn(function()
 
             if Settings.FruitNotifier then
                 playFruitSound()
-                showCustomNotification("JUMLAH BUAH DI MAP: " + totalFruits, Color3.fromRGB(46, 204, 113))
-                for _, name in ipairs(fruitList) do
-                    showCustomNotification("BUAH: " .. name, Color3.fromRGB(52, 152, 219))
-                end
+                showCustomNotification("JUMLAH BUAH DI MAP: " .. totalFruits, Color3.fromRGB(46, 204, 113))
             end
         else
-            -- Kalau TIDAK ADA BUAH di map
             if Settings.AutoServerHop then
                 noFruitTimer = noFruitTimer + 3
-                -- Jika sudah 15 detik berturut-turut kosong, pindah server otomatis!
+                -- Jika dalam 15 detik berturut-turut tidak ada buah, jalankan server hop otomatis
                 if noFruitTimer >= 15 then
                     hopServer()
                     noFruitTimer = 0
@@ -595,7 +580,7 @@ task.spawn(function()
 end)
 
 -- =====================================================================
--- 7. AUTO JOIN TEAM
+-- 6. AUTO JOIN TEAM & FPS BOOST
 -- =====================================================================
 local function joinTeam()
     if not Settings.AutoJoinEnabled then return end
@@ -613,9 +598,6 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 task.spawn(function() task.wait(3) joinTeam() end)
 
--- =====================================================================
--- 8. FPS BOOST
--- =====================================================================
 local function applyFpsBoost(state)
     if state then
         Lighting.GlobalShadows = false
@@ -641,7 +623,7 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 9. TAMPILAN MENU UTAMA
+-- 7. MENU UTAMA GUI
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -690,7 +672,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Ultimate Final v14"
+TitleLabel.Text = "Blox Fruits Hub | Ultimate v15"
 TitleLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -769,23 +751,22 @@ local function createToggle(text, settingKey, callback)
     return btn
 end
 
--- Membangun Menu GUI
 createSectionHeader("1. Auto Join Tim")
 createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
     if state then joinTeam() end
 end)
 
 createSectionHeader("2. Notifikasi & Live Map Stats HUD")
-createToggle("Fruit Notifier (Dual & Queue Notif)", "FruitNotifier", nil)
-createToggle("Live Fruit & Server HUD (Bisa Digeser)", "FruitStatsHUD", function(state)
+createToggle("Fruit Notifier", "FruitNotifier", nil)
+createToggle("Live Fruit & Server HUD", "FruitStatsHUD", function(state)
     StatsHudFrame.Visible = state
 end)
-createToggle("ESP Buah (3 Baris Bersih)", "FruitESP", function(state)
+createToggle("ESP Buah", "FruitESP", function(state)
     if not state then clearESP() end
 end)
 
-createSectionHeader("3. Auto Server Hop (Pindah Server Kosong)")
-createToggle("Auto Server Hop (Ganti Server Otomatis)", "AutoServerHop", nil)
+createSectionHeader("3. Auto Server Hop (Pindah Server Otomatis)")
+createToggle("Auto Server Hop", "AutoServerHop", nil)
 
 local HopNowBtn = Instance.new("TextButton")
 HopNowBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -805,7 +786,7 @@ HopNowBtn.MouseButton1Click:Connect(function()
 end)
 
 createSectionHeader("4. Auto Collect & Store Fruit")
-createToggle("Auto Collect Fruit (Borong Semua)", "AutoCollectFruit", nil)
+createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
 
 local CollectBtn = Instance.new("TextButton")
 CollectBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -826,7 +807,7 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("5. Pengaturan Terbang (Flight Settings)")
+createSectionHeader("5. Pengaturan Terbang")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -859,7 +840,7 @@ local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
 HeightBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
 HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs (Max 15)"
+HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
 HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
 HeightBtn.ZIndex = 102
 HeightBtn.Parent = Container
@@ -878,11 +859,11 @@ HeightBtn.MouseButton1Click:Connect(function()
     else
         Settings.FlyHeight = 3
     end
-    HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs (Max 15)"
+    HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
     saveSettings()
 end)
 
 createSectionHeader("6. Performa")
-createToggle("FPS Boost (Kurangi Lag)", "FpsBoost", function(state)
+createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state)
 end)
