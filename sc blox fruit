@@ -1,6 +1,6 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION + UPGRADED AUTO STORE)
--- Fitur: Live Fruit Counter, ESP, Auto Collect & Store (Upgrade), FPS Boost
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION + FIXED AUTO STORE)
+-- Fitur: Live Fruit Counter, ESP, Auto Collect & Fixed Auto Store, FPS Boost
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v19.json"
+local FileName = "BloxFruitsHub_Clean_v21.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -446,7 +446,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. UPGRADED AUTO STORE & MONITOR BUAH
+-- 5. FIXED AUTO STORE (BYPASS METODE REDZ/SPEED HUB)
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -461,25 +461,32 @@ local function autoStoreFruits()
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         local character = LocalPlayer.Character
         
-        local function attemptStore(item)
+        local function checkAndStore(item)
             if item:IsA("Tool") then
                 local name = item.Name:lower()
-                if name:find("fruit") or name:find("rocket") or name:find("spin") or name:find("kitsune") or name:find("dragon") or name:find("dough") or name:find("buddha") then
-                    commF:InvokeServer("StoreFruit", item.Name)
-                    task.wait(0.2)
+                -- Cek apakah item di tas benar-benar sebuah buah
+                if name:find("fruit") or name:find("rocket") or name:find("spin") or name:find("kitsune") or name:find("dragon") or name:find("dough") or name:find("buddha") or name:find("trex") or name:find("mammoth") then
+                    -- Menggunakan format pemanggilan Remote yang valid (mengirim argumen nama dan objek tool jika diperlukan)
+                    local originalName = item:GetAttribute("OriginalName") or item.Name
+                    pcall(function()
+                        commF:InvokeServer("StoreFruit", originalName, item)
+                    end)
+                    pcall(function()
+                        commF:InvokeServer("StoreFruit", item.Name)
+                    end)
                 end
             end
         end
         
         if backpack then
             for _, item in ipairs(backpack:GetChildren()) do
-                attemptStore(item)
+                checkAndStore(item)
             end
         end
         
         if character then
             for _, item in ipairs(character:GetChildren()) do
-                attemptStore(item)
+                checkAndStore(item)
             end
         end
     end)
@@ -508,37 +515,50 @@ task.spawn(function()
     end
 end)
 
--- Loop Utama Pemantau Buah & Auto Collect/Store
+-- =====================================================================
+-- 6. MONITORING STATUS & NOTIFIKASI (ANTI-SPAM)
+-- =====================================================================
 task.spawn(function()
+    local lastStatus = nil 
     task.wait(5) 
-    while task.wait(1) do
-        autoStoreFruits()
+    while task.wait(3) do 
+        pcall(function()
+            autoStoreFruits()
 
-        local hasFruitNow = false
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            if isRealSpawnedFruit(obj) then
-                hasFruitNow = true
-                break
+            local hasFruitNow = false
+            for _, obj in ipairs(Workspace:GetChildren()) do
+                if isRealSpawnedFruit(obj) then
+                    hasFruitNow = true
+                    break
+                end
             end
-        end
 
-        if hasFruitNow then
-            if Settings.AutoCollectFruit and not activeFlyConnection then
-                pcall(function()
+            -- Notifikasi perubahan status (Anti-Spam)
+            if hasFruitNow and lastStatus ~= "Ada" then
+                if Settings.FruitNotifier then
+                    playFruitSound()
+                    showCustomNotification("✅ BUAH TERDETEKSI DI MAP!", Color3.fromRGB(46, 204, 113))
+                end
+                lastStatus = "Ada"
+            elseif not hasFruitNow and lastStatus ~= "Kosong" then
+                if Settings.FruitNotifier then
+                    showCustomNotification("❌ Tidak ada buah di map.", Color3.fromRGB(231, 76, 60))
+                end
+                lastStatus = "Kosong"
+            end
+
+            -- Auto Collect Trigger
+            if hasFruitNow then
+                if Settings.AutoCollectFruit and not activeFlyConnection then
                     collectNearestFruit()
-                end)
+                end
             end
-
-            if Settings.FruitNotifier then
-                playFruitSound()
-                showCustomNotification("BUAH TERDETEKSI DI MAP!", Color3.fromRGB(46, 204, 113))
-            end
-        end
+        end)
     end
 end)
 
 -- =====================================================================
--- 6. AUTO JOIN TEAM & FPS BOOST
+-- 7. AUTO JOIN TEAM & FPS BOOST
 -- =====================================================================
 local function joinTeam()
     if not Settings.AutoJoinEnabled then return end
@@ -581,7 +601,7 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 7. MENU UTAMA GUI
+-- 8. MENU UTAMA GUI
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -630,7 +650,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v19"
+TitleLabel.Text = "Blox Fruits Hub | Clean v21"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
