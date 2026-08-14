@@ -1,7 +1,7 @@
 -- =====================================================================
 -- BLOX FRUITS ULTIMATE SCRIPT (DELTA & ALL EXECUTORS READY)
 -- Fitur: Live Fruit Counter, ESP, Auto Collect & Store, FPS Boost,
--- dan Auto Server Hop yang disempurnakan (Anti-Error).
+-- dan Auto Server Hop Bawaan Game (Timer 10 Detik Anti-Restricted)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,10 +13,9 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Ultimate_v15.json"
+local FileName = "BloxFruitsHub_Ultimate_v16.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -449,7 +448,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. AUTO STORE & AUTO SERVER HOP YANG AMAN (ANTI-ERROR)
+-- 5. AUTO STORE & SERVER HOP (BAWAAN GAME - 10 DETIK TIMEOUT)
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -480,34 +479,23 @@ local function autoStoreFruits()
     end)
 end
 
-local function hopServer()
+local function triggerGameServerHop()
     pcall(function()
-        showCustomNotification("MENYAMBUNGKAN KE SERVER LAIN...", Color3.fromRGB(230, 126, 34))
-        task.wait(1)
+        showCustomNotification("TIDAK ADA BUAH: MEMBUKA SERVER BROWSER...", Color3.fromRGB(230, 126, 34))
         
-        local placeId = game.PlaceId
-        local serversUrl = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
-        
-        local success, result = pcall(function()
-            return HttpService:JSONDecode(game:HttpGet(serversUrl))
-        end)
-        
-        if success and result and result.data then
-            for _, server in ipairs(result.data) do
-                -- Validasi server aktif dan belum penuh
-                if server.id ~= game.JobId and server.playing < server.maxPlayers then
-                    pcall(function()
-                        TeleportService:TeleportToPlaceInstance(placeId, server.id, LocalPlayer)
-                    end)
-                    return
-                end
-            end
+        -- Panggil fungsi internal server browser / UI game Blox Fruits
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        if remotes and remotes:FindFirstChild("CommF_") then
+            remotes.CommF_:InvokeServer("ServerHop")
         end
         
-        -- Fallback pengaman jika API gagal: Teleport acak biasa tanpa error crash
-        pcall(function()
-            TeleportService:Teleport(placeId, LocalPlayer)
-        end)
+        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if playerGui then
+            local mainGui = playerGui:FindFirstChild("Main")
+            if mainGui and mainGui:FindFirstChild("ServerBrowser") then
+                mainGui.ServerBrowser.Visible = true
+            end
+        end
     end)
 end
 
@@ -523,7 +511,7 @@ task.spawn(function()
                     count = count + 1
                 end
             end
-            FruitCountLabel.Text = "Buah di Map: " .. count
+            FruitCountLabel.Text = "Buah di Map: " + count
 
             local uptimeSeconds = math.floor(Workspace.DistributedGameTime)
             local hours = math.floor(uptimeSeconds / 3600)
@@ -534,23 +522,21 @@ task.spawn(function()
     end
 end)
 
--- Loop Utama Pemantau Buah & Logika Auto Server Hop
+-- Loop Utama Pemantau Buah & Logika Timer 10 Detik
 task.spawn(function()
-    task.wait(12) 
+    task.wait(10) 
     local noFruitTimer = 0
 
-    while task.wait(3) do
+    while task.wait(1) do
         autoStoreFruits()
 
-        local fruitListRaw = {}
+        local hasFruitNow = false
         for _, obj in ipairs(Workspace:GetChildren()) do
             if isRealSpawnedFruit(obj) then
-                table.insert(fruitListRaw, obj.Name)
+                hasFruitNow = true
+                break
             end
         end
-
-        local totalFruits = #fruitListRaw
-        local hasFruitNow = (totalFruits > 0)
 
         if hasFruitNow then
             noFruitTimer = 0 
@@ -562,15 +548,22 @@ task.spawn(function()
 
             if Settings.FruitNotifier then
                 playFruitSound()
-                showCustomNotification("JUMLAH BUAH DI MAP: " .. totalFruits, Color3.fromRGB(46, 204, 113))
+                showCustomNotification("BUAH TERDETEKSI DI MAP!", Color3.fromRGB(46, 204, 113))
             end
         else
             if Settings.AutoServerHop then
-                noFruitTimer = noFruitTimer + 3
-                -- Jika dalam 15 detik berturut-turut tidak ada buah, jalankan server hop otomatis
-                if noFruitTimer >= 15 then
-                    hopServer()
+                noFruitTimer = noFruitTimer + 1
+                
+                -- Hitung mundur 10 detik
+                if noFruitTimer <= 10 then
+                    local timeLeft = 10 - noFruitTimer
+                    showCustomNotification("Tidak ada buah. Hop dalam: " .. timeLeft .. "s", Color3.fromRGB(241, 196, 15))
+                end
+
+                if noFruitTimer >= 10 then
+                    triggerGameServerHop()
                     noFruitTimer = 0
+                    task.wait(15) -- Jeda agar tidak spam trigger beruntun
                 end
             else
                 noFruitTimer = 0
@@ -672,7 +665,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Ultimate v15"
+TitleLabel.Text = "Blox Fruits Hub | Ultimate v16 (Game Hop)"
 TitleLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -765,14 +758,14 @@ createToggle("ESP Buah", "FruitESP", function(state)
     if not state then clearESP() end
 end)
 
-createSectionHeader("3. Auto Server Hop (Pindah Server Otomatis)")
-createToggle("Auto Server Hop", "AutoServerHop", nil)
+createSectionHeader("3. Auto Server Hop (Timer 10 Detik)")
+createToggle("Auto Server Hop (10s)", "AutoServerHop", nil)
 
 local HopNowBtn = Instance.new("TextButton")
 HopNowBtn.Size = UDim2.new(0.9, 0, 0, 32)
 HopNowBtn.BackgroundColor3 = Color3.fromRGB(142, 68, 173)
 HopNowBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HopNowBtn.Text = "🌐 Ganti Server Manual Sekarang"
+HopNowBtn.Text = "🌐 Panggil Server Browser Sekarang"
 HopNowBtn.TextSize, HopNowBtn.Font = 11, Enum.Font.GothamBold
 HopNowBtn.ZIndex = 102
 HopNowBtn.Parent = Container
@@ -782,7 +775,7 @@ hopCorner.CornerRadius = UDim.new(0, 6)
 hopCorner.Parent = HopNowBtn
 
 HopNowBtn.MouseButton1Click:Connect(function()
-    hopServer()
+    triggerGameServerHop()
 end)
 
 createSectionHeader("4. Auto Collect & Store Fruit")
