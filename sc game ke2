@@ -1,5 +1,5 @@
 -- =====================================================================
--- BRAINROT SURVIVAL HUB (SAFE & COMPATIBLE VERSION)
+-- BRAINROT SURVIVAL HUB (FULL COMBINED & FIXED VERSION)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,8 +13,7 @@ local LocalPlayer = Players.LocalPlayer
 local Settings = {
     AutoExtractRun = false,
     AntiPlayerHighFly = false,
-    AutoCollectRareCube = false,
-    SmartStealRareCube = false
+    AutoCollectRareCube = false
 }
 
 -- Buat GUI Aman Tanpa Fungsi Protector Luar
@@ -23,7 +22,6 @@ ScreenGui.Name = "BrainrotHubSafe"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 
--- Masukkan ke CoreGui dengan aman
 pcall(function()
     ScreenGui.Parent = CoreGui
 end)
@@ -110,7 +108,7 @@ task.spawn(function()
     end
 end)
 
--- 3. Auto Collect Best Cube (Safe Teleport & Touch)
+-- 3. Auto Collect Best Cube (Hanya ambil di map, abaikan inventory/player)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -119,9 +117,22 @@ task.spawn(function()
                 local bestCubePart = nil
                 local highestRarity = -1
                 
+                -- Fungsi untuk mengecek apakah objek ada di dalam player atau inventory
+                local function isInsidePlayer(obj)
+                    local ancestor = obj.Parent
+                    while ancestor do
+                        if ancestor:IsA("Player") or ancestor.Name == "Backpack" or ancestor:FindFirstChildOfClass("Humanoid") then
+                            return true
+                        end
+                        ancestor = ancestor.Parent
+                    end
+                    return false
+                end
+                
+                -- Cari cube terbaik HANYA di luar player (di map/arena)
                 for _, obj in pairs(Workspace:GetDescendants()) do
                     local nameLower = obj.Name:lower()
-                    if nameLower:find("cube") or nameLower:find("brainrot") then
+                    if (nameLower:find("cube") or nameLower:find("brainrot")) and not isInsidePlayer(obj) then
                         local rarity = getCubeRarity(obj.Name)
                         if rarity >= highestRarity then
                             highestRarity = rarity
@@ -134,6 +145,7 @@ task.spawn(function()
                     end
                 end
                 
+                -- Teleport ke cube terbaik yang ada di map
                 if bestCubePart and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     local hrp = LocalPlayer.Character.HumanoidRootPart
                     hrp.CFrame = bestCubePart.CFrame + Vector3.new(0, 2, 0)
@@ -187,7 +199,7 @@ TopCorner.CornerRadius = UDim.new(0, 10)
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 1, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Brainrot Hub | Safe Mode"
+TitleLabel.Text = "Brainrot Hub | Full Version"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextSize = 12
@@ -244,4 +256,4 @@ createToggle("Auto Run Extraction", "AutoExtractRun")
 createToggle("Anti Player (High Fly)", "AntiPlayerHighFly")
 createToggle("Auto Collect Best Cube", "AutoCollectRareCube")
 
-print("Brainrot Hub Safe Version Loaded!")
+print("Brainrot Hub Full Version Loaded Successfully!")
