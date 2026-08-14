@@ -1,8 +1,7 @@
 -- =====================================================================
 -- BLOX FRUITS ULTIMATE SCRIPT (DELTA & ALL EXECUTORS READY)
--- Fitur: Dual Status Notif (Anti-Spam), GUI On/Off + Save JSON, 
--- Flight Settings (Speed & Height), Detailed Fruit ESP (Name, Distance, Island),
--- Fruit Notifier + Animasi, Auto Store Fruit, Auto Join Team, FPS Boost.
+-- Fitur: Delay Loading Notif, Durasi Notif Diperlama & Lebih Mulus,
+-- Auto Collect Fruit, Dual Status Notif, GUI On/Off + Save JSON, dll.
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -15,7 +14,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Ultimate_v5.json"
+local FileName = "BloxFruitsHub_Ultimate_v7.json"
 
 -- Pengaturan Default
 local Settings = {
@@ -27,7 +26,7 @@ local Settings = {
     FlyHeight = 5,      
     AutoStoreFruit = true,    
     FruitESP = true,
-    MonitorVisible = true
+    AutoCollectFruit = true
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -87,7 +86,7 @@ local function getCharacterRootPart()
 end
 
 -- =====================================================================
--- 1. SISTEM DUAL NOTIFIKASI (ANTI-SPAM DENGAN PERUBAHAN STATUS)
+-- 1. SISTEM NOTIFIKASI (DELAY MASUK + DURASI LEBIH LAMA & MULUS)
 -- =====================================================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 380, 0, 50)
@@ -133,17 +132,19 @@ local function showCustomNotification(messageText, textColor)
     NotifText.Text = messageText
     NotifText.TextColor3 = textColor or Color3.fromRGB(255, 255, 255)
 
-    TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    -- Durasi naik/turun diperlambat jadi 0.8 detik agar sangat mulus (tidak ngebut)
+    TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
         Position = UDim2.new(0.5, 0, 0, 15)
     }):Play()
 
-    task.wait(4)
+    -- Waktu baca teks di layar diperlama menjadi 7 detik (sebelumnya 4 detik)
+    task.wait(7)
 
-    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+    TweenService:Create(NotifFrame, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
         Position = UDim2.new(0.5, 0, 0, -80)
     }):Play()
 
-    task.wait(0.5)
+    task.wait(1)
     isAnimatingNotif = false
 end
 
@@ -179,7 +180,7 @@ local function getIslandName(position)
 end
 
 -- =====================================================================
--- 3. FILTER BUAH & ESP BUAH MENGETAHUI JARAK, NAMA, & PULAU
+-- 3. FILTER BUAH & ESP BUAH
 -- =====================================================================
 local function isRealSpawnedFruit(obj)
     if not obj or not obj.Parent then return false end
@@ -204,7 +205,6 @@ local function isRealSpawnedFruit(obj)
     return false
 end
 
--- Container ESP
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
 ESPFolder.Parent = CoreGui
@@ -249,7 +249,81 @@ local function updateFruitESP()
 end
 
 -- =====================================================================
--- 4. AUTO STORE FRUIT
+-- 4. SISTEM TERBANG MULUS (AUTO COLLECT FRUIT)
+-- =====================================================================
+local activeFlyConnection = nil
+local function smoothFlyTo(targetCFrame)
+    local rootPart = getCharacterRootPart()
+    if not rootPart then return end
+
+    if activeFlyConnection then
+        activeFlyConnection:Disconnect()
+        activeFlyConnection = nil
+    end
+
+    local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
+    local currentHeight = math.clamp(Settings.FlyHeight, 0, 15)
+    local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
+
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid then humanoid.PlatformStand = true end
+
+    local noclipConnection
+    noclipConnection = RunService.Stepped:Connect(function()
+        pcall(function()
+            if character then
+                for _, part in ipairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end)
+
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Parent = rootPart
+
+    local bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bodyGyro.CFrame = rootPart.CFrame
+    bodyGyro.Parent = rootPart
+
+    activeFlyConnection = RunService.Heartbeat:Connect(function()
+        local currentRoot = getCharacterRootPart()
+        if not currentRoot or not character or not character.Parent then
+            if noclipConnection then noclipConnection:Disconnect() end
+            if bodyVelocity then bodyVelocity:Destroy() end
+            if bodyGyro then bodyGyro:Destroy() end
+            if humanoid then humanoid.PlatformStand = false end
+            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
+            return
+        end
+
+        local currentPos = currentRoot.Position
+        local targetPos = adjustedTarget
+        local direction = (targetPos - currentPos)
+        local distance = direction.Magnitude
+
+        if distance < 4 then
+            if noclipConnection then noclipConnection:Disconnect() end
+            if bodyVelocity then bodyVelocity:Destroy() end
+            if bodyGyro then bodyGyro:Destroy() end
+            if humanoid then humanoid.PlatformStand = false end
+            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
+            return
+        end
+
+        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 15)
+        bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
+    end)
+end
+
+-- =====================================================================
+-- 5. AUTO STORE FRUIT
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -280,7 +354,7 @@ local function autoStoreFruits()
     end)
 end
 
--- Loop Deteksi Buah, ESP, Store & Logika Dual Status Notif (Anti-Spam)
+-- Loop Utama: ESP, Auto Collect Buah, Auto Store, & Dual Status Notif
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
@@ -289,10 +363,11 @@ task.spawn(function()
     end
 end)
 
-local lastFruitState = false -- Untuk melacak perubahan status agar tidak spam
+local lastFruitState = false
 task.spawn(function()
-    -- Notif awal saat script baru aktif
-    task.wait(2)
+    -- DELAY 7 DETIK SAAT PERTAMA KALI MASUK GAME (Biar nggak lag / bentrok sama loading awal)
+    task.wait(7)
+
     if Settings.FruitNotifier then
         showCustomNotification("STATUS: Memantau Map (Belum Ada Buah)", Color3.fromRGB(200, 200, 200))
     end
@@ -301,9 +376,11 @@ task.spawn(function()
         autoStoreFruits()
 
         local fruitListRaw = {}
+        local fruitInstances = {}
         for _, obj in ipairs(Workspace:GetChildren()) do
             if isRealSpawnedFruit(obj) then
                 table.insert(fruitListRaw, obj.Name)
+                table.insert(fruitInstances, obj)
             end
         end
 
@@ -318,15 +395,26 @@ task.spawn(function()
 
         local hasFruitNow = (#fruitList > 0)
 
+        if Settings.AutoCollectFruit and hasFruitNow and not activeFlyConnection then
+            pcall(function()
+                local rootPart = getCharacterRootPart()
+                if rootPart and #fruitInstances > 0 then
+                    local targetFruit = fruitInstances[1]
+                    local handle = targetFruit:FindFirstChild("Handle") or targetFruit:FindFirstChildWhichIsA("BasePart")
+                    if handle then
+                        smoothFlyTo(handle.CFrame)
+                    end
+                end
+            end)
+        end
+
         if Settings.FruitNotifier then
             if hasFruitNow and not lastFruitState then
-                -- KONDISI 2: Baru saja ADA BUAH muncul
                 lastFruitState = true
                 local fruitNameStr = table.concat(fruitList, ", ")
                 playFruitSound()
                 showCustomNotification("BUAH SPAWN: " .. fruitNameStr, Color3.fromRGB(46, 204, 113))
             elseif not hasFruitNow and lastFruitState then
-                -- KONDISI 1: Baru saja KOSONG / Buah diambil / Hilang
                 lastFruitState = false
                 showCustomNotification("STATUS: Buah Diambil / Kosong. Memantau...", Color3.fromRGB(231, 76, 60))
             end
@@ -335,7 +423,7 @@ task.spawn(function()
 end)
 
 -- =====================================================================
--- 5. AUTO JOIN TEAM
+-- 6. AUTO JOIN TEAM
 -- =====================================================================
 local function joinTeam()
     if not Settings.AutoJoinEnabled then return end
@@ -348,13 +436,13 @@ local function joinTeam()
 end
 
 LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(2)
+    task.wait(3)
     joinTeam()
 end)
-task.spawn(function() task.wait(1) joinTeam() end)
+task.spawn(function() task.wait(2) joinTeam() end)
 
 -- =====================================================================
--- 6. FPS BOOST
+-- 7. FPS BOOST
 -- =====================================================================
 local function applyFpsBoost(state)
     if state then
@@ -375,7 +463,7 @@ end
 if Settings.FpsBoost then applyFpsBoost(true) end
 
 -- =====================================================================
--- 7. TAMPILAN MENU UTAMA (GUI ON/OFF + SAVE SETTINGS)
+-- 8. TAMPILAN MENU UTAMA (GUI ON/OFF + SAVE SETTINGS)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -452,7 +540,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 650)
+Container.CanvasSize = UDim2.new(0, 0, 0, 700)
 Container.ScrollBarThickness = 4
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -515,7 +603,8 @@ createToggle("ESP Buah (Nama, Jarak, & Pulau)", "FruitESP", function(state)
     if not state then clearESP() end
 end)
 
-createSectionHeader("3. Auto Store")
+createSectionHeader("3. Auto Collect & Store Fruit")
+createToggle("Auto Collect Fruit (Terbang Mulus)", "AutoCollectFruit", nil)
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
 createSectionHeader("4. Pengaturan Terbang (Flight Settings)")
