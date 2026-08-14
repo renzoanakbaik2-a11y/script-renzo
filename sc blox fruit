@@ -1,6 +1,6 @@
 -- =====================================================================
 -- BLOX FRUITS ULTIMATE SCRIPT (DELTA & ALL EXECUTORS READY)
--- Fitur: GUI On/Off + Save JSON, Auto Chest (Fly + Noclip), 
+-- Fitur: Dual Status Notif (Anti-Spam), GUI On/Off + Save JSON, 
 -- Flight Settings (Speed & Height), Detailed Fruit ESP (Name, Distance, Island),
 -- Fruit Notifier + Animasi, Auto Store Fruit, Auto Join Team, FPS Boost.
 -- =====================================================================
@@ -15,7 +15,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Ultimate_v3.json"
+local FileName = "BloxFruitsHub_Ultimate_v5.json"
 
 -- Pengaturan Default
 local Settings = {
@@ -23,7 +23,6 @@ local Settings = {
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    AutoChest = true,
     FlightSpeed = 150,  
     FlyHeight = 5,      
     AutoStoreFruit = true,    
@@ -88,7 +87,7 @@ local function getCharacterRootPart()
 end
 
 -- =====================================================================
--- 1. NOTIFIKASI BUAH & AUDIO
+-- 1. SISTEM DUAL NOTIFIKASI (ANTI-SPAM DENGAN PERUBAHAN STATUS)
 -- =====================================================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 380, 0, 50)
@@ -127,17 +126,18 @@ NotifText.ZIndex = 51
 NotifText.Parent = NotifFrame
 
 local isAnimatingNotif = false
-local function showFruitNotification(fruitNameText)
+local function showCustomNotification(messageText, textColor)
     if isAnimatingNotif then return end
     isAnimatingNotif = true
 
-    NotifText.Text = "BUAH SPAWN: " .. fruitNameText
+    NotifText.Text = messageText
+    NotifText.TextColor3 = textColor or Color3.fromRGB(255, 255, 255)
 
     TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Position = UDim2.new(0.5, 0, 0, 15)
     }):Play()
 
-    task.wait(5)
+    task.wait(4)
 
     TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Position = UDim2.new(0.5, 0, 0, -80)
@@ -162,7 +162,6 @@ end
 -- 2. DETEKSI PULAU / LOKASI BERDASARKAN POSISI
 -- =====================================================================
 local function getIslandName(position)
-    -- Deteksi sederhana area pulau di Blox Fruits berdasarkan koordinat X dan Z
     local x, z = position.X, position.Z
     if math.abs(x) < 2000 and math.abs(z) < 2000 then
         return "Starter / Middle Area"
@@ -180,90 +179,7 @@ local function getIslandName(position)
 end
 
 -- =====================================================================
--- 3. SISTEM TERBANG MULUS + NOCLIP + ANTI-CAMERA BUG
--- =====================================================================
-local activeFlyConnection = nil
-local function smoothFlyTo(targetCFrame, checkSettingKey)
-    local rootPart = getCharacterRootPart()
-    if not rootPart then return end
-
-    if activeFlyConnection then
-        activeFlyConnection:Disconnect()
-        activeFlyConnection = nil
-    end
-
-    local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
-    local currentHeight = math.clamp(Settings.FlyHeight, 0, 15)
-    local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
-
-    local character = LocalPlayer.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    if humanoid then humanoid.PlatformStand = true end
-
-    local noclipConnection
-    noclipConnection = RunService.Stepped:Connect(function()
-        pcall(function()
-            if character then
-                for _, part in ipairs(character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    end)
-
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyVelocity.Parent = rootPart
-
-    local bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bodyGyro.CFrame = rootPart.CFrame
-    bodyGyro.Parent = rootPart
-
-    activeFlyConnection = RunService.Heartbeat:Connect(function()
-        if checkSettingKey and not Settings[checkSettingKey] then
-            if noclipConnection then noclipConnection:Disconnect() end
-            if bodyVelocity then bodyVelocity:Destroy() end
-            if bodyGyro then bodyGyro:Destroy() end
-            if humanoid then humanoid.PlatformStand = false end
-            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
-            return
-        end
-
-        local currentRoot = getCharacterRootPart()
-        if not currentRoot or not character or not character.Parent then
-            if noclipConnection then noclipConnection:Disconnect() end
-            if bodyVelocity then bodyVelocity:Destroy() end
-            if bodyGyro then bodyGyro:Destroy() end
-            if humanoid then humanoid.PlatformStand = false end
-            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
-            return
-        end
-
-        local currentPos = currentRoot.Position
-        local targetPos = adjustedTarget
-        local direction = (targetPos - currentPos)
-        local distance = direction.Magnitude
-
-        if distance < 4 then
-            if noclipConnection then noclipConnection:Disconnect() end
-            if bodyVelocity then bodyVelocity:Destroy() end
-            if bodyGyro then bodyGyro:Destroy() end
-            if humanoid then humanoid.PlatformStand = false end
-            if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
-            return
-        end
-
-        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 15)
-        bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
-    end)
-end
-
--- =====================================================================
--- 4. FILTER BUAH & ESP BUAH MENGETAHUI JARAK, NAMA, & PULAU
+-- 3. FILTER BUAH & ESP BUAH MENGETAHUI JARAK, NAMA, & PULAU
 -- =====================================================================
 local function isRealSpawnedFruit(obj)
     if not obj or not obj.Parent then return false end
@@ -333,7 +249,7 @@ local function updateFruitESP()
 end
 
 -- =====================================================================
--- 5. AUTO STORE FRUIT & AUTO CHEST
+-- 4. AUTO STORE FRUIT
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -364,51 +280,23 @@ local function autoStoreFruits()
     end)
 end
 
+-- Loop Deteksi Buah, ESP, Store & Logika Dual Status Notif (Anti-Spam)
 task.spawn(function()
-    while task.wait(0.4) do
+    while task.wait(1) do
         pcall(function()
             updateFruitESP()
-
-            if Settings.AutoChest and not activeFlyConnection then
-                local rootPart = getCharacterRootPart()
-                if rootPart then
-                    local targetChestPart = nil
-                    local shortestDist = math.huge
-
-                    for _, v in ipairs(Workspace:GetDescendants()) do
-                        if v:IsA("BasePart") or v:IsA("Model") then
-                            local nameLower = v.Name:lower()
-                            if nameLower:find("chest") or nameLower:find("bronze") or nameLower:find("silver") or nameLower:find("gold") or nameLower:find("diamond") then
-                                local partToCheck = v:IsA("Model") and (v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")) or v
-                                if partToCheck then
-                                    local dist = (rootPart.Position - partToCheck.Position).Magnitude
-                                    if dist < shortestDist and partToCheck.Transparency < 1 then
-                                        shortestDist = dist
-                                        targetChestPart = partToCheck
-                                    end
-                                end
-                            end
-                        end
-                    end
-
-                    if targetChestPart then
-                        smoothFlyTo(targetChestPart.CFrame, "AutoChest")
-                        local startTime = tick()
-                        repeat
-                            task.wait(0.1)
-                            local currentRoot = getCharacterRootPart()
-                            if not currentRoot or not targetChestPart.Parent then break end
-                            local dist = (currentRoot.Position - targetChestPart.Position).Magnitude
-                        until dist < 4 or not Settings.AutoChest or tick() - startTime > 3
-                    end
-                end
-            end
         end)
     end
 end)
 
--- Loop Deteksi Buah & Notifikasi
+local lastFruitState = false -- Untuk melacak perubahan status agar tidak spam
 task.spawn(function()
+    -- Notif awal saat script baru aktif
+    task.wait(2)
+    if Settings.FruitNotifier then
+        showCustomNotification("STATUS: Memantau Map (Belum Ada Buah)", Color3.fromRGB(200, 200, 200))
+    end
+
     while task.wait(3) do
         autoStoreFruits()
 
@@ -428,16 +316,26 @@ task.spawn(function()
             end
         end
 
-        if Settings.FruitNotifier and #fruitList > 0 then
-            local fruitNameStr = table.concat(fruitList, ", ")
-            playFruitSound()
-            task.spawn(function() showFruitNotification(fruitNameStr) end)
+        local hasFruitNow = (#fruitList > 0)
+
+        if Settings.FruitNotifier then
+            if hasFruitNow and not lastFruitState then
+                -- KONDISI 2: Baru saja ADA BUAH muncul
+                lastFruitState = true
+                local fruitNameStr = table.concat(fruitList, ", ")
+                playFruitSound()
+                showCustomNotification("BUAH SPAWN: " .. fruitNameStr, Color3.fromRGB(46, 204, 113))
+            elseif not hasFruitNow and lastFruitState then
+                -- KONDISI 1: Baru saja KOSONG / Buah diambil / Hilang
+                lastFruitState = false
+                showCustomNotification("STATUS: Buah Diambil / Kosong. Memantau...", Color3.fromRGB(231, 76, 60))
+            end
         end
     end
 end)
 
 -- =====================================================================
--- 6. AUTO JOIN TEAM
+-- 5. AUTO JOIN TEAM
 -- =====================================================================
 local function joinTeam()
     if not Settings.AutoJoinEnabled then return end
@@ -456,7 +354,7 @@ end)
 task.spawn(function() task.wait(1) joinTeam() end)
 
 -- =====================================================================
--- 7. FPS BOOST
+-- 6. FPS BOOST
 -- =====================================================================
 local function applyFpsBoost(state)
     if state then
@@ -477,7 +375,7 @@ end
 if Settings.FpsBoost then applyFpsBoost(true) end
 
 -- =====================================================================
--- 8. TAMPILAN MENU UTAMA (GUI ON/OFF + SAVE SETTINGS)
+-- 7. TAMPILAN MENU UTAMA (GUI ON/OFF + SAVE SETTINGS)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -554,7 +452,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 750)
+Container.CanvasSize = UDim2.new(0, 0, 0, 650)
 Container.ScrollBarThickness = 4
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -612,14 +510,13 @@ createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
 end)
 
 createSectionHeader("2. Notifikasi & ESP Buah")
-createToggle("Fruit Notifier (Notif Suara & Pop-up)", "FruitNotifier", nil)
+createToggle("Fruit Notifier (Dual Status Notif)", "FruitNotifier", nil)
 createToggle("ESP Buah (Nama, Jarak, & Pulau)", "FruitESP", function(state)
     if not state then clearESP() end
 end)
 
-createSectionHeader("3. Auto Collect & Store")
+createSectionHeader("3. Auto Store")
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
-createToggle("Auto Chest (Terbang Mulus + Noclip)", "AutoChest", nil)
 
 createSectionHeader("4. Pengaturan Terbang (Flight Settings)")
 
