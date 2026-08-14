@@ -1,5 +1,5 @@
 -- =====================================================================
--- BRAINROT SURVIVAL HUB (FULL COMBINED & FIXED VERSION)
+-- BRAINROT SURVIVAL HUB (STRICT ARENA FILTER VERSION)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -108,7 +108,7 @@ task.spawn(function()
     end
 end)
 
--- 3. Auto Collect Best Cube (Hanya ambil di map, abaikan inventory/player)
+-- 3. Auto Collect Best Cube (HANYA AMBIL DI DALAM FOLDER ARENA / DROP MAP)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -117,22 +117,31 @@ task.spawn(function()
                 local bestCubePart = nil
                 local highestRarity = -1
                 
-                -- Fungsi untuk mengecek apakah objek ada di dalam player atau inventory
-                local function isInsidePlayer(obj)
-                    local ancestor = obj.Parent
-                    while ancestor do
-                        if ancestor:IsA("Player") or ancestor.Name == "Backpack" or ancestor:FindFirstChildOfClass("Humanoid") then
-                            return true
+                -- Fungsi untuk memastikan objek benar-benar berada di dalam zona Arena / Map Drop, bukan di base/plot player
+                local function isValidArenaObject(obj)
+                    local current = obj.Parent
+                    local isInArena = false
+                    
+                    while current and current ~= Workspace do
+                        local nameLower = current.Name:lower()
+                        -- Jika masuk ke dalam folder player/base/plots, langsung tolak
+                        if nameLower:find("player") or nameLower:find("base") or nameLower:find("plot") or nameLower:find("backpack") then
+                            return false
                         end
-                        ancestor = ancestor.Parent
+                        -- Cek apakah berada di dalam folder yang mengarah ke Arena/Map/Spawns umum
+                        if nameLower:find("arena") or nameLower:find("map") or nameLower:find("spawns") or nameLower:find("drops") or nameLower:find("world") then
+                            isInArena = true
+                        end
+                        current = current.Parent
                     end
-                    return false
+                    
+                    return isInArena
                 end
                 
-                -- Cari cube terbaik HANYA di luar player (di map/arena)
+                -- Cari cube terbaik HANYA di dalam area valid map
                 for _, obj in pairs(Workspace:GetDescendants()) do
                     local nameLower = obj.Name:lower()
-                    if (nameLower:find("cube") or nameLower:find("brainrot")) and not isInsidePlayer(obj) then
+                    if (nameLower:find("cube") or nameLower:find("brainrot")) and isValidArenaObject(obj) then
                         local rarity = getCubeRarity(obj.Name)
                         if rarity >= highestRarity then
                             highestRarity = rarity
@@ -145,7 +154,7 @@ task.spawn(function()
                     end
                 end
                 
-                -- Teleport ke cube terbaik yang ada di map
+                -- Teleport ke cube terbaik yang ada di arena
                 if bestCubePart and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     local hrp = LocalPlayer.Character.HumanoidRootPart
                     hrp.CFrame = bestCubePart.CFrame + Vector3.new(0, 2, 0)
