@@ -1,0 +1,270 @@
+-- =====================================================================
+-- BRAINROT SURVIVAL HUB | v26 (EXTRACTION & AUTO FLIGHT EVASION)
+-- =====================================================================
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Proteksi UI ganda supaya tidak menumpuk
+if CoreGui:FindFirstChild("BrainrotHub_UI") then
+    CoreGui.BrainrotHub_UI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BrainrotHub_UI"
+ScreenGui.Parent = CoreGui
+
+-- Sistem Auto Save Settings
+local SaveFileName = "BrainrotHub_Config_v2.json"
+local Config = {
+    AutoExtract = false,
+    AntiPlayerFly = false,
+    AutoCollectBest = false
+}
+
+local function SaveSettings()
+    pcall(function()
+        if writefile then
+            writefile(SaveFileName, HttpService:JSONEncode(Config))
+        end
+    end)
+end
+
+local function LoadSettings()
+    pcall(function()
+        if readfile and isfile and isfile(SaveFileName) then
+            Config = HttpService:JSONDecode(readfile(SaveFileName))
+        end
+    end)
+end
+LoadSettings()
+
+-- Fungsi Membuat Garis Pinggir (Stroke) dengan tema warna senada
+local function createStroke(parent, thickness, color)
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = thickness or 2
+    stroke.Color = color or Color3.fromRGB(255, 100, 100)
+    stroke.Parent = parent
+    return stroke
+end
+
+-- =====================================================================
+-- 1. TOMBOL BUKA MENU (AWALNYA TERTUTUP / MUNCUL KETIKA DIKLIK)
+-- =====================================================================
+local OpenButton = Instance.new("ImageButton")
+OpenButton.Size = UDim2.new(0, 50, 0, 50)
+OpenButton.Position = UDim2.new(0.02, 0, 0.4, 0)
+OpenButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+OpenButton.Image = "rbxassetid://72916050815889"
+OpenButton.Active = true
+OpenButton.Draggable = true
+OpenButton.Parent = ScreenGui
+
+createStroke(OpenButton, 2, Color3.fromRGB(255, 100, 100))
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(0, 12)
+OpenCorner.Parent = OpenButton
+
+-- =====================================================================
+-- 2. MAIN MENU FRAME + TOMBOL CLOSE (X)
+-- =====================================================================
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 320, 0, 340)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -170)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainFrame.Visible = false -- TIDAK LANGSUNG MUNCUL KECUALI DIKLIK
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local mainStroke = createStroke(MainFrame, 3, Color3.fromRGB(255, 100, 100))
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+-- Efek Pelangi (Rainbow Stroke) pada Menu Utama
+task.spawn(function()
+    local i = 0
+    while true do
+        mainStroke.Color = Color3.fromHSV(i, 1, 1)
+        i = i + 0.005
+        if i >= 1 then i = 0 end
+        task.wait(0.05)
+    end
+end)
+
+-- Tombol untuk Membuka/Menutup Menu Utama
+OpenButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Judul Menu
+local Title = Instance.new("TextLabel")
+Title.Text = "BRAINROT SURVIVAL HUB"
+Title.Size = UDim2.new(1, 0, 0, 45)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+Title.Parent = MainFrame
+
+-- Tombol Close (X) Warna Merah
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 35, 0, 35)
+CloseButton.Position = UDim2.new(1, -40, 0, 5)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 14
+CloseButton.Parent = MainFrame
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 8)
+CloseCorner.Parent = CloseButton
+
+CloseButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+end)
+
+-- List Layout untuk Tombol Fitur di Dalam Menu
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = MainFrame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 10)
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local Spacer = Instance.new("Frame")
+Spacer.Size = UDim2.new(1, 0, 0, 45)
+Spacer.BackgroundTransparency = 1
+Spacer.LayoutOrder = 0
+Spacer.Parent = MainFrame
+
+-- Fungsi Pembuat Tombol Toggle Fitur dengan Auto Save Terintegrasi
+local function CreateToggleButton(name, configKey, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 290, 0, 40)
+    btn.BackgroundColor3 = Config[configKey] and Color3.fromRGB(50, 180, 90) or Color3.fromRGB(40, 40, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 14
+    btn.Text = name .. ": " .. (Config[configKey] and "ON" or "OFF")
+    btn.Parent = MainFrame
+
+    createStroke(btn, 1, Color3.fromRGB(100, 255, 100))
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+
+    task.spawn(function()
+        if Config[configKey] then
+            callback(true)
+        end
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        Config[configKey] = not Config[configKey]
+        if Config[configKey] then
+            btn.BackgroundColor3 = Color3.fromRGB(50, 180, 90)
+            btn.Text = name .. ": ON"
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            btn.Text = name .. ": OFF"
+        end
+        SaveSettings()
+        callback(Config[configKey])
+    end)
+end
+
+-- =====================================================================
+-- 3. IMPLEMENTASI FITUR-FITUR GAME
+-- =====================================================================
+
+-- Fitur 1: Auto Teleport ke Zona Extraction (Zona Hijau)
+CreateToggleButton("Auto Teleport Extraction", "AutoExtract", function(state)
+    task.spawn(function()
+        while Config.AutoExtract do
+            task.wait(0.5)
+            pcall(function()
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj.Name:lower():find("extraction") or obj.Name:lower():find("extract") then
+                        if obj:IsA("BasePart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            LocalPlayer.Character.HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                        end
+                    end
+                end
+            end)
+        end
+    end)
+end)
+
+-- Fitur 2: Anti Player (Terbang Tinggi Otomatis Saat Player Mendekat)
+CreateToggleButton("Anti Player (Fly Evasion)", "AntiPlayerFly", function(state)
+    task.spawn(function()
+        while Config.AntiPlayerFly do
+            task.wait(0.1)
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local hrp = char.HumanoidRootPart
+                    local playerNearby = false
+                    
+                    -- Cek jarak dengan pemain lain di sekitar arena
+                    for _, p in pairs(Players:GetPlayers()) do
+                        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                            local distance = (hrp.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                            if distance < 18 then -- Radius 18 stud (jika player terlalu dekat)
+                                playerNearby = true
+                                break
+                            end
+                        end
+                    end
+                    
+                    if playerNearby then
+                        -- Langsung melayang terbang ke atas untuk menghindari player
+                        hrp.Velocity = Vector3.new(hrp.Velocity.X, 60, hrp.Velocity.Z)
+                    end
+                end
+            end)
+        end
+    end)
+end)
+
+-- Fitur 3: Auto Collect Brainrot Paling Mahal / Rarity Tinggi di Arena
+CreateToggleButton("Auto Collect Best Brainrot", "AutoCollectBest", function(state)
+    task.spawn(function()
+        while Config.AutoCollectBest do
+            task.wait(1)
+            pcall(function()
+                local bestTarget = nil
+                local maxScore = 0
+                
+                for _, item in pairs(Workspace:GetChildren()) do
+                    if item:IsA("Model") or item:IsA("BasePart") then
+                        local nameLower = item.Name:lower()
+                        if nameLower:find("brainrot") or nameLower:find("item") or nameLower:find("gold") or item:FindFirstChild("Price") or item:FindFirstChild("Value") then
+                            local score = item:GetAttribute("Value") or item:GetAttribute("Rarity") or 100
+                            if score > maxScore then
+                                maxScore = score
+                                bestTarget = item
+                            end
+                        end
+                    end
+                end
+                
+                if bestTarget and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local targetPart = bestTarget:IsA("Model") and bestTarget.PrimaryPart or bestTarget:FindFirstChildWhichIsA("BasePart")
+                    if targetPart then
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+                    end
+                end
+            end)
+        end
+    end)
+end)
+
+print("Brainrot Survival Hub v26 Loaded Successfully!")
