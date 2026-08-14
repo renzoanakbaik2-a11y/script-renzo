@@ -1,5 +1,5 @@
 -- =====================================================================
--- BRAINROT SURVIVAL HUB (STRICT ARENA FILTER VERSION - FIXED)
+-- BRAINROT SURVIVAL HUB (RADIUS SAFE VERSION)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -38,7 +38,7 @@ local function getCubeRarity(name)
     if num then return tonumber(num) end
     local altNum = name:match("(%d+)")
     if altNum then return tonumber(altNum) end
-    return 0
+    return 1
 end
 
 -- 1. Auto Run Extraction
@@ -108,56 +108,46 @@ task.spawn(function()
     end
 end)
 
--- 3. Auto Collect Best Cube (REVISI FILTER KETAT AGAR TIDAK KE BASE PEMAIN)
+-- 3. Auto Collect Best Cube (Dengan Batasan Jarak / Radius Agar Tidak Nyasar ke Base Jauh)
 task.spawn(function()
     while true do
         task.wait(0.2)
         if Settings.AutoCollectRareCube then
             pcall(function()
+                local char = LocalPlayer.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                local hrp = char.HumanoidRootPart
+                
                 local bestCubePart = nil
                 local highestRarity = -1
-                
-                local function isValidSpawnObject(obj)
-                    local current = obj.Parent
-                    while current and current ~= Workspace do
-                        local nameLower = current.Name:lower()
-                        
-                        -- Blokir total jika berada di folder yang mengarah ke base/plot/penyimpanan player
-                        if nameLower:find("plot") or nameLower:find("base") or nameLower:find("owner") or nameLower:find("backpack") or nameLower:find("storage") then
-                            return false
-                        end
-                        
-                        -- Blokir jika objek berada di dalam karakter player lain
-                        for _, p in pairs(Players:GetPlayers()) do
-                            if p.Character and current == p.Character then
-                                return false
-                            end
-                        end
-                        
-                        current = current.Parent
-                    end
-                    
-                    return true
-                end
+                local maxRadius = 150 -- Batas jarak maksimal pencarian (meter) dari posisi kamu
                 
                 for _, obj in pairs(Workspace:GetDescendants()) do
-                    local nameLower = obj.Name:lower()
-                    if (nameLower:find("cube") or nameLower:find("brainrot")) and isValidSpawnObject(obj) then
-                        local rarity = getCubeRarity(obj.Name)
-                        if rarity >= highestRarity then
-                            highestRarity = rarity
-                            if obj:IsA("BasePart") then
-                                bestCubePart = obj
-                            elseif obj:IsA("Model") then
-                                bestCubePart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                    if obj:IsA("BasePart") or obj:IsA("Model") then
+                        local partToCheck = obj:IsA("BasePart") and obj or (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true))
+                        
+                        if partToCheck then
+                            -- Hitung jarak dari player ke objek
+                            local distance = (hrp.Position - partToCheck.Position).Magnitude
+                            
+                            -- Hanya ambil jika jaraknya di dalam batas radius (supaya tidak tembus ke base orang lain yang jauh)
+                            if distance <= maxRadius then
+                                local nameLower = obj.Name:lower()
+                                if nameLower:find("cube") or nameLower:find("brainrot") or nameLower:find("tile") then
+                                    local rarity = getCubeRarity(obj.Name)
+                                    if rarity >= highestRarity then
+                                        highestRarity = rarity
+                                        bestCubePart = partToCheck
+                                    end
+                                end
                             end
                         end
                     end
                 end
                 
-                if bestCubePart and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local hrp = LocalPlayer.Character.HumanoidRootPart
-                    hrp.CFrame = bestCubePart.CFrame + Vector3.new(0, 2, 0)
+                -- Teleport ke cube terdekat di sekitar arena/karakter
+                if bestCubePart then
+                    hrp.CFrame = bestCubePart.CFrame + Vector3.new(0, 3, 0)
                     
                     local touchInterest = bestCubePart:FindFirstChild("TouchInterest", true)
                     if touchInterest and firetouchinterest then
@@ -208,7 +198,7 @@ TopCorner.CornerRadius = UDim.new(0, 10)
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 1, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Brainrot Hub | Full Version"
+TitleLabel.Text = "Brainrot Hub | Radius Safe"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextSize = 12
@@ -247,7 +237,7 @@ local function createToggle(text, settingKey)
     btn.TextSize = 12
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     
-    local state = Settings[settingKey]
+    val state = Settings[settingKey]
     btn.Text = text .. ": " .. (state and "ON" or "OFF")
     btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
     btn.Parent = Container
@@ -256,7 +246,7 @@ local function createToggle(text, settingKey)
     btn.MouseButton1Click:Connect(function()
         Settings[settingKey] = not Settings[settingKey]
         local newState = Settings[settingKey]
-        btn.Text = text .. ": " .. (newState and "ON" or "OFF")
+        btn.Text = text .. ": " + (newState and "ON" or "OFF")
         btn.BackgroundColor3 = newState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
     end)
 end
@@ -265,4 +255,4 @@ createToggle("Auto Run Extraction", "AutoExtractRun")
 createToggle("Anti Player (High Fly)", "AntiPlayerHighFly")
 createToggle("Auto Collect Best Cube", "AutoCollectRareCube")
 
-print("Brainrot Hub Full Version Loaded Successfully!")
+print("Brainrot Hub Radius Safe Version Loaded Successfully!")
