@@ -1,5 +1,5 @@
 -- =====================================================================
--- BRAINROT SURVIVAL HUB (RADIUS SAFE VERSION)
+-- BRAINROT SURVIVAL HUB (FIXED EXECUTOR VERSION)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -108,7 +108,7 @@ task.spawn(function()
     end
 end)
 
--- 3. Auto Collect Best Cube (Dengan Batasan Jarak / Radius Agar Tidak Nyasar ke Base Jauh)
+-- 3. Auto Collect Best Cube (Dengan Batasan Radius Agar Aman)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -120,17 +120,14 @@ task.spawn(function()
                 
                 local bestCubePart = nil
                 local highestRarity = -1
-                local maxRadius = 150 -- Batas jarak maksimal pencarian (meter) dari posisi kamu
+                local maxRadius = 150 -- Batas jarak maksimal pencarian dari posisi kamu
                 
                 for _, obj in pairs(Workspace:GetDescendants()) do
                     if obj:IsA("BasePart") or obj:IsA("Model") then
                         local partToCheck = obj:IsA("BasePart") and obj or (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true))
                         
                         if partToCheck then
-                            -- Hitung jarak dari player ke objek
                             local distance = (hrp.Position - partToCheck.Position).Magnitude
-                            
-                            -- Hanya ambil jika jaraknya di dalam batas radius (supaya tidak tembus ke base orang lain yang jauh)
                             if distance <= maxRadius then
                                 local nameLower = obj.Name:lower()
                                 if nameLower:find("cube") or nameLower:find("brainrot") or nameLower:find("tile") then
@@ -145,7 +142,6 @@ task.spawn(function()
                     end
                 end
                 
-                -- Teleport ke cube terdekat di sekitar arena/karakter
                 if bestCubePart then
                     hrp.CFrame = bestCubePart.CFrame + Vector3.new(0, 3, 0)
                     
@@ -198,7 +194,7 @@ TopCorner.CornerRadius = UDim.new(0, 10)
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 1, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Brainrot Hub | Radius Safe"
+TitleLabel.Text = "Brainrot Hub | Fixed Version"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextSize = 12
@@ -237,7 +233,7 @@ local function createToggle(text, settingKey)
     btn.TextSize = 12
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     
-    val state = Settings[settingKey]
+    local state = Settings[settingKey]
     btn.Text = text .. ": " .. (state and "ON" or "OFF")
     btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
     btn.Parent = Container
@@ -246,7 +242,7 @@ local function createToggle(text, settingKey)
     btn.MouseButton1Click:Connect(function()
         Settings[settingKey] = not Settings[settingKey]
         local newState = Settings[settingKey]
-        btn.Text = text .. ": " + (newState and "ON" or "OFF")
+        btn.Text = text .. ": " .. (newState and "ON" or "OFF")
         btn.BackgroundColor3 = newState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
     end)
 end
@@ -255,4 +251,4 @@ createToggle("Auto Run Extraction", "AutoExtractRun")
 createToggle("Anti Player (High Fly)", "AntiPlayerHighFly")
 createToggle("Auto Collect Best Cube", "AutoCollectRareCube")
 
-print("Brainrot Hub Radius Safe Version Loaded Successfully!")
+print("Brainrot Hub Fixed Version Loaded Successfully!")
