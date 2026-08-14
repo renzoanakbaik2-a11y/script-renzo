@@ -1,6 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION + FIXED AUTO STORE)
--- Fitur: Live Fruit Counter, ESP, Auto Collect & Fixed Auto Store, FPS Boost
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION + FIXED SETTINGS & SCROLL SPEED)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,14 +13,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v21.json"
+local FileName = "BloxFruitsHub_Clean_v22.json"
 
 local Settings = {
     FruitNotifier = true,
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 150,  
+    FlightSpeed = 200,  -- Default pertama kali diatur ke 200
     FlyHeight = 5,      
     AutoStoreFruit = true,    
     FruitESP = true,
@@ -356,7 +355,7 @@ local function smoothFlyTo(targetCFrame, onComplete)
     end
 
     local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
-    local currentHeight = math.clamp(Settings.FlyHeight, 0, 15)
+    local currentHeight = math.clamp(Settings.FlyHeight, 0, 25)
     local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
 
     local character = LocalPlayer.Character
@@ -446,7 +445,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. FIXED AUTO STORE (BYPASS METODE REDZ/SPEED HUB)
+-- 5. FIXED AUTO STORE
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -464,16 +463,10 @@ local function autoStoreFruits()
         local function checkAndStore(item)
             if item:IsA("Tool") then
                 local name = item.Name:lower()
-                -- Cek apakah item di tas benar-benar sebuah buah
                 if name:find("fruit") or name:find("rocket") or name:find("spin") or name:find("kitsune") or name:find("dragon") or name:find("dough") or name:find("buddha") or name:find("trex") or name:find("mammoth") then
-                    -- Menggunakan format pemanggilan Remote yang valid (mengirim argumen nama dan objek tool jika diperlukan)
                     local originalName = item:GetAttribute("OriginalName") or item.Name
-                    pcall(function()
-                        commF:InvokeServer("StoreFruit", originalName, item)
-                    end)
-                    pcall(function()
-                        commF:InvokeServer("StoreFruit", item.Name)
-                    end)
+                    pcall(function() commF:InvokeServer("StoreFruit", originalName, item) end)
+                    pcall(function() commF:InvokeServer("StoreFruit", item.Name) end)
                 end
             end
         end
@@ -533,7 +526,6 @@ task.spawn(function()
                 end
             end
 
-            -- Notifikasi perubahan status (Anti-Spam)
             if hasFruitNow and lastStatus ~= "Ada" then
                 if Settings.FruitNotifier then
                     playFruitSound()
@@ -547,7 +539,6 @@ task.spawn(function()
                 lastStatus = "Kosong"
             end
 
-            -- Auto Collect Trigger
             if hasFruitNow then
                 if Settings.AutoCollectFruit and not activeFlyConnection then
                     collectNearestFruit()
@@ -601,7 +592,7 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI
+-- 8. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -650,7 +641,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v21"
+TitleLabel.Text = "Blox Fruits Hub | Clean v22"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -678,14 +669,14 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 700)
-Container.ScrollBarThickness = 4
+Container.CanvasSize = UDim2.new(0, 0, 0, 750)
+Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
 
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 6)
+UIListLayout.Padding = UDim.new(0, 8)
 UIListLayout.Parent = Container
 
 local function createSectionHeader(text)
@@ -765,7 +756,7 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("4. Pengaturan Terbang")
+createSectionHeader("4. Pengaturan Kecepatan Terbang (100 - 500)")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -781,11 +772,14 @@ sCorner.CornerRadius = UDim.new(0, 6)
 sCorner.Parent = SpeedBtn
 
 SpeedBtn.MouseButton1Click:Connect(function()
+    -- Berputar sesuai pilihan: 100 -> 200 -> 300 -> 400 -> 500 -> kembali ke 100
     if Settings.FlightSpeed == 100 then
         Settings.FlightSpeed = 200
     elseif Settings.FlightSpeed == 200 then
-        Settings.FlightSpeed = 350
-    elseif Settings.FlightSpeed == 350 then
+        Settings.FlightSpeed = 300
+    elseif Settings.FlightSpeed == 300 then
+        Settings.FlightSpeed = 400
+    elseif Settings.FlightSpeed == 400 then
         Settings.FlightSpeed = 500
     else
         Settings.FlightSpeed = 100
@@ -793,6 +787,8 @@ SpeedBtn.MouseButton1Click:Connect(function()
     SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
     saveSettings()
 end)
+
+createSectionHeader("5. Pengaturan Ketinggian Terbang")
 
 local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -814,6 +810,8 @@ HeightBtn.MouseButton1Click:Connect(function()
         Settings.FlyHeight = 10
     elseif Settings.FlyHeight == 10 then
         Settings.FlyHeight = 15
+    elseif Settings.FlyHeight == 15 then
+        Settings.FlyHeight = 20
     else
         Settings.FlyHeight = 3
     end
@@ -821,7 +819,7 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("5. Performa")
+createSectionHeader("6. Performa")
 createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state)
 end)
