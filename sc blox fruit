@@ -1,7 +1,6 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (FINAL VERSION - UI AUTO-CLICK HOP)
--- Fitur: Live Fruit Counter, ESP, Auto Collect & Store, FPS Boost,
--- dan Final Server Hop (Metode Virtual Click & UI Bawaan Game - 10 Detik)
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION + UPGRADED AUTO STORE)
+-- Fitur: Live Fruit Counter, ESP, Auto Collect & Store (Upgrade), FPS Boost
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,10 +12,9 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Final_v17.json"
+local FileName = "BloxFruitsHub_Clean_v19.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -29,8 +27,7 @@ local Settings = {
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
-    HUDPosition = {X = 0.05, Y = 0.15},
-    AutoServerHop = false
+    HUDPosition = {X = 0.05, Y = 0.15}
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -61,7 +58,7 @@ end
 
 -- Proteksi GUI untuk Executor
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubFinal"
+ScreenGui.Name = "BloxFruitsHubClean"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -449,70 +446,42 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. AUTO STORE & FINAL SERVER HOP (UI AUTO-CLICK & 10 SECONDS TIMEOUT)
+-- 5. UPGRADED AUTO STORE & MONITOR BUAH
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
+    
     pcall(function()
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-        if not remotes or not remotes:FindFirstChild("CommF_") then return end
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes") 
+            or ReplicatedStorage:FindFirstChild("MainRemote")
+            
+        local commF = remotes and (remotes:FindFirstChild("CommF_") or remotes:FindFirstChild("Data"))
+        if not commF then return end
         
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         local character = LocalPlayer.Character
         
+        local function attemptStore(item)
+            if item:IsA("Tool") then
+                local name = item.Name:lower()
+                if name:find("fruit") or name:find("rocket") or name:find("spin") or name:find("kitsune") or name:find("dragon") or name:find("dough") or name:find("buddha") then
+                    commF:InvokeServer("StoreFruit", item.Name)
+                    task.wait(0.2)
+                end
+            end
+        end
+        
         if backpack then
             for _, item in ipairs(backpack:GetChildren()) do
-                if item:IsA("Tool") and (item.Name:lower():find("fruit") or item:FindFirstChild("Handle")) then
-                    remotes.CommF_:InvokeServer("StoreFruit", item.Name)
-                    task.wait(0.3)
-                end
+                attemptStore(item)
             end
         end
         
         if character then
             for _, item in ipairs(character:GetChildren()) do
-                if item:IsA("Tool") and (item.Name:lower():find("fruit") or item:FindFirstChild("Handle")) then
-                    remotes.CommF_:InvokeServer("StoreFruit", item.Name)
-                    task.wait(0.3)
-                end
+                attemptStore(item)
             end
         end
-    end)
-end
-
-local function simulateClick(x, y)
-    pcall(function()
-        VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
-        task.wait(0.05)
-        VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
-    end)
-end
-
-local function triggerFinalServerHop()
-    pcall(function()
-        showCustomNotification("TIDAK ADA BUAH: MENGEKSEKUSI FINAL HOP...", Color3.fromRGB(230, 126, 34))
-        
-        -- 1. Munculkan UI Server Browser bawaan game
-        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if playerGui then
-            local main = playerGui:FindFirstChild("Main")
-            if main and main:FindFirstChild("ServerBrowser") then
-                main.ServerBrowser.Visible = true
-            end
-        end
-
-        -- 2. Panggil remote internal game
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-        if remotes and remotes:FindFirstChild("CommF_") then
-            remotes.CommF_:InvokeServer("ServerHop")
-        end
-
-        -- 3. Simulasi klik virtual ke tombol server browser & tombol join
-        task.wait(1.5)
-        simulateClick(Workspace.CurrentCamera.ViewportSize.X - 50, 30)
-        
-        task.wait(1)
-        simulateClick(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2 + 50)
     end)
 end
 
@@ -539,15 +508,10 @@ task.spawn(function()
     end
 end)
 
--- Loop Utama Pemantau Buah & Logika Anti-Reset Timer 10 Detik
+-- Loop Utama Pemantau Buah & Auto Collect/Store
 task.spawn(function()
-    task.wait(10) 
-    local noFruitTimer = 0
-    local isHopping = false
-
+    task.wait(5) 
     while task.wait(1) do
-        if isHopping then continue end
-
         autoStoreFruits()
 
         local hasFruitNow = false
@@ -559,7 +523,6 @@ task.spawn(function()
         end
 
         if hasFruitNow then
-            noFruitTimer = 0 
             if Settings.AutoCollectFruit and not activeFlyConnection then
                 pcall(function()
                     collectNearestFruit()
@@ -569,26 +532,6 @@ task.spawn(function()
             if Settings.FruitNotifier then
                 playFruitSound()
                 showCustomNotification("BUAH TERDETEKSI DI MAP!", Color3.fromRGB(46, 204, 113))
-            end
-        else
-            if Settings.AutoServerHop then
-                noFruitTimer = noFruitTimer + 1
-                
-                local timeLeft = 10 - noFruitTimer
-                if timeLeft > 0 then
-                    showCustomNotification("Tidak ada buah. Hop dalam: " .. timeLeft .. "s", Color3.fromRGB(241, 196, 15))
-                else
-                    isHopping = true
-                    showCustomNotification("Waktu habis! Menjalankan Server Hop...", Color3.fromRGB(231, 76, 60))
-                    
-                    triggerFinalServerHop()
-                    
-                    task.wait(20)
-                    isHopping = false
-                    noFruitTimer = 0
-                end
-            else
-                noFruitTimer = 0
             end
         end
     end
@@ -659,8 +602,8 @@ OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 420, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -200)
+MainFrame.Size = UDim2.new(0, 420, 0, 360)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -180)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
@@ -687,7 +630,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Final v17 (UI Click Hop)"
+TitleLabel.Text = "Blox Fruits Hub | Clean v19"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -715,7 +658,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 820)
+Container.CanvasSize = UDim2.new(0, 0, 0, 700)
 Container.ScrollBarThickness = 4
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -780,27 +723,7 @@ createToggle("ESP Buah", "FruitESP", function(state)
     if not state then clearESP() end
 end)
 
-createSectionHeader("3. Auto Server Hop (Final 10s Timer)")
-createToggle("Auto Server Hop (10s)", "AutoServerHop", nil)
-
-local HopNowBtn = Instance.new("TextButton")
-HopNowBtn.Size = UDim2.new(0.9, 0, 0, 32)
-HopNowBtn.BackgroundColor3 = Color3.fromRGB(142, 68, 173)
-HopNowBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HopNowBtn.Text = "🌐 Jalankan Final Hop Sekarang"
-HopNowBtn.TextSize, HopNowBtn.Font = 11, Enum.Font.GothamBold
-HopNowBtn.ZIndex = 102
-HopNowBtn.Parent = Container
-
-local hopCorner = Instance.new("UICorner")
-hopCorner.CornerRadius = UDim.new(0, 6)
-hopCorner.Parent = HopNowBtn
-
-HopNowBtn.MouseButton1Click:Connect(function()
-    triggerFinalServerHop()
-end)
-
-createSectionHeader("4. Auto Collect & Store Fruit")
+createSectionHeader("3. Auto Collect & Store Fruit")
 createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
 
 local CollectBtn = Instance.new("TextButton")
@@ -822,7 +745,7 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("5. Pengaturan Terbang")
+createSectionHeader("4. Pengaturan Terbang")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -878,7 +801,7 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Performa")
+createSectionHeader("5. Performa")
 createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state)
 end)
