@@ -1,5 +1,5 @@
 -- =====================================================================
--- BRAINROT SURVIVAL HUB | v26 (EXTRACTION & AUTO FLIGHT EVASION)
+-- BRAINROT SURVIVAL HUB | v29 (AUTO STEAL, INSTANT ATTACK & EXTRACTION)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -7,10 +7,11 @@ local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
+local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Proteksi UI ganda supaya tidak menumpuk
+-- Proteksi UI ganda
 if CoreGui:FindFirstChild("BrainrotHub_UI") then
     CoreGui.BrainrotHub_UI:Destroy()
 end
@@ -20,11 +21,11 @@ ScreenGui.Name = "BrainrotHub_UI"
 ScreenGui.Parent = CoreGui
 
 -- Sistem Auto Save Settings
-local SaveFileName = "BrainrotHub_Config_v2.json"
+local SaveFileName = "BrainrotHub_Config_v5.json"
 local Config = {
-    AutoExtract = false,
-    AntiPlayerFly = false,
-    AutoCollectBest = false
+    AutoExtractRun = false,
+    AntiPlayerHighFly = false,
+    AutoStealAndAttack = false
 }
 
 local function SaveSettings()
@@ -54,7 +55,7 @@ local function createStroke(parent, thickness, color)
 end
 
 -- =====================================================================
--- 1. TOMBOL BUKA MENU (AWALNYA TERTUTUP / MUNCUL KETIKA DIKLIK)
+-- 1. TOMBOL BUKA MENU (AWALNYA TERTUTUP)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -77,7 +78,7 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 320, 0, 340)
 MainFrame.Position = UDim2.new(0.5, -160, 0.5, -170)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-MainFrame.Visible = false -- TIDAK LANGSUNG MUNCUL KECUALI DIKLIK
+MainFrame.Visible = false -- TIDAK KELUAR KECUALI DIKLIK
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
@@ -98,12 +99,10 @@ task.spawn(function()
     end
 end)
 
--- Tombol untuk Membuka/Menutup Menu Utama
 OpenButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Judul Menu
 local Title = Instance.new("TextLabel")
 Title.Text = "BRAINROT SURVIVAL HUB"
 Title.Size = UDim2.new(1, 0, 0, 45)
@@ -112,7 +111,7 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 15
 Title.Parent = MainFrame
 
--- Tombol Close (X) Warna Merah
+-- Tombol Close (X)
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 35, 0, 35)
 CloseButton.Position = UDim2.new(1, -40, 0, 5)
@@ -131,7 +130,6 @@ CloseButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
 end)
 
--- List Layout untuk Tombol Fitur di Dalam Menu
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = MainFrame
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -144,7 +142,6 @@ Spacer.BackgroundTransparency = 1
 Spacer.LayoutOrder = 0
 Spacer.Parent = MainFrame
 
--- Fungsi Pembuat Tombol Toggle Fitur dengan Auto Save Terintegrasi
 local function CreateToggleButton(name, configKey, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 290, 0, 40)
@@ -181,31 +178,48 @@ local function CreateToggleButton(name, configKey, callback)
 end
 
 -- =====================================================================
--- 3. IMPLEMENTASI FITUR-FITUR GAME
+-- 3. IMPLEMENTASI FITUR v29 (AUTO STEAL & ATTACK)
 -- =====================================================================
 
--- Fitur 1: Auto Teleport ke Zona Extraction (Zona Hijau)
-CreateToggleButton("Auto Teleport Extraction", "AutoExtract", function(state)
+-- Fitur 1: Auto Run Kilat ke Extraction (Hanya jalan saat zona hijau benar-benar terbuka)
+CreateToggleButton("Auto Run Extraction", "AutoExtractRun", function(state)
     task.spawn(function()
-        while Config.AutoExtract do
-            task.wait(0.5)
+        while Config.AutoExtractRun do
+            task.wait(0.2)
             pcall(function()
-                for _, obj in pairs(Workspace:GetDescendants()) do
-                    if obj.Name:lower():find("extraction") or obj.Name:lower():find("extract") then
-                        if obj:IsA("BasePart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                            LocalPlayer.Character.HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                    local extractionPart = nil
+                    for _, obj in pairs(Workspace:GetDescendants()) do
+                        if obj.Name:lower():find("extraction") or obj.Name:lower():find("extract") then
+                            if obj:IsA("BasePart") and obj.Transparency < 0.8 then
+                                extractionPart = obj
+                                break
+                            end
                         end
+                    end
+                    
+                    if extractionPart then
+                        char.Humanoid.WalkSpeed = 160
+                        char.Humanoid:MoveTo(extractionPart.Position)
+                    else
+                        char.Humanoid.WalkSpeed = 16
                     end
                 end
             end)
         end
+        pcall(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid.WalkSpeed = 16
+            end
+        end)
     end)
 end)
 
--- Fitur 2: Anti Player (Terbang Tinggi Otomatis Saat Player Mendekat)
-CreateToggleButton("Anti Player (Fly Evasion)", "AntiPlayerFly", function(state)
+-- Fitur 2: Anti Player (Terbang Jauh Tinggi ke Atas Supaya Aman)
+CreateToggleButton("Anti Player (High Fly)", "AntiPlayerHighFly", function(state)
     task.spawn(function()
-        while Config.AntiPlayerFly do
+        while Config.AntiPlayerHighFly do
             task.wait(0.1)
             pcall(function()
                 local char = LocalPlayer.Character
@@ -213,11 +227,10 @@ CreateToggleButton("Anti Player (Fly Evasion)", "AntiPlayerFly", function(state)
                     local hrp = char.HumanoidRootPart
                     local playerNearby = false
                     
-                    -- Cek jarak dengan pemain lain di sekitar arena
                     for _, p in pairs(Players:GetPlayers()) do
                         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                             local distance = (hrp.Position - p.Character.HumanoidRootPart.Position).Magnitude
-                            if distance < 18 then -- Radius 18 stud (jika player terlalu dekat)
+                            if distance < 25 then
                                 playerNearby = true
                                 break
                             end
@@ -225,8 +238,7 @@ CreateToggleButton("Anti Player (Fly Evasion)", "AntiPlayerFly", function(state)
                     end
                     
                     if playerNearby then
-                        -- Langsung melayang terbang ke atas untuk menghindari player
-                        hrp.Velocity = Vector3.new(hrp.Velocity.X, 60, hrp.Velocity.Z)
+                        hrp.Velocity = Vector3.new(hrp.Velocity.X, 180, hrp.Velocity.Z)
                     end
                 end
             end)
@@ -234,32 +246,38 @@ CreateToggleButton("Anti Player (Fly Evasion)", "AntiPlayerFly", function(state)
     end)
 end)
 
--- Fitur 3: Auto Collect Brainrot Paling Mahal / Rarity Tinggi di Arena
-CreateToggleButton("Auto Collect Best Brainrot", "AutoCollectBest", function(state)
+-- Fitur 3: Auto Steal & Attack Target (Otomatis kejar player yang bawa brainrot, pukul instan, dan rebut)
+CreateToggleButton("Auto Steal & Attack", "AutoStealAndAttack", function(state)
     task.spawn(function()
-        while Config.AutoCollectBest do
-            task.wait(1)
+        while Config.AutoStealAndAttack do
+            task.wait(0.3)
             pcall(function()
-                local bestTarget = nil
-                local maxScore = 0
+                local targetPlayer = nil
                 
-                for _, item in pairs(Workspace:GetChildren()) do
-                    if item:IsA("Model") or item:IsA("BasePart") then
-                        local nameLower = item.Name:lower()
-                        if nameLower:find("brainrot") or nameLower:find("item") or nameLower:find("gold") or item:FindFirstChild("Price") or item:FindFirstChild("Value") then
-                            local score = item:GetAttribute("Value") or item:GetAttribute("Rarity") or 100
-                            if score > maxScore then
-                                maxScore = score
-                                bestTarget = item
+                -- Cari player lain yang memiliki folder/item brainrot (seperti ArenaHeadBrainrot_1) di badannya
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character then
+                        for _, child in pairs(p.Character:GetChildren()) do
+                            if child.Name:lower():find("brainrot") or child.Name:lower():find("headbrainrot") then
+                                targetPlayer = p
+                                break
                             end
                         end
                     end
+                    if targetPlayer then break end
                 end
                 
-                if bestTarget and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local targetPart = bestTarget:IsA("Model") and bestTarget.PrimaryPart or bestTarget:FindFirstChildWhichIsA("BasePart")
-                    if targetPart then
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+                -- Jika ada player yang bawa brainrot, langsung teleport ke depannya, pukul, dan ambil
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local localChar = LocalPlayer.Character
+                    if localChar and localChar:FindFirstChild("HumanoidRootPart") then
+                        -- Teleport instan tepat di sebelah player target
+                        localChar.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                        
+                        -- Simulasi klik / pukul secara instan untuk merebut brainrot
+                        VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                        task.wait(0.05)
+                        VirtualUser:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
                     end
                 end
             end)
@@ -267,4 +285,4 @@ CreateToggleButton("Auto Collect Best Brainrot", "AutoCollectBest", function(sta
     end)
 end)
 
-print("Brainrot Survival Hub v26 Loaded Successfully!")
+print("Brainrot Survival Hub v29 Loaded Successfully!")
