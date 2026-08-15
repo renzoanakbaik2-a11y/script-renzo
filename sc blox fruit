@@ -465,7 +465,7 @@ task.spawn(function()
     end
 end)
 
--- Auto Basic Attack / Clicker
+-- Auto Basic Attack / Clicker (Diperbaiki agar klik mouse mengarah ke target)
 task.spawn(function()
     while task.wait(0.05) do
         pcall(function()
@@ -476,7 +476,7 @@ task.spawn(function()
     end
 end)
 
--- Auto Farm & Bring Mob Terbang ke Musuh Terdekat
+-- Auto Farm & Bring Mob Terbang ke Musuh Terdekat (Diperbaiki agar tidak terbang liar/bergetar)
 task.spawn(function()
     while task.wait(0.2) do
         pcall(function()
@@ -514,11 +514,17 @@ task.spawn(function()
                             end
                         end
 
-                        -- Terbang otomatis mendekati musuh farming
+                        -- Terbang otomatis mendekati musuh farming dengan posisi yang stabil di atasnya
                         if nearestEnemy then
-                            local targetPos = nearestEnemy.CFrame + Vector3.new(0, 8, 3)
+                            local targetPos = nearestEnemy.CFrame + Vector3.new(0, math.clamp(Settings.FlyHeight, 5, 12), 0)
                             if not activeFlyConnection then
-                                smoothFlyTo(targetPos, function() end)
+                                smoothFlyTo(targetPos, function()
+                                    -- Kunci posisi stabil setelah sampai di atas musuh
+                                    local currentRoot = getCharacterRootPart()
+                                    if currentRoot then
+                                        currentRoot.Velocity = Vector3.new(0, 0, 0)
+                                    end
+                                end)
                             end
                         end
                     end
@@ -887,31 +893,27 @@ hCorner.CornerRadius = UDim.new(0, 6)
 hCorner.Parent = HeightBtn
 
 HeightBtn.MouseButton1Click:Connect(function()
-    if Settings.FlyHeight == 3 then
-        Settings.FlyHeight = 5
-    elseif Settings.FlyHeight == 5 then
+    if Settings.FlyHeight == 5 then
         Settings.FlyHeight = 10
     elseif Settings.FlyHeight == 10 then
         Settings.FlyHeight = 15
     elseif Settings.FlyHeight == 15 then
         Settings.FlyHeight = 20
     else
-        Settings.FlyHeight = 3
+        Settings.FlyHeight = 5
     end
     HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
     saveSettings()
 end)
 
-createSectionHeader("6. Auto Farm & Combat Features")
+createSectionHeader("6. Pengaturan Auto Farm & Combat")
 createToggle("Auto Farm Level", "AutoFarmLevel", nil)
 createToggle("Auto Farm Bounty", "AutoFarmBounty", nil)
-createToggle("Bring Mob", "BringMob", nil)
-createToggle("Auto Basic Attack (Clicker)", "AutoBasicAttack", nil)
-createToggle("Auto Haki (Anti Kedap-Kedip)", "AutoHaki", nil)
+createToggle("Bring Mob (Tarik Monster)", "BringMob", nil)
+createToggle("Auto Haki (Buso)", "AutoHaki", nil)
+createToggle("Auto Basic Attack (Klik Otomatis)", "AutoBasicAttack", nil)
 
-createSectionHeader("7. Performa")
-createToggle("FPS Boost", "FpsBoost", function(state)
-    applyFpsBoost(state) 
+createSectionHeader("7. Optimasi Game")
+createToggle("FPS Boost & Grafik Ringan", "FpsBoost", function(state)
+    applyFpsBoost(state)
 end)
-
-print("Blox Fruits Hub Clean v23 Berhasil Dimuat dengan Tema Merah & Auto Farm Terbang + Auto Basic Attack!")
