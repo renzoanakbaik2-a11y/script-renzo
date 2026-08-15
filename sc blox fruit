@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS MASTER ULTIMATE SCRIPT (FLY ATTACK & FIXED HITBOX)
+-- BLOX FRUITS MASTER ULTIMATE SCRIPT (STABLE HEIGHT FLY ATTACK)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,11 +13,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsMaster_v25.json"
+local FileName = "BloxFruitsMaster_v26.json"
 
 local Settings = {
     AutoFarmLevel = false,
-    FlyAttack = true, -- Fitur baru: Terbang sambil Auto Farm & mukul
+    FlyAttack = true, -- Terbang melayang stabil saat auto farm
     SelectWeapon = "Melee", -- Pilihan: "Melee", "Sword", "Blox Fruit", "Gun"
     FastAttack = true,
     BringMob = true,
@@ -28,7 +28,7 @@ local Settings = {
     SelectedTeam = "Pirates",
     FpsBoost = false,
     FlightSpeed = 200,
-    FlyHeight = 8, -- Ketinggian pas di atas mob saat farm
+    FlyHeight = 12, -- Ketinggian stabil di atas mob (bisa diatur)
     AutoStoreFruit = true,
     FruitESP = true,
     AutoCollectFruit = true,
@@ -359,8 +359,7 @@ local function smoothFlyTo(targetCFrame, onComplete)
     end
 
     local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
-    local currentHeight = math.clamp(Settings.FlyHeight, 0, 25)
-    local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
+    local adjustedTarget = targetCFrame.Position + Vector3.new(0, 10, 0)
 
     local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -371,9 +370,7 @@ local function smoothFlyTo(targetCFrame, onComplete)
         pcall(function()
             if character then
                 for _, part in ipairs(character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
+                    if part:IsA("BasePart") then part.CanCollide = false end
                 end
             end
         end)
@@ -449,7 +446,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. AUTO STORE & SMART WEAPON / FLY FARM ENGINE
+-- 5. AUTO STORE & SMART WEAPON / STABLE FLY FARM ENGINE
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -534,10 +531,11 @@ local function equipSelectedWeapon()
 end
 
 -- =====================================================================
--- FLY FARM ENGINE (TERBANG STABIL DI ATAS MOB SAMBIL MENYERANG)
+-- STABLE FLY FARM ENGINE (KETINGGIAN TERKUNCI & TIDAK IKUT TURUN)
 -- =====================================================================
 task.spawn(function()
     local bv, bg, noclip
+    local lockedBaseY = nil -- Menyimpan ketinggian dasar area farm agar tetap stabil
     
     while task.wait(0.1) do
         pcall(function()
@@ -556,7 +554,7 @@ task.spawn(function()
                 -- 2. Senjata
                 equipSelectedWeapon()
 
-                -- 3. Cari Mob Terdekat untuk Dijadikan Pusat Farming
+                -- 3. Cari Pusat Kelompok Mob Terdekat
                 local targetMobRoot = nil
                 local shortest = math.huge
                 for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
@@ -572,22 +570,27 @@ task.spawn(function()
                 end
 
                 if targetMobRoot then
-                    -- Tarik semua mob ke bawah posisi terbang kita
+                    -- Tentukan ketinggian dasar (Y) berdasarkan posisi tanah mob pertama kali terdeteksi
+                    if not lockedBaseY or math.abs(rootPart.Position.X - targetMobRoot.Position.X) > 50 or math.abs(rootPart.Position.Z - targetMobRoot.Position.Z) > 50 then
+                        lockedBaseY = targetMobRoot.Position.Y
+                    end
+
+                    -- Tarik semua mob di sekitar agar mengumpul di bawah posisi terbang player
                     for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
                         local eRoot = enemy:FindFirstChild("HumanoidRootPart")
                         local eHum = enemy:FindFirstChildOfClass("Humanoid")
                         if eRoot and eHum and eHum.Health > 0 then
                             if (targetMobRoot.Position - eRoot.Position).Magnitude < 250 then
-                                -- Tarik mob tepat di bawah posisi terbang player
-                                eRoot.CFrame = rootPart.CFrame * CFrame.new(0, -Settings.FlyHeight, -3)
+                                -- Mob ditarik sejajar dengan permukaan tanah asal, player tetap di atasnya
+                                eRoot.CFrame = CFrame.new(targetMobRoot.Position.X, lockedBaseY, targetMobRoot.Position.Z)
                                 eHum.PlatformStand = true
                             end
                         end
                     end
                 end
 
-                -- 4. Aktifkan Mode Terbang Melayang (Fly Attack)
-                if Settings.FlyAttack then
+                -- 4. Aktifkan Terbang Melayang dengan Ketinggian Terkunci (Stable Height)
+                if Settings.FlyAttack and targetMobRoot then
                     humanoid.PlatformStand = true
                     
                     if not bv or not bv.Parent then
@@ -613,17 +616,19 @@ task.spawn(function()
                         end)
                     end
 
-                    if targetMobRoot then
-                        -- Melayang stabil di atas posisi mob
-                        local hoverTarget = targetMobRoot.Position + Vector3.new(0, Settings.FlyHeight, 0)
-                        bv.Velocity = (hoverTarget - rootPart.Position) * 10
-                        bg.CFrame = CFrame.new(rootPart.Position, targetMobRoot.Position)
-                    else
-                        bv.Velocity = Vector3.new(0, 0, 0)
-                    end
+                    -- Posisi X dan Z mengikuti pergerakan area mob, tapi sumbu Y (tinggi) dikunci stabil
+                    local targetX = targetMobRoot.Position.X
+                    local targetZ = targetMobRoot.Position.Z
+                    local stableHoverY = lockedBaseY + Settings.FlyHeight
+
+                    local targetPosition = Vector3.new(targetX, stableHoverY, targetZ)
+                    local moveDirection = (targetPosition - rootPart.Position)
+
+                    bv.Velocity = moveDirection * 12
+                    bg.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetMobRoot.Position.X, rootPart.Position.Y, targetMobRoot.Position.Z))
                 end
 
-                -- 5. Fast Attack / Basic Attack Simulation
+                -- 5. Fast Attack / Simulasi Pukulan Serangan
                 if Settings.FastAttack then
                     pcall(function()
                         local vu = game:GetService("VirtualUser")
@@ -632,11 +637,12 @@ task.spawn(function()
                     end)
                 end
             else
-                -- Matikan komponen terbang jika Auto Farm dimatikan
+                -- Bersihkan komponen terbang jika Auto Farm dimatikan
                 if bv then bv:Destroy() bv = nil end
                 if bg then bg:Destroy() bg = nil end
                 if noclip then noclip:Disconnect() noclip = nil end
                 if humanoid then humanoid.PlatformStand = false end
+                lockedBaseY = nil
             end
         end)
     end
@@ -798,7 +804,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Fly Attack Master v25"
+TitleLabel.Text = "Blox Fruits Hub | Stable Fly Attack v26"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -877,11 +883,11 @@ local function createToggle(text, settingKey, callback)
     return btn
 end
 
-createSectionHeader("1. Auto Farm & Fly Attack Settings")
+createSectionHeader("1. Auto Farm & Stable Fly Settings")
 createToggle("Auto Farm Level", "AutoFarmLevel", nil)
-createToggle("Fly Attack (Terbang Melayang Saat Farm)", "FlyAttack", nil)
+createToggle("Fly Attack (Melayang Stabil di Atas Mob)", "FlyAttack", nil)
 createToggle("Fast Attack", "FastAttack", nil)
-createToggle("Bring Mob (Tarik Musuh di Bawah)", "BringMob", nil)
+createToggle("Bring Mob (Tarik Musuh ke Bawah)", "BringMob", nil)
 createToggle("Auto Buso Haki (Bypass Elemental)", "AutoBuso", nil)
 
 createSectionHeader("2. Pilih Senjata Auto Farm (Weapon Selector)")
@@ -980,13 +986,13 @@ SpeedBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("7. Pengaturan Ketinggian Terbang Farm")
+createSectionHeader("7. Pengaturan Ketinggian Melayang")
 
 local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
 HeightBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
 HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
+HeightBtn.Text = "Ketinggian Melayang: " .. Settings.FlyHeight .. " Studs"
 HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
 HeightBtn.ZIndex = 102
 Container.CanvasSize = UDim2.new(0, 0, 0, 1000)
@@ -997,16 +1003,16 @@ hCorner.CornerRadius = UDim.new(0, 6)
 hCorner.Parent = HeightBtn
 
 HeightBtn.MouseButton1Click:Connect(function()
-    if Settings.FlyHeight == 5 then
-        Settings.FlyHeight = 8
-    elseif Settings.FlyHeight == 8 then
+    if Settings.FlyHeight == 8 then
         Settings.FlyHeight = 12
     elseif Settings.FlyHeight == 12 then
         Settings.FlyHeight = 15
+    elseif Settings.FlyHeight == 15 then
+        Settings.FlyHeight = 18
     else
-        Settings.FlyHeight = 5
+        Settings.FlyHeight = 8
     end
-    HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
+    HeightBtn.Text = "Ketinggian Melayang: " .. Settings.FlyHeight .. " Studs"
     saveSettings()
 end)
 
@@ -1015,4 +1021,4 @@ createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Master Ultimate + Fly Attack Berhasil Dimuat!")
+print("Blox Fruits Master Ultimate + Stable Fly Attack v26 Berhasil Dimuat!")
