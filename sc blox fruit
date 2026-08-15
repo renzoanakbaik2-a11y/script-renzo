@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - NO SERVER HOP) + AUTO FARMING & HAKI FIX
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION + AUTO FARM FLY + AUTO BASIC ATTACK)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -11,9 +11,10 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v22.json"
+local FileName = "BloxFruitsHub_Clean_v23.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -27,11 +28,11 @@ local Settings = {
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
-    -- Tambahan Pengaturan Auto Farm & Haki
     AutoFarmLevel = false,
     AutoFarmBounty = false,
     BringMob = false,
-    AutoHaki = true
+    AutoHaki = true,
+    AutoBasicAttack = true
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -108,7 +109,7 @@ HudCorner.CornerRadius = UDim.new(0, 8)
 HudCorner.Parent = StatsHudFrame
 
 local HudStroke = Instance.new("UIStroke")
-HudStroke.Color = Color3.fromRGB(255, 100, 100)
+HudStroke.Color = Color3.fromRGB(255, 50, 50)
 HudStroke.Thickness = 2
 HudStroke.Parent = StatsHudFrame
 
@@ -116,7 +117,7 @@ local HudTitle = Instance.new("TextLabel")
 HudTitle.Size = UDim2.new(1, 0, 0, 22)
 HudTitle.BackgroundTransparency = 1
 HudTitle.Text = "📊 LIVE MAP STATS"
-HudTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
+HudTitle.TextColor3 = Color3.fromRGB(255, 50, 50)
 HudTitle.TextSize, HudTitle.Font = 11, Enum.Font.GothamBold
 HudTitle.ZIndex = 81
 HudTitle.Parent = StatsHudFrame
@@ -192,18 +193,10 @@ local NotifCorner = Instance.new("UICorner")
 NotifCorner.CornerRadius = UDim.new(0, 8)
 NotifCorner.Parent = NotifFrame
 
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Thickness = 2
-UIStroke.Parent = NotifFrame
-
-task.spawn(function()
-    while true do
-        for i = 0, 1, 0.05 do
-            UIStroke.Color = Color3.fromHSV(i, 1, 1)
-            task.wait(1)
-        end
-    end
-end)
+local NotifStroke = Instance.new("UIStroke")
+NotifStroke.Color = Color3.fromRGB(255, 50, 50)
+NotifStroke.Thickness = 2
+NotifStroke.Parent = NotifFrame
 
 local NotifText = Instance.new("TextLabel")
 NotifText.Size = UDim2.new(1, 0, 1, 0)
@@ -450,25 +443,17 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 4.5. SISTEM TAMBAHAN: AUTO HAKI (ANTI KEDAP-KEDIP) & BRING MOB / AUTO FARM
+-- 4.5. SISTEM TAMBAHAN: AUTO HAKI, AUTO FARM TERBANG, & AUTO BASIC ATTACK
 -- =====================================================================
+
+-- Auto Haki Stabil (Tidak Kedap-Kedip saat Fast Attack / Farm)
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(1.5) do
         pcall(function()
             if Settings.AutoHaki then
                 local character = LocalPlayer.Character
                 if character then
-                    -- Cek atribut/folder buso asli blox fruits tanpa kedap-kedip (hanya nyalakan jika belum ada)
-                    local isHakiActive = character:FindFirstChild("HasBuso") or character:FindFirstChild("Buso")
-                    if not isHakiActive then
-                        for _, v in ipairs(character:GetChildren()) do
-                            if v:IsA("BasePart") and v.Color == Color3.fromRGB(0,0,0) then
-                                isHakiActive = true
-                                break
-                            end
-                        end
-                    end
-                    
+                    local isHakiActive = character:FindFirstChild("HasBuso")
                     local remotes = ReplicatedStorage:FindFirstChild("Remotes")
                     local commF = remotes and remotes:FindFirstChild("CommF_")
                     if not isHakiActive and commF then
@@ -480,22 +465,44 @@ task.spawn(function()
     end
 end)
 
+-- Auto Basic Attack / Clicker
+task.spawn(function()
+    while task.wait(0.05) do
+        pcall(function()
+            if Settings.AutoBasicAttack and (Settings.AutoFarmLevel or Settings.AutoFarmBounty) then
+                VirtualUser:Button1Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+            end
+        end)
+    end
+end)
+
+-- Auto Farm & Bring Mob Terbang ke Musuh Terdekat
 task.spawn(function()
     while task.wait(0.2) do
         pcall(function()
-            if Settings.BringMob and (Settings.AutoFarmLevel or Settings.AutoFarmBounty) then
+            if Settings.AutoFarmLevel or Settings.AutoFarmBounty then
                 local rootPart = getCharacterRootPart()
                 if rootPart then
                     local enemiesFolder = Workspace:FindFirstChild("Enemies")
                     if enemiesFolder then
+                        local nearestEnemy = nil
+                        local shortestDist = math.huge
+
                         for _, enemy in ipairs(enemiesFolder:GetChildren()) do
                             local eRoot = enemy:FindFirstChild("HumanoidRootPart")
                             local eHum = enemy:FindFirstChildOfClass("Humanoid")
                             if eRoot and eHum and eHum.Health > 0 then
-                                if (rootPart.Position - eRoot.Position).Magnitude <= 300 then
+                                local dist = (rootPart.Position - eRoot.Position).Magnitude
+                                if dist < shortestDist then
+                                    shortestDist = dist
+                                    nearestEnemy = eRoot
+                                end
+
+                                -- Tarik Mob jika Bring Mob aktif
+                                if Settings.BringMob and dist <= 350 then
                                     eRoot.CFrame = rootPart.CFrame + Vector3.new(0, 0, 3)
                                     eRoot.CanCollide = false
-                                    local eBodyVel = eRoot:FindFirstChild("BodyVelocity")
+                                    local eBodyVel = eRoot:FindFirstChild("BringMobVelocity")
                                     if not eBodyVel then
                                         eBodyVel = Instance.new("BodyVelocity")
                                         eBodyVel.Name = "BringMobVelocity"
@@ -504,6 +511,14 @@ task.spawn(function()
                                         eBodyVel.Parent = eRoot
                                     end
                                 end
+                            end
+                        end
+
+                        -- Terbang otomatis mendekati musuh farming
+                        if nearestEnemy then
+                            local targetPos = nearestEnemy.CFrame + Vector3.new(0, 8, 3)
+                            if not activeFlyConnection then
+                                smoothFlyTo(targetPos, function() end)
                             end
                         end
                     end
@@ -578,7 +593,7 @@ task.spawn(function()
 end)
 
 -- =====================================================================
--- 6. MONITORING STATUS & NOTIFIKASI (ANTI-SPAM)
+-- 6. MONITORING STATUS & NOTIFIKASI
 -- =====================================================================
 task.spawn(function()
     local lastStatus = nil 
@@ -661,7 +676,7 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
+-- 8. MENU UTAMA GUI (SERBA MERAH SESUAI PERMINTAAN)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -677,7 +692,7 @@ OpenCorner.CornerRadius = UDim.new(0, 12)
 OpenCorner.Parent = OpenButton
 
 local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Color = Color3.fromRGB(255, 100, 100)
+OpenStroke.Color = Color3.fromRGB(255, 50, 50)
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
@@ -695,7 +710,7 @@ MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(255, 100, 100)
+MainStroke.Color = Color3.fromRGB(255, 50, 50)
 MainStroke.Thickness = 2
 MainStroke.Parent = MainFrame
 
@@ -710,8 +725,8 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v22 (No Hop)"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+TitleLabel.Text = "Blox Fruits Hub | Clean v23 (Red Theme)"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.ZIndex = 102
@@ -738,7 +753,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 850)
+Container.CanvasSize = UDim2.new(0, 0, 0, 920)
 Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -753,7 +768,7 @@ local function createSectionHeader(text)
     lbl.Size = UDim2.new(0.9, 0, 0, 28)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
-    lbl.TextColor3 = Color3.fromRGB(255, 100, 100)
+    lbl.TextColor3 = Color3.fromRGB(255, 50, 50)
     lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.ZIndex = 102
@@ -808,7 +823,7 @@ createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
 
 local CollectBtn = Instance.new("TextButton")
 CollectBtn.Size = UDim2.new(0.9, 0, 0, 32)
-CollectBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
+CollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CollectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CollectBtn.Text = "⚡ Ambil Paksa Semua Buah Sekarang"
 CollectBtn.TextSize, CollectBtn.Font = 11, Enum.Font.GothamBold
@@ -829,7 +844,7 @@ createSectionHeader("4. Pengaturan Kecepatan Terbang (100 - 500)")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
-SpeedBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+SpeedBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
 SpeedBtn.TextSize, SpeedBtn.Font = 11, Enum.Font.GothamBold
@@ -860,7 +875,7 @@ createSectionHeader("5. Pengaturan Ketinggian Terbang")
 
 local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
-HeightBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
+HeightBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
 HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
@@ -891,6 +906,7 @@ createSectionHeader("6. Auto Farm & Combat Features")
 createToggle("Auto Farm Level", "AutoFarmLevel", nil)
 createToggle("Auto Farm Bounty", "AutoFarmBounty", nil)
 createToggle("Bring Mob", "BringMob", nil)
+createToggle("Auto Basic Attack (Clicker)", "AutoBasicAttack", nil)
 createToggle("Auto Haki (Anti Kedap-Kedip)", "AutoHaki", nil)
 
 createSectionHeader("7. Performa")
@@ -898,4 +914,4 @@ createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Hub Clean (No Server Hop) + Auto Farm & Haki Berhasil Dimuat!")
+print("Blox Fruits Hub Clean v23 Berhasil Dimuat dengan Tema Merah & Auto Farm Terbang + Auto Basic Attack!")
