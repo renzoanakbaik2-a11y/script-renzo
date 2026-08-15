@@ -458,7 +458,17 @@ task.spawn(function()
             if Settings.AutoHaki then
                 local character = LocalPlayer.Character
                 if character then
-                    local isHakiActive = character:FindFirstChild("HasBuso")
+                    -- Cek atribut/folder buso asli blox fruits tanpa kedap-kedip (hanya nyalakan jika belum ada)
+                    local isHakiActive = character:FindFirstChild("HasBuso") or character:FindFirstChild("Buso")
+                    if not isHakiActive then
+                        for _, v in ipairs(character:GetChildren()) do
+                            if v:IsA("BasePart") and v.Color == Color3.fromRGB(0,0,0) then
+                                isHakiActive = true
+                                break
+                            end
+                        end
+                    end
+                    
                     local remotes = ReplicatedStorage:FindFirstChild("Remotes")
                     local commF = remotes and remotes:FindFirstChild("CommF_")
                     if not isHakiActive and commF then
