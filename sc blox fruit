@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS MASTER ULTIMATE SCRIPT (STABLE FLY & TRUE DAMAGE v27)
+-- BLOX FRUITS MASTER ULTIMATE SCRIPT (FULL COMBINED v29 - FINAL STABLE)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsMaster_v27.json"
+local FileName = "BloxFruitsMaster_v29.json"
 
 local Settings = {
     AutoFarmLevel = false,
@@ -28,7 +28,7 @@ local Settings = {
     SelectedTeam = "Pirates",
     FpsBoost = false,
     FlightSpeed = 200,
-    FlyHeight = 10,
+    FlyHeight = 12,
     AutoStoreFruit = true,
     FruitESP = true,
     AutoCollectFruit = true,
@@ -62,7 +62,7 @@ local function saveSettings()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsMasterHub"
+ScreenGui.Name = "BloxFruitsMasterHubFinal"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -108,7 +108,7 @@ HudCorner.CornerRadius = UDim.new(0, 8)
 HudCorner.Parent = StatsHudFrame
 
 local HudStroke = Instance.new("UIStroke")
-HudStroke.Color = Color3.fromRGB(255, 100, 100)
+HudStroke.Color = Color3.fromRGB(46, 204, 113)
 HudStroke.Thickness = 2
 HudStroke.Parent = StatsHudFrame
 
@@ -116,7 +116,7 @@ local HudTitle = Instance.new("TextLabel")
 HudTitle.Size = UDim2.new(1, 0, 0, 22)
 HudTitle.BackgroundTransparency = 1
 HudTitle.Text = "📊 LIVE MAP STATS"
-HudTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
+HudTitle.TextColor3 = Color3.fromRGB(46, 204, 113)
 HudTitle.TextSize, HudTitle.Font = 11, Enum.Font.GothamBold
 HudTitle.ZIndex = 81
 HudTitle.Parent = StatsHudFrame
@@ -126,7 +126,7 @@ FruitCountLabel.Size = UDim2.new(1, 0, 0, 22)
 FruitCountLabel.Position = UDim2.new(0, 0, 0, 24)
 FruitCountLabel.BackgroundTransparency = 1
 FruitCountLabel.Text = "Buah di Map: 0"
-FruitCountLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+FruitCountLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 FruitCountLabel.TextSize, FruitCountLabel.Font = 11, Enum.Font.GothamBold
 FruitCountLabel.ZIndex = 81
 FruitCountLabel.Parent = StatsHudFrame
@@ -190,19 +190,6 @@ local NotifCorner = Instance.new("UICorner")
 NotifCorner.CornerRadius = UDim.new(0, 8)
 NotifCorner.Parent = NotifFrame
 
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Thickness = 2
-UIStroke.Parent = NotifFrame
-
-task.spawn(function()
-    while true do
-        for i = 0, 1, 0.05 do
-            UIStroke.Color = Color3.fromHSV(i, 1, 1)
-            task.wait(1)
-        end
-    end
-end)
-
 local NotifText = Instance.new("TextLabel")
 NotifText.Size = UDim2.new(1, 0, 1, 0)
 NotifText.BackgroundTransparency = 1
@@ -212,38 +199,14 @@ NotifText.TextSize, NotifText.Font = 12, Enum.Font.GothamBold
 NotifText.ZIndex = 51
 NotifText.Parent = NotifFrame
 
-local notifQueue = {}
-local isProcessingNotif = false
-
-local function processNotificationQueue()
-    if isProcessingNotif or #notifQueue == 0 then return end
-    isProcessingNotif = true
-
-    local data = table.remove(notifQueue, 1)
-    NotifText.Text = data.text
-    NotifText.TextColor3 = data.color or Color3.fromRGB(255, 255, 255)
-
-    TweenService:Create(NotifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0.5, 0, 0, 15)
-    }):Play()
-
-    task.wait(4)
-
-    TweenService:Create(NotifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
-        Position = UDim2.new(0.5, 0, 0, -80)
-    }):Play()
-
-    task.wait(0.8)
-    isProcessingNotif = false
-
-    if #notifQueue > 0 then
-        processNotificationQueue()
-    end
-end
-
 local function showCustomNotification(messageText, textColor)
-    table.insert(notifQueue, {text = messageText, color = textColor})
-    processNotificationQueue()
+    NotifText.Text = messageText
+    NotifText.TextColor3 = textColor or Color3.fromRGB(255, 255, 255)
+
+    TweenService:Create(NotifFrame, TweenInfo.new(0.3), {Position = UDim2.new(0.5, 0, 0, 15)}):Play()
+    task.delay(3, function()
+        TweenService:Create(NotifFrame, TweenInfo.new(0.3), {Position = UDim2.new(0.5, 0, 0, -80)}):Play()
+    end)
 end
 
 local function playFruitSound()
@@ -258,50 +221,17 @@ local function playFruitSound()
 end
 
 -- =====================================================================
--- 3. DETEKSI PULAU & ESP BUAH
+-- 3. DETEKSI BUAH & ESP
 -- =====================================================================
-local function getIslandName(position)
-    local x, z = position.X, position.Z
-    if math.abs(x) < 2000 and math.abs(z) < 2000 then
-        return "Starter Area"
-    elseif x > 2000 then
-        return "Marine Fortress"
-    elseif x < -2000 then
-        return "Skypiea"
-    elseif z > 3000 then
-        return "Ice Island"
-    elseif z < -3000 then
-        return "Magma Island"
-    else
-        return "Open Sea"
-    end
-end
-
 local function isRealSpawnedFruit(obj)
     if not obj or not obj.Parent then return false end
     if obj.Parent ~= Workspace then return false end
-
-    local officialFruits = {
-        "rocket", "spin", "spring", "chop", "spike", "flame", "falcon", "ice", 
-        "sand", "dark", "diamond", "light", "rubber", "barrier", "ghost", 
-        "magma", "quake", "buddha", "love", "spider", "phoenix", 
-        "portal", "pain", "blizzard", "gravity", "mammoth", "trex", "dough", 
-        "shadow", "venom", "control", "spirit", "dragon", "leopard", "kitsune"
-    }
-
-    local objNameLower = obj.Name:lower()
-    for _, fruitName in ipairs(officialFruits) do
-        if objNameLower:find(fruitName) then
-            if not objNameLower:find("pot") and not objNameLower:find("controller") then
-                return obj:IsA("Tool") or objNameLower:sub(-5) == "fruit" or obj:FindFirstChild("Handle")
-            end
-        end
-    end
-    return false
+    local name = obj.Name:lower()
+    return name:find("fruit") and not name:find("pot") and not name:find("controller")
 end
 
 local ESPFolder = Instance.new("Folder")
-ESPFolder.Name = "FruitESPFolder"
+ESPFolder.Name = "FruitESPFolderFinal"
 ESPFolder.Parent = CoreGui
 
 local function clearESP()
@@ -313,31 +243,25 @@ local function updateFruitESP()
     if not Settings.FruitESP then return end
 
     pcall(function()
-        local rootPart = getCharacterRootPart()
         for _, obj in ipairs(Workspace:GetChildren()) do
             if isRealSpawnedFruit(obj) then
                 local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
                 if handle then
-                    local distance = rootPart and math.floor((rootPart.Position - handle.Position).Magnitude) or 0
-                    local island = getIslandName(handle.Position)
-                    local fruitName = obj.Name
-
                     local billboard = Instance.new("BillboardGui")
-                    billboard.Name = "ESP_" .. fruitName
-                    billboard.Size = UDim2.new(0, 200, 0, 60)
+                    billboard.Size = UDim2.new(0, 150, 0, 40)
                     billboard.AlwaysOnTop = true
                     billboard.Adornee = handle
                     billboard.Parent = ESPFolder
 
-                    local textLabel = Instance.new("TextLabel")
-                    textLabel.Size = UDim2.new(1, 0, 1, 0)
-                    textLabel.BackgroundTransparency = 1
-                    textLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-                    textLabel.TextStrokeTransparency = 0
-                    textLabel.TextSize = 11
-                    textLabel.Font = Enum.Font.GothamBold
-                    textLabel.Text = string.format("%s\n%dm\n%s", fruitName, distance, island)
-                    textLabel.Parent = billboard
+                    local label = Instance.new("TextLabel")
+                    label.Size = UDim2.new(1, 0, 1, 0)
+                    label.BackgroundTransparency = 1
+                    label.TextColor3 = Color3.fromRGB(255, 215, 0)
+                    label.TextStrokeTransparency = 0
+                    label.TextSize = 11
+                    label.Font = Enum.Font.GothamBold
+                    label.Text = "🍎 " .. obj.Name
+                    label.Parent = billboard
                 end
             end
         end
@@ -345,7 +269,7 @@ local function updateFruitESP()
 end
 
 -- =====================================================================
--- 4. SISTEM TERBANG UMUM & AUTO COLLECT
+-- 4. SISTEM TERBANG UMUM (UNTUK AMBIL BUAH)
 -- =====================================================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, onComplete)
@@ -357,7 +281,7 @@ local function smoothFlyTo(targetCFrame, onComplete)
         activeFlyConnection = nil
     end
 
-    local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
+    local currentSpeed = math.clamp(Settings.FlightSpeed, 50, 500)
     local adjustedTarget = targetCFrame.Position + Vector3.new(0, 10, 0)
 
     local character = LocalPlayer.Character
@@ -397,8 +321,7 @@ local function smoothFlyTo(targetCFrame, onComplete)
         end
 
         local currentPos = currentRoot.Position
-        local targetPos = adjustedTarget
-        local direction = (targetPos - currentPos)
+        local direction = (adjustedTarget - currentPos)
         local distance = direction.Magnitude
 
         if distance < 4 then
@@ -412,7 +335,7 @@ local function smoothFlyTo(targetCFrame, onComplete)
         end
 
         bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 15)
-        bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
+        bodyGyro.CFrame = CFrame.new(currentPos, adjustedTarget)
     end)
 end
 
@@ -472,15 +395,10 @@ local function autoStoreFruits()
         end
         
         if backpack then
-            for _, item in ipairs(backpack:GetChildren()) do
-                checkAndStore(item)
-            end
+            for _, item in ipairs(backpack:GetChildren()) do checkAndStore(item) end
         end
-        
         if character then
-            for _, item in ipairs(character:GetChildren()) do
-                checkAndStore(item)
-            end
+            for _, item in ipairs(character:GetChildren()) do checkAndStore(item) end
         end
     end)
 end
@@ -491,36 +409,30 @@ local function equipSelectedWeapon()
         local backpack = LocalPlayer.Backpack
         if not character then return end
         
-        local currentWeapon = character:FindFirstChildOfClass("Tool")
-        if currentWeapon then
-            local name = currentWeapon.Name:lower()
-            if Settings.SelectWeapon == "Melee" and (name:find("combat") or name:find("step") or name:find("claw") or name:find("fist") or name:find("karate") or name:find("talon") or name:find("godhuman") or name:find("superhuman")) then
-                return
-            elseif Settings.SelectWeapon == "Sword" and (not name:find("gun") and not name:find("fruit") and not name:find("combat")) then
-                return
-            elseif Settings.SelectWeapon == "Blox Fruit" and (name:find("fruit") or name:find("flame") or name:find("ice") or name:find("buddha") or name:find("magma") or name:find("kitsune") or name:find("dough")) then
-                return
-            elseif Settings.SelectWeapon == "Gun" and (name:find("gun") or name:find("musket") or name:find("rifle") or name:find("kabucha") or name:find("guitar")) then
-                return
-            end
+        local current = character:FindFirstChildOfClass("Tool")
+        if current then
+            local n = current.Name:lower()
+            if Settings.SelectWeapon == "Melee" and (n:find("combat") or n:find("step") or n:find("claw") or n:find("fist") or n:find("karate") or n:find("godhuman") or n:find("superhuman")) then return end
+            if Settings.SelectWeapon == "Sword" and (not n:find("gun") and not n:find("fruit") and not n:find("combat")) then return end
+            if Settings.SelectWeapon == "Blox Fruit" and (n:find("fruit") or n:find("flame") or n:find("ice") or n:find("buddha") or n:find("magma") or n:find("kitsune") or n:find("dough")) then return end
+            if Settings.SelectWeapon == "Gun" and (n:find("gun") or n:find("musket") or n:find("rifle") or n:find("kabucha") or n:find("guitar")) then return end
         end
         
         for _, item in ipairs(backpack:GetChildren()) do
             if item:IsA("Tool") then
-                local name = item.Name:lower()
-                local matched = false
-                
-                if Settings.SelectWeapon == "Melee" and (name:find("combat") or name:find("step") or name:find("claw") or name:find("fist") or name:find("karate") or name:find("talon") or name:find("godhuman") or name:find("superhuman")) then
-                    matched = true
-                elseif Settings.SelectWeapon == "Sword" and (not name:find("gun") and not name:find("fruit") and not name:find("combat")) then
-                    matched = true
-                elseif Settings.SelectWeapon == "Blox Fruit" and (name:find("fruit") or name:find("flame") or name:find("ice") or name:find("buddha") or name:find("magma") or name:find("kitsune") or name:find("dough")) then
-                    matched = true
-                elseif Settings.SelectWeapon == "Gun" and (name:find("gun") or name:find("musket") or name:find("rifle") or name:find("kabucha") or name:find("guitar")) then
-                    matched = true
+                local n = item.Name:lower()
+                local match = false
+                if Settings.SelectWeapon == "Melee" and (n:find("combat") or n:find("step") or n:find("claw") or n:find("fist") or n:find("karate") or n:find("godhuman") or n:find("superhuman")) then
+                    match = true
+                elseif Settings.SelectWeapon == "Sword" and (not n:find("gun") and not n:find("fruit") and not n:find("combat")) then
+                    match = true
+                elseif Settings.SelectWeapon == "Blox Fruit" and (n:find("fruit") or n:find("flame") or n:find("ice") or n:find("buddha") or n:find("magma") or n:find("kitsune") or n:find("dough")) then
+                    match = true
+                elseif Settings.SelectWeapon == "Gun" and (n:find("gun") or n:find("musket") or n:find("rifle") or n:find("kabucha") or n:find("guitar")) then
+                    match = true
                 end
                 
-                if matched then
+                if match then
                     item.Parent = character
                     break
                 end
@@ -530,110 +442,106 @@ local function equipSelectedWeapon()
 end
 
 -- =====================================================================
--- ULTIMATE FARM ENGINE (FIXED STABLE FLY, TRUE BUSO & SERVER-SIDE HIT)
+-- 6. ULTIMATE STABLE FARM (FIXED FLY, STABLE HAKI & VALID NPC HIT)
 -- =====================================================================
 task.spawn(function()
-    local bv, bg, noclip
-    
-    while task.wait(0.08) do
+    local bodyVel, bodyGyro, noclipConn
+    local lastHakiCheck = 0
+
+    while task.wait(0.06) do
         pcall(function()
             local character = LocalPlayer.Character
             local rootPart = getCharacterRootPart()
             local humanoid = character and character:FindFirstChildOfClass("Humanoid")
             local remotes = ReplicatedStorage:FindFirstChild("Remotes")
             local commF = remotes and remotes:FindFirstChild("CommF_")
-            
+
             if Settings.AutoFarmLevel and rootPart and humanoid and humanoid.Health > 0 then
-                -- 1. Buso Haki Permanen (Anti Kedap-Kedip)
-                if Settings.AutoBuso and commF then
-                    local hasBusoActive = character:FindFirstChild("HasBuso") or character:FindFirstChild("Buso") or LocalPlayer:FindFirstChild("BusoEnabled") or character:GetAttribute("Buso")
-                    if not hasBusoActive then
-                        pcall(function() commF:InvokeServer("Buso") end)
+                
+                -- [STABLE HAKI] Diaktifkan dengan jeda aman 5 detik agar tidak kedap-kedip / spam server
+                if Settings.AutoBuso and commF and (tick() - lastHakiCheck > 5) then
+                    lastHakiCheck = tick()
+                    local hasBuso = character:FindFirstChild("HasBuso") or character:FindFirstChild("Buso") or character:GetAttribute("Buso")
+                    if not hasBuso then
+                        commF:InvokeServer("Buso")
                     end
                 end
 
-                -- 2. Senjata
                 equipSelectedWeapon()
 
-                -- 3. Cari & Kunci Posisi Mob Terdekat (Server-Side Alignment)
+                -- Cari Musuh Terdekat
                 local targetMobRoot = nil
-                local shortest = math.huge
-                
-                for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
-                    local eRoot = enemy:FindFirstChild("HumanoidRootPart")
-                    local eHum = enemy:FindFirstChildOfClass("Humanoid")
-                    if eRoot and eHum and eHum.Health > 0 then
-                        local dist = (rootPart.Position - eRoot.Position).Magnitude
-                        if dist < shortest then
-                            shortest = dist
-                            targetMobRoot = eRoot
+                local shortestDist = math.huge
+
+                if Workspace:FindFirstChild("Enemies") then
+                    for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
+                        local eRoot = enemy:FindFirstChild("HumanoidRootPart")
+                        local eHum = enemy:FindFirstChildOfClass("Humanoid")
+                        if eRoot and eHum and eHum.Health > 0 then
+                            local dist = (rootPart.Position - eRoot.Position).Magnitude
+                            if dist < shortestDist then
+                                shortestDist = dist
+                                targetMobRoot = eRoot
+                            end
                         end
                     end
                 end
 
                 if targetMobRoot then
-                    local mobCenter = targetMobRoot.Position
-                    
-                    for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
-                        local eRoot = enemy:FindFirstChild("HumanoidRootPart")
-                        local eHum = enemy:FindFirstChildOfClass("Humanoid")
-                        if eRoot and eHum and eHum.Health > 0 then
-                            local d = (mobCenter - eRoot.Position).Magnitude
-                            if d < 350 then
-                                -- Paksa posisi asli mob agar menyatu tepat di satu koordinat server
-                                eRoot.CFrame = CFrame.new(mobCenter)
-                                eRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                                eRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                                eHum.PlatformStand = true
+                    local mobPos = targetMobRoot.Position
+
+                    -- [FIX HIT NPC] Menyatukan posisi mob ke satu titik pusat server secara paksa agar damage masuk
+                    if Settings.BringMob then
+                        for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
+                            local eRoot = enemy:FindFirstChild("HumanoidRootPart")
+                            local eHum = enemy:FindFirstChildOfClass("Humanoid")
+                            if eRoot and eHum and eHum.Health > 0 then
+                                local d = (mobPos - eRoot.Position).Magnitude
+                                if d < 400 then
+                                    eRoot.CFrame = CFrame.new(mobPos)
+                                    eRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                                    eRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                                    eHum.PlatformStand = true
+                                end
                             end
                         end
                     end
 
-                    -- 4. Stable Fly Melayang Stabil Menggunakan Raycast Anti-Tanah
+                    -- [STABLE FLY] Melayang stabil tanpa bentrok gravitasi
                     humanoid.PlatformStand = true
-                    
-                    if not bv or not bv.Parent then
-                        bv = Instance.new("BodyVelocity")
-                        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-                        bv.Velocity = Vector3.new(0, 0, 0)
-                        bv.Parent = rootPart
-                    end
-                    
-                    if not bg or not bg.Parent then
-                        bg = Instance.new("BodyGyro")
-                        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-                        bg.Parent = rootPart
+
+                    if not bodyVel or not bodyVel.Parent then
+                        bodyVel = Instance.new("BodyVelocity")
+                        bodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+                        bodyVel.Velocity = Vector3.new(0, 0, 0)
+                        bodyVel.Parent = rootPart
                     end
 
-                    if not noclip then
-                        noclip = RunService.Stepped:Connect(function()
+                    if not bodyGyro or not bodyGyro.Parent then
+                        bodyGyro = Instance.new("BodyGyro")
+                        bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+                        bodyGyro.Parent = rootPart
+                    end
+
+                    if not noclipConn then
+                        noclipConn = RunService.Stepped:Connect(function()
                             if character then
-                                for _, part in ipairs(character:GetDescendants()) do
-                                    if part:IsA("BasePart") then part.CanCollide = false end
+                                for _, p in ipairs(character:GetDescendants()) do
+                                    if p:IsA("BasePart") then p.CanCollide = false end
                                 end
                             end
                         end)
                     end
 
-                    -- Raycast posisi tanah asli agar tidak tembus ke bawah tanah
-                    local rayOrigin = mobCenter + Vector3.new(0, 50, 0)
-                    local rayDirection = Vector3.new(0, -200, 0)
-                    local raycastParams = RaycastParams.new()
-                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-                    raycastParams.FilterDescendantsInstances = {character, Workspace.Enemies}
+                    -- Posisi melayang tepat di atas kepala musuh berdasarkan pengaturan ketinggian
+                    local hoverHeight = math.clamp(Settings.FlyHeight, 8, 25)
+                    local targetPos = Vector3.new(mobPos.X, mobPos.Y + hoverHeight, mobPos.Z)
                     
-                    local rayResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-                    local groundY = rayResult and rayResult.Position.Y or mobCenter.Y
+                    local moveVector = (targetPos - rootPart.Position)
+                    bodyVel.Velocity = moveVector * 18
+                    bodyGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(mobPos.X, rootPart.Position.Y, mobPos.Z))
 
-                    -- Posisi target melayang tepat di atas kepala kerumunan mob agar hit senjata masuk
-                    local hoverHeight = math.clamp(Settings.FlyHeight, 8, 20)
-                    local targetPosition = Vector3.new(mobCenter.X, groundY + hoverHeight, mobCenter.Z)
-                    
-                    local moveDirection = (targetPosition - rootPart.Position)
-                    bv.Velocity = moveDirection * 18
-                    bg.CFrame = CFrame.new(rootPart.Position, Vector3.new(mobCenter.X, rootPart.Position.Y, mobCenter.Z))
-
-                    -- 5. Fast Attack / Simulasi Hit Server
+                    -- Simulasi Hit Serangan Cepat
                     if Settings.FastAttack then
                         pcall(function()
                             local vu = game:GetService("VirtualUser")
@@ -644,73 +552,33 @@ task.spawn(function()
                     end
                 end
             else
-                if bv then bv:Destroy() bv = nil end
-                if bg then bg:Destroy() bg = nil end
-                if noclip then noclip:Disconnect() noclip = nil end
+                if bodyVel then bodyVel:Destroy() bodyVel = nil end
+                if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+                if noclipConn then noclipConn:Disconnect() noclipConn = nil end
                 if humanoid then humanoid.PlatformStand = false end
             end
         end)
     end
 end)
 
--- Loop Statistik & ESP
+-- Loop Statistik, ESP & Auto Collect
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
             updateFruitESP()
+            autoStoreFruits()
 
             local count = 0
             for _, obj in ipairs(Workspace:GetChildren()) do
-                if isRealSpawnedFruit(obj) then
-                    count = count + 1
-                end
+                if isRealSpawnedFruit(obj) then count = count + 1 end
             end
             FruitCountLabel.Text = "Buah di Map: " .. count
 
-            local uptimeSeconds = math.floor(Workspace.DistributedGameTime)
-            local hours = math.floor(uptimeSeconds / 3600)
-            local minutes = math.floor((uptimeSeconds % 3600) / 60)
-            local seconds = uptimeSeconds % 60
-            ServerTimeLabel.Text = string.format("Server Aktif: %02d:%02d:%02d", hours, minutes, seconds)
-        end)
-    end
-end)
-
--- =====================================================================
--- 6. MONITORING STATUS & NOTIFIKASI
--- =====================================================================
-task.spawn(function()
-    local lastStatus = nil 
-    task.wait(5) 
-    while task.wait(3) do 
-        pcall(function()
-            autoStoreFruits()
-
-            local hasFruitNow = false
-            for _, obj in ipairs(Workspace:GetChildren()) do
-                if isRealSpawnedFruit(obj) then
-                    hasFruitNow = true
-                    break
-                end
-            end
-
-            if hasFruitNow and lastStatus ~= "Ada" then
-                if Settings.FruitNotifier then
-                    playFruitSound()
-                    showCustomNotification("✅ BUAH TERDETEKSI DI MAP!", Color3.fromRGB(46, 204, 113))
-                end
-                lastStatus = "Ada"
-            elseif not hasFruitNow and lastStatus ~= "Kosong" then
-                if Settings.FruitNotifier then
-                    showCustomNotification("❌ Tidak ada buah di map.", Color3.fromRGB(231, 76, 60))
-                end
-                lastStatus = "Kosong"
-            end
-
-            if hasFruitNow then
-                if Settings.AutoCollectFruit and not activeFlyConnection then
-                    collectNearestFruit()
-                end
+            local up = math.floor(Workspace.DistributedGameTime)
+            ServerTimeLabel.Text = string.format("Server Aktif: %02d:%02d:%02d", math.floor(up/3600), math.floor((up%3600)/60), up%60)
+            
+            if count > 0 and Settings.AutoCollectFruit and not activeFlyConnection then
+                collectNearestFruit()
             end
         end)
     end
@@ -753,14 +621,11 @@ local function applyFpsBoost(state)
 end
 
 if Settings.FpsBoost then
-    task.spawn(function()
-        task.wait(2)
-        applyFpsBoost(true)
-    end)
+    task.spawn(function() task.wait(2) applyFpsBoost(true) end)
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (LENGKAP)
+-- 8. MENU UTAMA GUI (LENGKAP & RAPI)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -775,11 +640,6 @@ local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(0, 12)
 OpenCorner.Parent = OpenButton
 
-local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Color = Color3.fromRGB(255, 100, 100)
-OpenStroke.Thickness = 2
-OpenStroke.Parent = OpenButton
-
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 420, 0, 380)
 MainFrame.Position = UDim2.new(0.5, -210, 0.5, -190)
@@ -793,11 +653,6 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(255, 100, 100)
-MainStroke.Thickness = 2
-MainStroke.Parent = MainFrame
-
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 35)
 TopBar.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
@@ -809,9 +664,9 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Stable Fly & Fix Hit v27"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
+TitleLabel.Text = "Blox Fruits Hub | Master Final v29"
+TitleLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+TitleLabel.TextSize, TitleLabel.Font = 11, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.ZIndex = 102
 TitleLabel.Parent = TopBar
@@ -837,7 +692,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 1000)
+Container.CanvasSize = UDim2.new(0, 0, 0, 1100)
 Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -852,7 +707,7 @@ local function createSectionHeader(text)
     lbl.Size = UDim2.new(0.9, 0, 0, 28)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
-    lbl.TextColor3 = Color3.fromRGB(255, 100, 100)
+    lbl.TextColor3 = Color3.fromRGB(46, 204, 113)
     lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.ZIndex = 102
@@ -889,14 +744,13 @@ local function createToggle(text, settingKey, callback)
 end
 
 createSectionHeader("1. Auto Farm & Stable Fly Settings")
-createToggle("Auto Farm Level", "AutoFarmLevel", nil)
-createToggle("Fly Attack (Melayang Stabil di Atas Mob)", "FlyAttack", nil)
-createToggle("Fast Attack", "FastAttack", nil)
-createToggle("Bring Mob (Kunci & Tarik Musuh)", "BringMob", nil)
-createToggle("Auto Buso Haki (Stabil)", "AutoBuso", nil)
+createToggle("Auto Farm Level", "AutoFarmLevel")
+createToggle("Fly Attack (Stabil)", "FlyAttack")
+createToggle("Fast Attack", "FastAttack")
+createToggle("Bring Mob (Fix Hit NPC)", "BringMob")
+createToggle("Auto Buso Haki (Anti Kedap-Kedip)", "AutoBuso")
 
-createSectionHeader("2. Pilih Senjata Auto Farm (Weapon Selector)")
-
+createSectionHeader("2. Pilih Senjata Auto Farm")
 local WeaponSelectBtn = Instance.new("TextButton")
 WeaponSelectBtn.Size = UDim2.new(0.9, 0, 0, 32)
 WeaponSelectBtn.BackgroundColor3 = Color3.fromRGB(142, 68, 173)
@@ -911,15 +765,10 @@ wCorner.CornerRadius = UDim.new(0, 6)
 wCorner.Parent = WeaponSelectBtn
 
 WeaponSelectBtn.MouseButton1Click:Connect(function()
-    if Settings.SelectWeapon == "Melee" then
-        Settings.SelectWeapon = "Sword"
-    elseif Settings.SelectWeapon == "Sword" then
-        Settings.SelectWeapon = "Blox Fruit"
-    elseif Settings.SelectWeapon == "Blox Fruit" then
-        Settings.SelectWeapon = "Gun"
-    else
-        Settings.SelectWeapon = "Melee"
-    end
+    if Settings.SelectWeapon == "Melee" then Settings.SelectWeapon = "Sword"
+    elseif Settings.SelectWeapon == "Sword" then Settings.SelectWeapon = "Blox Fruit"
+    elseif Settings.SelectWeapon == "Blox Fruit" then Settings.SelectWeapon = "Gun"
+    else Settings.SelectWeapon = "Melee" end
     WeaponSelectBtn.Text = "Senjata Aktif: " .. Settings.SelectWeapon
     saveSettings()
 end)
@@ -930,7 +779,7 @@ createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
 end)
 
 createSectionHeader("4. Notifikasi & Live Map Stats HUD")
-createToggle("Fruit Notifier", "FruitNotifier", nil)
+createToggle("Fruit Notifier", "FruitNotifier")
 createToggle("Live Fruit & Server HUD", "FruitStatsHUD", function(state)
     StatsHudFrame.Visible = state
 end)
@@ -939,7 +788,7 @@ createToggle("ESP Buah", "FruitESP", function(state)
 end)
 
 createSectionHeader("5. Auto Collect & Store Fruit")
-createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
+createToggle("Auto Collect Fruit", "AutoCollectFruit")
 
 local CollectBtn = Instance.new("TextButton")
 CollectBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -954,14 +803,10 @@ local cCorner = Instance.new("UICorner")
 cCorner.CornerRadius = UDim.new(0, 6)
 cCorner.Parent = CollectBtn
 
-CollectBtn.MouseButton1Click:Connect(function()
-    collectNearestFruit()
-end)
+CollectBtn.MouseButton1Click:Connect(function() collectNearestFruit() end)
+createToggle("Auto Store Buah ke Tas", "AutoStoreFruit")
 
-createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
-
-createSectionHeader("6. Pengaturan Kecepatan Terbang (100 - 500)")
-
+createSectionHeader("6. Pengaturan Kecepatan Terbang")
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
 SpeedBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
@@ -976,23 +821,16 @@ sCorner.CornerRadius = UDim.new(0, 6)
 sCorner.Parent = SpeedBtn
 
 SpeedBtn.MouseButton1Click:Connect(function()
-    if Settings.FlightSpeed == 100 then
-        Settings.FlightSpeed = 200
-    elseif Settings.FlightSpeed == 200 then
-        Settings.FlightSpeed = 300
-    elseif Settings.FlightSpeed == 300 then
-        Settings.FlightSpeed = 400
-    elseif Settings.FlightSpeed == 400 then
-        Settings.FlightSpeed = 500
-    else
-        Settings.FlightSpeed = 100
-    end
+    if Settings.FlightSpeed == 100 then Settings.FlightSpeed = 200
+    elseif Settings.FlightSpeed == 200 then Settings.FlightSpeed = 300
+    elseif Settings.FlightSpeed == 300 then Settings.FlightSpeed = 400
+    elseif Settings.FlightSpeed == 400 then Settings.FlightSpeed = 500
+    else Settings.FlightSpeed = 100 end
     SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
     saveSettings()
 end)
 
 createSectionHeader("7. Pengaturan Ketinggian Melayang")
-
 local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
 HeightBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
@@ -1000,7 +838,6 @@ HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HeightBtn.Text = "Ketinggian Melayang: " .. Settings.FlyHeight .. " Studs"
 HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
 HeightBtn.ZIndex = 102
-Container.CanvasSize = UDim2.new(0, 0, 0, 1000)
 HeightBtn.Parent = Container
 
 local hCorner = Instance.new("UICorner")
@@ -1008,22 +845,15 @@ hCorner.CornerRadius = UDim.new(0, 6)
 hCorner.Parent = HeightBtn
 
 HeightBtn.MouseButton1Click:Connect(function()
-    if Settings.FlyHeight == 8 then
-        Settings.FlyHeight = 10
-    elseif Settings.FlyHeight == 10 then
-        Settings.FlyHeight = 14
-    elseif Settings.FlyHeight == 14 then
-        Settings.FlyHeight = 18
-    else
-        Settings.FlyHeight = 8
-    end
+    if Settings.FlyHeight == 8 then Settings.FlyHeight = 10
+    elseif Settings.FlyHeight == 10 then Settings.FlyHeight = 14
+    elseif Settings.FlyHeight == 14 then Settings.FlyHeight = 18
+    else Settings.FlyHeight = 8 end
     HeightBtn.Text = "Ketinggian Melayang: " .. Settings.FlyHeight .. " Studs"
     saveSettings()
 end)
 
 createSectionHeader("8. Performa")
-createToggle("FPS Boost", "FpsBoost", function(state)
-    applyFpsBoost(state) 
-end)
+createToggle("FPS Boost", "FpsBoost", function(state) applyFpsBoost(state) end)
 
-print("Blox Fruits Master Ultimate + Fix Hit & Stable Fly v27 Berhasil Dimuat!")
+print("Blox Fruits Master Final Hub v29 Berhasil Dimuat!")
