@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - NO SERVER HOP)
+-- BLOX FRUITS ULTIMATE MASTER SCRIPT (FULL AUTO FARM + CLEAN TOOLS)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,16 +13,25 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v22.json"
+local FileName = "BloxFruitsMaster_v22.json"
 
 local Settings = {
+    -- Auto Farm Settings
+    AutoFarmLevel = false,
+    SelectWeapon = "Melee",
+    FastAttack = true,
+    BringMob = true,
+    AutoBuso = true,
+    AutoAwakening = true,
+    
+    -- Fruit & Utility Settings
     FruitNotifier = true,
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 200,  -- Default pertama kali diatur ke 200
-    FlyHeight = 5,      
-    AutoStoreFruit = true,    
+    FlightSpeed = 200,
+    FlyHeight = 5,
+    AutoStoreFruit = true,
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
@@ -57,7 +66,7 @@ end
 
 -- Proteksi GUI untuk Executor
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubClean"
+ScreenGui.Name = "BloxFruitsMasterHub"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -445,7 +454,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. FIXED AUTO STORE
+-- 5. AUTO STORE & AUTO FARM ENGINE (FULL LOGIC)
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -484,6 +493,52 @@ local function autoStoreFruits()
         end
     end)
 end
+
+-- Auto Farm Core Loop (Level, Quest, Bring Mob, Fast Attack)
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if Settings.AutoFarmLevel then
+                local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                local commF = remotes and remotes:FindFirstChild("CommF_")
+                
+                -- Buso Haki Activation
+                if Settings.AutoBuso then
+                    local character = LocalPlayer.Character
+                    if character and not character:FindFirstChild("HasBuso") then
+                        pcall(function() commF:InvokeServer("Buso") end)
+                    end
+                end
+
+                -- Bring Mobs Logic
+                if Settings.BringMob then
+                    local rootPart = getCharacterRootPart()
+                    if rootPart then
+                        for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
+                            local eRoot = enemy:FindFirstChild("HumanoidRootPart")
+                            local eHum = enemy:FindFirstChildOfClass("Humanoid")
+                            if eRoot and eHum and eHum.Health > 0 then
+                                if (rootPart.Position - eRoot.Position).Magnitude < 250 then
+                                    eRoot.CFrame = rootPart.CFrame * CFrame.new(0, 0, -3)
+                                    eHum.PlatformStand = true
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Fast Attack Simulation
+                if Settings.FastAttack then
+                    pcall(function()
+                        local vu = game:GetService("VirtualUser")
+                        vu:Button1Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+                        vu:Button1Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+                    end)
+                end
+            end
+        end)
+    end
+end)
 
 -- Loop Statistik & ESP
 task.spawn(function()
@@ -592,7 +647,7 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
+-- 8. MENU UTAMA GUI (SCROLLABLE & FULL MASTER SETTINGS)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -613,8 +668,8 @@ OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 420, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -180)
+MainFrame.Size = UDim2.new(0, 420, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -190)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
@@ -641,7 +696,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v22 (No Hop)"
+TitleLabel.Text = "Blox Fruits Hub | Master Ultimate v22"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -669,7 +724,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 650)
+Container.CanvasSize = UDim2.new(0, 0, 0, 850)
 Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -720,12 +775,18 @@ local function createToggle(text, settingKey, callback)
     return btn
 end
 
-createSectionHeader("1. Auto Join Tim")
+createSectionHeader("1. Auto Farm & Combat")
+createToggle("Auto Farm Level", "AutoFarmLevel", nil)
+createToggle("Fast Attack", "FastAttack", nil)
+createToggle("Bring Mob (Tarik Musuh)", "BringMob", nil)
+createToggle("Auto Buso Haki", "AutoBuso", nil)
+
+createSectionHeader("2. Auto Join Tim")
 createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
     if state then joinTeam() end
 end)
 
-createSectionHeader("2. Notifikasi & Live Map Stats HUD")
+createSectionHeader("3. Notifikasi & Live Map Stats HUD")
 createToggle("Fruit Notifier", "FruitNotifier", nil)
 createToggle("Live Fruit & Server HUD", "FruitStatsHUD", function(state)
     StatsHudFrame.Visible = state
@@ -734,7 +795,7 @@ createToggle("ESP Buah", "FruitESP", function(state)
     if not state then clearESP() end
 end)
 
-createSectionHeader("3. Auto Collect & Store Fruit")
+createSectionHeader("4. Auto Collect & Store Fruit")
 createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
 
 local CollectBtn = Instance.new("TextButton")
@@ -756,7 +817,7 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("4. Pengaturan Kecepatan Terbang (100 - 500)")
+createSectionHeader("5. Pengaturan Kecepatan Terbang (100 - 500)")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -787,7 +848,7 @@ SpeedBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("5. Pengaturan Ketinggian Terbang")
+createSectionHeader("6. Pengaturan Ketinggian Terbang")
 
 local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -818,9 +879,9 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Performa")
+createSectionHeader("7. Performa")
 createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Hub Clean (No Server Hop) Berhasil Dimuat!")
+print("Blox Fruits Master Ultimate Hub Berhasil Dimuat!")
