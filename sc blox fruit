@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS MASTER ULTIMATE SCRIPT (STABLE FLY & FIX NPC DAMAGE v26)
+-- BLOX FRUITS MASTER ULTIMATE SCRIPT (STABLE FLY & TRUE DAMAGE v27)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,12 +13,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsMaster_v26.json"
+local FileName = "BloxFruitsMaster_v27.json"
 
 local Settings = {
     AutoFarmLevel = false,
-    FlyAttack = true, -- Terbang melayang stabil saat auto farm
-    SelectWeapon = "Melee", -- Pilihan: "Melee", "Sword", "Blox Fruit", "Gun"
+    FlyAttack = true,
+    SelectWeapon = "Melee",
     FastAttack = true,
     BringMob = true,
     AutoBuso = true,
@@ -28,7 +28,7 @@ local Settings = {
     SelectedTeam = "Pirates",
     FpsBoost = false,
     FlightSpeed = 200,
-    FlyHeight = 12, -- Ketinggian stabil di atas mob (bisa diatur)
+    FlyHeight = 10,
     AutoStoreFruit = true,
     FruitESP = true,
     AutoCollectFruit = true,
@@ -166,7 +166,6 @@ UserInputService.InputChanged:Connect(function(input)
         local delta = input.Position - dragStart
         local newX = startPos.X.Scale + (delta.X / Workspace.CurrentCamera.ViewportSize.X)
         local newY = startPos.Y.Scale + (delta.Y / Workspace.CurrentCamera.ViewportSize.Y)
-        
         StatsHudFrame.Position = UDim2.new(newX, 0, newY, 0)
         Settings.HUDPosition.X = newX
         Settings.HUDPosition.Y = newY
@@ -531,13 +530,12 @@ local function equipSelectedWeapon()
 end
 
 -- =====================================================================
--- STABLE FLY FARM ENGINE (FIX BUSO, RAYCAST ANTI-TANAH & FIX NPC DAMAGE)
+-- ULTIMATE FARM ENGINE (FIXED STABLE FLY, TRUE BUSO & SERVER-SIDE HIT)
 -- =====================================================================
 task.spawn(function()
     local bv, bg, noclip
-    local lastBusoTick = 0
     
-    while task.wait(0.1) do
+    while task.wait(0.08) do
         pcall(function()
             local character = LocalPlayer.Character
             local rootPart = getCharacterRootPart()
@@ -546,22 +544,18 @@ task.spawn(function()
             local commF = remotes and remotes:FindFirstChild("CommF_")
             
             if Settings.AutoFarmLevel and rootPart and humanoid and humanoid.Health > 0 then
-                -- 1. Buso Haki (Anti Kedap-kedip)
+                -- 1. Buso Haki Permanen (Anti Kedap-Kedip)
                 if Settings.AutoBuso and commF then
-                    local currentTime = tick()
-                    if currentTime - lastBusoTick > 3 then
-                        local hasBusoActive = character:FindFirstChild("HasBuso") or character:FindFirstChild("Buso") or LocalPlayer:FindFirstChild("BusoEnabled")
-                        if not hasBusoActive then
-                            pcall(function() commF:InvokeServer("Buso") end)
-                            lastBusoTick = currentTime
-                        end
+                    local hasBusoActive = character:FindFirstChild("HasBuso") or character:FindFirstChild("Buso") or LocalPlayer:FindFirstChild("BusoEnabled") or character:GetAttribute("Buso")
+                    if not hasBusoActive then
+                        pcall(function() commF:InvokeServer("Buso") end)
                     end
                 end
 
                 -- 2. Senjata
                 equipSelectedWeapon()
 
-                -- 3. Cari Pusat Kelompok Mob Terdekat & Kunci Posisi Total
+                -- 3. Cari & Kunci Posisi Mob Terdekat (Server-Side Alignment)
                 local targetMobRoot = nil
                 local shortest = math.huge
                 
@@ -578,26 +572,24 @@ task.spawn(function()
                 end
 
                 if targetMobRoot then
-                    local centerPos = targetMobRoot.Position
+                    local mobCenter = targetMobRoot.Position
                     
                     for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
                         local eRoot = enemy:FindFirstChild("HumanoidRootPart")
                         local eHum = enemy:FindFirstChildOfClass("Humanoid")
                         if eRoot and eHum and eHum.Health > 0 then
-                            local distToTarget = (centerPos - eRoot.Position).Magnitude
-                            if distToTarget < 300 then
-                                -- Bekukan posisi mob di satu titik agar tidak lari dan hitbox sinkron
-                                eRoot.CFrame = CFrame.new(centerPos.X, centerPos.Y, centerPos.Z)
+                            local d = (mobCenter - eRoot.Position).Magnitude
+                            if d < 350 then
+                                -- Paksa posisi asli mob agar menyatu tepat di satu koordinat server
+                                eRoot.CFrame = CFrame.new(mobCenter)
                                 eRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                                 eRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                                 eHum.PlatformStand = true
-                                
-                                pcall(function() enemy.Humanoid:MoveTo(centerPos) end)
                             end
                         end
                     end
 
-                    -- 4. Aktifkan Terbang Melayang Stabil (Raycast Anti-Tanah)
+                    -- 4. Stable Fly Melayang Stabil Menggunakan Raycast Anti-Tanah
                     humanoid.PlatformStand = true
                     
                     if not bv or not bv.Parent then
@@ -623,29 +615,30 @@ task.spawn(function()
                         end)
                     end
 
-                    -- Gunakan Raycast untuk mendeteksi daratan asli agar tidak tembus ke bawah tanah
-                    local rayOrigin = targetMobRoot.Position + Vector3.new(0, 50, 0)
+                    -- Raycast posisi tanah asli agar tidak tembus ke bawah tanah
+                    local rayOrigin = mobCenter + Vector3.new(0, 50, 0)
                     local rayDirection = Vector3.new(0, -200, 0)
                     local raycastParams = RaycastParams.new()
                     raycastParams.FilterType = Enum.RaycastFilterType.Exclude
                     raycastParams.FilterDescendantsInstances = {character, Workspace.Enemies}
                     
                     local rayResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-                    local groundY = rayResult and rayResult.Position.Y or targetMobRoot.Position.Y
+                    local groundY = rayResult and rayResult.Position.Y or mobCenter.Y
 
-                    local stableHoverY = groundY + math.clamp(Settings.FlyHeight, 10, 30)
-                    local targetPosition = Vector3.new(targetMobRoot.Position.X, stableHoverY, targetMobRoot.Position.Z)
+                    -- Posisi target melayang tepat di atas kepala kerumunan mob agar hit senjata masuk
+                    local hoverHeight = math.clamp(Settings.FlyHeight, 8, 20)
+                    local targetPosition = Vector3.new(mobCenter.X, groundY + hoverHeight, mobCenter.Z)
+                    
                     local moveDirection = (targetPosition - rootPart.Position)
+                    bv.Velocity = moveDirection * 18
+                    bg.CFrame = CFrame.new(rootPart.Position, Vector3.new(mobCenter.X, rootPart.Position.Y, mobCenter.Z))
 
-                    bv.Velocity = moveDirection * 15
-                    bg.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetMobRoot.Position.X, rootPart.Position.Y, targetMobRoot.Position.Z))
-
-                    -- 5. Fast Attack yang Dioptimalkan agar Damage Masuk
+                    -- 5. Fast Attack / Simulasi Hit Server
                     if Settings.FastAttack then
                         pcall(function()
                             local vu = game:GetService("VirtualUser")
                             vu:Button1Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
-                            task.wait(0.02)
+                            task.wait(0.01)
                             vu:Button1Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
                         end)
                     end
@@ -816,7 +809,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Stable Fly Attack v26"
+TitleLabel.Text = "Blox Fruits Hub | Stable Fly & Fix Hit v27"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1016,10 +1009,10 @@ hCorner.Parent = HeightBtn
 
 HeightBtn.MouseButton1Click:Connect(function()
     if Settings.FlyHeight == 8 then
-        Settings.FlyHeight = 12
-    elseif Settings.FlyHeight == 12 then
-        Settings.FlyHeight = 15
-    elseif Settings.FlyHeight == 15 then
+        Settings.FlyHeight = 10
+    elseif Settings.FlyHeight == 10 then
+        Settings.FlyHeight = 14
+    elseif Settings.FlyHeight == 14 then
         Settings.FlyHeight = 18
     else
         Settings.FlyHeight = 8
@@ -1033,4 +1026,4 @@ createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Master Ultimate + Stable Fly & Fix NPC Damage v26 Berhasil Dimuat!")
+print("Blox Fruits Master Ultimate + Fix Hit & Stable Fly v27 Berhasil Dimuat!")
