@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE MASTER SCRIPT (FULL AUTO FARM + CLEAN TOOLS)
+-- BLOX FRUITS MASTER ULTIMATE SCRIPT (FLY ATTACK & FIXED HITBOX)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,24 +13,22 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsMaster_v22.json"
+local FileName = "BloxFruitsMaster_v25.json"
 
 local Settings = {
-    -- Auto Farm Settings
     AutoFarmLevel = false,
-    SelectWeapon = "Melee",
+    FlyAttack = true, -- Fitur baru: Terbang sambil Auto Farm & mukul
+    SelectWeapon = "Melee", -- Pilihan: "Melee", "Sword", "Blox Fruit", "Gun"
     FastAttack = true,
     BringMob = true,
     AutoBuso = true,
-    AutoAwakening = true,
     
-    -- Fruit & Utility Settings
     FruitNotifier = true,
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
     FlightSpeed = 200,
-    FlyHeight = 5,
+    FlyHeight = 8, -- Ketinggian pas di atas mob saat farm
     AutoStoreFruit = true,
     FruitESP = true,
     AutoCollectFruit = true,
@@ -38,7 +36,6 @@ local Settings = {
     HUDPosition = {X = 0.05, Y = 0.15}
 }
 
--- Sistem Save & Load Settings (JSON)
 local function loadSettings()
     if readfile and pcall(readfile, FileName) then
         local success, data = pcall(function()
@@ -64,7 +61,6 @@ local function saveSettings()
     end
 end
 
--- Proteksi GUI untuk Executor
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsMasterHub"
 ScreenGui.ResetOnSpawn = false
@@ -145,7 +141,6 @@ ServerTimeLabel.TextSize, ServerTimeLabel.Font = 10, Enum.Font.GothamBold
 ServerTimeLabel.ZIndex = 81
 ServerTimeLabel.Parent = StatsHudFrame
 
--- Dragging Widget
 local dragging, dragInput, dragStart, startPos
 StatsHudFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -264,7 +259,7 @@ local function playFruitSound()
 end
 
 -- =====================================================================
--- 3. DETEKSI NAMA PULAU & ESP BUAH
+-- 3. DETEKSI PULAU & ESP BUAH
 -- =====================================================================
 local function getIslandName(position)
     local x, z = position.X, position.Z
@@ -351,7 +346,7 @@ local function updateFruitESP()
 end
 
 -- =====================================================================
--- 4. SISTEM TERBANG & AUTO COLLECT
+-- 4. SISTEM TERBANG UMUM & AUTO COLLECT
 -- =====================================================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, onComplete)
@@ -454,7 +449,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. AUTO STORE & AUTO FARM ENGINE (FULL LOGIC)
+-- 5. AUTO STORE & SMART WEAPON / FLY FARM ENGINE
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -494,40 +489,141 @@ local function autoStoreFruits()
     end)
 end
 
--- Auto Farm Core Loop (Level, Quest, Bring Mob, Fast Attack)
+local function equipSelectedWeapon()
+    pcall(function()
+        local character = LocalPlayer.Character
+        local backpack = LocalPlayer.Backpack
+        if not character then return end
+        
+        local currentWeapon = character:FindFirstChildOfClass("Tool")
+        if currentWeapon then
+            local name = currentWeapon.Name:lower()
+            if Settings.SelectWeapon == "Melee" and (name:find("combat") or name:find("step") or name:find("claw") or name:find("fist") or name:find("karate") or name:find("talon") or name:find("godhuman") or name:find("superhuman")) then
+                return
+            elseif Settings.SelectWeapon == "Sword" and (not name:find("gun") and not name:find("fruit") and not name:find("combat")) then
+                return
+            elseif Settings.SelectWeapon == "Blox Fruit" and (name:find("fruit") or name:find("flame") or name:find("ice") or name:find("buddha") or name:find("magma") or name:find("kitsune") or name:find("dough")) then
+                return
+            elseif Settings.SelectWeapon == "Gun" and (name:find("gun") or name:find("musket") or name:find("rifle") or name:find("kabucha") or name:find("guitar")) then
+                return
+            end
+        end
+        
+        for _, item in ipairs(backpack:GetChildren()) do
+            if item:IsA("Tool") then
+                local name = item.Name:lower()
+                local matched = false
+                
+                if Settings.SelectWeapon == "Melee" and (name:find("combat") or name:find("step") or name:find("claw") or name:find("fist") or name:find("karate") or name:find("talon") or name:find("godhuman") or name:find("superhuman")) then
+                    matched = true
+                elseif Settings.SelectWeapon == "Sword" and (not name:find("gun") and not name:find("fruit") and not name:find("combat")) then
+                    matched = true
+                elseif Settings.SelectWeapon == "Blox Fruit" and (name:find("fruit") or name:find("flame") or name:find("ice") or name:find("buddha") or name:find("magma") or name:find("kitsune") or name:find("dough")) then
+                    matched = true
+                elseif Settings.SelectWeapon == "Gun" and (name:find("gun") or name:find("musket") or name:find("rifle") or name:find("kabucha") or name:find("guitar")) then
+                    matched = true
+                end
+                
+                if matched then
+                    item.Parent = character
+                    break
+                end
+            end
+        end
+    end)
+end
+
+-- =====================================================================
+-- FLY FARM ENGINE (TERBANG STABIL DI ATAS MOB SAMBIL MENYERANG)
+-- =====================================================================
 task.spawn(function()
+    local bv, bg, noclip
+    
     while task.wait(0.1) do
         pcall(function()
-            if Settings.AutoFarmLevel then
-                local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-                local commF = remotes and remotes:FindFirstChild("CommF_")
-                
-                -- Buso Haki Activation
-                if Settings.AutoBuso then
-                    local character = LocalPlayer.Character
-                    if character and not character:FindFirstChild("HasBuso") then
-                        pcall(function() commF:InvokeServer("Buso") end)
+            local character = LocalPlayer.Character
+            local rootPart = getCharacterRootPart()
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            local commF = remotes and remotes:FindFirstChild("CommF_")
+            
+            if Settings.AutoFarmLevel and rootPart and humanoid and humanoid.Health > 0 then
+                -- 1. Buso Haki
+                if Settings.AutoBuso and not character:FindFirstChild("HasBuso") then
+                    pcall(function() commF:InvokeServer("Buso") end)
+                end
+
+                -- 2. Senjata
+                equipSelectedWeapon()
+
+                -- 3. Cari Mob Terdekat untuk Dijadikan Pusat Farming
+                local targetMobRoot = nil
+                local shortest = math.huge
+                for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
+                    local eRoot = enemy:FindFirstChild("HumanoidRootPart")
+                    local eHum = enemy:FindFirstChildOfClass("Humanoid")
+                    if eRoot and eHum and eHum.Health > 0 then
+                        local dist = (rootPart.Position - eRoot.Position).Magnitude
+                        if dist < shortest then
+                            shortest = dist
+                            targetMobRoot = eRoot
+                        end
                     end
                 end
 
-                -- Bring Mobs Logic
-                if Settings.BringMob then
-                    local rootPart = getCharacterRootPart()
-                    if rootPart then
-                        for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
-                            local eRoot = enemy:FindFirstChild("HumanoidRootPart")
-                            local eHum = enemy:FindFirstChildOfClass("Humanoid")
-                            if eRoot and eHum and eHum.Health > 0 then
-                                if (rootPart.Position - eRoot.Position).Magnitude < 250 then
-                                    eRoot.CFrame = rootPart.CFrame * CFrame.new(0, 0, -3)
-                                    eHum.PlatformStand = true
-                                end
+                if targetMobRoot then
+                    -- Tarik semua mob ke bawah posisi terbang kita
+                    for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
+                        local eRoot = enemy:FindFirstChild("HumanoidRootPart")
+                        local eHum = enemy:FindFirstChildOfClass("Humanoid")
+                        if eRoot and eHum and eHum.Health > 0 then
+                            if (targetMobRoot.Position - eRoot.Position).Magnitude < 250 then
+                                -- Tarik mob tepat di bawah posisi terbang player
+                                eRoot.CFrame = rootPart.CFrame * CFrame.new(0, -Settings.FlyHeight, -3)
+                                eHum.PlatformStand = true
                             end
                         end
                     end
                 end
 
-                -- Fast Attack Simulation
+                -- 4. Aktifkan Mode Terbang Melayang (Fly Attack)
+                if Settings.FlyAttack then
+                    humanoid.PlatformStand = true
+                    
+                    if not bv or not bv.Parent then
+                        bv = Instance.new("BodyVelocity")
+                        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                        bv.Velocity = Vector3.new(0, 0, 0)
+                        bv.Parent = rootPart
+                    end
+                    
+                    if not bg or not bg.Parent then
+                        bg = Instance.new("BodyGyro")
+                        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                        bg.Parent = rootPart
+                    end
+
+                    if not noclip then
+                        noclip = RunService.Stepped:Connect(function()
+                            if character then
+                                for _, part in ipairs(character:GetDescendants()) do
+                                    if part:IsA("BasePart") then part.CanCollide = false end
+                                end
+                            end
+                        end)
+                    end
+
+                    if targetMobRoot then
+                        -- Melayang stabil di atas posisi mob
+                        local hoverTarget = targetMobRoot.Position + Vector3.new(0, Settings.FlyHeight, 0)
+                        bv.Velocity = (hoverTarget - rootPart.Position) * 10
+                        bg.CFrame = CFrame.new(rootPart.Position, targetMobRoot.Position)
+                    else
+                        bv.Velocity = Vector3.new(0, 0, 0)
+                    end
+                end
+
+                -- 5. Fast Attack / Basic Attack Simulation
                 if Settings.FastAttack then
                     pcall(function()
                         local vu = game:GetService("VirtualUser")
@@ -535,6 +631,12 @@ task.spawn(function()
                         vu:Button1Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
                     end)
                 end
+            else
+                -- Matikan komponen terbang jika Auto Farm dimatikan
+                if bv then bv:Destroy() bv = nil end
+                if bg then bg:Destroy() bg = nil end
+                if noclip then noclip:Disconnect() noclip = nil end
+                if humanoid then humanoid.PlatformStand = false end
             end
         end)
     end
@@ -564,7 +666,7 @@ task.spawn(function()
 end)
 
 -- =====================================================================
--- 6. MONITORING STATUS & NOTIFIKASI (ANTI-SPAM)
+-- 6. MONITORING STATUS & NOTIFIKASI
 -- =====================================================================
 task.spawn(function()
     local lastStatus = nil 
@@ -647,7 +749,7 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (SCROLLABLE & FULL MASTER SETTINGS)
+-- 8. MENU UTAMA GUI (LENGKAP)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -696,7 +798,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Master Ultimate v22"
+TitleLabel.Text = "Blox Fruits Hub | Fly Attack Master v25"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -724,7 +826,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 850)
+Container.CanvasSize = UDim2.new(0, 0, 0, 1000)
 Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -775,18 +877,48 @@ local function createToggle(text, settingKey, callback)
     return btn
 end
 
-createSectionHeader("1. Auto Farm & Combat")
+createSectionHeader("1. Auto Farm & Fly Attack Settings")
 createToggle("Auto Farm Level", "AutoFarmLevel", nil)
+createToggle("Fly Attack (Terbang Melayang Saat Farm)", "FlyAttack", nil)
 createToggle("Fast Attack", "FastAttack", nil)
-createToggle("Bring Mob (Tarik Musuh)", "BringMob", nil)
-createToggle("Auto Buso Haki", "AutoBuso", nil)
+createToggle("Bring Mob (Tarik Musuh di Bawah)", "BringMob", nil)
+createToggle("Auto Buso Haki (Bypass Elemental)", "AutoBuso", nil)
 
-createSectionHeader("2. Auto Join Tim")
+createSectionHeader("2. Pilih Senjata Auto Farm (Weapon Selector)")
+
+local WeaponSelectBtn = Instance.new("TextButton")
+WeaponSelectBtn.Size = UDim2.new(0.9, 0, 0, 32)
+WeaponSelectBtn.BackgroundColor3 = Color3.fromRGB(142, 68, 173)
+WeaponSelectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+WeaponSelectBtn.Text = "Senjata Aktif: " .. Settings.SelectWeapon
+WeaponSelectBtn.TextSize, WeaponSelectBtn.Font = 11, Enum.Font.GothamBold
+WeaponSelectBtn.ZIndex = 102
+WeaponSelectBtn.Parent = Container
+
+local wCorner = Instance.new("UICorner")
+wCorner.CornerRadius = UDim.new(0, 6)
+wCorner.Parent = WeaponSelectBtn
+
+WeaponSelectBtn.MouseButton1Click:Connect(function()
+    if Settings.SelectWeapon == "Melee" then
+        Settings.SelectWeapon = "Sword"
+    elseif Settings.SelectWeapon == "Sword" then
+        Settings.SelectWeapon = "Blox Fruit"
+    elseif Settings.SelectWeapon == "Blox Fruit" then
+        Settings.SelectWeapon = "Gun"
+    else
+        Settings.SelectWeapon = "Melee"
+    end
+    WeaponSelectBtn.Text = "Senjata Aktif: " .. Settings.SelectWeapon
+    saveSettings()
+end)
+
+createSectionHeader("3. Auto Join Tim")
 createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
     if state then joinTeam() end
 end)
 
-createSectionHeader("3. Notifikasi & Live Map Stats HUD")
+createSectionHeader("4. Notifikasi & Live Map Stats HUD")
 createToggle("Fruit Notifier", "FruitNotifier", nil)
 createToggle("Live Fruit & Server HUD", "FruitStatsHUD", function(state)
     StatsHudFrame.Visible = state
@@ -795,7 +927,7 @@ createToggle("ESP Buah", "FruitESP", function(state)
     if not state then clearESP() end
 end)
 
-createSectionHeader("4. Auto Collect & Store Fruit")
+createSectionHeader("5. Auto Collect & Store Fruit")
 createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
 
 local CollectBtn = Instance.new("TextButton")
@@ -817,7 +949,7 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("5. Pengaturan Kecepatan Terbang (100 - 500)")
+createSectionHeader("6. Pengaturan Kecepatan Terbang (100 - 500)")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -848,7 +980,7 @@ SpeedBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Pengaturan Ketinggian Terbang")
+createSectionHeader("7. Pengaturan Ketinggian Terbang Farm")
 
 local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -857,6 +989,7 @@ HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
 HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
 HeightBtn.ZIndex = 102
+Container.CanvasSize = UDim2.new(0, 0, 0, 1000)
 HeightBtn.Parent = Container
 
 local hCorner = Instance.new("UICorner")
@@ -864,24 +997,22 @@ hCorner.CornerRadius = UDim.new(0, 6)
 hCorner.Parent = HeightBtn
 
 HeightBtn.MouseButton1Click:Connect(function()
-    if Settings.FlyHeight == 3 then
-        Settings.FlyHeight = 5
-    elseif Settings.FlyHeight == 5 then
-        Settings.FlyHeight = 10
-    elseif Settings.FlyHeight == 10 then
+    if Settings.FlyHeight == 5 then
+        Settings.FlyHeight = 8
+    elseif Settings.FlyHeight == 8 then
+        Settings.FlyHeight = 12
+    elseif Settings.FlyHeight == 12 then
         Settings.FlyHeight = 15
-    elseif Settings.FlyHeight == 15 then
-        Settings.FlyHeight = 20
     else
-        Settings.FlyHeight = 3
+        Settings.FlyHeight = 5
     end
     HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
     saveSettings()
 end)
 
-createSectionHeader("7. Performa")
+createSectionHeader("8. Performa")
 createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Master Ultimate Hub Berhasil Dimuat!")
+print("Blox Fruits Master Ultimate + Fly Attack Berhasil Dimuat!")
