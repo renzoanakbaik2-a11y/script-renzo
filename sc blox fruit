@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (UNIVERSAL EXECUTOR SAFE FIX)
+-- BLOX FRUITS ULTIMATE SCRIPT (FIXED FLY, MOB FLIGHT & ATTACK SETTINGS)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v25.json"
+local FileName = "BloxFruitsHub_Clean_v26.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -27,13 +27,13 @@ local Settings = {
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
-    SelectedNPC = "Bandit",
-    FlyToNPCEnabled = false,
+    SelectedMob = "Bandit",
+    FlyToMobEnabled = false,
     FastAttackEnabled = false,
-    AttackSpeedMultiplier = 2
+    AttackSpeedMultiplier = 2,
+    AttackHeightOffset = 3 -- Ketinggian pukul bisa diatur sampai 10
 }
 
--- Sistem Save & Load Settings (Aman untuk Semua Executor)
 local function loadSettings()
     pcall(function()
         if readfile and pcall(readfile, FileName) then
@@ -63,7 +63,6 @@ local function saveSettings()
     end)
 end
 
--- Proteksi GUI Universal (Support Synapse, Delta, Arceus X, Fluxus, CodeX, Hydrogen)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsHubClean"
 ScreenGui.ResetOnSpawn = false
@@ -151,7 +150,6 @@ ServerTimeLabel.TextSize, ServerTimeLabel.Font = 10, Enum.Font.GothamBold
 ServerTimeLabel.ZIndex = 81
 ServerTimeLabel.Parent = StatsHudFrame
 
--- Dragging Widget Aman Mobile & PC
 local dragging, dragInput, dragStart, startPos
 StatsHudFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -358,10 +356,11 @@ local function updateFruitESP()
 end
 
 -- =====================================================================
--- 4. SISTEM TERBANG & AUTO COLLECT + FLY TO NPC
+-- 4. STABILIZED FLY, AUTO COLLECT & FLY TO MOB SYSTEM
 -- =====================================================================
 local activeFlyConnection = nil
-local function smoothFlyTo(targetCFrame, onComplete)
+
+local function smoothFlyTo(targetCFrame, customOffset, onComplete)
     local rootPart = getCharacterRootPart()
     if not rootPart then return end
 
@@ -371,8 +370,8 @@ local function smoothFlyTo(targetCFrame, onComplete)
     end
 
     local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
-    local currentHeight = math.clamp(Settings.FlyHeight, 0, 25)
-    local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
+    local heightOffset = customOffset or math.clamp(Settings.FlyHeight, 0, 25)
+    local adjustedTarget = targetCFrame.Position + Vector3.new(0, heightOffset, 0)
 
     local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -417,7 +416,8 @@ local function smoothFlyTo(targetCFrame, onComplete)
         local direction = (targetPos - currentPos)
         local distance = direction.Magnitude
 
-        if distance < 4 then
+        -- Toleransi jarak agar tidak overshoot / mental ke atas
+        if distance < 3 then
             if noclipConnection then noclipConnection:Disconnect() end
             if bodyVelocity then bodyVelocity:Destroy() end
             if bodyGyro then bodyGyro:Destroy() end
@@ -427,7 +427,7 @@ local function smoothFlyTo(targetCFrame, onComplete)
             return
         end
 
-        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 15)
+        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 12)
         bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
     end)
 end
@@ -453,18 +453,19 @@ local function collectNearestFruit()
     end
 
     if targetFruit then
-        smoothFlyTo(targetFruit.CFrame, function()
+        -- Ketinggian pas ke buah (offset 1 agar tepat menyentuh buah tanpa mental)
+        smoothFlyTo(targetFruit.CFrame, 1, function()
             task.wait(0.5)
             collectNearestFruit()
         end)
     end
 end
 
-local function getTargetNPC()
+local function getTargetMob()
     local enemiesFolder = Workspace:FindFirstChild("Enemies")
     if enemiesFolder then
         for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-            if enemy.Name:lower() == Settings.SelectedNPC:lower() then
+            if enemy.Name:lower() == Settings.SelectedMob:lower() then
                 local hrp = enemy:FindFirstChild("HumanoidRootPart")
                 local hum = enemy:FindFirstChildOfClass("Humanoid")
                 if hrp and hum and hum.Health > 0 then
@@ -474,7 +475,7 @@ local function getTargetNPC()
         end
     end
     for _, obj in ipairs(Workspace:GetChildren()) do
-        if obj:IsA("Model") and obj.Name:lower() == Settings.SelectedNPC:lower() then
+        if obj:IsA("Model") and obj.Name:lower() == Settings.SelectedMob:lower() then
             local hrp = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso")
             local hum = obj:FindFirstChildOfClass("Humanoid")
             if hrp and hum and hum.Health > 0 then
@@ -485,30 +486,37 @@ local function getTargetNPC()
     return nil
 end
 
-local function flyToNPC()
-    if not Settings.FlyToNPCEnabled then return end
+local function flyToMob()
+    if not Settings.FlyToMobEnabled then return end
     pcall(function()
-        local npcRoot = getTargetNPC()
-        if npcRoot and not activeFlyConnection then
-            smoothFlyTo(npcRoot.CFrame + Vector3.new(0, 3, 0), function()
+        local mobRoot = getTargetMob()
+        if mobRoot and not activeFlyConnection then
+            -- Menggunakan AttackHeightOffset yang bisa disetting sampai 10
+            smoothFlyTo(mobRoot.CFrame, Settings.AttackHeightOffset, function()
             end)
         end
     end)
 end
 
 -- =====================================================================
--- 4.5. FAST BASIC ATTACK SYSTEM (UNIVERSAL)
+-- 4.5. FAST BASIC ATTACK SYSTEM (DENGAN KECEPATAN BISA DISETTING)
 -- =====================================================================
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait() do
         if Settings.FastAttackEnabled then
             pcall(function()
                 local vim = game:GetService("VirtualInputManager")
                 if vim then
-                    vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                    vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    -- Mengulangi klik sesuai kelipatan serangan (1x sampai 3x)
+                    local loops = math.clamp(Settings.AttackSpeedMultiplier, 1, 3)
+                    for i = 1, loops do
+                        vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                        vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    end
                 end
             end)
+            -- Jeda interval diatur berdasarkan multiplier agar kecepatan serangannya terasa dinamis
+            task.wait(0.15 / Settings.AttackSpeedMultiplier)
         end
     end
 end)
@@ -574,8 +582,8 @@ task.spawn(function()
             local seconds = uptimeSeconds % 60
             ServerTimeLabel.Text = string.format("Server Aktif: %02d:%02d:%02d", hours, minutes, seconds)
             
-            if Settings.FlyToNPCEnabled and not activeFlyConnection then
-                flyToNPC()
+            if Settings.FlyToMobEnabled and not activeFlyConnection then
+                flyToMob()
             end
         end)
     end
@@ -714,7 +722,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | v25 (Universal Safe)"
+TitleLabel.Text = "Blox Fruits Hub | v26 (Perfect Fixed)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -742,7 +750,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 850)
+Container.CanvasSize = UDim2.new(0, 0, 0, 950)
 Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -891,35 +899,59 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Fitur Baru: Terbang ke NPC")
-createToggle("Terbang ke Target NPC", "FlyToNPCEnabled", nil)
+createSectionHeader("6. Terbang ke Mob (Target Mob)")
+createToggle("Terbang ke Target Mob", "FlyToMobEnabled", nil)
 
-local NpcBtn = Instance.new("TextButton")
-NpcBtn.Size = UDim2.new(0.9, 0, 0, 32)
-NpcBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
-NpcBtn.TextColor3 = Color3.fromRGB(40, 40, 40)
-NpcBtn.Text = "Target NPC: " .. Settings.SelectedNPC
-NpcBtn.TextSize, NpcBtn.Font = 11, Enum.Font.GothamBold
-NpcBtn.ZIndex = 102
-NpcBtn.Parent = Container
+local MobBtn = Instance.new("TextButton")
+MobBtn.Size = UDim2.new(0.9, 0, 0, 32)
+MobBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
+MobBtn.TextColor3 = Color3.fromRGB(40, 40, 40)
+MobBtn.Text = "Target Mob: " .. Settings.SelectedMob
+MobBtn.TextSize, MobBtn.Font = 11, Enum.Font.GothamBold
+MobBtn.ZIndex = 102
+MobBtn.Parent = Container
 
-local nCorner = Instance.new("UICorner")
-nCorner.CornerRadius = UDim.new(0, 6)
-nCorner.Parent = NpcBtn
+local mCorner = Instance.new("UICorner")
+mCorner.CornerRadius = UDim.new(0, 6)
+mCorner.Parent = MobBtn
 
-NpcBtn.MouseButton1Click:Connect(function()
-    if Settings.SelectedNPC == "Bandit" then
-        Settings.SelectedNPC = "Marine"
-    elseif Settings.SelectedNPC == "Marine" then
-        Settings.SelectedNPC = "Brute"
+MobBtn.MouseButton1Click:Connect(function()
+    if Settings.SelectedMob == "Bandit" then
+        Settings.SelectedMob = "Marine"
+    elseif Settings.SelectedMob == "Marine" then
+        Settings.SelectedMob = "Brute"
     else
-        Settings.SelectedNPC = "Bandit"
+        Settings.SelectedMob = "Bandit"
     end
-    NpcBtn.Text = "Target NPC: " .. Settings.SelectedNPC
+    MobBtn.Text = "Target Mob: " .. Settings.SelectedMob
     saveSettings()
 end)
 
-createSectionHeader("7. Kecepatan Basic Attack (Fast Attack)")
+-- Ketinggian Pukul / Ketinggian Posisi ke Mob (Bisa diatur dari 1 sampai 10)
+createSectionHeader("7. Ketinggian Pukul Mob (Maks 10 Studs)")
+local OffsetBtn = Instance.new("TextButton")
+OffsetBtn.Size = UDim2.new(0.9, 0, 0, 32)
+OffsetBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
+OffsetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OffsetBtn.Text = "Ketinggian Pukul: " .. Settings.AttackHeightOffset .. " Studs"
+OffsetBtn.TextSize, OffsetBtn.Font = 11, Enum.Font.GothamBold
+OffsetBtn.ZIndex = 102
+OffsetBtn.Parent = Container
+
+local aoCorner = Instance.new("UICorner")
+aoCorner.CornerRadius = UDim.new(0, 6)
+aoCorner.Parent = OffsetBtn
+
+OffsetBtn.MouseButton1Click:Connect(function()
+    Settings.AttackHeightOffset = Settings.AttackHeightOffset + 1
+    if Settings.AttackHeightOffset > 10 then
+        Settings.AttackHeightOffset = 1
+    end
+    OffsetBtn.Text = "Ketinggian Pukul: " .. Settings.AttackHeightOffset .. " Studs"
+    saveSettings()
+end)
+
+createSectionHeader("8. Fast Basic Attack & Kecepatan Pukul")
 createToggle("Fast Basic Attack", "FastAttackEnabled", nil)
 
 local AttackSpeedBtn = Instance.new("TextButton")
@@ -947,9 +979,9 @@ AttackSpeedBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("8. Performa")
+createSectionHeader("9. Performa")
 createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Hub v25 (Universal Safe) Berhasil Dimuat!")
+print("Blox Fruits Hub v26 (Perfect Fixed) Berhasil Dimuat!")
