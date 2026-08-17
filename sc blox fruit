@@ -886,37 +886,37 @@ end)
 
 createToggle("Hover Nearest Mob", "HoverNearestMob", function(s) toggleHoverNearestMob(s) end)
 
-local MobHeightBtn
-MobHeightBtn = createSettingButton("Ketinggian Hover Mob: " .. Settings.MobHeightOffset .. " Studs", function()
+local HeightMobBtn
+HeightMobBtn = createSettingButton("Tinggi Mob Offset: " .. Settings.MobHeightOffset, function()
     if Settings.MobHeightOffset == 3 then Settings.MobHeightOffset = 5
     elseif Settings.MobHeightOffset == 5 then Settings.MobHeightOffset = 8
     elseif Settings.MobHeightOffset == 8 then Settings.MobHeightOffset = 10
     else Settings.MobHeightOffset = 3 end
-    MobHeightBtn.Text = " [ * ] Ketinggian Hover Mob: " .. Settings.MobHeightOffset .. " Studs"
+    HeightMobBtn.Text = " [ * ] Tinggi Mob Offset: " .. Settings.MobHeightOffset
     saveSettings()
 end)
 
-local SpeedFlyBtn
-SpeedFlyBtn = createSettingButton("Kecepatan Terbang: " .. Settings.FlightSpeed, function()
+local FlightSpeedBtn
+FlightSpeedBtn = createSettingButton("Kecepatan Terbang: " .. Settings.FlightSpeed, function()
     if Settings.FlightSpeed == 100 then Settings.FlightSpeed = 200
     elseif Settings.FlightSpeed == 200 then Settings.FlightSpeed = 300
     elseif Settings.FlightSpeed == 300 then Settings.FlightSpeed = 400
     elseif Settings.FlightSpeed == 400 then Settings.FlightSpeed = 500
     else Settings.FlightSpeed = 100 end
-    SpeedFlyBtn.Text = " [ * ] Kecepatan Terbang: " .. Settings.FlightSpeed
+    FlightSpeedBtn.Text = " [ * ] Kecepatan Terbang: " .. Settings.FlightSpeed
     saveSettings()
 end)
 
-local HeightFlyBtn
-HeightFlyBtn = createSettingButton("Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs", function()
+local FlyHeightBtn
+FlyHeightBtn = createSettingButton("Tinggi Terbang: " .. Settings.FlyHeight, function()
     if Settings.FlyHeight == 10 then Settings.FlyHeight = 20
     elseif Settings.FlyHeight == 20 then Settings.FlyHeight = 30
     elseif Settings.FlyHeight == 30 then Settings.FlyHeight = 40
     else Settings.FlyHeight = 10 end
-    HeightFlyBtn.Text = " [ * ] Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
+    FlyHeightBtn.Text = " [ * ] Tinggi Terbang: " .. Settings.FlyHeight
     saveSettings()
 end)
 
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub Clean Menu Berhasil Dimuat Sepenuhnya!")
+print("Blox Fruits Hub - Clean Versi Berhasil Dimuat!")
