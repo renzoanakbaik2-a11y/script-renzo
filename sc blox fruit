@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (FIXED HOVER HEIGHT 5-8 & ATTACK RANGE)
+-- BLOX FRUITS ULTIMATE SCRIPT (FIXED HOVER HEIGHT 10, GUN & FRUIT AIM)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_CustomOrder_v32.json"
+local FileName = "BloxFruitsHub_CustomOrder_v33.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -22,17 +22,17 @@ local Settings = {
     SelectedTeam = "Pirates",
     FpsBoost = false,
     FlightSpeed = 200,
-    FlyHeight = 20,
+    FlyHeight = 15,
     AutoStoreFruit = true,
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
     HoverNearestMob = false,
-    MobHeightOffset = 6, -- Diubah default ke 6 agar posisi pas dekat musuh dan tidak miss
+    MobHeightOffset = 10, -- Diperbarui maksimal ke 10 sesuai kesepakatan
     AutoAuraAttack = false,
-    AuraRange = 65, -- Diperbesar jadi 65 agar jangkauan pukul lebih luas dan tidak gampang miss
-    AuraAttackSpeed = 40, -- Dioptimalkan jadi 40ms agar hit lebih rapat
+    AuraRange = 100, 
+    AuraAttackSpeed = 40,
     SelectedWeapon = "Melee"
 }
 
@@ -449,7 +449,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. HOVER NEAREST MOB SYSTEM (KETINGGIAN DIPATOK AMAN 3-8 AGAR TIDAK MISS)
+-- 5. HOVER NEAREST MOB SYSTEM (MAKSIMAL DI KETINGGIAN 10)
 -- =====================================================================
 local activeHoverMobConnection = nil
 local function toggleHoverNearestMob(state)
@@ -500,15 +500,14 @@ local function toggleHoverNearestMob(state)
         end
         
         if closestMob then
-            -- Dibatasi maksimum 8 agar pukulan/hitbox basic attack tidak miss di ketinggian 15
-            local safeOffset = math.clamp(Settings.MobHeightOffset, 2, 8)
+            local safeOffset = math.clamp(Settings.MobHeightOffset, 3, 10)
             root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, safeOffset, 0))
         end
     end)
 end
 
 -- =====================================================================
--- 6. AUTO AURA ATTACK (FIXED WEAPON & HITBOX)
+-- 6. AUTO AURA ATTACK (FIXED WEAPON, GUN, & FRUIT AIM)
 -- =====================================================================
 local function equipSelectedWeapon()
     pcall(function()
@@ -587,6 +586,7 @@ local function toggleAutoAuraAttack(state)
         pcall(function()
             equipSelectedWeapon()
             local foundTarget = false
+            local targetPos = nil
 
             for _, plr in ipairs(Players:GetPlayers()) do
                 if plr ~= LocalPlayer and plr.Character then
@@ -595,6 +595,7 @@ local function toggleAutoAuraAttack(state)
                     if pRoot and pHum and pHum.Health > 0 then
                         if (root.Position - pRoot.Position).Magnitude <= Settings.AuraRange then
                             foundTarget = true
+                            targetPos = pRoot.Position
                             break
                         end
                     end
@@ -612,6 +613,7 @@ local function toggleAutoAuraAttack(state)
                             if mRoot and mHum and mHum.Health > 0 then
                                 if (root.Position - mRoot.Position).Magnitude <= Settings.AuraRange then
                                     foundTarget = true
+                                    targetPos = mRoot.Position
                                     break
                                 end
                             end
@@ -621,7 +623,11 @@ local function toggleAutoAuraAttack(state)
                 end
             end
 
-            if foundTarget then
+            if foundTarget and targetPos then
+                if Settings.SelectedWeapon == "Gun" or Settings.SelectedWeapon == "Fruit" then
+                    root.CFrame = CFrame.new(root.Position, Vector3.new(targetPos.X, root.Position.Y, targetPos.Z))
+                end
+
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
                 task.wait(0.01)
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
@@ -1073,8 +1079,7 @@ end)
 createDropdown("Kecepatan Pukul (ms)", "AuraAttackSpeed", {25, 40, 50, 100, 150, 200, 300}, "ms", nil)
 
 createToggle("Hover Nearest Mob", "HoverNearestMob", function(s) toggleHoverNearestMob(s) end)
--- Opsi tinggi offset diperketat ke angka kecil (3, 4, 5, 6, 8, 10) agar di ketinggian 15 tidak miss
-createDropdown("Tinggi Mob Offset", "MobHeightOffset", {3, 4, 5, 6, 8, 10}, "", nil)
+createDropdown("Tinggi Mob Offset", "MobHeightOffset", {4, 6, 8, 10}, "", nil)
 
 createCategoryHeader("4. UTILITIES & TERBANG")
 createToggle("Auto Join Team", "AutoJoinEnabled", function(s) if s then joinTeam() end end)
@@ -1087,4 +1092,4 @@ createDropdown("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, ""
 createDropdown("Tinggi Terbang", "FlyHeight", {5, 10, 15, 20}, "", nil)
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub - Fixed Hitbox & Height Offset Berhasil Dimuat!")
+print("Blox Fruits Hub - Final Fixed Version Loaded!")
