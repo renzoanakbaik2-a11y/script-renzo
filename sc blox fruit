@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (FIXED AURA RANGE & HITBOX)
+-- BLOX FRUITS ULTIMATE SCRIPT (DIRECT FULL CODE REVISION)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -11,11 +11,10 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 local Stats = game:GetService("Stats")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_CustomOrder_v36.json"
+local FileName = "BloxFruitsHub_CustomOrder_v37.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -32,7 +31,7 @@ local Settings = {
     HoverNearestMob = false,
     MobHeightOffset = 6,
     AutoAuraAttack = false,
-    AuraRange = 65, -- Diubah ke range aman agar tidak miss hitbox senjata
+    AuraRange = 65,
     AuraAttackSpeed = 40,
     SelectedWeapon = "Melee"
 }
@@ -91,9 +90,6 @@ local function getCharacterRootPart()
     return nil
 end
 
--- =====================================================================
--- 1. WIDGET STATISTIK BUAH, SERVER AKTIF, & PING
--- =====================================================================
 local StatsHudFrame = Instance.new("Frame")
 StatsHudFrame.Size = UDim2.new(0, 190, 0, 98)
 StatsHudFrame.Position = UDim2.new(Settings.HUDPosition.X, 0, Settings.HUDPosition.Y, 0)
@@ -185,9 +181,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- =====================================================================
--- 2. SISTEM NOTIFIKASI
--- =====================================================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 380, 0, 50)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0)
@@ -269,9 +262,6 @@ local function playFruitSound()
     end)
 end
 
--- =====================================================================
--- 3. DETEKSI PULAU & ESP BUAH
--- =====================================================================
 local function getIslandName(position)
     local x, z = position.X, position.Z
     if math.abs(x) < 2000 and math.abs(z) < 2000 then
@@ -356,9 +346,6 @@ local function updateFruitESP()
     end)
 end
 
--- =====================================================================
--- 4. SISTEM TERBANG & AUTO COLLECT
--- =====================================================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, onComplete)
     local rootPart = getCharacterRootPart()
@@ -459,9 +446,6 @@ local function collectNearestFruit()
     end
 end
 
--- =====================================================================
--- 5. HOVER NEAREST MOB SYSTEM (REVISED DENGAN AREA CHECK)
--- =====================================================================
 local activeHoverMobConnection = nil
 local function toggleHoverNearestMob(state)
     if not state then 
@@ -511,16 +495,12 @@ local function toggleHoverNearestMob(state)
         end
         
         if closestMob then
-            -- Ketinggian dikunci pas di atas musuh agar hitbox serangan melee / senjata masuk
-            local safeOffset = math.clamp(Settings.MobHeightOffset, 3, 8)
+            local safeOffset = math.clamp(Settings.MobHeightOffset, 3, 10)
             root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, safeOffset, 0))
         end
     end)
 end
 
--- =====================================================================
--- 6. AUTO AURA ATTACK (REVISED: AREA HITBOX MASUK & AUTO EQUIP)
--- =====================================================================
 local function equipSelectedWeapon()
     pcall(function()
         local character = LocalPlayer.Character
@@ -600,7 +580,6 @@ local function toggleAutoAuraAttack(state)
             local foundTarget = false
             local targetPos = nil
 
-            -- Cek Area Musuh / Mob di dalam radius AuraRange
             local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
             for _, folderName in ipairs(mobFolderNames) do
                 local folder = Workspace:FindFirstChild(folderName)
@@ -621,7 +600,6 @@ local function toggleAutoAuraAttack(state)
                 if foundTarget then break end
             end
 
-            -- Jika tidak ada mob, cek player lain (jika PvP)
             if not foundTarget then
                 for _, plr in ipairs(Players:GetPlayers()) do
                     if plr ~= LocalPlayer and plr.Character then
@@ -640,19 +618,25 @@ local function toggleAutoAuraAttack(state)
 
             if foundTarget and targetPos then
                 root.CFrame = CFrame.lookAt(root.Position, Vector3.new(targetPos.X, root.Position.Y, targetPos.Z))
-
-                -- Simulasi klik serangan agar hitbox tereksekusi langsung ke musuh dalam area
-                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                task.wait(0.01)
-                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                
+                local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                local combatRemote = remotes and remotes:FindFirstChild("Combat")
+                if combatRemote then
+                    combatRemote:InvokeServer(targetPos)
+                else
+                    local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                    if tool and tool:FindFirstChild("Handle") then
+                        local remoteEvent = tool:FindFirstChild("RemoteEvent") or tool:FindFirstChild("AttackRemote")
+                        if remoteEvent then
+                            remoteEvent:FireServer(targetPos)
+                        end
+                    end
+                end
             end
         end)
     end)
 end
 
--- =====================================================================
--- 7. AUTO STORE FRUIT
--- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
     
@@ -806,9 +790,6 @@ if Settings.AutoAuraAttack then
     task.spawn(function() task.wait(2) toggleAutoAuraAttack(true) end)
 end
 
--- =====================================================================
--- 8. MENU UTAMA GUI
--- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 45, 0, 45)
 OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
@@ -1073,7 +1054,7 @@ local function createDropdown(title, settingKey, options, unit, onSelectCallback
 
             isOpen = false
             arrowLabel.Text = "▼"
-            TweenService:GetRegistry and TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+            TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
                 Size = UDim2.new(1, -10, 0, collapsedHeight)
             }):Play()
 
@@ -1081,10 +1062,6 @@ local function createDropdown(title, settingKey, options, unit, onSelectCallback
         end)
     end
 end
-
--- =====================================================================
--- PENYUSUNAN MENU UTAMA
--- =====================================================================
 
 createCategoryHeader("1. NOTIFIKASI & INFO")
 createToggle("Fruit Notifier", "FruitNotifier", nil)
@@ -1119,4 +1096,4 @@ createDropdown("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, ""
 createDropdown("Tinggi Terbang", "FlyHeight", {5, 10, 15, 20}, "", nil)
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub - Fixed Hitbox & Area Attack Version Loaded!")
+print("Blox Fruits Hub - Direct Revision Loaded Successfully!")
