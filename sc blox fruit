@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN + MOB HOVER + AUTO AURA ATTACK + SCROLL PICKER)
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN + MEDIUM GUI + MOB HOVER + AURA)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v25.json"
+local FileName = "BloxFruitsHub_Medium_v26.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -32,7 +32,7 @@ local Settings = {
     MobHeightOffset = 5,
     AutoAuraAttack = false,
     AuraRange = 30,
-    AuraAttackSpeed = 100 -- Pilihan: 100, 200, 300, 400, 500
+    AuraAttackSpeed = 100
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -63,7 +63,7 @@ end
 
 -- Proteksi GUI untuk Executor
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubClean"
+ScreenGui.Name = "BloxFruitsHubMedium"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -535,7 +535,6 @@ local function toggleAutoAuraAttack(state)
         pcall(function()
             local foundTarget = false
 
-            -- Cek Player dalam area
             for _, plr in ipairs(Players:GetPlayers()) do
                 if plr ~= LocalPlayer and plr.Character then
                     local pRoot = plr.Character:FindFirstChild("HumanoidRootPart")
@@ -549,7 +548,6 @@ local function toggleAutoAuraAttack(state)
                 end
             end
 
-            -- Cek Mob dalam area
             if not foundTarget then
                 local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
                 for _, folderName in ipairs(mobFolderNames) do
@@ -570,7 +568,6 @@ local function toggleAutoAuraAttack(state)
                 end
             end
 
-            -- Kirim sinyal klik serang otomatis jika target masuk jangkauan
             if foundTarget then
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
                 task.wait(0.02)
@@ -727,7 +724,7 @@ if Settings.AutoAuraAttack then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (COMPACT SCROLL PICKER)
+-- 8. MENU UTAMA GUI (MEDIUM SIZE)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 45, 0, 45)
@@ -747,9 +744,10 @@ OpenStroke.Color = Color3.fromRGB(255, 100, 100)
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
+-- UKURAN MENU UTAMA DIUBAH MENJADI MEDIUM (360 x 360)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 280, 0, 280)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -140)
+MainFrame.Size = UDim2.new(0, 360, 0, 360)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -180)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
@@ -766,7 +764,7 @@ MainStroke.Thickness = 1.5
 MainStroke.Parent = MainFrame
 
 local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(1, 0, 0, 26)
+TopBar.Size = UDim2.new(1, 0, 0, 30)
 TopBar.BackgroundColor3 = Color3.fromRGB(22, 25, 35)
 TopBar.BorderSizePixel = 0
 TopBar.ZIndex = 101
@@ -776,20 +774,20 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Compact"
+TitleLabel.Text = "Blox Fruits Hub | Medium Menu"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
+TitleLabel.TextSize, TitleLabel.Font = 12, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.ZIndex = 102
 TitleLabel.Parent = TopBar
 
 local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 20, 0, 20)
+CloseButton.Size = UDim2.new(0, 24, 0, 24)
 CloseButton.Position = UDim2.new(0.92, 0, 0.1, 0)
 CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextSize, CloseButton.Font = 9, Enum.Font.GothamBold
+CloseButton.TextSize, CloseButton.Font = 10, Enum.Font.GothamBold
 CloseButton.ZIndex = 102
 CloseButton.Parent = TopBar
 
@@ -801,24 +799,24 @@ OpenButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFram
 CloseButton.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
 local Container = Instance.new("ScrollingFrame")
-Container.Size = UDim2.new(1, 0, 1, -26)
-Container.Position = UDim2.new(0, 0, 0, 26)
+Container.Size = UDim2.new(1, 0, 1, -30)
+Container.Position = UDim2.new(0, 0, 0, 30)
 Container.BackgroundTransparency = 1
 Container.CanvasSize = UDim2.new(0, 0, 0, 680)
-Container.ScrollBarThickness = 4
+Container.ScrollBarThickness = 5
 Container.ZIndex = 101
 Container.Parent = MainFrame
 
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 4)
+UIListLayout.Padding = UDim.new(0, 6)
 UIListLayout.Parent = Container
 
 local function createToggle(text, settingKey, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.95, 0, 0, 26)
+    btn.Size = UDim2.new(0.95, 0, 0, 32)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 9
+    btn.TextSize = 11
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.ZIndex = 102
     
@@ -828,7 +826,7 @@ local function createToggle(text, settingKey, callback)
     btn.Parent = Container
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 4)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = btn
 
     btn.MouseButton1Click:Connect(function()
@@ -844,9 +842,9 @@ end
 
 local function createSettingButton(text, onClick)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.95, 0, 0, 26)
+    btn.Size = UDim2.new(0.95, 0, 0, 32)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 9
+    btn.TextSize = 11
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
     btn.Text = " [ * ] " .. text
@@ -854,7 +852,7 @@ local function createSettingButton(text, onClick)
     btn.Parent = Container
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 4)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = btn
 
     btn.MouseButton1Click:Connect(onClick)
@@ -919,4 +917,4 @@ end)
 
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub - Clean Versi Berhasil Dimuat!")
+print("Blox Fruits Hub - Medium Menu Berhasil Dimuat!")
