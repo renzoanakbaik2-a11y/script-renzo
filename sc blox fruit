@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (FIXED ATTACK SPEED & WEAPON)
+-- BLOX FRUITS ULTIMATE SCRIPT (FIXED ATTACK SPEED & HITBOX/RANGE)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_CustomOrder_v28.json"
+local FileName = "BloxFruitsHub_CustomOrder_v30.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -29,10 +29,10 @@ local Settings = {
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
     HoverNearestMob = false,
-    MobHeightOffset = 5,
+    MobHeightOffset = 8, -- Diubah default ke 8 agar pas & stabil (tidak terlalu jauh)
     AutoAuraAttack = false,
-    AuraRange = 30,
-    AuraAttackSpeed = 100,
+    AuraRange = 50, -- Diperbesar agar jangkauan pukul lebih luas/tidak miss
+    AuraAttackSpeed = 50, -- Diubah jadi angka kecil (milidetik/delay antar pukul, makin kecil makin cepat)
     SelectedWeapon = "Melee"
 }
 
@@ -449,7 +449,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. HOVER NEAREST MOB SYSTEM
+-- 5. HOVER NEAREST MOB SYSTEM (KETINGGIAN AMAN & STABIL DI 5-10 AGAR HITBOX MASUK)
 -- =====================================================================
 local activeHoverMobConnection = nil
 local function toggleHoverNearestMob(state)
@@ -500,13 +500,15 @@ local function toggleHoverNearestMob(state)
         end
         
         if closestMob then
-            root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, Settings.MobHeightOffset, 0))
+            -- Dibatasi max 15, tetapi diatur pas di atas mob agar damage basic attack masuk terus
+            local safeOffset = math.clamp(Settings.MobHeightOffset, 3, 15)
+            root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, safeOffset, 0))
         end
     end)
 end
 
 -- =====================================================================
--- 6. AUTO AURA ATTACK (DENGAN PEMILIHAN WEAPON/EQUIPMENT YANG AMAN)
+-- 6. AUTO AURA ATTACK (FIXED SPEED & RANGE AGAR DAMAGE KENA TERUS)
 -- =====================================================================
 local function equipSelectedWeapon()
     pcall(function()
@@ -600,7 +602,9 @@ local function toggleAutoAuraAttack(state)
         local root = getCharacterRootPart()
         if not root then return end
 
-        local interval = math.clamp(0.5 - (Settings.AuraAttackSpeed / 1200), 0.03, 0.4)
+        -- Diubah agar interval kecepatan serang merespons nilai dropdown dengan benar & sangat cepat (tanpa delay patah-patah)
+        local speedSetting = tonumber(Settings.AuraAttackSpeed) or 50
+        local interval = speedSetting / 1000 -- Mengubah milidetik ke detik (misal 50ms = 0.05 detik)
         if tick() - lastAttackTick < interval then return end
         lastAttackTick = tick()
 
@@ -643,7 +647,7 @@ local function toggleAutoAuraAttack(state)
 
             if foundTarget then
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                task.wait(0.02)
+                task.wait(0.01)
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
             end
         end)
@@ -794,7 +798,7 @@ if Settings.AutoAuraAttack then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (FIXED DROP DOWN INTERACTION & SCROLLABLE ATTACK SPEED)
+-- 8. MENU UTAMA GUI
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 45, 0, 45)
@@ -1086,10 +1090,12 @@ createToggle("Auto Store Fruit", "AutoStoreFruit", nil)
 createCategoryHeader("3. FITUR COMBAT & MOB")
 createToggle("Auto Aura Attack (Player/Mob)", "AutoAuraAttack", function(s) toggleAutoAuraAttack(s) end)
 createDropdown("Pilih Senjata (Weapon)", "SelectedWeapon", {"Melee", "Fruit", "Sword", "Gun"}, "", nil)
-createDropdown("Kecepatan Pukul", "AuraAttackSpeed", {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}, "", nil)
+-- Attack Speed diperbaiki menjadi millisecond delay kecil (25ms sampai 500ms) agar berfungsi optimal
+createDropdown("Kecepatan Pukul (ms)", "AuraAttackSpeed", {25, 50, 100, 150, 200, 300, 400, 500}, "ms", nil)
 
 createToggle("Hover Nearest Mob", "HoverNearestMob", function(s) toggleHoverNearestMob(s) end)
-createDropdown("Tinggi Mob Offset", "MobHeightOffset", {5, 10, 15, 20}, "", nil)
+-- Tinggi Mob Offset diubah ke opsi yang lebih rapat (3, 5, 8, 10, 12) agar basic attack konsisten masuk/kena terus
+createDropdown("Tinggi Mob Offset", "MobHeightOffset", {3, 5, 8, 10, 12, 15}, "", nil)
 
 createCategoryHeader("4. UTILITIES & TERBANG")
 createToggle("Auto Join Team", "AutoJoinEnabled", function(s) if s then joinTeam() end end)
@@ -1102,4 +1108,4 @@ createDropdown("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, ""
 createDropdown("Tinggi Terbang", "FlyHeight", {5, 10, 15, 20}, "", nil)
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub - Fixed Attack Speed Menu Berhasil Dimuat!")
+print("Blox Fruits Hub - Fixed Attack Speed & Range Berhasil Dimuat!")
