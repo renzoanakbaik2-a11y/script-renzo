@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN + MEDIUM GUI + MOB HOVER + AURA)
+-- BLOX FRUITS ULTIMATE SCRIPT (KATEGORI RAPI + COMPACT SCROLL PICKER)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Medium_v26.json"
+local FileName = "BloxFruitsHub_Kategori_v26.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -35,7 +35,6 @@ local Settings = {
     AuraAttackSpeed = 100
 }
 
--- Sistem Save & Load Settings (JSON)
 local function loadSettings()
     if readfile and pcall(readfile, FileName) then
         local success, data = pcall(function()
@@ -61,9 +60,8 @@ local function saveSettings()
     end
 end
 
--- Proteksi GUI untuk Executor
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubMedium"
+ScreenGui.Name = "BloxFruitsHubKategori"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -142,7 +140,6 @@ ServerTimeLabel.TextSize, ServerTimeLabel.Font = 10, Enum.Font.GothamBold
 ServerTimeLabel.ZIndex = 81
 ServerTimeLabel.Parent = StatsHudFrame
 
--- Dragging Widget Stats
 local dragging, dragInput, dragStart, startPos
 StatsHudFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -193,14 +190,14 @@ local NotifCorner = Instance.new("UICorner")
 NotifCorner.CornerRadius = UDim.new(0, 8)
 NotifCorner.Parent = NotifFrame
 
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Thickness = 2
-UIStroke.Parent = NotifFrame
+local UIStrokeNotif = Instance.new("UIStroke")
+UIStrokeNotif.Thickness = 2
+UIStrokeNotif.Parent = NotifFrame
 
 task.spawn(function()
     while true do
         for i = 0, 1, 0.05 do
-            UIStroke.Color = Color3.fromHSV(i, 1, 1)
+            UIStrokeNotif.Color = Color3.fromHSV(i, 1, 1)
             task.wait(1)
         end
     end
@@ -508,7 +505,7 @@ local function toggleHoverNearestMob(state)
 end
 
 -- =====================================================================
--- 6. AUTO AURA ATTACK (FIXED MENGGUNAKAN VIRTUAL INPUT MANAGER)
+-- 6. AUTO AURA ATTACK
 -- =====================================================================
 local activeAuraConnection = nil
 local function toggleAutoAuraAttack(state)
@@ -578,7 +575,7 @@ local function toggleAutoAuraAttack(state)
 end
 
 -- =====================================================================
--- 7. FIXED AUTO STORE FRUIT
+-- 7. AUTO STORE FRUIT
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -618,7 +615,6 @@ local function autoStoreFruits()
     end)
 end
 
--- Loop Statistik & ESP
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
@@ -641,7 +637,6 @@ task.spawn(function()
     end
 end)
 
--- Monitoring Status Buah
 task.spawn(function()
     local lastStatus = nil 
     task.wait(5) 
@@ -679,7 +674,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Join Team & FPS Boost
 local function joinTeam()
     if not Settings.AutoJoinEnabled then return end
     pcall(function()
@@ -724,7 +718,7 @@ if Settings.AutoAuraAttack then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (MEDIUM SIZE)
+-- 8. MENU UTAMA GUI (KATEGORI TERPISAH + COMPACT SCROLL PICKER)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 45, 0, 45)
@@ -744,10 +738,9 @@ OpenStroke.Color = Color3.fromRGB(255, 100, 100)
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
--- UKURAN MENU UTAMA DIUBAH MENJADI MEDIUM (360 x 360)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 360, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -180, 0.5, -180)
+MainFrame.Size = UDim2.new(0, 360, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -190)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
@@ -774,7 +767,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Medium Menu"
+TitleLabel.Text = "Blox Fruits Hub | Kategori Terpisah"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 12, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -802,7 +795,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -30)
 Container.Position = UDim2.new(0, 0, 0, 30)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 680)
+Container.CanvasSize = UDim2.new(0, 0, 0, 850)
 Container.ScrollBarThickness = 5
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -812,9 +805,23 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 6)
 UIListLayout.Parent = Container
 
+-- Helper untuk Judul Kategori Section
+local function createCategoryHeader(categoryName)
+    local header = Instance.new("TextLabel")
+    header.Size = UDim2.new(0.95, 0, 0, 24)
+    header.BackgroundTransparency = 1
+    header.Text = "--- " .. categoryName .. " ---"
+    header.TextColor3 = Color3.fromRGB(255, 215, 0)
+    header.TextSize = 11
+    header.Font = Enum.Font.GothamBold
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.ZIndex = 102
+    header.Parent = Container
+end
+
 local function createToggle(text, settingKey, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.95, 0, 0, 32)
+    btn.Size = UDim2.new(0.95, 0, 0, 30)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 11
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -842,7 +849,7 @@ end
 
 local function createSettingButton(text, onClick)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.95, 0, 0, 32)
+    btn.Size = UDim2.new(0.95, 0, 0, 30)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 11
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -859,62 +866,95 @@ local function createSettingButton(text, onClick)
     return btn
 end
 
--- Menyusun Menu List Sesuai Keinginan
-createToggle("Auto Join Team", "AutoJoinEnabled", function(s) if s then joinTeam() end end)
+-- COMPACT SCROLL PICKER UNTUK SETTING ANGKA
+local function createCompactPicker(title, settingKey, options, unit)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0.95, 0, 0, 30)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 33, 45)
+    frame.BorderSizePixel = 0
+    frame.ZIndex = 102
+    frame.Parent = Container
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = frame
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.55, 0, 1, 0)
+    label.Position = UDim2.new(0.03, 0, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = " > " .. title
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 10
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 103
+    label.Parent = frame
+
+    local valBtn = Instance.new("TextButton")
+    valBtn.Size = UDim2.new(0.38, 0, 0.8, 0)
+    valBtn.Position = UDim2.new(0.59, 0, 0.1, 0)
+    valBtn.BackgroundColor3 = Color3.fromRGB(50, 56, 75)
+    valBtn.Font = Enum.Font.GothamBold
+    valBtn.TextSize = 10
+    valBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
+    valBtn.ZIndex = 103
+    valBtn.Parent = frame
+
+    local valCorner = Instance.new("UICorner")
+    valCorner.CornerRadius = UDim.new(0, 4)
+    valCorner.Parent = valBtn
+
+    local currentIndex = 1
+    for i, v in ipairs(options) do
+        if v == Settings[settingKey] then
+            currentIndex = i
+            break
+        end
+    end
+    valBtn.Text = tostring(Settings[settingKey]) .. (unit or "")
+
+    valBtn.MouseButton1Click:Connect(function()
+        currentIndex = currentIndex + 1
+        if currentIndex > #options then
+            currentIndex = 1
+        end
+        local newVal = options[currentIndex]
+        Settings[settingKey] = newVal
+        valBtn.Text = tostring(newVal) .. (unit or "")
+        saveSettings()
+    end)
+end
+
+-- =====================================================================
+-- PENYUSUNAN MENU BERDASARKAN KATEGORI YANG JELAS & RAPI
+-- =====================================================================
+
+-- 1. KATEGORI NOTIFIKASI
+createCategoryHeader("1. NOTIFIKASI & INFO")
 createToggle("Fruit Notifier", "FruitNotifier", nil)
 createToggle("Live HUD Stats", "FruitStatsHUD", function(s) StatsHudFrame.Visible = s end)
+
+-- 2. KATEGORI LIVE BUAH
+createCategoryHeader("2. LIVE BUAH & ESP")
 createToggle("Fruit ESP", "FruitESP", function(s) if not s then clearESP() end end)
 createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
-
 createSettingButton("⚡ Ambil Paksa Semua Buah Sekarang", function() collectNearestFruit() end)
-
 createToggle("Auto Store Fruit", "AutoStoreFruit", nil)
-createToggle("Auto Aura Attack (Player/Mob)", "AutoAuraAttack", function(s) toggleAutoAuraAttack(s) end)
 
-local SpeedAuraBtn
-SpeedAuraBtn = createSettingButton("Kecepatan Pukul: " .. Settings.AuraAttackSpeed, function()
-    if Settings.AuraAttackSpeed == 100 then Settings.AuraAttackSpeed = 200
-    elseif Settings.AuraAttackSpeed == 200 then Settings.AuraAttackSpeed = 300
-    elseif Settings.AuraAttackSpeed == 300 then Settings.AuraAttackSpeed = 400
-    elseif Settings.AuraAttackSpeed == 400 then Settings.AuraAttackSpeed = 500
-    else Settings.AuraAttackSpeed = 100 end
-    SpeedAuraBtn.Text = " [ * ] Kecepatan Pukul: " .. Settings.AuraAttackSpeed
-    saveSettings()
-end)
+-- 3. KATEGORI FITUR FRUIT & COMBAT / FARMING
+createCategoryHeader("3. FITUR COMBAT & MOB")
+createToggle("Auto Aura Attack (Player/Mob)", "AutoAuraAttack", function(s) toggleAutoAuraAttack(s) end)
+createCompactPicker("Kecepatan Pukul", "AuraAttackSpeed", {100, 200, 300, 400, 500}, "")
 
 createToggle("Hover Nearest Mob", "HoverNearestMob", function(s) toggleHoverNearestMob(s) end)
+createCompactPicker("Tinggi Mob Offset", "MobHeightOffset", {3, 5, 8, 10}, "m")
 
-local HeightMobBtn
-HeightMobBtn = createSettingButton("Tinggi Mob Offset: " .. Settings.MobHeightOffset, function()
-    if Settings.MobHeightOffset == 3 then Settings.MobHeightOffset = 5
-    elseif Settings.MobHeightOffset == 5 then Settings.MobHeightOffset = 8
-    elseif Settings.MobHeightOffset == 8 then Settings.MobHeightOffset = 10
-    else Settings.MobHeightOffset = 3 end
-    HeightMobBtn.Text = " [ * ] Tinggi Mob Offset: " .. Settings.MobHeightOffset
-    saveSettings()
-end)
-
-local FlightSpeedBtn
-FlightSpeedBtn = createSettingButton("Kecepatan Terbang: " .. Settings.FlightSpeed, function()
-    if Settings.FlightSpeed == 100 then Settings.FlightSpeed = 200
-    elseif Settings.FlightSpeed == 200 then Settings.FlightSpeed = 300
-    elseif Settings.FlightSpeed == 300 then Settings.FlightSpeed = 400
-    elseif Settings.FlightSpeed == 400 then Settings.FlightSpeed = 500
-    else Settings.FlightSpeed = 100 end
-    FlightSpeedBtn.Text = " [ * ] Kecepatan Terbang: " .. Settings.FlightSpeed
-    saveSettings()
-end)
-
-local FlyHeightBtn
-FlyHeightBtn = createSettingButton("Tinggi Terbang: " .. Settings.FlyHeight, function()
-    if Settings.FlyHeight == 10 then Settings.FlyHeight = 20
-    elseif Settings.FlyHeight == 20 then Settings.FlyHeight = 30
-    elseif Settings.FlyHeight == 30 then Settings.FlyHeight = 40
-    else Settings.FlyHeight = 10 end
-    FlyHeightBtn.Text = " [ * ] Tinggi Terbang: " .. Settings.FlyHeight
-    saveSettings()
-end)
-
+-- 4. KATEGORI PENGATURAN UMUM & TERBANG
+createCategoryHeader("4. UTILITIES & TERBANG")
+createToggle("Auto Join Team", "AutoJoinEnabled", function(s) if s then joinTeam() end end)
+createCompactPicker("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, "")
+createCompactPicker("Tinggi Terbang", "FlyHeight", {10, 20, 30, 40}, "m")
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub - Medium Menu Berhasil Dimuat!")
+print("Blox Fruits Hub - Kategori Terpisah & Scroll Picker Berhasil Dimuat!")
