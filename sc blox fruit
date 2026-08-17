@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - v27 MOB ONLY FIX)
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION + HOVER NEAREST MOB)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,22 +13,22 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v27.json"
+local FileName = "BloxFruitsHub_Clean_v23.json"
 
 local Settings = {
     FruitNotifier = true,
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 200,  
-    FlyHeight = 5,      
-    AutoStoreFruit = true,    
+    FlightSpeed = 200,
+    FlyHeight = 5,
+    AutoStoreFruit = true,
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
     HoverNearestMob = false,
-    MobHeightOffset = 6
+    MobHeightOffset = 5
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -447,7 +447,64 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. FIXED AUTO STORE
+-- 5. HOVER NEAREST MOB SYSTEM
+-- =====================================================================
+local activeHoverMobConnection = nil
+local function toggleHoverNearestMob(state)
+    if not state then 
+        if activeHoverMobConnection then 
+            activeHoverMobConnection:Disconnect() 
+            activeHoverMobConnection = nil 
+        end
+        return 
+    end
+    
+    if activeHoverMobConnection then activeHoverMobConnection:Disconnect() end
+    
+    activeHoverMobConnection = RunService.Heartbeat:Connect(function()
+        if not Settings.HoverNearestMob then return end
+        local root = getCharacterRootPart()
+        if not root then return end
+        
+        local closestMob = nil
+        local minDist = math.huge
+        
+        local function scanMobModel(model)
+            if model:IsA("Model") and model ~= LocalPlayer.Character then
+                local humanoid = model:FindFirstChildOfClass("Humanoid")
+                local hrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
+                
+                if humanoid and hrp and humanoid.Health > 0 then
+                    local isPlayer = Players:GetPlayerFromCharacter(model)
+                    if not isPlayer then
+                        local d = (root.Position - hrp.Position).Magnitude
+                        if d < minDist then
+                            minDist = d
+                            closestMob = hrp
+                        end
+                    end
+                end
+            end
+        end
+
+        local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
+        for _, folderName in ipairs(mobFolderNames) do
+            local folder = Workspace:FindFirstChild(folderName)
+            if folder then
+                for _, mob in pairs(folder:GetChildren()) do
+                    scanMobModel(mob)
+                end
+            end
+        end
+        
+        if closestMob then
+            root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, Settings.MobHeightOffset, 0))
+        end
+    end)
+end
+
+-- =====================================================================
+-- 6. FIXED AUTO STORE
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -487,64 +544,6 @@ local function autoStoreFruits()
     end)
 end
 
--- =====================================================================
--- 5.1 NEAREST MOB HOVER LOGIC (KHUSUS KE MOB/MUSUH YANG BISA DISERANG)
--- =====================================================================
-local activeHoverMobConnection = nil
-local function toggleHoverNearestMob(state)
-    if not state then 
-        if activeHoverMobConnection then activeHoverMobConnection:Disconnect() activeHoverMobConnection = nil end
-        return 
-    end
-    
-    if activeHoverMobConnection then activeHoverMobConnection:Disconnect() end
-    activeHoverMobConnection = RunService.Heartbeat:Connect(function()
-        if not Settings.HoverNearestMob then return end
-        local root = getCharacterRootPart()
-        if not root then return end
-        
-        local closestMob = nil
-        local minDist = math.huge
-        
-        -- Fungsi untuk memvalidasi apakah model tersebut adalah Mob Musuh (Bukan NPC Quest & Bukan Player)
-        local function scanMobModel(model)
-            if model:IsA("Model") and model ~= LocalPlayer.Character then
-                local humanoid = model:FindFirstChildOfClass("Humanoid")
-                local hrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
-                
-                -- Pastikan memiliki Humanoid hidup dan bukan Player asli
-                if humanoid and hrp and humanoid.Health > 0 then
-                    local isPlayer = Players:GetPlayerFromCharacter(model)
-                    if not isPlayer then
-                        -- Filter tambahan: Pastikan tidak mendekati NPC Netral/Quest Giver (biasanya darahnya tidak berkurang atau di luar folder Enemies)
-                        local d = (root.Position - hrp.Position).Magnitude
-                        if d < minDist then
-                            minDist = d
-                            closestMob = hrp
-                        end
-                    end
-                end
-            end
-        end
-
-        -- Fokus utama mengambil dari folder tempat Mob/Musuh Spawn di Blox Fruits
-        local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
-        for _, folderName in ipairs(mobFolderNames) do
-            local folder = Workspace:FindFirstChild(folderName)
-            if folder then
-                for _, mob in pairs(folder:GetChildren()) do
-                    scanMobModel(mob)
-                end
-            end
-        end
-        
-        -- Jika terdeteksi mob terdekat, posisikan karakter terbang di atasnya
-        if closestMob then
-            root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, Settings.MobHeightOffset, 0))
-        end
-    end)
-end
-
 -- Loop Statistik & ESP
 task.spawn(function()
     while task.wait(1) do
@@ -569,7 +568,7 @@ task.spawn(function()
 end)
 
 -- =====================================================================
--- 6. MONITORING STATUS & NOTIFIKASI (ANTI-SPAM)
+-- 7. MONITORING STATUS & NOTIFIKASI (ANTI-SPAM)
 -- =====================================================================
 task.spawn(function()
     local lastStatus = nil 
@@ -609,7 +608,7 @@ task.spawn(function()
 end)
 
 -- =====================================================================
--- 7. AUTO JOIN TEAM & FPS BOOST
+-- 8. AUTO JOIN TEAM & FPS BOOST
 -- =====================================================================
 local function joinTeam()
     if not Settings.AutoJoinEnabled then return end
@@ -651,8 +650,15 @@ if Settings.FpsBoost then
     end)
 end
 
+if Settings.HoverNearestMob then
+    task.spawn(function()
+        task.wait(2)
+        toggleHoverNearestMob(true)
+    end)
+end
+
 -- =====================================================================
--- 8. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
+-- 9. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -701,7 +707,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v27 (Nearest Mob Only)"
+TitleLabel.Text = "Blox Fruits Hub | Clean + Mob Hover v23"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -729,7 +735,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 750)
+Container.CanvasSize = UDim2.new(0, 0, 0, 800)
 Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -816,12 +822,39 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("3.1 Tambahan Fitur Farm Mob")
-createToggle("Hover ke Mob Terdekat Saja (Nearest Mob)", "HoverNearestMob", function(state)
+createSectionHeader("4. Fitur Tambahan: Hover Nearest Mob")
+createToggle("Hover Nearest Mob", "HoverNearestMob", function(state)
     toggleHoverNearestMob(state)
 end)
 
-createSectionHeader("4. Pengaturan Kecepatan Terbang (100 - 500)")
+local MobHeightBtn = Instance.new("TextButton")
+MobHeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
+MobHeightBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
+MobHeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MobHeightBtn.Text = "Ketinggian Hover Mob: " .. Settings.MobHeightOffset .. " Studs"
+MobHeightBtn.TextSize, MobHeightBtn.Font = 11, Enum.Font.GothamBold
+MobHeightBtn.ZIndex = 102
+MobHeightBtn.Parent = Container
+
+local mhCorner = Instance.new("UICorner")
+mhCorner.CornerRadius = UDim.new(0, 6)
+mhCorner.Parent = MobHeightBtn
+
+MobHeightBtn.MouseButton1Click:Connect(function()
+    if Settings.MobHeightOffset == 3 then
+        Settings.MobHeightOffset = 5
+    elseif Settings.MobHeightOffset == 5 then
+        Settings.MobHeightOffset = 8
+    elseif Settings.MobHeightOffset == 8 then
+        Settings.MobHeightOffset = 10
+    else
+        Settings.MobHeightOffset = 3
+    end
+    MobHeightBtn.Text = "Ketinggian Hover Mob: " .. Settings.MobHeightOffset .. " Studs"
+    saveSettings()
+end)
+
+createSectionHeader("5. Pengaturan Kecepatan Terbang")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -852,7 +885,7 @@ SpeedBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("5. Pengaturan Ketinggian Terbang")
+createSectionHeader("6. Pengaturan Ketinggian Terbang")
 
 local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -883,14 +916,9 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Performa")
+createSectionHeader("7. Performa")
 createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
--- Jalankan status awal HoverNearestMob jika diset true dari file config
-if Settings.HoverNearestMob then
-    toggleHoverNearestMob(true)
-end
-
-print("Blox Fruits Hub Clean v27 Berhasil Dimuat!")
+print("Blox Fruits Hub Clean + Mob Hover Berhasil Dimuat!")
