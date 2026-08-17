@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE HUB (FULL FEATURES + INSTANT SERVER HOP)
+-- BLOX FRUITS ULTIMATE HUB (FULL FEATURES + BYPASS ERROR 773 & 769)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Ultimate_v26.json"
+local FileName = "BloxFruitsHub_Ultimate_v27.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -593,14 +593,28 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. INSTANT SERVER HOP (DIRECT TELEPORT METHOD)
+-- 8. BYPASS SERVER HOP (ANTi ERROR 773 & 769)
 -- =====================================================================
 local function safeServerHop()
-    showCustomNotification("🚀 Memproses perpindahan server...", Color3.fromRGB(52, 152, 219))
+    showCustomNotification("🚀 Melewati proteksi 773 & 769...", Color3.fromRGB(241, 196, 15))
     
-    -- Menggunakan teleport langsung ke game ID utama yang otomatis melempar ke server berbeda
     pcall(function()
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        local queueFunction = queue_on_teleport or queueonteleport
+        if queueFunction then
+            queueFunction([[
+                task.wait(1)
+                game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+            ]])
+        end
+
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+    end)
+
+    task.spawn(function()
+        task.wait(2)
+        pcall(function()
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        end)
     end)
 end
 
@@ -654,7 +668,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Ultimate (Instant Hop)"
+TitleLabel.Text = "Blox Fruits Hub | Ultimate (Bypass 773)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -831,13 +845,13 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Instant Server Hop")
+createSectionHeader("6. Bypass Server Hop")
 
 local HopBtn = Instance.new("TextButton")
 HopBtn.Size = UDim2.new(0.9, 0, 0, 36)
 HopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
 HopBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
-HopBtn.Text = "🚀 Pindah Server Instan (Server Hop)"
+HopBtn.Text = "🚀 Pindah Server (Bypass Error)"
 HopBtn.TextSize, HopBtn.Font = 11, Enum.Font.GothamBold
 HopBtn.ZIndex = 102
 HopBtn.Parent = Container
