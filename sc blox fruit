@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - v26 NEAREST ENEMY FIX)
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - v27 MOB ONLY FIX)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v26.json"
+local FileName = "BloxFruitsHub_Clean_v27.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -27,8 +27,8 @@ local Settings = {
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
-    HoverNearestEnemy = false,
-    NPCHeightOffset = 6
+    HoverNearestMob = false,
+    MobHeightOffset = 6
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -488,69 +488,59 @@ local function autoStoreFruits()
 end
 
 -- =====================================================================
--- 5.1 NEAREST ENEMY HOVER LOGIC (HANYA KE MUSUH/MOB TERDEKAT)
+-- 5.1 NEAREST MOB HOVER LOGIC (KHUSUS KE MOB/MUSUH YANG BISA DISERANG)
 -- =====================================================================
-local activeHoverEnemyConnection = nil
-local function toggleHoverNearestEnemy(state)
+local activeHoverMobConnection = nil
+local function toggleHoverNearestMob(state)
     if not state then 
-        if activeHoverEnemyConnection then activeHoverEnemyConnection:Disconnect() activeHoverEnemyConnection = nil end
+        if activeHoverMobConnection then activeHoverMobConnection:Disconnect() activeHoverMobConnection = nil end
         return 
     end
     
-    if activeHoverEnemyConnection then activeHoverEnemyConnection:Disconnect() end
-    activeHoverEnemyConnection = RunService.Heartbeat:Connect(function()
-        if not Settings.HoverNearestEnemy then return end
+    if activeHoverMobConnection then activeHoverMobConnection:Disconnect() end
+    activeHoverMobConnection = RunService.Heartbeat:Connect(function()
+        if not Settings.HoverNearestMob then return end
         local root = getCharacterRootPart()
         if not root then return end
         
-        local closestEnemy = nil
+        local closestMob = nil
         local minDist = math.huge
         
-        -- Fungsi untuk memindai musuh di sekitar dan mencari yang jaraknya PALING DEKAT
-        local function scanEnemyModel(model)
+        -- Fungsi untuk memvalidasi apakah model tersebut adalah Mob Musuh (Bukan NPC Quest & Bukan Player)
+        local function scanMobModel(model)
             if model:IsA("Model") and model ~= LocalPlayer.Character then
                 local humanoid = model:FindFirstChildOfClass("Humanoid")
                 local hrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
                 
-                -- Pastikan punya Humanoid yang hidup (Health > 0) dan bukan Player lain
+                -- Pastikan memiliki Humanoid hidup dan bukan Player asli
                 if humanoid and hrp and humanoid.Health > 0 then
                     local isPlayer = Players:GetPlayerFromCharacter(model)
                     if not isPlayer then
+                        -- Filter tambahan: Pastikan tidak mendekati NPC Netral/Quest Giver (biasanya darahnya tidak berkurang atau di luar folder Enemies)
                         local d = (root.Position - hrp.Position).Magnitude
-                        -- Cari yang jaraknya paling dekat secara mutlak
                         if d < minDist then
                             minDist = d
-                            closestEnemy = hrp
+                            closestMob = hrp
                         end
                     end
                 end
             end
         end
 
-        -- Cek di folder umum penyimpanan musuh Blox Fruits
-        local enemyFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
-        for _, folderName in ipairs(enemyFolderNames) do
+        -- Fokus utama mengambil dari folder tempat Mob/Musuh Spawn di Blox Fruits
+        local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
+        for _, folderName in ipairs(mobFolderNames) do
             local folder = Workspace:FindFirstChild(folderName)
             if folder then
-                for _, enemy in pairs(folder:GetChildren()) do
-                    scanEnemyModel(enemy)
+                for _, mob in pairs(folder:GetChildren()) do
+                    scanMobModel(mob)
                 end
             end
         end
         
-        -- Fallback: Scan Workspace langsung jika musuh berada di luar folder
-        for _, v in pairs(Workspace:GetChildren()) do
-            scanEnemyModel(v)
-            if v:IsA("Folder") and v.Name ~= "FruitESPFolder" then
-                for _, subV in pairs(v:GetChildren()) do
-                    scanEnemyModel(subV)
-                end
-            end
-        end
-        
-        -- Jika ketemu musuh terdekat di radius dekat, posisikan karakter tepat di atasnya
-        if closestEnemy then
-            root.CFrame = CFrame.new(closestEnemy.Position + Vector3.new(0, Settings.NPCHeightOffset, 0))
+        -- Jika terdeteksi mob terdekat, posisikan karakter terbang di atasnya
+        if closestMob then
+            root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, Settings.MobHeightOffset, 0))
         end
     end)
 end
@@ -711,7 +701,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v26 (Nearest Enemy Fix)"
+TitleLabel.Text = "Blox Fruits Hub | Clean v27 (Nearest Mob Only)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -827,8 +817,8 @@ end)
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
 createSectionHeader("3.1 Tambahan Fitur Farm Mob")
-createToggle("Hover ke Musuh Terdekat (Nearest Enemy)", "HoverNearestEnemy", function(state)
-    toggleHoverNearestEnemy(state)
+createToggle("Hover ke Mob Terdekat Saja (Nearest Mob)", "HoverNearestMob", function(state)
+    toggleHoverNearestMob(state)
 end)
 
 createSectionHeader("4. Pengaturan Kecepatan Terbang (100 - 500)")
@@ -898,9 +888,9 @@ createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
--- Jalankan status awal HoverNearestEnemy jika diset true dari file config
-if Settings.HoverNearestEnemy then
-    toggleHoverNearestEnemy(true)
+-- Jalankan status awal HoverNearestMob jika diset true dari file config
+if Settings.HoverNearestMob then
+    toggleHoverNearestMob(true)
 end
 
-print("Blox Fruits Hub Clean v26 Berhasil Dimuat!")
+print("Blox Fruits Hub Clean v27 Berhasil Dimuat!")
