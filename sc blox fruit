@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (FIXED FRUIT/GUN SKILLS & ACCURATE HITBOX)
+-- BLOX FRUITS ULTIMATE SCRIPT (FIXED AURA RANGE & HITBOX)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -12,9 +12,10 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local Stats = game:GetService("Stats")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_CustomOrder_v34.json"
+local FileName = "BloxFruitsHub_CustomOrder_v36.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -29,9 +30,9 @@ local Settings = {
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
     HoverNearestMob = false,
-    MobHeightOffset = 10,
+    MobHeightOffset = 6,
     AutoAuraAttack = false,
-    AuraRange = 100, 
+    AuraRange = 65, -- Diubah ke range aman agar tidak miss hitbox senjata
     AuraAttackSpeed = 40,
     SelectedWeapon = "Melee"
 }
@@ -91,10 +92,10 @@ local function getCharacterRootPart()
 end
 
 -- =====================================================================
--- 1. WIDGET STATISTIK BUAH & SERVER AKTIF
+-- 1. WIDGET STATISTIK BUAH, SERVER AKTIF, & PING
 -- =====================================================================
 local StatsHudFrame = Instance.new("Frame")
-StatsHudFrame.Size = UDim2.new(0, 190, 0, 75)
+StatsHudFrame.Size = UDim2.new(0, 190, 0, 98)
 StatsHudFrame.Position = UDim2.new(Settings.HUDPosition.X, 0, Settings.HUDPosition.Y, 0)
 StatsHudFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 StatsHudFrame.BackgroundTransparency = 0.15
@@ -140,6 +141,16 @@ ServerTimeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 ServerTimeLabel.TextSize, ServerTimeLabel.Font = 10, Enum.Font.GothamBold
 ServerTimeLabel.ZIndex = 81
 ServerTimeLabel.Parent = StatsHudFrame
+
+local PingLabel = Instance.new("TextLabel")
+PingLabel.Size = UDim2.new(1, 0, 0, 22)
+PingLabel.Position = UDim2.new(0, 0, 0, 70)
+PingLabel.BackgroundTransparency = 1
+PingLabel.Text = "Ping: 0 ms"
+PingLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
+PingLabel.TextSize, PingLabel.Font = 10, Enum.Font.GothamBold
+PingLabel.ZIndex = 81
+PingLabel.Parent = StatsHudFrame
 
 local dragging, dragInput, dragStart, startPos
 StatsHudFrame.InputBegan:Connect(function(input)
@@ -449,7 +460,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. HOVER NEAREST MOB SYSTEM
+-- 5. HOVER NEAREST MOB SYSTEM (REVISED DENGAN AREA CHECK)
 -- =====================================================================
 local activeHoverMobConnection = nil
 local function toggleHoverNearestMob(state)
@@ -500,14 +511,15 @@ local function toggleHoverNearestMob(state)
         end
         
         if closestMob then
-            local safeOffset = math.clamp(Settings.MobHeightOffset, 3, 10)
+            -- Ketinggian dikunci pas di atas musuh agar hitbox serangan melee / senjata masuk
+            local safeOffset = math.clamp(Settings.MobHeightOffset, 3, 8)
             root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, safeOffset, 0))
         end
     end)
 end
 
 -- =====================================================================
--- 6. AUTO AURA ATTACK (FIXED WEAPON, GUN/FRUIT ACCURATE AIM & HITBOX)
+-- 6. AUTO AURA ATTACK (REVISED: AREA HITBOX MASUK & AUTO EQUIP)
 -- =====================================================================
 local function equipSelectedWeapon()
     pcall(function()
@@ -588,47 +600,50 @@ local function toggleAutoAuraAttack(state)
             local foundTarget = false
             local targetPos = nil
 
-            for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= LocalPlayer and plr.Character then
-                    local pRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-                    local pHum = plr.Character:FindFirstChildOfClass("Humanoid")
-                    if pRoot and pHum and pHum.Health > 0 then
-                        if (root.Position - pRoot.Position).Magnitude <= Settings.AuraRange then
-                            foundTarget = true
-                            targetPos = pRoot.Position
-                            break
-                        end
-                    end
-                end
-            end
-
-            if not foundTarget then
-                local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
-                for _, folderName in ipairs(mobFolderNames) do
-                    local folder = Workspace:FindFirstChild(folderName)
-                    if folder then
-                        for _, mob in pairs(folder:GetChildren()) do
-                            local mRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
-                            local mHum = mob:FindFirstChildOfClass("Humanoid")
-                            if mRoot and mHum and mHum.Health > 0 then
-                                if (root.Position - mRoot.Position).Magnitude <= Settings.AuraRange then
-                                    foundTarget = true
-                                    targetPos = mRoot.Position
-                                    break
-                                end
+            -- Cek Area Musuh / Mob di dalam radius AuraRange
+            local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
+            for _, folderName in ipairs(mobFolderNames) do
+                local folder = Workspace:FindFirstChild(folderName)
+                if folder then
+                    for _, mob in pairs(folder:GetChildren()) do
+                        local mRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
+                        local mHum = mob:FindFirstChildOfClass("Humanoid")
+                        if mRoot and mHum and mHum.Health > 0 then
+                            local distanceToMob = (root.Position - mRoot.Position).Magnitude
+                            if distanceToMob <= Settings.AuraRange then
+                                foundTarget = true
+                                targetPos = mRoot.Position
+                                break
                             end
                         end
                     end
-                    if foundTarget then break end
+                end
+                if foundTarget then break end
+            end
+
+            -- Jika tidak ada mob, cek player lain (jika PvP)
+            if not foundTarget then
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= LocalPlayer and plr.Character then
+                        local pRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+                        local pHum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        if pRoot and pHum and pHum.Health > 0 then
+                            if (root.Position - pRoot.Position).Magnitude <= Settings.AuraRange then
+                                foundTarget = true
+                                targetPos = pRoot.Position
+                                break
+                            end
+                        end
+                    end
                 end
             end
 
             if foundTarget and targetPos then
-                -- Memaksa arah pandangan menunduk tepat ke arah hitbox mob agar Gun/Fruit tidak meleset
-                root.CFrame = CFrame.lookAt(root.Position, targetPos)
+                root.CFrame = CFrame.lookAt(root.Position, Vector3.new(targetPos.X, root.Position.Y, targetPos.Z))
 
+                -- Simulasi klik serangan agar hitbox tereksekusi langsung ke musuh dalam area
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                task.wait(0.02)
+                task.wait(0.01)
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
             end
         end)
@@ -687,13 +702,26 @@ task.spawn(function()
                     count = count + 1
                 end
             end
-            FruitCountLabel.Text = "Buah di Map: " + count
+            FruitCountLabel.Text = "Buah di Map: " .. count
 
             local uptimeSeconds = math.floor(Workspace.DistributedGameTime)
             local hours = math.floor(uptimeSeconds / 3600)
             local minutes = math.floor((uptimeSeconds % 3600) / 60)
             local seconds = uptimeSeconds % 60
             ServerTimeLabel.Text = string.format("Server Aktif: %02d:%02d:%02d", hours, minutes, seconds)
+
+            local pingVal = 0
+            pcall(function()
+                pingVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            end)
+            PingLabel.Text = "Ping: " .. pingVal .. " ms"
+            if pingVal < 150 then
+                PingLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+            elseif pingVal < 300 then
+                PingLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
+            else
+                PingLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+            end
         end)
     end
 end)
@@ -772,7 +800,7 @@ if Settings.FpsBoost then
     task.spawn(function() task.wait(2) applyFpsBoost(true) end)
 end
 if Settings.HoverNearestMob then
-    task.spawn(function() task.spawn(function() task.wait(2) toggleHoverNearestMob(true) end) end)
+    task.spawn(function() task.wait(2) toggleHoverNearestMob(true) end)
 end
 if Settings.AutoAuraAttack then
     task.spawn(function() task.wait(2) toggleAutoAuraAttack(true) end)
@@ -1045,7 +1073,7 @@ local function createDropdown(title, settingKey, options, unit, onSelectCallback
 
             isOpen = false
             arrowLabel.Text = "▼"
-            TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+            TweenService:GetRegistry and TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
                 Size = UDim2.new(1, -10, 0, collapsedHeight)
             }):Play()
 
@@ -1091,4 +1119,4 @@ createDropdown("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, ""
 createDropdown("Tinggi Terbang", "FlyHeight", {5, 10, 15, 20}, "", nil)
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub - Final Fixed Version Loaded!")
+print("Blox Fruits Hub - Fixed Hitbox & Area Attack Version Loaded!")
