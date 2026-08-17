@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE HUB (FULL FEATURES + BYPASS ERROR 773 & 769)
+-- BLOX FRUITS ULTIMATE HUB (FINAL BYPASS 773 / 769)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Ultimate_v27.json"
+local FileName = "BloxFruitsHub_Ultimate_v28.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -593,26 +593,31 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. BYPASS SERVER HOP (ANTi ERROR 773 & 769)
+-- 8. ULTIMATE RECONNECT HOP (ANTI ERROR 773 & 769)
 -- =====================================================================
 local function safeServerHop()
-    showCustomNotification("🚀 Melewati proteksi 773 & 769...", Color3.fromRGB(241, 196, 15))
+    showCustomNotification("🚀 Melakukan Refresh Server Bersih...", Color3.fromRGB(241, 196, 15))
     
     pcall(function()
-        local queueFunction = queue_on_teleport or queueonteleport
-        if queueFunction then
-            queueFunction([[
-                task.wait(1)
-                game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
-            ]])
+        -- Memakai metode kick/reconnect secara halus lewat game core 
+        -- agar terhindar dari pemblokiran Place ID instance restricted
+        game:GetService("CoreGui"):FindFirstChild("RobloxGui"):ClearAllChildren()
+        
+        -- Memaksa teleport ulang ke game utama lewat antrean bersih
+        if queue_on_teleport then
+            queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/...'))()")
         end
-
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+        
+        -- Memindahkan player ke server acak baru melalui fungsi internal game
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
     end)
 
+    -- Eksekusi cadangan jika metode utama tertahan proteksi
     task.spawn(function()
-        task.wait(2)
+        task.wait(1.5)
         pcall(function()
+            LocalPlayer:Kick("\n[Blox Fruits Hub] Me-refresh koneksi server otomatis...")
+            task.wait(0.5)
             TeleportService:Teleport(game.PlaceId, LocalPlayer)
         end)
     end)
@@ -668,7 +673,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Ultimate (Bypass 773)"
+TitleLabel.Text = "Blox Fruits Hub | Ultimate (Anti-773)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -845,13 +850,13 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Bypass Server Hop")
+createSectionHeader("6. Server Hop Aman (Anti 773)")
 
 local HopBtn = Instance.new("TextButton")
 HopBtn.Size = UDim2.new(0.9, 0, 0, 36)
 HopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
 HopBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
-HopBtn.Text = "🚀 Pindah Server (Bypass Error)"
+HopBtn.Text = "🚀 Pindah Server Bersih (Anti-Error)"
 HopBtn.TextSize, HopBtn.Font = 11, Enum.Font.GothamBold
 HopBtn.ZIndex = 102
 HopBtn.Parent = Container
