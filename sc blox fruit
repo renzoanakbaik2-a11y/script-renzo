@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (FIXED UI & FULL TOGGLES)
+-- BLOX FRUITS ULTIMATE SCRIPT (FINAL PERFECTED REVISION)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,15 +14,15 @@ local UserInputService = game:GetService("UserInputService")
 local Stats = game:GetService("Stats")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_CustomOrder_v39.json"
+local FileName = "BloxFruitsHub_CustomOrder_v40.json"
 
 local Settings = {
     FruitNotifier = true,
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 200,
-    FlyHeight = 15,
+    FlightSpeed = 180,
+    FlyHeight = 12,
     AutoStoreFruit = true,
     FruitESP = true,
     AutoCollectFruit = true,
@@ -148,7 +148,6 @@ PingLabel.TextSize, PingLabel.Font = 10, Enum.Font.GothamBold
 PingLabel.ZIndex = 81
 PingLabel.Parent = StatsHudFrame
 
--- Draggable HUD
 local dragging, dragInput, dragStart, startPos
 StatsHudFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -333,7 +332,7 @@ local function updateFruitESP()
 end
 
 -- =====================================================================
--- ✈️ FLY & AUTO COLLECT LOGIC
+-- ✈️ DIRECT SMOOTH FLY & AUTO COLLECT (TANPA LOMPAT-LOMPAT)
 -- =====================================================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, onComplete)
@@ -342,8 +341,8 @@ local function smoothFlyTo(targetCFrame, onComplete)
 
     if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
 
-    local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
-    local currentHeight = math.clamp(Settings.FlyHeight, 0, 50)
+    local currentSpeed = math.clamp(Settings.FlightSpeed, 50, 400)
+    local currentHeight = math.clamp(Settings.FlyHeight, 5, 40)
     local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
 
     local character = LocalPlayer.Character
@@ -382,11 +381,10 @@ local function smoothFlyTo(targetCFrame, onComplete)
         end
 
         local currentPos = currentRoot.Position
-        local targetPos = adjustedTarget
-        local direction = (targetPos - currentPos)
+        local direction = (adjustedTarget - currentPos)
         local distance = direction.Magnitude
 
-        if distance < 4 then
+        if distance < 3 then
             if noclipConnection then noclipConnection:Disconnect() end
             if bodyVelocity then bodyVelocity:Destroy() end
             if bodyGyro then bodyGyro:Destroy() end
@@ -396,8 +394,8 @@ local function smoothFlyTo(targetCFrame, onComplete)
             return
         end
 
-        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 15)
-        bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
+        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 20)
+        bodyGyro.CFrame = CFrame.new(currentPos, adjustedTarget)
     end)
 end
 
@@ -423,14 +421,14 @@ local function collectNearestFruit()
 
     if targetFruit then
         smoothFlyTo(targetFruit.CFrame, function()
-            task.wait(0.5)
+            task.wait(0.3)
             collectNearestFruit()
         end)
     end
 end
 
 -- =====================================================================
--- ⚔️ COMBAT & HOVER MOB
+-- ⚔️ COMBAT, HOVER MOB & AURA
 -- =====================================================================
 local activeHoverMobConnection = nil
 local function toggleHoverNearestMob(state)
@@ -589,7 +587,6 @@ local function autoStoreFruits()
     end)
 end
 
--- Background Monitoring Loop
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
@@ -661,10 +658,9 @@ local function applyFpsBoost(state)
 end
 
 -- =====================================================================
--- 🎨 MAIN GUI BUILDER (REVISED & FIXED DISPLAY)
+-- 🎨 MAIN GUI & MENU BUILDER (RAPI DAN LENGKAP)
 -- =====================================================================
 
--- Open/Close Floating Ninja Icon (Placed safely on the left edge)
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 42, 0, 42)
 OpenButton.Position = UDim2.new(0, 10, 0.4, 0)
@@ -683,10 +679,9 @@ OpenStroke.Color = Color3.fromRGB(255, 100, 100)
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
--- Main Hub Window
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 400, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -190)
+MainFrame.Size = UDim2.new(0, 410, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -205, 0.5, -200)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
@@ -702,7 +697,6 @@ MainStroke.Color = Color3.fromRGB(255, 100, 100)
 MainStroke.Thickness = 1.5
 MainStroke.Parent = MainFrame
 
--- Top Bar Title & Exit Button
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 35)
 TopBar.BackgroundColor3 = Color3.fromRGB(22, 25, 35)
@@ -742,10 +736,9 @@ CloseCorner.Parent = CloseButton
 CloseButton.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 OpenButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 
--- Scrolling Container for Features
 local TabContainer = Instance.new("ScrollingFrame")
-TabContainer.Size = UDim2.new(1, -20, 1, -45)
-TabContainer.Position = UDim2.new(0, 10, 0, 40)
+TabContainer.Size = UDim2.new(1, -16, 1, -45)
+TabContainer.Position = UDim2.new(0, 8, 0, 40)
 TabContainer.BackgroundTransparency = 1
 TabContainer.BorderSizePixel = 0
 TabContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -763,14 +756,13 @@ UIListLayout.Parent = TabContainer
 
 local UIPadding = Instance.new("UIPadding")
 UIPadding.PaddingTop = UDim.new(0, 4)
-UIPadding.PaddingBottom = UDim.new(0, 10)
+UIPadding.PaddingBottom = UDim.new(0, 12)
 UIPadding.Parent = TabContainer
 
--- Helper function to generate clean working Toggle Buttons
 local itemOrder = 0
+
 local function createToggle(titleText, defaultState, callback)
     itemOrder = itemOrder + 1
-
     local btnFrame = Instance.new("Frame")
     btnFrame.Size = UDim2.new(1, -6, 0, 38)
     btnFrame.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
@@ -784,7 +776,7 @@ local function createToggle(titleText, defaultState, callback)
     btnCorner.Parent = btnFrame
 
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(0.72, 0, 1, 0)
+    titleLabel.Size = UDim2.new(0.70, 0, 1, 0)
     titleLabel.Position = UDim2.new(0.03, 0, 0, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = titleText
@@ -797,7 +789,7 @@ local function createToggle(titleText, defaultState, callback)
 
     local toggleBtn = Instance.new("TextButton")
     toggleBtn.Size = UDim2.new(0, 50, 0, 22)
-    toggleBtn.Position = UDim2.new(0.84, 0, 0.2, 0)
+    toggleBtn.Position = UDim2.new(0.82, 0, 0.2, 0)
     toggleBtn.BackgroundColor3 = defaultState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
     toggleBtn.Text = defaultState and "ON" or "OFF"
     toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -820,45 +812,110 @@ local function createToggle(titleText, defaultState, callback)
     end)
 end
 
--- Populate Menu Items
-createToggle("🍓 Fruit Notifier & Sound", Settings.FruitNotifier, function(state)
-    Settings.FruitNotifier = state
-end)
+local function createSlider(titleText, minVal, maxVal, currentVal, callback)
+    itemOrder = itemOrder + 1
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Size = UDim2.new(1, -6, 0, 52)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
+    sliderFrame.BorderSizePixel = 0
+    sliderFrame.LayoutOrder = itemOrder
+    sliderFrame.ZIndex = 102
+    sliderFrame.Parent = TabContainer
 
-createToggle("👁️ Fruit ESP (Nama & Jarak)", Settings.FruitESP, function(state)
-    Settings.FruitESP = state
-end)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = sliderFrame
 
-createToggle("🚀 Auto Collect Fruit (Fly)", Settings.AutoCollectFruit, function(state)
-    Settings.AutoCollectFruit = state
-end)
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(0.70, 0, 0, 24)
+    titleLabel.Position = UDim2.new(0.03, 0, 0, 4)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = titleText
+    titleLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+    titleLabel.TextSize = 11
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.ZIndex = 103
+    titleLabel.Parent = sliderFrame
 
-createToggle("📦 Auto Store Fruit (Storage)", Settings.AutoStoreFruit, function(state)
-    Settings.AutoStoreFruit = state
-end)
+    local valLabel = Instance.new("TextLabel")
+    valLabel.Size = UDim2.new(0.25, 0, 0, 24)
+    valLabel.Position = UDim2.new(0.72, 0, 0, 4)
+    valLabel.BackgroundTransparency = 1
+    valLabel.Text = tostring(currentVal)
+    valLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    valLabel.TextSize = 11
+    valLabel.Font = Enum.Font.GothamBold
+    valLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valLabel.ZIndex = 103
+    valLabel.Parent = sliderFrame
 
-createToggle("📊 Live Map Stats HUD", Settings.FruitStatsHUD, function(state)
-    Settings.FruitStatsHUD = state
-    StatsHudFrame.Visible = state
-end)
+    local sliderBar = Instance.new("Frame")
+    sliderBar.Size = UDim2.new(0.94, 0, 0, 6)
+    sliderBar.Position = UDim2.new(0.03, 0, 0, 34)
+    sliderBar.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+    sliderBar.BorderSizePixel = 0
+    sliderBar.ZIndex = 103
+    sliderBar.Parent = sliderFrame
 
-createToggle("🏴‍☠️ Auto Join Team ("..Settings.SelectedTeam..")", Settings.AutoJoinEnabled, function(state)
-    Settings.AutoJoinEnabled = state
-end)
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(0, 3)
+    barCorner.Parent = sliderBar
 
-createToggle("⚡ FPS Boost (Anti-Lag)", Settings.FpsBoost, function(state)
-    Settings.FpsBoost = state
-    applyFpsBoost(state)
-end)
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Size = UDim2.new(math.clamp((currentVal - minVal) / (maxVal - minVal), 0, 1), 0, 1, 0)
+    sliderFill.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+    sliderFill.BorderSizePixel = 0
+    sliderFill.ZIndex = 104
+    sliderFill.Parent = sliderBar
 
-createToggle("🛸 Hover Nearest Mob", Settings.HoverNearestMob, function(state)
-    Settings.HoverNearestMob = state
-    toggleHoverNearestMob(state)
-end)
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 3)
+    fillCorner.Parent = sliderFill
 
-createToggle("⚔️ Auto Aura Attack (Killaura)", Settings.AutoAuraAttack, function(state)
-    Settings.AutoAuraAttack = state
-    toggleAutoAuraAttack(state)
-end)
+    local draggingSlider = false
+    local function updateValue(input)
+        local pos = math.clamp((input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
+        local val = math.floor(minVal + ((maxVal - minVal) * pos))
+        sliderFill.Size = UDim2.new(pos, 0, 1, 0)
+        valLabel.Text = tostring(val)
+        callback(val)
+        saveSettings()
+    end
+
+    sliderBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = true
+            updateValue(input)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateValue(input)
+        end
+    end)
+end
+
+-- Masukkan Seluruh Daftar Menu Utama & Pengaturan
+createToggle("🍓 Fruit Notifier & Sound", Settings.FruitNotifier, function(state) Settings.FruitNotifier = state end)
+createToggle("👁️ Fruit ESP (Nama & Jarak)", Settings.FruitESP, function(state) Settings.FruitESP = state end)
+createToggle("🚀 Auto Collect Fruit (Fly Lurus)", Settings.AutoCollectFruit, function(state) Settings.AutoCollectFruit = state end)
+createSlider("✈️ Kecepatan Terbang (Flight Speed)", 50, 400, Settings.FlightSpeed, function(val) Settings.FlightSpeed = val end)
+createSlider("🛫 Ketinggian Terbang (Fly Height)", 5, 40, Settings.FlyHeight, function(val) Settings.FlyHeight = val end)
+createToggle("📦 Auto Store Fruit (Storage)", Settings.AutoStoreFruit, function(state) Settings.AutoStoreFruit = state end)
+createToggle("📊 Live Map Stats HUD", Settings.FruitStatsHUD, function(state) Settings.FruitStatsHUD = state; StatsHudFrame.Visible = state end)
+createToggle("🏴‍☠️ Auto Join Team ("..Settings.SelectedTeam..")", Settings.AutoJoinEnabled, function(state) Settings.AutoJoinEnabled = state end)
+createToggle("⚡ FPS Boost (Anti-Lag)", Settings.FpsBoost, function(state) Settings.FpsBoost = state; applyFpsBoost(state) end)
+createToggle("🛸 Hover Nearest Mob", Settings.HoverNearestMob, function(state) Settings.HoverNearestMob = state; toggleHoverNearestMob(state) end)
+createSlider("📏 Ketinggian Hover Mob", 3, 15, Settings.MobHeightOffset, function(val) Settings.MobHeightOffset = val end)
+createToggle("⚔️ Auto Aura Attack (Killaura)", Settings.AutoAuraAttack, function(state) Settings.AutoAuraAttack = state; toggleAutoAuraAttack(state) end)
+createSlider("🎯 Jangkauan Aura (Range)", 20, 120, Settings.AuraRange, function(val) Settings.AuraRange = val end)
 
 showCustomNotification("🔥 Hub Script Berhasil Dimuat!", Color3.fromRGB(46, 204, 113))
