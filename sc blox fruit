@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - NO SERVER HOP)
+-- BLOX FRUITS ULTIMATE SCRIPT (WITH SERVER HOP TEST)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -11,18 +11,19 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v22.json"
+local FileName = "BloxFruitsHub_Clean_v23.json"
 
 local Settings = {
     FruitNotifier = true,
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 200,  -- Default pertama kali diatur ke 200
-    FlyHeight = 5,      
-    AutoStoreFruit = true,    
+    FlightSpeed = 200,
+    FlyHeight = 5,
+    AutoStoreFruit = true,
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
@@ -592,7 +593,40 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
+-- 8. FITUR SERVER HOP (UJI COBA ANTI-PROTEKSI)
+-- =====================================================================
+local function tryServerHop()
+    showCustomNotification("🔄 Mencari server lain...", Color3.fromRGB(52, 152, 219))
+    task.wait(1)
+    pcall(function()
+        local servers = {}
+        local req = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
+        local body = HttpService:JSONDecode(req)
+        
+        if body and body.data then
+            for _, v in pairs(body.data) do
+                if type(v) == "table" and v.id ~= game.JobId and v.playing < v.maxPlayers then
+                    table.insert(servers, v.id)
+                end
+            end
+        end
+        
+        if #servers > 0 then
+            local randomServer = servers[math.random(1, #servers)]
+            local success = pcall(function()
+                TeleportService:TeleportAsync(game.PlaceId, {randomServer}, LocalPlayer)
+            end)
+            if not success then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer, LocalPlayer)
+            end
+        else
+            showCustomNotification("❌ Gagal menemukan server kosong!", Color3.fromRGB(231, 76, 60))
+        end
+    end)
+end
+
+-- =====================================================================
+-- 9. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -641,7 +675,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v22 (No Hop)"
+TitleLabel.Text = "Blox Fruits Hub | Clean v23 (With Hop)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -669,7 +703,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 650)
+Container.CanvasSize = UDim2.new(0, 0, 0, 750)
 Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -818,9 +852,28 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Performa")
+createSectionHeader("6. Server Hop (Uji Coba Tembus Proteksi)")
+
+local HopBtn = Instance.new("TextButton")
+HopBtn.Size = UDim2.new(0.9, 0, 0, 32)
+HopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
+HopBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
+HopBtn.Text = "🚀 Pindah Server Sekarang (Test Hop)"
+HopBtn.TextSize, HopBtn.Font = 11, Enum.Font.GothamBold
+HopBtn.ZIndex = 102
+HopBtn.Parent = Container
+
+local hopCorner = Instance.new("UICorner")
+hopCorner.CornerRadius = UDim.new(0, 6)
+hopCorner.Parent = HopBtn
+
+HopBtn.MouseButton1Click:Connect(function()
+    tryServerHop()
+end)
+
+createSectionHeader("7. Performa")
 createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Hub Clean (No Server Hop) Berhasil Dimuat!")
+print("Blox Fruits Hub Clean (With Server Hop Test) Berhasil Dimuat!")
