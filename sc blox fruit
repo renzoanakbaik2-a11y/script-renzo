@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CUSTOMIZED ORDER & WEAPON SELECTOR)
+-- BLOX FRUITS ULTIMATE SCRIPT (FIXED ATTACK SPEED & WEAPON)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_CustomOrder_v27.json"
+local FileName = "BloxFruitsHub_CustomOrder_v28.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -506,7 +506,7 @@ local function toggleHoverNearestMob(state)
 end
 
 -- =====================================================================
--- 6. AUTO AURA ATTACK (DENGAN PEMILIHAN WEAPON/EQUIPMENT)
+-- 6. AUTO AURA ATTACK (DENGAN PEMILIHAN WEAPON/EQUIPMENT YANG AMAN)
 -- =====================================================================
 local function equipSelectedWeapon()
     pcall(function()
@@ -515,45 +515,69 @@ local function equipSelectedWeapon()
         if not character or not backpack then return end
 
         local targetType = Settings.SelectedWeapon or "Melee"
-        local equippedTool = nil
+        
+        local alreadyEquipped = false
         for _, child in ipairs(character:GetChildren()) do
             if child:IsA("Tool") then
                 local name = child.Name:lower()
-                if targetType == "Melee" and (child:GetAttribute("ToolType") == "Melee" or not child:FindFirstChild("Handle") or name:find("combat") or name:find("step") or name:find("claw") or name:find("fist") or name:find("water") or name:find("dragon") or name:find("superhuman") or name:find("godhuman") or name:find("electric")) then
-                    equippedTool = child
+                if targetType == "Melee" and (name:find("combat") or name:find("step") or name:find("claw") or name:find("fist") or name:find("water") or name:find("dragon") or name:find("superhuman") or name:find("godhuman") or name:find("electric") or name:find("sanguine")) then
+                    alreadyEquipped = true
                     break
-                elseif targetType == "Fruit" and (name:find("fruit") or name:find("rocket") or name:find("dough") or name:find("kitsune") or name:find("buddha")) then
-                    equippedTool = child
+                elseif targetType == "Fruit" and (name:find("fruit") or name:find("rocket") or name:find("dough") or name:find("kitsune") or name:find("buddha") or name:find("leopard") or name:find("dragon")) then
+                    alreadyEquipped = true
                     break
-                elseif targetType == "Sword" and (name:find("sword") or name:find("katana") or name:find("blade") or name:find("saber") or name:find("tushita") or name:find("dark") or name:find("culling") or name:find("buddy") or name:find("hallow")) then
-                    equippedTool = child
+                elseif targetType == "Sword" and (name:find("sword") or name:find("katana") or name:find("blade") or name:find("saber") or name:find("tushita") or name:find("culling") or name:find("buddy") or name:find("hallow") or name:find("dark")) then
+                    alreadyEquipped = true
                     break
-                elseif targetType == "Gun" and (name:find("gun") or name:find("rifle") or name:find("musket") or name:find("kabucha") or name:find("soul") or name:find("bazooka")) then
-                    equippedTool = child
+                elseif targetType == "Gun" and (name:find("gun") or name:find("rifle") or name:find("musket") or name:find("kabucha") or name:find("soul") or name:find("bazooka") or name:find("flintlock")) then
+                    alreadyEquipped = true
                     break
                 end
             end
         end
 
-        if not equippedTool then
+        if alreadyEquipped then return end
+
+        local targetTool = nil
+        for _, child in ipairs(backpack:GetChildren()) do
+            if child:IsA("Tool") then
+                local name = child.Name:lower()
+                if targetType == "Melee" and (name:find("combat") or name:find("step") or name:find("claw") or name:find("fist") or name:find("water") or name:find("dragon") or name:find("superhuman") or name:find("godhuman") or name:find("electric") or name:find("sanguine")) then
+                    targetTool = child
+                    break
+                elseif targetType == "Fruit" and (name:find("fruit") or name:find("rocket") or name:find("dough") or name:find("kitsune") or name:find("buddha") or name:find("leopard") or name:find("dragon")) then
+                    targetTool = child
+                    break
+                elseif targetType == "Sword" and (name:find("sword") or name:find("katana") or name:find("blade") or name:find("saber") or name:find("tushita") or name:find("culling") or name:find("buddy") or name:find("hallow") or name:find("dark")) then
+                    targetTool = child
+                    break
+                elseif targetType == "Gun" and (name:find("gun") or name:find("rifle") or name:find("musket") or name:find("kabucha") or name:find("soul") or name:find("bazooka") or name:find("flintlock")) then
+                    targetTool = child
+                    break
+                end
+            end
+        end
+
+        if not targetTool then
             for _, child in ipairs(backpack:GetChildren()) do
                 if child:IsA("Tool") then
                     local name = child.Name:lower()
-                    if targetType == "Melee" then
-                        character.Humanoid:EquipTool(child)
+                    if targetType == "Melee" and not name:find("fruit") and not name:find("gun") and not name:find("sword") then
+                        targetTool = child
                         break
-                    elseif targetType == "Fruit" and (name:find("fruit") or name:find("rocket") or name:find("dough") or name:find("kitsune") or name:find("buddha")) then
-                        character.Humanoid:EquipTool(child)
+                    elseif targetType == "Sword" and name:find("sword") then
+                        targetTool = child
                         break
-                    elseif targetType == "Sword" and (name:find("sword") or name:find("katana") or name:find("blade") or name:find("saber") or name:find("tushita")) then
-                        character.Humanoid:EquipTool(child)
-                        break
-                    elseif targetType == "Gun" and (name:find("gun") or name:find("rifle") or name:find("musket") or name:find("kabucha")) then
-                        character.Humanoid:EquipTool(child)
+                    elseif targetType == "Gun" and name:find("gun") then
+                        targetTool = child
                         break
                     end
                 end
             end
+        end
+
+        if targetTool and character:FindFirstChildOfClass("Humanoid") then
+            character.Humanoid:EquipTool(targetTool)
         end
     end)
 end
@@ -678,7 +702,7 @@ task.spawn(function()
                     count = count + 1
                 end
             end
-            FruitCountLabel.Text = "Buah di Map: " .. count
+            FruitCountLabel.Text = "Buah di Map: " + count
 
             local uptimeSeconds = math.floor(Workspace.DistributedGameTime)
             local hours = math.floor(uptimeSeconds / 3600)
@@ -770,7 +794,7 @@ if Settings.AutoAuraAttack then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (URUTAN NOMOR, UKURAN LEBAR & PINGGIRAN PAS)
+-- 8. MENU UTAMA GUI (FIXED DROP DOWN INTERACTION & SCROLLABLE ATTACK SPEED)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 45, 0, 45)
@@ -790,7 +814,6 @@ OpenStroke.Color = Color3.fromRGB(255, 100, 100)
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
--- Menu utama diperbesar lebarnya menjadi 440px agar tombol & dropdown pas di sisi kiri & kanan
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 440, 0, 420)
 MainFrame.Position = UDim2.new(0.5, -220, 0.5, -210)
@@ -848,7 +871,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, -8, 1, -38)
 Container.Position = UDim2.new(0, 4, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 1100)
+Container.CanvasSize = UDim2.new(0, 0, 0, 1200)
 Container.ScrollBarThickness = 5
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -924,7 +947,9 @@ end
 local function createDropdown(title, settingKey, options, unit, onSelectCallback)
     local collapsedHeight = 32
     local itemHeight = 26
-    local totalExpandedHeight = collapsedHeight + (#options * itemHeight) + 6
+    local maxVisibleItems = 4
+    local calculatedListHeight = math.min(#options, maxVisibleItems) * itemHeight
+    local totalExpandedHeight = collapsedHeight + calculatedListHeight + 8
 
     local dropFrame = Instance.new("Frame")
     dropFrame.Size = UDim2.new(1, -10, 0, collapsedHeight)
@@ -970,11 +995,11 @@ local function createDropdown(title, settingKey, options, unit, onSelectCallback
     arrowLabel.Parent = dropFrame
 
     local optionsContainer = Instance.new("ScrollingFrame")
-    optionsContainer.Size = UDim2.new(1, -10, 0, #options * itemHeight)
-    optionsContainer.Position = UDim2.new(0, 5, 0, collapsedHeight + 2)
+    optionsContainer.Size = UDim2.new(1, -10, 0, calculatedListHeight)
+    optionsContainer.Position = UDim2.new(0, 5, 0, collapsedHeight + 4)
     optionsContainer.BackgroundTransparency = 1
     optionsContainer.CanvasSize = UDim2.new(0, 0, 0, #options * itemHeight)
-    optionsContainer.ScrollBarThickness = 3
+    optionsContainer.ScrollBarThickness = 4
     optionsContainer.ZIndex = 152
     optionsContainer.Parent = dropFrame
 
@@ -1002,7 +1027,7 @@ local function createDropdown(title, settingKey, options, unit, onSelectCallback
 
     for _, opt in ipairs(options) do
         local optBtn = Instance.new("TextButton")
-        optBtn.Size = UDim2.new(1, 0, 0, itemHeight - 2)
+        optBtn.Size = UDim2.new(1, -4, 0, itemHeight - 2)
         optBtn.BackgroundColor3 = (opt == Settings[settingKey]) and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(30, 35, 48)
         optBtn.Font = Enum.Font.GothamBold
         optBtn.TextSize = 10
@@ -1045,7 +1070,7 @@ local function createDropdown(title, settingKey, options, unit, onSelectCallback
 end
 
 -- =====================================================================
--- PENYUSUNAN MENU SESUAI PERMINTAAN (URUTAN 1 SAMPAI 4, NO. 1 DI ATAS)
+-- PENYUSUNAN MENU UTAMA
 -- =====================================================================
 
 createCategoryHeader("1. NOTIFIKASI & INFO")
@@ -1061,7 +1086,7 @@ createToggle("Auto Store Fruit", "AutoStoreFruit", nil)
 createCategoryHeader("3. FITUR COMBAT & MOB")
 createToggle("Auto Aura Attack (Player/Mob)", "AutoAuraAttack", function(s) toggleAutoAuraAttack(s) end)
 createDropdown("Pilih Senjata (Weapon)", "SelectedWeapon", {"Melee", "Fruit", "Sword", "Gun"}, "", nil)
-createDropdown("Kecepatan Pukul", "AuraAttackSpeed", {100, 200, 300, 400, 500}, "", nil)
+createDropdown("Kecepatan Pukul", "AuraAttackSpeed", {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}, "", nil)
 
 createToggle("Hover Nearest Mob", "HoverNearestMob", function(s) toggleHoverNearestMob(s) end)
 createDropdown("Tinggi Mob Offset", "MobHeightOffset", {5, 10, 15, 20}, "", nil)
@@ -1074,7 +1099,7 @@ createDropdown("Pilih Tim (Team)", "SelectedTeam", {"Pirates", "Marines"}, "", f
     joinTeam()
 end)
 createDropdown("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, "", nil)
-createDropdown("Tinggi Terbang", "FlyHeight", {10, 20, 30, 40}, "", nil)
+createDropdown("Tinggi Terbang", "FlyHeight", {5, 10, 15, 20}, "", nil)
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub - Custom Ordered Menu Berhasil Dimuat!")
+print("Blox Fruits Hub - Fixed Attack Speed Menu Berhasil Dimuat!")
