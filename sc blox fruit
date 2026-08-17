@@ -1,5 +1,6 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (FINAL PERFECTED REVISION)
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - NO SERVER HOP)
+-- UPDATED WITH: Fly to NPC, Basic Attack Speed & Modifiers
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -11,31 +12,30 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local Stats = game:GetService("Stats")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_CustomOrder_v40.json"
+local FileName = "BloxFruitsHub_Clean_v23.json"
 
 local Settings = {
     FruitNotifier = true,
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 180,
-    FlyHeight = 12,
-    AutoStoreFruit = true,
+    FlightSpeed = 200,  
+    FlyHeight = 5,      
+    AutoStoreFruit = true,    
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
-    HUDPosition = {X = 0.02, Y = 0.12},
-    HoverNearestMob = false,
-    MobHeightOffset = 6,
-    AutoAuraAttack = false,
-    AuraRange = 65,
-    AuraAttackSpeed = 40,
-    SelectedWeapon = "Melee"
+    HUDPosition = {X = 0.05, Y = 0.15},
+    -- New Settings
+    SelectedNPC = "Bandit",
+    FlyToNPCEnabled = false,
+    FastAttackEnabled = false,
+    AttackSpeedMultiplier = 2
 }
 
+-- Sistem Save & Load Settings (JSON)
 local function loadSettings()
     if readfile and pcall(readfile, FileName) then
         local success, data = pcall(function()
@@ -52,14 +52,18 @@ loadSettings()
 
 local function saveSettings()
     if writefile then
-        pcall(function()
-            writefile(FileName, HttpService:JSONEncode(Settings))
+        local success, encoded = pcall(function()
+            return HttpService:JSONEncode(Settings)
         end)
+        if success then
+            writefile(FileName, encoded)
+        end
     end
 end
 
+-- Proteksi GUI untuk Executor
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubCustom"
+ScreenGui.Name = "BloxFruitsHubClean"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -88,10 +92,10 @@ local function getCharacterRootPart()
 end
 
 -- =====================================================================
--- 📊 LIVE MAP STATS HUD
+-- 1. WIDGET STATISTIK BUAH & SERVER AKTIF
 -- =====================================================================
 local StatsHudFrame = Instance.new("Frame")
-StatsHudFrame.Size = UDim2.new(0, 190, 0, 98)
+StatsHudFrame.Size = UDim2.new(0, 190, 0, 75)
 StatsHudFrame.Position = UDim2.new(Settings.HUDPosition.X, 0, Settings.HUDPosition.Y, 0)
 StatsHudFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 StatsHudFrame.BackgroundTransparency = 0.15
@@ -106,7 +110,7 @@ HudCorner.Parent = StatsHudFrame
 
 local HudStroke = Instance.new("UIStroke")
 HudStroke.Color = Color3.fromRGB(255, 100, 100)
-HudStroke.Thickness = 1.5
+HudStroke.Thickness = 2
 HudStroke.Parent = StatsHudFrame
 
 local HudTitle = Instance.new("TextLabel")
@@ -138,16 +142,7 @@ ServerTimeLabel.TextSize, ServerTimeLabel.Font = 10, Enum.Font.GothamBold
 ServerTimeLabel.ZIndex = 81
 ServerTimeLabel.Parent = StatsHudFrame
 
-local PingLabel = Instance.new("TextLabel")
-PingLabel.Size = UDim2.new(1, 0, 0, 22)
-PingLabel.Position = UDim2.new(0, 0, 0, 70)
-PingLabel.BackgroundTransparency = 1
-PingLabel.Text = "Ping: 0 ms"
-PingLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
-PingLabel.TextSize, PingLabel.Font = 10, Enum.Font.GothamBold
-PingLabel.ZIndex = 81
-PingLabel.Parent = StatsHudFrame
-
+-- Dragging Widget
 local dragging, dragInput, dragStart, startPos
 StatsHudFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -155,7 +150,9 @@ StatsHudFrame.InputBegan:Connect(function(input)
         dragStart = input.Position
         startPos = StatsHudFrame.Position
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
         end)
     end
 end)
@@ -171,6 +168,7 @@ UserInputService.InputChanged:Connect(function(input)
         local delta = input.Position - dragStart
         local newX = startPos.X.Scale + (delta.X / Workspace.CurrentCamera.ViewportSize.X)
         local newY = startPos.Y.Scale + (delta.Y / Workspace.CurrentCamera.ViewportSize.Y)
+        
         StatsHudFrame.Position = UDim2.new(newX, 0, newY, 0)
         Settings.HUDPosition.X = newX
         Settings.HUDPosition.Y = newY
@@ -179,30 +177,31 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- =====================================================================
--- 🔔 NOTIFICATION SYSTEM
+-- 2. SISTEM NOTIFIKASI
 -- =====================================================================
 local NotifFrame = Instance.new("Frame")
-NotifFrame.Size = UDim2.new(0, 360, 0, 45)
+NotifFrame.Size = UDim2.new(0, 380, 0, 50)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0)
 NotifFrame.Position = UDim2.new(0.5, 0, 0, -80)
 NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+NotifFrame.BackgroundTransparency = 0.1
 NotifFrame.BorderSizePixel = 0
-NotifFrame.ZIndex = 200
+NotifFrame.ZIndex = 50
 NotifFrame.Parent = ScreenGui
 
 local NotifCorner = Instance.new("UICorner")
 NotifCorner.CornerRadius = UDim.new(0, 8)
 NotifCorner.Parent = NotifFrame
 
-local UIStrokeNotif = Instance.new("UIStroke")
-UIStrokeNotif.Thickness = 2
-UIStrokeNotif.Parent = NotifFrame
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 2
+UIStroke.Parent = NotifFrame
 
 task.spawn(function()
     while true do
         for i = 0, 1, 0.05 do
-            UIStrokeNotif.Color = Color3.fromHSV(i, 1, 1)
-            task.wait(0.1)
+            UIStroke.Color = Color3.fromHSV(i, 1, 1)
+            task.wait(1)
         end
     end
 end)
@@ -213,7 +212,7 @@ NotifText.BackgroundTransparency = 1
 NotifText.Text = ""
 NotifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 NotifText.TextSize, NotifText.Font = 12, Enum.Font.GothamBold
-NotifText.ZIndex = 201
+NotifText.ZIndex = 51
 NotifText.Parent = NotifFrame
 
 local notifQueue = {}
@@ -222,23 +221,27 @@ local isProcessingNotif = false
 local function processNotificationQueue()
     if isProcessingNotif or #notifQueue == 0 then return end
     isProcessingNotif = true
+
     local data = table.remove(notifQueue, 1)
     NotifText.Text = data.text
     NotifText.TextColor3 = data.color or Color3.fromRGB(255, 255, 255)
 
-    TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+    TweenService:Create(NotifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
         Position = UDim2.new(0.5, 0, 0, 15)
     }):Play()
 
-    task.wait(3.5)
+    task.wait(4)
 
-    TweenService:Create(NotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+    TweenService:Create(NotifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
         Position = UDim2.new(0.5, 0, 0, -80)
     }):Play()
 
-    task.wait(0.5)
+    task.wait(0.8)
     isProcessingNotif = false
-    if #notifQueue > 0 then processNotificationQueue() end
+
+    if #notifQueue > 0 then
+        processNotificationQueue()
+    end
 end
 
 local function showCustomNotification(messageText, textColor)
@@ -258,20 +261,29 @@ local function playFruitSound()
 end
 
 -- =====================================================================
--- 🍏 FRUIT & ESP LOGIC
+-- 3. DETEKSI NAMA PULAU & ESP BUAH
 -- =====================================================================
 local function getIslandName(position)
     local x, z = position.X, position.Z
-    if math.abs(x) < 2000 and math.abs(z) < 2000 then return "Starter Area"
-    elseif x > 2000 then return "Marine Fortress"
-    elseif x < -2000 then return "Skypiea"
-    elseif z > 3000 then return "Ice Island"
-    elseif z < -3000 then return "Magma Island"
-    else return "Open Sea" end
+    if math.abs(x) < 2000 and math.abs(z) < 2000 then
+        return "Starter Area"
+    elseif x > 2000 then
+        return "Marine Fortress"
+    elseif x < -2000 then
+        return "Skypiea"
+    elseif z > 3000 then
+        return "Ice Island"
+    elseif z < -3000 then
+        return "Magma Island"
+    else
+        return "Open Sea"
+    end
 end
 
 local function isRealSpawnedFruit(obj)
-    if not obj or not obj.Parent or obj.Parent ~= Workspace then return false end
+    if not obj or not obj.Parent then return false end
+    if obj.Parent ~= Workspace then return false end
+
     local officialFruits = {
         "rocket", "spin", "spring", "chop", "spike", "flame", "falcon", "ice", 
         "sand", "dark", "diamond", "light", "rubber", "barrier", "ghost", 
@@ -279,6 +291,7 @@ local function isRealSpawnedFruit(obj)
         "portal", "pain", "blizzard", "gravity", "mammoth", "trex", "dough", 
         "shadow", "venom", "control", "spirit", "dragon", "leopard", "kitsune"
     }
+
     local objNameLower = obj.Name:lower()
     for _, fruitName in ipairs(officialFruits) do
         if objNameLower:find(fruitName) then
@@ -294,11 +307,14 @@ local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
 ESPFolder.Parent = CoreGui
 
-local function clearESP() ESPFolder:ClearAllChildren() end
+local function clearESP()
+    ESPFolder:ClearAllChildren()
+end
 
 local function updateFruitESP()
     clearESP()
     if not Settings.FruitESP then return end
+
     pcall(function()
         local rootPart = getCharacterRootPart()
         for _, obj in ipairs(Workspace:GetChildren()) do
@@ -332,28 +348,34 @@ local function updateFruitESP()
 end
 
 -- =====================================================================
--- ✈️ DIRECT SMOOTH FLY & AUTO COLLECT (TANPA LOMPAT-LOMPAT)
+-- 4. SISTEM TERBANG & AUTO COLLECT + FLY TO NPC
 -- =====================================================================
 local activeFlyConnection = nil
 local function smoothFlyTo(targetCFrame, onComplete)
     local rootPart = getCharacterRootPart()
     if not rootPart then return end
 
-    if activeFlyConnection then activeFlyConnection:Disconnect() activeFlyConnection = nil end
+    if activeFlyConnection then
+        activeFlyConnection:Disconnect()
+        activeFlyConnection = nil
+    end
 
-    local currentSpeed = math.clamp(Settings.FlightSpeed, 50, 400)
-    local currentHeight = math.clamp(Settings.FlyHeight, 5, 40)
+    local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
+    local currentHeight = math.clamp(Settings.FlyHeight, 0, 25)
     local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
 
     local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     if humanoid then humanoid.PlatformStand = true end
 
-    local noclipConnection = RunService.Stepped:Connect(function()
+    local noclipConnection
+    noclipConnection = RunService.Stepped:Connect(function()
         pcall(function()
             if character then
                 for _, part in ipairs(character:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
                 end
             end
         end)
@@ -381,10 +403,11 @@ local function smoothFlyTo(targetCFrame, onComplete)
         end
 
         local currentPos = currentRoot.Position
-        local direction = (adjustedTarget - currentPos)
+        local targetPos = adjustedTarget
+        local direction = (targetPos - currentPos)
         local distance = direction.Magnitude
 
-        if distance < 3 then
+        if distance < 4 then
             if noclipConnection then noclipConnection:Disconnect() end
             if bodyVelocity then bodyVelocity:Destroy() end
             if bodyGyro then bodyGyro:Destroy() end
@@ -394,8 +417,8 @@ local function smoothFlyTo(targetCFrame, onComplete)
             return
         end
 
-        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 20)
-        bodyGyro.CFrame = CFrame.new(currentPos, adjustedTarget)
+        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 15)
+        bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
     end)
 end
 
@@ -421,172 +444,110 @@ local function collectNearestFruit()
 
     if targetFruit then
         smoothFlyTo(targetFruit.CFrame, function()
-            task.wait(0.3)
+            task.wait(0.5)
             collectNearestFruit()
         end)
     end
 end
 
--- =====================================================================
--- ⚔️ COMBAT, HOVER MOB & AURA
--- =====================================================================
-local activeHoverMobConnection = nil
-local function toggleHoverNearestMob(state)
-    if not state then 
-        if activeHoverMobConnection then activeHoverMobConnection:Disconnect() activeHoverMobConnection = nil end
-        return 
-    end
-    if activeHoverMobConnection then activeHoverMobConnection:Disconnect() end
-    
-    activeHoverMobConnection = RunService.Heartbeat:Connect(function()
-        if not Settings.HoverNearestMob then return end
-        local root = getCharacterRootPart()
-        if not root then return end
-        
-        local closestMob = nil
-        local minDist = math.huge
-        
-        local function scanMobModel(model)
-            if model:IsA("Model") and model ~= LocalPlayer.Character then
-                local humanoid = model:FindFirstChildOfClass("Humanoid")
-                local hrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
-                if humanoid and hrp and humanoid.Health > 0 then
-                    if not Players:GetPlayerFromCharacter(model) then
-                        local d = (root.Position - hrp.Position).Magnitude
-                        if d < minDist then minDist = d closestMob = hrp end
-                    end
+-- Fly to NPC System
+local function getTargetNPC()
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    if enemiesFolder then
+        for _, enemy in ipairs(enemiesFolder:GetChildren()) do
+            if enemy.Name:lower() == Settings.SelectedNPC:lower() then
+                local hrp = enemy:FindFirstChild("HumanoidRootPart")
+                local hum = enemy:FindFirstChildOfClass("Humanoid")
+                if hrp and hum and hum.Health > 0 then
+                    return hrp
                 end
             end
         end
-
-        local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
-        for _, folderName in ipairs(mobFolderNames) do
-            local folder = Workspace:FindFirstChild(folderName)
-            if folder then
-                for _, mob in pairs(folder:GetChildren()) do scanMobModel(mob) end
+    end
+    -- Fallback search workspace
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj:IsA("Model") and obj.Name:lower() == Settings.SelectedNPC:lower() then
+            local hrp = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso")
+            local hum = obj:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.Health > 0 then
+                return hrp
             end
         end
-        if closestMob then
-            local safeOffset = math.clamp(Settings.MobHeightOffset, 3, 10)
-            root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, safeOffset, 0))
-        end
-    end)
+    end
+    return nil
 end
 
-local function equipSelectedWeapon()
+local function flyToNPC()
+    if not Settings.FlyToNPCEnabled then return end
     pcall(function()
-        local character = LocalPlayer.Character
-        local backpack = LocalPlayer.Backpack
-        if not character or not backpack then return end
-
-        local targetType = Settings.SelectedWeapon or "Melee"
-        local function matchesCategory(itemName, category)
-            itemName = itemName:lower()
-            if category == "Melee" then return itemName:find("combat") or itemName:find("step") or itemName:find("claw") or itemName:find("fist") or itemName:find("water") or itemName:find("dragon") or itemName:find("superhuman") or itemName:find("godhuman") or itemName:find("electric") or itemName:find("sanguine") or itemName:find("sharkman") or itemName:find("death")
-            elseif category == "Fruit" then return itemName:find("fruit") or itemName:find("rocket") or itemName:find("spin") or itemName:find("spring") or itemName:find("chop") or itemName:find("spike") or itemName:find("flame") or itemName:find("falcon") or itemName:find("ice") or itemName:find("sand") or itemName:find("dark") or itemName:find("diamond") or itemName:find("light") or itemName:find("rubber") or itemName:find("barrier") or itemName:find("ghost") or itemName:find("magma") or itemName:find("quake") or itemName:find("buddha") or itemName:find("love") or itemName:find("spider") or itemName:find("phoenix") or itemName:find("portal") or itemName:find("pain") or itemName:find("blizzard") or itemName:find("gravity") or itemName:find("mammoth") or itemName:find("trex") or itemName:find("dough") or itemName:find("shadow") or itemName:find("venom") or itemName:find("control") or itemName:find("spirit") or itemName:find("dragon") or itemName:find("leopard") or itemName:find("kitsune")
-            elseif category == "Sword" then return itemName:find("sword") or itemName:find("katana") or itemName:find("blade") or itemName:find("saber") or itemName:find("tushita") or itemName:find("culling") or itemName:find("buddy") or itemName:find("hallow") or itemName:find("dark") or itemName:find("pole") or itemName:find("rengoku") or itemName:find("wando") or itemName:find("shisui") or itemName:find("bisento") or itemName:find("midnight") or itemName:find("cavendish") or itemName:find("foxlamp")
-            elseif category == "Gun" then return itemName:find("gun") or itemName:find("rifle") or itemName:find("musket") or itemName:find("kabucha") or itemName:find("soul") or itemName:find("bazooka") or itemName:find("flintlock") or itemName:find("cannon") or itemName:find("acidum") or itemName:find("serpent") end
-            return false
-        end
-
-        for _, child in ipairs(character:GetChildren()) do
-            if child:IsA("Tool") and matchesCategory(child.Name, targetType) then return end
-        end
-
-        local targetTool = nil
-        for _, child in ipairs(backpack:GetChildren()) do
-            if child:IsA("Tool") and matchesCategory(child.Name, targetType) then targetTool = child break end
-        end
-
-        if targetTool and targetTool.Parent == backpack then
-            character.Humanoid:EquipTool(targetTool)
+        local npcRoot = getTargetNPC()
+        if npcRoot and not activeFlyConnection then
+            smoothFlyTo(npcRoot.CFrame + CFrame.new(0, 0, 3).Position, function()
+                -- Keep locked or loop logic if enabled
+            end)
         end
     end)
 end
 
-local activeAuraConnection = nil
-local function toggleAutoAuraAttack(state)
-    if not state then
-        if activeAuraConnection then activeAuraConnection:Disconnect() activeAuraConnection = nil end
-        return
+-- =====================================================================
+-- 4.5. FAST BASIC ATTACK SYSTEM
+-- =====================================================================
+task.spawn(function()
+    while task.wait(0.1) do
+        if Settings.FastAttackEnabled then
+            pcall(function()
+                local combatFramework = debug and debug.getupvalues and rawget(require(LocalPlayer.PlayerScripts.Clientérence or ReplicatedStorage:WaitForChild("CombatFramework", 2)), "Client")
+                -- Alternative remote/click simulation for basic attacks
+                local vim = game:GetService("VirtualInputManager")
+                vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+            end)
+        end
     end
+end)
 
-    if activeAuraConnection then activeAuraConnection:Disconnect() end
-    local lastAttackTick = 0
-
-    activeAuraConnection = RunService.Heartbeat:Connect(function()
-        if not Settings.AutoAuraAttack then return end
-        local root = getCharacterRootPart()
-        if not root then return end
-
-        local interval = (tonumber(Settings.AuraAttackSpeed) or 40) / 1000 
-        if tick() - lastAttackTick < interval then return end
-        lastAttackTick = tick()
-
-        pcall(function()
-            equipSelectedWeapon()
-            local foundTarget = false
-            local targetPos = nil
-
-            local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
-            for _, folderName in ipairs(mobFolderNames) do
-                local folder = Workspace:FindFirstChild(folderName)
-                if folder then
-                    for _, mob in pairs(folder:GetChildren()) do
-                        local mRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
-                        local mHum = mob:FindFirstChildOfClass("Humanoid")
-                        if mRoot and mHum and mHum.Health > 0 then
-                            if (root.Position - mRoot.Position).Magnitude <= Settings.AuraRange then
-                                foundTarget = true
-                                targetPos = mRoot.Position
-                                break
-                            end
-                        end
-                    end
-                end
-                if foundTarget then break end
-            end
-
-            if foundTarget and targetPos then
-                root.CFrame = CFrame.lookAt(root.Position, Vector3.new(targetPos.X, root.Position.Y, targetPos.Z))
-                local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-                local combatRemote = remotes and remotes:FindFirstChild("Combat")
-                if combatRemote then
-                    combatRemote:InvokeServer(targetPos)
-                else
-                    local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
-                    if tool then
-                        local remoteEvent = tool:FindFirstChild("RemoteEvent") or tool:FindFirstChild("AttackRemote")
-                        if remoteEvent then remoteEvent:FireServer(targetPos) end
-                    end
-                end
-            end
-        end)
-    end)
-end
-
+-- =====================================================================
+-- 5. FIXED AUTO STORE
+-- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
+    
     pcall(function()
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes") or ReplicatedStorage:FindFirstChild("MainRemote")
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes") 
+            or ReplicatedStorage:FindFirstChild("MainRemote")
+            
         local commF = remotes and (remotes:FindFirstChild("CommF_") or remotes:FindFirstChild("Data"))
         if not commF then return end
         
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         local character = LocalPlayer.Character
+        
         local function checkAndStore(item)
             if item:IsA("Tool") then
                 local name = item.Name:lower()
                 if name:find("fruit") or name:find("rocket") or name:find("spin") or name:find("kitsune") or name:find("dragon") or name:find("dough") or name:find("buddha") or name:find("trex") or name:find("mammoth") then
+                    local originalName = item:GetAttribute("OriginalName") or item.Name
+                    pcall(function() commF:InvokeServer("StoreFruit", originalName, item) end)
                     pcall(function() commF:InvokeServer("StoreFruit", item.Name) end)
                 end
             end
         end
-        if backpack then for _, item in ipairs(backpack:GetChildren()) do checkAndStore(item) end end
-        if character then for _, item in ipairs(character:GetChildren()) do checkAndStore(item) end end
+        
+        if backpack then
+            for _, item in ipairs(backpack:GetChildren()) do
+                checkAndStore(item)
+            end
+        end
+        
+        if character then
+            for _, item in ipairs(character:GetChildren()) do
+                checkAndStore(item)
+            end
+        end
     end)
 end
 
+-- Loop Statistik & ESP
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
@@ -594,7 +555,9 @@ task.spawn(function()
 
             local count = 0
             for _, obj in ipairs(Workspace:GetChildren()) do
-                if isRealSpawnedFruit(obj) then count = count + 1 end
+                if isRealSpawnedFruit(obj) then
+                    count = count + 1
+                end
             end
             FruitCountLabel.Text = "Buah di Map: " .. count
 
@@ -603,28 +566,30 @@ task.spawn(function()
             local minutes = math.floor((uptimeSeconds % 3600) / 60)
             local seconds = uptimeSeconds % 60
             ServerTimeLabel.Text = string.format("Server Aktif: %02d:%02d:%02d", hours, minutes, seconds)
-
-            local pingVal = 0
-            pcall(function()
-                pingVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-            end)
-            PingLabel.Text = "Ping: " .. pingVal .. " ms"
-            if pingVal < 150 then PingLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-            elseif pingVal < 300 then PingLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
-            else PingLabel.TextColor3 = Color3.fromRGB(231, 76, 60) end
+            
+            if Settings.FlyToNPCEnabled and not activeFlyConnection then
+                flyToNPC()
+            end
         end)
     end
 end)
 
+-- =====================================================================
+-- 6. MONITORING STATUS & NOTIFIKASI (ANTI-SPAM)
+-- =====================================================================
 task.spawn(function()
     local lastStatus = nil 
-    task.wait(4) 
+    task.wait(5) 
     while task.wait(3) do 
         pcall(function()
             autoStoreFruits()
+
             local hasFruitNow = false
             for _, obj in ipairs(Workspace:GetChildren()) do
-                if isRealSpawnedFruit(obj) then hasFruitNow = true break end
+                if isRealSpawnedFruit(obj) then
+                    hasFruitNow = true
+                    break
+                end
             end
 
             if hasFruitNow and lastStatus ~= "Ada" then
@@ -640,38 +605,72 @@ task.spawn(function()
                 lastStatus = "Kosong"
             end
 
-            if hasFruitNow and Settings.AutoCollectFruit and not activeFlyConnection then
-                collectNearestFruit()
+            if hasFruitNow then
+                if Settings.AutoCollectFruit and not activeFlyConnection then
+                    collectNearestFruit()
+                end
             end
         end)
     end
 end)
 
+-- =====================================================================
+-- 7. AUTO JOIN TEAM & FPS BOOST
+-- =====================================================================
+local function joinTeam()
+    if not Settings.AutoJoinEnabled then return end
+    pcall(function()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        if remotes and remotes:FindFirstChild("CommF_") then
+            remotes.CommF_:InvokeServer("SetTeam", Settings.SelectedTeam)
+        end
+    end)
+end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(4)
+    joinTeam()
+end)
+task.spawn(function() task.wait(3) joinTeam() end)
+
 local function applyFpsBoost(state)
     if state then
         Lighting.GlobalShadows = false
+        Lighting.FogEnd = 999999
         for _, v in ipairs(Workspace:GetDescendants()) do
-            if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic v.Reflectance = 0
-            elseif v:IsA("Decal") or v:IsA("Texture") then v.Transparency = 1 end
+            if v:IsA("BasePart") then
+                v.Material = Enum.Material.SmoothPlastic
+                v.Reflectance = 0
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 1
+            end
         end
-    else Lighting.GlobalShadows = true end
+    else
+        Lighting.GlobalShadows = true
+    end
+end
+
+if Settings.FpsBoost then
+    task.spawn(function()
+        task.wait(2)
+        applyFpsBoost(true)
+    end)
 end
 
 -- =====================================================================
--- 🎨 MAIN GUI & MENU BUILDER (RAPI DAN LENGKAP)
+-- 8. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
 -- =====================================================================
-
 local OpenButton = Instance.new("ImageButton")
-OpenButton.Size = UDim2.new(0, 42, 0, 42)
-OpenButton.Position = UDim2.new(0, 10, 0.4, 0)
+OpenButton.Size = UDim2.new(0, 50, 0, 50)
+OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
 OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 OpenButton.Image = "rbxassetid://72916050815889"
 OpenButton.ScaleType = Enum.ScaleType.Crop
-OpenButton.ZIndex = 500
+OpenButton.ZIndex = 999
 OpenButton.Parent = ScreenGui
 
 local OpenCorner = Instance.new("UICorner")
-OpenCorner.CornerRadius = UDim.new(0, 10)
+OpenCorner.CornerRadius = UDim.new(0, 12)
 OpenCorner.Parent = OpenButton
 
 local OpenStroke = Instance.new("UIStroke")
@@ -680,9 +679,9 @@ OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 410, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -205, 0.5, -200)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
+MainFrame.Size = UDim2.new(0, 420, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
 MainFrame.ZIndex = 100
@@ -694,38 +693,34 @@ MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Color = Color3.fromRGB(255, 100, 100)
-MainStroke.Thickness = 1.5
+MainStroke.Thickness = 2
 MainStroke.Parent = MainFrame
 
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 35)
-TopBar.BackgroundColor3 = Color3.fromRGB(22, 25, 35)
+TopBar.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
 TopBar.BorderSizePixel = 0
 TopBar.ZIndex = 101
 TopBar.Parent = MainFrame
 
-local TopBarCorner = Instance.new("UICorner")
-TopBarCorner.CornerRadius = UDim.new(0, 10)
-TopBarCorner.Parent = TopBar
-
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
-TitleLabel.Position = UDim2.new(0.04, 0, 0, 0)
+TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Ultimate Menu"
+TitleLabel.Text = "Blox Fruits Hub | Clean v23 (Updated)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-TitleLabel.TextSize, TitleLabel.Font = 12, Enum.Font.GothamBold
+TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.ZIndex = 102
 TitleLabel.Parent = TopBar
 
 local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 24, 0, 24)
-CloseButton.Position = UDim2.new(0.92, 0, 0.15, 0)
-CloseButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+CloseButton.Size = UDim2.new(0, 28, 0, 28)
+CloseButton.Position = UDim2.new(0.93, 0, 0.1, 0)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextSize, CloseButton.Font = 11, Enum.Font.GothamBold
+CloseButton.TextSize, CloseButton.Font = 12, Enum.Font.GothamBold
 CloseButton.ZIndex = 102
 CloseButton.Parent = TopBar
 
@@ -733,189 +728,221 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 6)
 CloseCorner.Parent = CloseButton
 
-CloseButton.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 OpenButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+CloseButton.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
-local TabContainer = Instance.new("ScrollingFrame")
-TabContainer.Size = UDim2.new(1, -16, 1, -45)
-TabContainer.Position = UDim2.new(0, 8, 0, 40)
-TabContainer.BackgroundTransparency = 1
-TabContainer.BorderSizePixel = 0
-TabContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
-TabContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-TabContainer.ScrollBarThickness = 4
-TabContainer.ScrollBarImageColor3 = Color3.fromRGB(255, 100, 100)
-TabContainer.ZIndex = 101
-TabContainer.Parent = MainFrame
+local Container = Instance.new("ScrollingFrame")
+Container.Size = UDim2.new(1, 0, 1, -35)
+Container.Position = UDim2.new(0, 0, 0, 35)
+Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0, 0, 0, 850)
+Container.ScrollBarThickness = 6
+Container.ZIndex = 101
+Container.Parent = MainFrame
 
 local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 6)
-UIListLayout.Parent = TabContainer
+UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.Parent = Container
 
-local UIPadding = Instance.new("UIPadding")
-UIPadding.PaddingTop = UDim.new(0, 4)
-UIPadding.PaddingBottom = UDim.new(0, 12)
-UIPadding.Parent = TabContainer
-
-local itemOrder = 0
-
-local function createToggle(titleText, defaultState, callback)
-    itemOrder = itemOrder + 1
-    local btnFrame = Instance.new("Frame")
-    btnFrame.Size = UDim2.new(1, -6, 0, 38)
-    btnFrame.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
-    btnFrame.BorderSizePixel = 0
-    btnFrame.LayoutOrder = itemOrder
-    btnFrame.ZIndex = 102
-    btnFrame.Parent = TabContainer
-
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
-    btnCorner.Parent = btnFrame
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(0.70, 0, 1, 0)
-    titleLabel.Position = UDim2.new(0.03, 0, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = titleText
-    titleLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-    titleLabel.TextSize = 11
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.ZIndex = 103
-    titleLabel.Parent = btnFrame
-
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 50, 0, 22)
-    toggleBtn.Position = UDim2.new(0.82, 0, 0.2, 0)
-    toggleBtn.BackgroundColor3 = defaultState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
-    toggleBtn.Text = defaultState and "ON" or "OFF"
-    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleBtn.TextSize = 10
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.ZIndex = 103
-    toggleBtn.Parent = btnFrame
-
-    local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(0, 11)
-    toggleCorner.Parent = toggleBtn
-
-    local currentState = defaultState
-    toggleBtn.MouseButton1Click:Connect(function()
-        currentState = not currentState
-        toggleBtn.BackgroundColor3 = currentState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
-        toggleBtn.Text = currentState and "ON" or "OFF"
-        callback(currentState)
-        saveSettings()
-    end)
+local function createSectionHeader(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.9, 0, 0, 28)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(255, 100, 100)
+    lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.ZIndex = 102
+    lbl.Parent = Container
+    return lbl
 end
 
-local function createSlider(titleText, minVal, maxVal, currentVal, callback)
-    itemOrder = itemOrder + 1
-    local sliderFrame = Instance.new("Frame")
-    sliderFrame.Size = UDim2.new(1, -6, 0, 52)
-    sliderFrame.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
-    sliderFrame.BorderSizePixel = 0
-    sliderFrame.LayoutOrder = itemOrder
-    sliderFrame.ZIndex = 102
-    sliderFrame.Parent = TabContainer
+local function createToggle(text, settingKey, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 32)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.ZIndex = 102
+    
+    local state = Settings[settingKey]
+    btn.Text = text .. ": " .. (state and "ON" or "OFF")
+    btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
+    btn.Parent = Container
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = sliderFrame
+    corner.Parent = btn
 
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(0.70, 0, 0, 24)
-    titleLabel.Position = UDim2.new(0.03, 0, 0, 4)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = titleText
-    titleLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-    titleLabel.TextSize = 11
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.ZIndex = 103
-    titleLabel.Parent = sliderFrame
-
-    local valLabel = Instance.new("TextLabel")
-    valLabel.Size = UDim2.new(0.25, 0, 0, 24)
-    valLabel.Position = UDim2.new(0.72, 0, 0, 4)
-    valLabel.BackgroundTransparency = 1
-    valLabel.Text = tostring(currentVal)
-    valLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-    valLabel.TextSize = 11
-    valLabel.Font = Enum.Font.GothamBold
-    valLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valLabel.ZIndex = 103
-    valLabel.Parent = sliderFrame
-
-    local sliderBar = Instance.new("Frame")
-    sliderBar.Size = UDim2.new(0.94, 0, 0, 6)
-    sliderBar.Position = UDim2.new(0.03, 0, 0, 34)
-    sliderBar.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
-    sliderBar.BorderSizePixel = 0
-    sliderBar.ZIndex = 103
-    sliderBar.Parent = sliderFrame
-
-    local barCorner = Instance.new("UICorner")
-    barCorner.CornerRadius = UDim.new(0, 3)
-    barCorner.Parent = sliderBar
-
-    local sliderFill = Instance.new("Frame")
-    sliderFill.Size = UDim2.new(math.clamp((currentVal - minVal) / (maxVal - minVal), 0, 1), 0, 1, 0)
-    sliderFill.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-    sliderFill.BorderSizePixel = 0
-    sliderFill.ZIndex = 104
-    sliderFill.Parent = sliderBar
-
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, 3)
-    fillCorner.Parent = sliderFill
-
-    local draggingSlider = false
-    local function updateValue(input)
-        local pos = math.clamp((input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
-        local val = math.floor(minVal + ((maxVal - minVal) * pos))
-        sliderFill.Size = UDim2.new(pos, 0, 1, 0)
-        valLabel.Text = tostring(val)
-        callback(val)
+    btn.MouseButton1Click:Connect(function()
+        Settings[settingKey] = not Settings[settingKey]
+        local newState = Settings[settingKey]
+        btn.Text = text .. ": " .. (newState and "ON" or "OFF")
+        btn.BackgroundColor3 = newState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
         saveSettings()
-    end
-
-    sliderBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingSlider = true
-            updateValue(input)
-        end
+        if callback then callback(newState) end
     end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingSlider = false
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            updateValue(input)
-        end
-    end)
+    return btn
 end
 
--- Masukkan Seluruh Daftar Menu Utama & Pengaturan
-createToggle("🍓 Fruit Notifier & Sound", Settings.FruitNotifier, function(state) Settings.FruitNotifier = state end)
-createToggle("👁️ Fruit ESP (Nama & Jarak)", Settings.FruitESP, function(state) Settings.FruitESP = state end)
-createToggle("🚀 Auto Collect Fruit (Fly Lurus)", Settings.AutoCollectFruit, function(state) Settings.AutoCollectFruit = state end)
-createSlider("✈️ Kecepatan Terbang (Flight Speed)", 50, 400, Settings.FlightSpeed, function(val) Settings.FlightSpeed = val end)
-createSlider("🛫 Ketinggian Terbang (Fly Height)", 5, 40, Settings.FlyHeight, function(val) Settings.FlyHeight = val end)
-createToggle("📦 Auto Store Fruit (Storage)", Settings.AutoStoreFruit, function(state) Settings.AutoStoreFruit = state end)
-createToggle("📊 Live Map Stats HUD", Settings.FruitStatsHUD, function(state) Settings.FruitStatsHUD = state; StatsHudFrame.Visible = state end)
-createToggle("🏴‍☠️ Auto Join Team ("..Settings.SelectedTeam..")", Settings.AutoJoinEnabled, function(state) Settings.AutoJoinEnabled = state end)
-createToggle("⚡ FPS Boost (Anti-Lag)", Settings.FpsBoost, function(state) Settings.FpsBoost = state; applyFpsBoost(state) end)
-createToggle("🛸 Hover Nearest Mob", Settings.HoverNearestMob, function(state) Settings.HoverNearestMob = state; toggleHoverNearestMob(state) end)
-createSlider("📏 Ketinggian Hover Mob", 3, 15, Settings.MobHeightOffset, function(val) Settings.MobHeightOffset = val end)
-createToggle("⚔️ Auto Aura Attack (Killaura)", Settings.AutoAuraAttack, function(state) Settings.AutoAuraAttack = state; toggleAutoAuraAttack(state) end)
-createSlider("🎯 Jangkauan Aura (Range)", 20, 120, Settings.AuraRange, function(val) Settings.AuraRange = val end)
+createSectionHeader("1. Auto Join Tim")
+createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
+    if state then joinTeam() end
+end)
 
-showCustomNotification("🔥 Hub Script Berhasil Dimuat!", Color3.fromRGB(46, 204, 113))
+createSectionHeader("2. Notifikasi & Live Map Stats HUD")
+createToggle("Fruit Notifier", "FruitNotifier", nil)
+createToggle("Live Fruit & Server HUD", "FruitStatsHUD", function(state)
+    StatsHudFrame.Visible = state
+end)
+createToggle("ESP Buah", "FruitESP", function(state)
+    if not state then clearESP() end
+end)
+
+createSectionHeader("3. Auto Collect & Store Fruit")
+createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
+
+local CollectBtn = Instance.new("TextButton")
+CollectBtn.Size = UDim2.new(0.9, 0, 0, 32)
+CollectBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
+CollectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CollectBtn.Text = "⚡ Ambil Paksa Semua Buah Sekarang"
+CollectBtn.TextSize, CollectBtn.Font = 11, Enum.Font.GothamBold
+CollectBtn.ZIndex = 102
+CollectBtn.Parent = Container
+
+local cCorner = Instance.new("UICorner")
+cCorner.CornerRadius = UDim.new(0, 6)
+cCorner.Parent = CollectBtn
+
+CollectBtn.MouseButton1Click:Connect(function()
+    collectNearestFruit()
+end)
+
+createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
+
+createSectionHeader("4. Pengaturan Kecepatan Terbang (100 - 500)")
+
+local SpeedBtn = Instance.new("TextButton")
+SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
+SpeedBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
+SpeedBtn.TextSize, SpeedBtn.Font = 11, Enum.Font.GothamBold
+SpeedBtn.ZIndex = 102
+SpeedBtn.Parent = Container
+
+local sCorner = Instance.new("UICorner")
+sCorner.CornerRadius = UDim.new(0, 6)
+sCorner.Parent = SpeedBtn
+
+SpeedBtn.MouseButton1Click:Connect(function()
+    if Settings.FlightSpeed == 100 then
+        Settings.FlightSpeed = 200
+    elseif Settings.FlightSpeed == 200 then
+        Settings.FlightSpeed = 300
+    elseif Settings.FlightSpeed == 300 then
+        Settings.FlightSpeed = 400
+    elseif Settings.FlightSpeed == 400 then
+        Settings.FlightSpeed = 500
+    else
+        Settings.FlightSpeed = 100
+    end
+    SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
+    saveSettings()
+end)
+
+createSectionHeader("5. Pengaturan Ketinggian Terbang")
+
+local HeightBtn = Instance.new("TextButton")
+HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
+HeightBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
+HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
+HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
+HeightBtn.ZIndex = 102
+HeightBtn.Parent = Container
+
+local hCorner = Instance.new("UICorner")
+hCorner.CornerRadius = UDim.new(0, 6)
+hCorner.Parent = HeightBtn
+
+HeightBtn.MouseButton1Click:Connect(function()
+    if Settings.FlyHeight == 3 then
+        Settings.FlyHeight = 5
+    elseif Settings.FlyHeight == 5 then
+        Settings.FlyHeight = 10
+    elseif Settings.FlyHeight == 10 then
+        Settings.FlyHeight = 15
+    elseif Settings.FlyHeight == 15 then
+        Settings.FlyHeight = 20
+    else
+        Settings.FlyHeight = 3
+    end
+    HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
+    saveSettings()
+end)
+
+createSectionHeader("6. Fitur Baru: Terbang ke NPC")
+createToggle("Terbang ke Target NPC", "FlyToNPCEnabled", nil)
+
+local NpcBtn = Instance.new("TextButton")
+NpcBtn.Size = UDim2.new(0.9, 0, 0, 32)
+NpcBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
+NpcBtn.TextColor3 = Color3.fromRGB(40, 40, 40)
+NpcBtn.Text = "Target NPC: " .. Settings.SelectedNPC
+NpcBtn.TextSize, NpcBtn.Font = 11, Enum.Font.GothamBold
+NpcBtn.ZIndex = 102
+NpcBtn.Parent = Container
+
+local nCorner = Instance.new("UICorner")
+nCorner.CornerRadius = UDim.new(0, 6)
+nCorner.Parent = NpcBtn
+
+NpcBtn.MouseButton1Click:Connect(function()
+    if Settings.SelectedNPC == "Bandit" then
+        Settings.SelectedNPC = "Marine"
+    elseif Settings.SelectedNPC == "Marine" then
+        Settings.SelectedNPC = "Brute"
+    else
+        Settings.SelectedNPC = "Bandit"
+    end
+    NpcBtn.Text = "Target NPC: " .. Settings.SelectedNPC
+    saveSettings()
+end)
+
+createSectionHeader("7. Kecepatan Basic Attack (Fast Attack)")
+createToggle("Fast Basic Attack", "FastAttackEnabled", nil)
+
+local AttackSpeedBtn = Instance.new("TextButton")
+AttackSpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
+AttackSpeedBtn.BackgroundColor3 = Color3.fromRGB(22, 160, 133)
+AttackSpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AttackSpeedBtn.Text = "Kelipatan Serangan: " .. Settings.AttackSpeedMultiplier .. "x"
+AttackSpeedBtn.TextSize, AttackSpeedBtn.Font = 11, Enum.Font.GothamBold
+AttackSpeedBtn.ZIndex = 102
+AttackSpeedBtn.Parent = Container
+
+local asCorner = Instance.new("UICorner")
+asCorner.CornerRadius = UDim.new(0, 6)
+asCorner.Parent = AttackSpeedBtn
+
+AttackSpeedBtn.MouseButton1Click:Connect(function()
+    if Settings.AttackSpeedMultiplier == 1 then
+        Settings.AttackSpeedMultiplier = 2
+    elseif Settings.AttackSpeedMultiplier == 2 then
+        Settings.AttackSpeedMultiplier = 3
+    else
+        Settings.AttackSpeedMultiplier = 1
+    end
+    AttackSpeedBtn.Text = "Kelipatan Serangan: " .. Settings.AttackSpeedMultiplier .. "x"
+    saveSettings()
+end)
+
+createSectionHeader("8. Performa")
+createToggle("FPS Boost", "FpsBoost", function(state)
+    applyFpsBoost(state) 
+end)
+
+print("Blox Fruits Hub Clean (No Server Hop) Updated Berhasil Dimuat!")
