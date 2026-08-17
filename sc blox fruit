@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - FINAL NPC FIX)
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - v26 NEAREST ENEMY FIX)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v24.json"
+local FileName = "BloxFruitsHub_Clean_v26.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -27,7 +27,7 @@ local Settings = {
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
-    HoverMissionNPC = false,
+    HoverNearestEnemy = false,
     NPCHeightOffset = 6
 }
 
@@ -488,66 +488,69 @@ local function autoStoreFruits()
 end
 
 -- =====================================================================
--- 5.1 PERFECTION HOVER MISSION NPC LOGIC (MENCARI "Quest" / "NPC" / Folder NPC)
+-- 5.1 NEAREST ENEMY HOVER LOGIC (HANYA KE MUSUH/MOB TERDEKAT)
 -- =====================================================================
-local activeHoverConnection = nil
-local function toggleHoverMissionNPC(state)
+local activeHoverEnemyConnection = nil
+local function toggleHoverNearestEnemy(state)
     if not state then 
-        if activeHoverConnection then activeHoverConnection:Disconnect() activeHoverConnection = nil end
+        if activeHoverEnemyConnection then activeHoverEnemyConnection:Disconnect() activeHoverEnemyConnection = nil end
         return 
     end
     
-    if activeHoverConnection then activeHoverConnection:Disconnect() end
-    activeHoverConnection = RunService.Heartbeat:Connect(function()
-        if not Settings.HoverMissionNPC then return end
+    if activeHoverEnemyConnection then activeHoverEnemyConnection:Disconnect() end
+    activeHoverEnemyConnection = RunService.Heartbeat:Connect(function()
+        if not Settings.HoverNearestEnemy then return end
         local root = getCharacterRootPart()
         if not root then return end
         
-        local closestNPC = nil
+        local closestEnemy = nil
         local minDist = math.huge
         
-        -- Fungsi pengecekan objek sebagai NPC Quest Blox Fruits
-        local function checkModel(v)
-            if v:IsA("Model") and v ~= LocalPlayer.Character then
-                local hrp = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso")
-                local nameLower = v.Name:lower()
+        -- Fungsi untuk memindai musuh di sekitar dan mencari yang jaraknya PALING DEKAT
+        local function scanEnemyModel(model)
+            if model:IsA("Model") and model ~= LocalPlayer.Character then
+                local humanoid = model:FindFirstChildOfClass("Humanoid")
+                local hrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
                 
-                -- Deteksi NPC jika namanya mengandung "quest", "giver", "npc", atau ada objek BillboardGui / Level di dalamnya
-                local isQuestNPC = nameLower:find("quest") or nameLower:find("giver") or nameLower:find("bandit") or nameLower:find("marine") or nameLower:find("pirate")
-                
-                if not isQuestNPC then
-                    -- Cek apakah ada BillboardGui bertuliskan Level/Quest di dalam model tersebut
-                    for _, child in ipairs(v:GetDescendants()) do
-                        if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
-                            isQuestNPC = true
-                            break
+                -- Pastikan punya Humanoid yang hidup (Health > 0) dan bukan Player lain
+                if humanoid and hrp and humanoid.Health > 0 then
+                    local isPlayer = Players:GetPlayerFromCharacter(model)
+                    if not isPlayer then
+                        local d = (root.Position - hrp.Position).Magnitude
+                        -- Cari yang jaraknya paling dekat secara mutlak
+                        if d < minDist then
+                            minDist = d
+                            closestEnemy = hrp
                         end
                     end
                 end
-
-                if hrp and isQuestNPC then
-                    local d = (root.Position - hrp.Position).Magnitude
-                    if d < minDist then
-                        minDist = d
-                        closestNPC = hrp
-                    end
-                end
             end
         end
 
-        -- Cari di dalam Workspace secara langsung atau di dalam folder "NPCs" / "Quest" jika ada
-        for _, v in pairs(Workspace:GetChildren()) do
-            checkModel(v)
-            if v:IsA("Folder") then
-                for _, subV in pairs(v:GetChildren()) do
-                    checkModel(subV)
+        -- Cek di folder umum penyimpanan musuh Blox Fruits
+        local enemyFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
+        for _, folderName in ipairs(enemyFolderNames) do
+            local folder = Workspace:FindFirstChild(folderName)
+            if folder then
+                for _, enemy in pairs(folder:GetChildren()) do
+                    scanEnemyModel(enemy)
                 end
             end
         end
         
-        -- Jika NPC Quest terdeteksi di radius 350 studs, langsung melayang di atasnya
-        if closestNPC and minDist <= 350 then
-            root.CFrame = CFrame.new(closestNPC.Position + Vector3.new(0, Settings.NPCHeightOffset, 0))
+        -- Fallback: Scan Workspace langsung jika musuh berada di luar folder
+        for _, v in pairs(Workspace:GetChildren()) do
+            scanEnemyModel(v)
+            if v:IsA("Folder") and v.Name ~= "FruitESPFolder" then
+                for _, subV in pairs(v:GetChildren()) do
+                    scanEnemyModel(subV)
+                end
+            end
+        end
+        
+        -- Jika ketemu musuh terdekat di radius dekat, posisikan karakter tepat di atasnya
+        if closestEnemy then
+            root.CFrame = CFrame.new(closestEnemy.Position + Vector3.new(0, Settings.NPCHeightOffset, 0))
         end
     end)
 end
@@ -708,7 +711,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v24 (Quest NPC Fix)"
+TitleLabel.Text = "Blox Fruits Hub | Clean v26 (Nearest Enemy Fix)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -823,9 +826,9 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("3.1 Tambahan Fitur Quest/NPC")
-createToggle("Hover Misi NPC (Quest Fixed)", "HoverMissionNPC", function(state)
-    toggleHoverMissionNPC(state)
+createSectionHeader("3.1 Tambahan Fitur Farm Mob")
+createToggle("Hover ke Musuh Terdekat (Nearest Enemy)", "HoverNearestEnemy", function(state)
+    toggleHoverNearestEnemy(state)
 end)
 
 createSectionHeader("4. Pengaturan Kecepatan Terbang (100 - 500)")
@@ -895,9 +898,9 @@ createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
--- Jalankan status awal HoverMissionNPC jika diset true dari file config
-if Settings.HoverMissionNPC then
-    toggleHoverMissionNPC(true)
+-- Jalankan status awal HoverNearestEnemy jika diset true dari file config
+if Settings.HoverNearestEnemy then
+    toggleHoverNearestEnemy(true)
 end
 
-print("Blox Fruits Hub Clean v24 Berhasil Dimuat!")
+print("Blox Fruits Hub Clean v26 Berhasil Dimuat!")
