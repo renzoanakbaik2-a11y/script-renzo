@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (FIXED ATTACK SPEED & HITBOX/RANGE)
+-- BLOX FRUITS ULTIMATE SCRIPT (FIXED WEAPON SWITCH & ATTACK SPEED)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_CustomOrder_v30.json"
+local FileName = "BloxFruitsHub_CustomOrder_v31.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -29,10 +29,10 @@ local Settings = {
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
     HoverNearestMob = false,
-    MobHeightOffset = 8, -- Diubah default ke 8 agar pas & stabil (tidak terlalu jauh)
+    MobHeightOffset = 8,
     AutoAuraAttack = false,
-    AuraRange = 50, -- Diperbesar agar jangkauan pukul lebih luas/tidak miss
-    AuraAttackSpeed = 50, -- Diubah jadi angka kecil (milidetik/delay antar pukul, makin kecil makin cepat)
+    AuraRange = 50,
+    AuraAttackSpeed = 50,
     SelectedWeapon = "Melee"
 }
 
@@ -449,7 +449,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. HOVER NEAREST MOB SYSTEM (KETINGGIAN AMAN & STABIL DI 5-10 AGAR HITBOX MASUK)
+-- 5. HOVER NEAREST MOB SYSTEM
 -- =====================================================================
 local activeHoverMobConnection = nil
 local function toggleHoverNearestMob(state)
@@ -500,7 +500,6 @@ local function toggleHoverNearestMob(state)
         end
         
         if closestMob then
-            -- Dibatasi max 15, tetapi diatur pas di atas mob agar damage basic attack masuk terus
             local safeOffset = math.clamp(Settings.MobHeightOffset, 3, 15)
             root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, safeOffset, 0))
         end
@@ -508,7 +507,7 @@ local function toggleHoverNearestMob(state)
 end
 
 -- =====================================================================
--- 6. AUTO AURA ATTACK (FIXED SPEED & RANGE AGAR DAMAGE KENA TERUS)
+-- 6. AUTO AURA ATTACK (FIXED WEAPON SWITCHING FOR FRUIT/DEVILS/SWORD)
 -- =====================================================================
 local function equipSelectedWeapon()
     pcall(function()
@@ -518,67 +517,50 @@ local function equipSelectedWeapon()
 
         local targetType = Settings.SelectedWeapon or "Melee"
         
-        local alreadyEquipped = false
+        -- Fungsi pengecekan kecocokan nama senjata/item secara akurat di Blox Fruits
+        local function matchesCategory(itemName, category)
+            itemName = itemName:lower()
+            if category == "Melee" then
+                return itemName:find("combat") or itemName:find("step") or itemName:find("claw") or itemName:find("fist") or itemName:find("water") or itemName:find("dragon") or itemName:find("superhuman") or itemName:find("godhuman") or itemName:find("electric") or itemName:find("sanguine") or itemName:find("sharkman") or itemName:find("death")
+            elseif category == "Fruit" then
+                -- Mencakup nama buah umum, kata "fruit", atau item yang tidak masuk kategori lain
+                return itemName:find("fruit") or itemName:find("rocket") or itemName:find("spin") or itemName:find("spring") or itemName:find("chop") or itemName:find("spike") or itemName:find("flame") or itemName:find("falcon") or itemName:find("ice") or itemName:find("sand") or itemName:find("dark") or itemName:find("diamond") or itemName:find("light") or itemName:find("rubber") or itemName:find("barrier") or itemName:find("ghost") or itemName:find("magma") or itemName:find("quake") or itemName:find("buddha") or itemName:find("love") or itemName:find("spider") or itemName:find("phoenix") or itemName:find("portal") or itemName:find("pain") or itemName:find("blizzard") or itemName:find("gravity") or itemName:find("mammoth") or itemName:find("trex") or itemName:find("dough") or itemName:find("shadow") or itemName:find("venom") or itemName:find("control") or itemName:find("spirit") or itemName:find("dragon") or itemName:find("leopard") or itemName:find("kitsune")
+            elseif category == "Sword" then
+                return itemName:find("sword") or itemName:find("katana") or itemName:find("blade") or itemName:find("saber") or itemName:find("tushita") or itemName:find("culling") or itemName:find("buddy") or itemName:find("hallow") or itemName:find("dark") or itemName:find("pole") or itemName:find("rengoku") or itemName:find("wando") or itemName:find("shisui") or itemName:find("bisento") or itemName:find("midnight") or itemName:find("cavendish") or itemName:find("foxlamp")
+            elseif category == "Gun" then
+                return itemName:find("gun") or itemName:find("rifle") or itemName:find("musket") or itemName:find("kabucha") or itemName:find("soul") or itemName:find("bazooka") or itemName:find("flintlock") or itemName:find("cannon") or itemName:find("acidum") or itemName:find("serpent")
+            end
+            return false
+        end
+
+        -- Cek apakah senjata yang sedang dipegang sudah sesuai dengan kategori yang dipilih
         for _, child in ipairs(character:GetChildren()) do
-            if child:IsA("Tool") then
-                local name = child.Name:lower()
-                if targetType == "Melee" and (name:find("combat") or name:find("step") or name:find("claw") or name:find("fist") or name:find("water") or name:find("dragon") or name:find("superhuman") or name:find("godhuman") or name:find("electric") or name:find("sanguine")) then
-                    alreadyEquipped = true
-                    break
-                elseif targetType == "Fruit" and (name:find("fruit") or name:find("rocket") or name:find("dough") or name:find("kitsune") or name:find("buddha") or name:find("leopard") or name:find("dragon")) then
-                    alreadyEquipped = true
-                    break
-                elseif targetType == "Sword" and (name:find("sword") or name:find("katana") or name:find("blade") or name:find("saber") or name:find("tushita") or name:find("culling") or name:find("buddy") or name:find("hallow") or name:find("dark")) then
-                    alreadyEquipped = true
-                    break
-                elseif targetType == "Gun" and (name:find("gun") or name:find("rifle") or name:find("musket") or name:find("kabucha") or name:find("soul") or name:find("bazooka") or name:find("flintlock")) then
-                    alreadyEquipped = true
-                    break
-                end
+            if child:IsA("Tool") and matchesCategory(child.Name, targetType) then
+                return -- Sudah dipegang, tidak perlu equip ulang terus-menerus agar tidak spam/glitch
             end
         end
 
-        if alreadyEquipped then return end
-
+        -- Cari di Backpack terlebih dahulu
         local targetTool = nil
         for _, child in ipairs(backpack:GetChildren()) do
-            if child:IsA("Tool") then
-                local name = child.Name:lower()
-                if targetType == "Melee" and (name:find("combat") or name:find("step") or name:find("claw") or name:find("fist") or name:find("water") or name:find("dragon") or name:find("superhuman") or name:find("godhuman") or name:find("electric") or name:find("sanguine")) then
-                    targetTool = child
-                    break
-                elseif targetType == "Fruit" and (name:find("fruit") or name:find("rocket") or name:find("dough") or name:find("kitsune") or name:find("buddha") or name:find("leopard") or name:find("dragon")) then
-                    targetTool = child
-                    break
-                elseif targetType == "Sword" and (name:find("sword") or name:find("katana") or name:find("blade") or name:find("saber") or name:find("tushita") or name:find("culling") or name:find("buddy") or name:find("hallow") or name:find("dark")) then
-                    targetTool = child
-                    break
-                elseif targetType == "Gun" and (name:find("gun") or name:find("rifle") or name:find("musket") or name:find("kabucha") or name:find("soul") or name:find("bazooka") or name:find("flintlock")) then
-                    targetTool = child
-                    break
-                end
+            if child:IsA("Tool") and matchesCategory(child.Name, targetType) then
+                targetTool = child
+                break
             end
         end
 
+        -- Jika tidak ketemu di backpack, cek barangkali ada di character tapi belum terdeteksi sempurna
         if not targetTool then
-            for _, child in ipairs(backpack:GetChildren()) do
-                if child:IsA("Tool") then
-                    local name = child.Name:lower()
-                    if targetType == "Melee" and not name:find("fruit") and not name:find("gun") and not name:find("sword") then
-                        targetTool = child
-                        break
-                    elseif targetType == "Sword" and name:find("sword") then
-                        targetTool = child
-                        break
-                    elseif targetType == "Gun" and name:find("gun") then
-                        targetTool = child
-                        break
-                    end
+            for _, child in ipairs(character:GetChildren()) do
+                if child:IsA("Tool") and matchesCategory(child.Name, targetType) then
+                    targetTool = child
+                    break
                 end
             end
         end
 
-        if targetTool and character:FindFirstChildOfClass("Humanoid") then
+        -- Eksekusi perpindahan/equip tool jika ditemukan
+        if targetTool and targetTool.Parent == backpack then
             character.Humanoid:EquipTool(targetTool)
         end
     end)
@@ -602,9 +584,8 @@ local function toggleAutoAuraAttack(state)
         local root = getCharacterRootPart()
         if not root then return end
 
-        -- Diubah agar interval kecepatan serang merespons nilai dropdown dengan benar & sangat cepat (tanpa delay patah-patah)
         local speedSetting = tonumber(Settings.AuraAttackSpeed) or 50
-        local interval = speedSetting / 1000 -- Mengubah milidetik ke detik (misal 50ms = 0.05 detik)
+        local interval = speedSetting / 1000 
         if tick() - lastAttackTick < interval then return end
         lastAttackTick = tick()
 
@@ -1089,12 +1070,14 @@ createToggle("Auto Store Fruit", "AutoStoreFruit", nil)
 
 createCategoryHeader("3. FITUR COMBAT & MOB")
 createToggle("Auto Aura Attack (Player/Mob)", "AutoAuraAttack", function(s) toggleAutoAuraAttack(s) end)
-createDropdown("Pilih Senjata (Weapon)", "SelectedWeapon", {"Melee", "Fruit", "Sword", "Gun"}, "", nil)
--- Attack Speed diperbaiki menjadi millisecond delay kecil (25ms sampai 500ms) agar berfungsi optimal
+createDropdown("Pilih Senjata (Weapon)", "SelectedWeapon", {"Melee", "Fruit", "Sword", "Gun"}, "", function(opt)
+    Settings.SelectedWeapon = opt
+    saveSettings()
+    equipSelectedWeapon() -- Langsung eksekusi ganti senjata saat opsi diklik
+end)
 createDropdown("Kecepatan Pukul (ms)", "AuraAttackSpeed", {25, 50, 100, 150, 200, 300, 400, 500}, "ms", nil)
 
 createToggle("Hover Nearest Mob", "HoverNearestMob", function(s) toggleHoverNearestMob(s) end)
--- Tinggi Mob Offset diubah ke opsi yang lebih rapat (3, 5, 8, 10, 12) agar basic attack konsisten masuk/kena terus
 createDropdown("Tinggi Mob Offset", "MobHeightOffset", {3, 5, 8, 10, 12, 15}, "", nil)
 
 createCategoryHeader("4. UTILITIES & TERBANG")
@@ -1108,4 +1091,4 @@ createDropdown("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, ""
 createDropdown("Tinggi Terbang", "FlyHeight", {5, 10, 15, 20}, "", nil)
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub - Fixed Attack Speed & Range Berhasil Dimuat!")
+print("Blox Fruits Hub - Fixed Weapon Switch Berhasil Dimuat!")
