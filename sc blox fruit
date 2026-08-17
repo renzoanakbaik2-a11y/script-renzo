@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (DIRECT FULL CODE REVISION - COMPLETE)
+-- BLOX FRUITS ULTIMATE SCRIPT (FULL REVISION WITH UI & TOGGLES)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local Stats = game:GetService("Stats")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_CustomOrder_v37.json"
+local FileName = "BloxFruitsHub_CustomOrder_v38.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -864,4 +864,105 @@ end)
 
 OpenButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- TAB SYSTEM & MENU CONTAINER
+local TabContainer = Instance.new("ScrollingFrame")
+TabContainer.Size = UDim2.new(1, 0, 1, -32)
+TabContainer.Position = UDim2.new(0, 0, 0, 32)
+TabContainer.BackgroundTransparency = 1
+TabContainer.CanvasSize = UDim2.new(0, 0, 1.5, 0)
+TabContainer.ScrollBarThickness = 4
+TabContainer.ZIndex = 101
+TabContainer.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.Parent = TabContainer
+
+local function createToggle(name, defaultState, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 410, 0, 36)
+    btn.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
+    btn.Text = ""
+    btn.ZIndex = 102
+    btn.Parent = TabContainer
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.75, 0, 1, 0)
+    label.Position = UDim2.new(0.03, 0, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 11
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 103
+    label.Parent = btn
+
+    local stateIndicator = Instance.new("Frame")
+    stateIndicator.Size = UDim2.new(0, 18, 0, 18)
+    stateIndicator.Position = UDim2.new(0.88, 0, 0.25, 0)
+    stateIndicator.BackgroundColor3 = defaultState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
+    stateIndicator.ZIndex = 103
+    stateIndicator.Parent = btn
+
+    local indCorner = Instance.new("UICorner")
+    indCorner.CornerRadius = UDim.new(0, 4)
+    indCorner.Parent = stateIndicator
+
+    local currentState = defaultState
+    btn.MouseButton1Click:Connect(function()
+        currentState = not currentState
+        stateIndicator.BackgroundColor3 = currentState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
+        callback(currentState)
+        saveSettings()
+    end)
+end
+
+-- Masukkan Semua Tombol Menu Utama
+createToggle("Fruit Notifier & Sound", Settings.FruitNotifier, function(state)
+    Settings.FruitNotifier = state
+end)
+
+createToggle("Fruit ESP (Nama & Jarak)", Settings.FruitESP, function(state)
+    Settings.FruitESP = state
+end)
+
+createToggle("Auto Collect Fruit (Teleport/Fly)", Settings.AutoCollectFruit, function(state)
+    Settings.AutoCollectFruit = state
+end)
+
+createToggle("Auto Store Fruit (Simpan Otomatis)", Settings.AutoStoreFruit, function(state)
+    Settings.AutoStoreFruit = state
+end)
+
+createToggle("Live Map Stats HUD", Settings.FruitStatsHUD, function(state)
+    Settings.FruitStatsHUD = state
+    StatsHudFrame.Visible = state
+end)
+
+createToggle("Auto Join Team ("..Settings.SelectedTeam..")", Settings.AutoJoinEnabled, function(state)
+    Settings.AutoJoinEnabled = state
+end)
+
+createToggle("FPS Boost (Hapus Efek/Shader)", Settings.FpsBoost, function(state)
+    Settings.FpsBoost = state
+    applyFpsBoost(state)
+end)
+
+createToggle("Hover Nearest Mob (Melayang di atas Mob)", Settings.HoverNearestMob, function(state)
+    Settings.HoverNearestMob = state
+    toggleHoverNearestMob(state)
+end)
+
+createToggle("Auto Aura Attack (Killaura Target)", Settings.AutoAuraAttack, function(state)
+    Settings.AutoAuraAttack = state
+    toggleAutoAuraAttack(state)
 end)
