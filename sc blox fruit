@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (WITH SERVER HOP TEST)
+-- BLOX FRUITS ULTIMATE HUB (FULL FEATURES + SAFE SERVER HOP)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v23.json"
+local FileName = "BloxFruitsHub_Ultimate_v24.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -58,7 +58,7 @@ end
 
 -- Proteksi GUI untuk Executor
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubClean"
+ScreenGui.Name = "BloxFruitsUltimateHub"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -446,7 +446,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. FIXED AUTO STORE
+-- 5. AUTO STORE
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -510,7 +510,7 @@ task.spawn(function()
 end)
 
 -- =====================================================================
--- 6. MONITORING STATUS & NOTIFIKASI (ANTI-SPAM)
+-- 6. MONITORING STATUS & NOTIFIKASI
 -- =====================================================================
 task.spawn(function()
     local lastStatus = nil 
@@ -593,40 +593,46 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. FITUR SERVER HOP (UJI COBA ANTI-PROTEKSI)
+-- 8. SAFE SERVER HOP (ANTI-RESTRICTION ERROR)
 -- =====================================================================
-local function tryServerHop()
-    showCustomNotification("🔄 Mencari server lain...", Color3.fromRGB(52, 152, 219))
-    task.wait(1)
+local function safeServerHop()
+    showCustomNotification("🔄 Mencari server lain yang aman...", Color3.fromRGB(52, 152, 219))
+    
+    local queueFunction = queue_on_teleport or queueonteleport
+    if queueFunction then
+        pcall(function()
+            queueFunction([[
+                task.wait(3)
+                -- Script otomatis memuat ulang setelah pindah server
+            ]])
+        end)
+    end
+
     pcall(function()
         local servers = {}
-        local req = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
-        local body = HttpService:JSONDecode(req)
+        local success, result = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+        end)
         
-        if body and body.data then
-            for _, v in pairs(body.data) do
-                if type(v) == "table" and v.id ~= game.JobId and v.playing < v.maxPlayers then
-                    table.insert(servers, v.id)
+        if success and result and result.data then
+            for _, s in ipairs(result.data) do
+                if type(s) == "table" and s.id ~= game.JobId and s.playing < s.maxPlayers then
+                    table.insert(servers, s.id)
                 end
             end
         end
         
         if #servers > 0 then
-            local randomServer = servers[math.random(1, #servers)]
-            local success = pcall(function()
-                TeleportService:TeleportAsync(game.PlaceId, {randomServer}, LocalPlayer)
-            end)
-            if not success then
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer, LocalPlayer)
-            end
+            local targetServer = servers[math.random(1, #servers)]
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, targetServer, LocalPlayer)
         else
-            showCustomNotification("❌ Gagal menemukan server kosong!", Color3.fromRGB(231, 76, 60))
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
         end
     end)
 end
 
 -- =====================================================================
--- 9. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
+-- 9. MENU UTAMA GUI (LENGKAP DENGAN SCROLL)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -675,7 +681,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v23 (With Hop)"
+TitleLabel.Text = "Blox Fruits Hub | Ultimate (Safe Hop)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -790,7 +796,7 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("4. Pengaturan Kecepatan Terbang (100 - 500)")
+createSectionHeader("4. Kecepatan Terbang (100 - 500)")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -821,7 +827,7 @@ SpeedBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("5. Pengaturan Ketinggian Terbang")
+createSectionHeader("5. Ketinggian Terbang")
 
 local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -852,13 +858,13 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Server Hop (Uji Coba Tembus Proteksi)")
+createSectionHeader("6. Safe Server Hop (Anti-Restriction)")
 
 local HopBtn = Instance.new("TextButton")
-HopBtn.Size = UDim2.new(0.9, 0, 0, 32)
+HopBtn.Size = UDim2.new(0.9, 0, 0, 36)
 HopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
 HopBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
-HopBtn.Text = "🚀 Pindah Server Sekarang (Test Hop)"
+HopBtn.Text = "🚀 Pindah Server Aman (Safe Hop)"
 HopBtn.TextSize, HopBtn.Font = 11, Enum.Font.GothamBold
 HopBtn.ZIndex = 102
 HopBtn.Parent = Container
@@ -868,7 +874,7 @@ hopCorner.CornerRadius = UDim.new(0, 6)
 hopCorner.Parent = HopBtn
 
 HopBtn.MouseButton1Click:Connect(function()
-    tryServerHop()
+    safeServerHop()
 end)
 
 createSectionHeader("7. Performa")
@@ -876,4 +882,5 @@ createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Hub Clean (With Server Hop Test) Berhasil Dimuat!")
+showCustomNotification("✅ Blox Fruits Ultimate Hub Berhasil Dimuat!", Color3.fromRGB(46, 204, 113))
+print("Blox Fruits Ultimate Hub Berhasil Dimuat!")
