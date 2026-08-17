@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (FIXED HOVER HEIGHT 10, GUN & FRUIT AIM)
+-- BLOX FRUITS ULTIMATE SCRIPT (FIXED FRUIT/GUN SKILLS & ACCURATE HITBOX)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_CustomOrder_v33.json"
+local FileName = "BloxFruitsHub_CustomOrder_v34.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -29,7 +29,7 @@ local Settings = {
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
     HoverNearestMob = false,
-    MobHeightOffset = 10, -- Diperbarui maksimal ke 10 sesuai kesepakatan
+    MobHeightOffset = 10,
     AutoAuraAttack = false,
     AuraRange = 100, 
     AuraAttackSpeed = 40,
@@ -449,7 +449,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. HOVER NEAREST MOB SYSTEM (MAKSIMAL DI KETINGGIAN 10)
+-- 5. HOVER NEAREST MOB SYSTEM
 -- =====================================================================
 local activeHoverMobConnection = nil
 local function toggleHoverNearestMob(state)
@@ -507,7 +507,7 @@ local function toggleHoverNearestMob(state)
 end
 
 -- =====================================================================
--- 6. AUTO AURA ATTACK (FIXED WEAPON, GUN, & FRUIT AIM)
+-- 6. AUTO AURA ATTACK (FIXED WEAPON, GUN/FRUIT ACCURATE AIM & HITBOX)
 -- =====================================================================
 local function equipSelectedWeapon()
     pcall(function()
@@ -624,12 +624,11 @@ local function toggleAutoAuraAttack(state)
             end
 
             if foundTarget and targetPos then
-                if Settings.SelectedWeapon == "Gun" or Settings.SelectedWeapon == "Fruit" then
-                    root.CFrame = CFrame.new(root.Position, Vector3.new(targetPos.X, root.Position.Y, targetPos.Z))
-                end
+                -- Memaksa arah pandangan menunduk tepat ke arah hitbox mob agar Gun/Fruit tidak meleset
+                root.CFrame = CFrame.lookAt(root.Position, targetPos)
 
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                task.wait(0.01)
+                task.wait(0.02)
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
             end
         end)
