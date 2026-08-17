@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (KATEGORI RAPI + COMPACT SCROLL PICKER)
+-- BLOX FRUITS ULTIMATE SCRIPT (DROPDOWN MENU SEPERTI CONTOH)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Kategori_v26.json"
+local FileName = "BloxFruitsHub_Dropdown_v26.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -61,7 +61,7 @@ local function saveSettings()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubKategori"
+ScreenGui.Name = "BloxFruitsHubDropdown"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -718,7 +718,7 @@ if Settings.AutoAuraAttack then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (KATEGORI TERPISAH + COMPACT SCROLL PICKER)
+-- 8. MENU UTAMA GUI (KATEGORI RAPI + DROPDOWN LIST SEPERTI GAMBAR)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 45, 0, 45)
@@ -739,8 +739,8 @@ OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 360, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -180, 0.5, -190)
+MainFrame.Size = UDim2.new(0, 360, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -200)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
@@ -767,7 +767,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Kategori Terpisah"
+TitleLabel.Text = "Blox Fruits Hub | Dropdown Menu"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 12, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -795,7 +795,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -30)
 Container.Position = UDim2.new(0, 0, 0, 30)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 850)
+Container.CanvasSize = UDim2.new(0, 0, 0, 950)
 Container.ScrollBarThickness = 5
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -805,7 +805,6 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 6)
 UIListLayout.Parent = Container
 
--- Helper untuk Judul Kategori Section
 local function createCategoryHeader(categoryName)
     local header = Instance.new("TextLabel")
     header.Size = UDim2.new(0.95, 0, 0, 24)
@@ -866,68 +865,130 @@ local function createSettingButton(text, onClick)
     return btn
 end
 
--- COMPACT SCROLL PICKER UNTUK SETTING ANGKA
-local function createCompactPicker(title, settingKey, options, unit)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0.95, 0, 0, 30)
-    frame.BackgroundColor3 = Color3.fromRGB(30, 33, 45)
-    frame.BorderSizePixel = 0
-    frame.ZIndex = 102
-    frame.Parent = Container
+-- SISTEM DROPDOWN LIST SEPERTI PADA CONTOH GAMBAR (KLIK MEMBUKA DAFTAR PILIHAN KE BAWAH)
+local function createDropdown(title, settingKey, options, unit, onSelectCallback)
+    local collapsedHeight = 32
+    local itemHeight = 26
+    local totalExpandedHeight = collapsedHeight + (#options * itemHeight) + 6
+
+    local dropFrame = Instance.new("Frame")
+    dropFrame.Size = UDim2.new(0.95, 0, 0, collapsedHeight)
+    dropFrame.BackgroundColor3 = Color3.fromRGB(22, 25, 35)
+    dropFrame.BorderSizePixel = 0
+    dropFrame.ClipsDescendants = true
+    dropFrame.ZIndex = 150
+    dropFrame.Parent = Container
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = frame
+    corner.Parent = dropFrame
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.55, 0, 1, 0)
-    label.Position = UDim2.new(0.03, 0, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = " > " .. title
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = 10
-    label.Font = Enum.Font.GothamBold
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.ZIndex = 103
-    label.Parent = frame
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(45, 52, 70)
+    stroke.Thickness = 1
+    stroke.Parent = dropFrame
 
-    local valBtn = Instance.new("TextButton")
-    valBtn.Size = UDim2.new(0.38, 0, 0.8, 0)
-    valBtn.Position = UDim2.new(0.59, 0, 0.1, 0)
-    valBtn.BackgroundColor3 = Color3.fromRGB(50, 56, 75)
-    valBtn.Font = Enum.Font.GothamBold
-    valBtn.TextSize = 10
-    valBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
-    valBtn.ZIndex = 103
-    valBtn.Parent = frame
+    local mainBtn = Instance.new("TextButton")
+    mainBtn.Size = UDim2.new(1, 0, 0, collapsedHeight)
+    mainBtn.BackgroundTransparency = 1
+    mainBtn.Font = Enum.Font.GothamBold
+    mainBtn.TextSize = 11
+    mainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    mainBtn.TextXAlignment = Enum.TextXAlignment.Left
+    mainBtn.ZIndex = 151
+    mainBtn.Parent = dropFrame
 
-    local valCorner = Instance.new("UICorner")
-    valCorner.CornerRadius = UDim.new(0, 4)
-    valCorner.Parent = valBtn
+    local currentVal = Settings[settingKey]
+    mainBtn.Text = "   " .. title .. ": " .. tostring(currentVal) .. (unit or "")
 
-    local currentIndex = 1
-    for i, v in ipairs(options) do
-        if v == Settings[settingKey] then
-            currentIndex = i
-            break
+    local arrowLabel = Instance.new("TextLabel")
+    arrowLabel.Size = UDim2.new(0, 30, 0, collapsedHeight)
+    arrowLabel.Position = UDim2.new(1, -35, 0, 0)
+    arrowLabel.BackgroundTransparency = 1
+    arrowLabel.Text = "▼"
+    arrowLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    arrowLabel.TextSize = 10
+    arrowLabel.Font = Enum.Font.GothamBold
+    arrowLabel.ZIndex = 151
+    arrowLabel.Parent = dropFrame
+
+    local optionsContainer = Instance.new("ScrollingFrame")
+    optionsContainer.Size = UDim2.new(1, -10, 0, #options * itemHeight)
+    optionsContainer.Position = UDim2.new(0, 5, 0, collapsedHeight + 2)
+    optionsContainer.BackgroundTransparency = 1
+    optionsContainer.CanvasSize = UDim2.new(0, 0, 0, #options * itemHeight)
+    optionsContainer.ScrollBarThickness = 3
+    optionsContainer.ZIndex = 152
+    optionsContainer.Parent = dropFrame
+
+    local optLayout = Instance.new("UIListLayout")
+    optLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    optLayout.Padding = UDim.new(0, 2)
+    optLayout.Parent = optionsContainer
+
+    local isOpen = false
+
+    mainBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        if isOpen then
+            arrowLabel.Text = "▲"
+            TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0.95, 0, 0, totalExpandedHeight)
+            }):Play()
+        else
+            arrowLabel.Text = "▼"
+            TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+                Size = UDim2.new(0.95, 0, 0, collapsedHeight)
+            }):Play()
         end
-    end
-    valBtn.Text = tostring(Settings[settingKey]) .. (unit or "")
-
-    valBtn.MouseButton1Click:Connect(function()
-        currentIndex = currentIndex + 1
-        if currentIndex > #options then
-            currentIndex = 1
-        end
-        local newVal = options[currentIndex]
-        Settings[settingKey] = newVal
-        valBtn.Text = tostring(newVal) .. (unit or "")
-        saveSettings()
     end)
+
+    for _, opt in ipairs(options) do
+        local optBtn = Instance.new("TextButton")
+        optBtn.Size = UDim2.new(1, 0, 0, itemHeight - 2)
+        optBtn.BackgroundColor3 = (opt == Settings[settingKey]) and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(30, 35, 48)
+        optBtn.Font = Enum.Font.GothamBold
+        optBtn.TextSize = 10
+        optBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        optBtn.TextXAlignment = Enum.TextXAlignment.Left
+        optBtn.ZIndex = 153
+        optBtn.Parent = optionsContainer
+
+        local optCorner = Instance.new("UICorner")
+        optCorner.CornerRadius = UDim.new(0, 4)
+        optCorner.Parent = optBtn
+
+        local optPadding = Instance.new("UIPadding")
+        optPadding.PaddingLeft = UDim.new(0, 10)
+        optPadding.Parent = optBtn
+
+        optBtn.Text = tostring(opt) .. (unit or "")
+
+        optBtn.MouseButton1Click:Connect(function()
+            Settings[settingKey] = opt
+            mainBtn.Text = "   " .. title .. ": " .. tostring(opt) .. (unit or "")
+            saveSettings()
+
+            for _, child in ipairs(optionsContainer:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child.BackgroundColor3 = Color3.fromRGB(30, 35, 48)
+                end
+            end
+            optBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+
+            isOpen = false
+            arrowLabel.Text = "▼"
+            TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+                Size = UDim2.new(0.95, 0, 0, collapsedHeight)
+            }):Play()
+
+            if onSelectCallback then onSelectCallback(opt) end
+        end)
+    end
 end
 
 -- =====================================================================
--- PENYUSUNAN MENU BERDASARKAN KATEGORI YANG JELAS & RAPI
+-- PENYUSUNAN MENU BERDASARKAN KATEGORI & DROPDOWN RAPI
 -- =====================================================================
 
 -- 1. KATEGORI NOTIFIKASI
@@ -942,19 +1003,19 @@ createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
 createSettingButton("⚡ Ambil Paksa Semua Buah Sekarang", function() collectNearestFruit() end)
 createToggle("Auto Store Fruit", "AutoStoreFruit", nil)
 
--- 3. KATEGORI FITUR FRUIT & COMBAT / FARMING
+-- 3. KATEGORI FITUR FRUIT & COMBAT / MOB
 createCategoryHeader("3. FITUR COMBAT & MOB")
 createToggle("Auto Aura Attack (Player/Mob)", "AutoAuraAttack", function(s) toggleAutoAuraAttack(s) end)
-createCompactPicker("Kecepatan Pukul", "AuraAttackSpeed", {100, 200, 300, 400, 500}, "")
+createDropdown("Kecepatan Pukul", "AuraAttackSpeed", {100, 200, 300, 400, 500}, "", nil)
 
 createToggle("Hover Nearest Mob", "HoverNearestMob", function(s) toggleHoverNearestMob(s) end)
-createCompactPicker("Tinggi Mob Offset", "MobHeightOffset", {3, 5, 8, 10}, "m")
+createDropdown("Tinggi Mob Offset", "MobHeightOffset", {3, 5, 8, 10}, "m", nil)
 
 -- 4. KATEGORI PENGATURAN UMUM & TERBANG
 createCategoryHeader("4. UTILITIES & TERBANG")
 createToggle("Auto Join Team", "AutoJoinEnabled", function(s) if s then joinTeam() end end)
-createCompactPicker("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, "")
-createCompactPicker("Tinggi Terbang", "FlyHeight", {10, 20, 30, 40}, "m")
+createDropdown("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, "", nil)
+createDropdown("Tinggi Terbang", "FlyHeight", {10, 20, 30, 40}, "m", nil)
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub - Kategori Terpisah & Scroll Picker Berhasil Dimuat!")
+print("Blox Fruits Hub - Dropdown Menu Berhasil Dimuat!")
