@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE HUB (FULL FEATURES + STABLE SERVER HOP v3)
+-- BLOX FRUITS ULTIMATE HUB (FULL FEATURES + INSTANT SERVER HOP)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Ultimate_v25.json"
+local FileName = "BloxFruitsHub_Ultimate_v26.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -593,36 +593,13 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. ULTRA SAFE SERVER HOP (STABLE METHOD)
+-- 8. INSTANT SERVER HOP (DIRECT TELEPORT METHOD)
 -- =====================================================================
 local function safeServerHop()
-    showCustomNotification("🔄 Mencari server lain yang aman...", Color3.fromRGB(52, 152, 219))
+    showCustomNotification("🚀 Memproses perpindahan server...", Color3.fromRGB(52, 152, 219))
     
-    local queueFunction = queue_on_teleport or queueonteleport
-    if queueFunction then
-        pcall(function()
-            queueFunction([[
-                task.wait(3)
-            ]])
-        end)
-    end
-
+    -- Menggunakan teleport langsung ke game ID utama yang otomatis melempar ke server berbeda
     pcall(function()
-        -- Menggunakan metode HTTP API Publik Roblox untuk mengambil list server server acak
-        local site = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-        if site and site.data then
-            local servers = {}
-            for _, server in ipairs(site.data) do
-                if type(server) == "table" and server.id ~= game.JobId and server.playing < server.maxPlayers then
-                    table.insert(servers, server.id)
-                end
-            end
-            if #servers > 0 then
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], LocalPlayer)
-                return
-            end
-        end
-        -- Fallback darurat jika list kosong
         TeleportService:Teleport(game.PlaceId, LocalPlayer)
     end)
 end
@@ -677,7 +654,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Ultimate (Stable Hop)"
+TitleLabel.Text = "Blox Fruits Hub | Ultimate (Instant Hop)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -854,13 +831,13 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Stable Server Hop")
+createSectionHeader("6. Instant Server Hop")
 
 local HopBtn = Instance.new("TextButton")
 HopBtn.Size = UDim2.new(0.9, 0, 0, 36)
 HopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
 HopBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
-HopBtn.Text = "🚀 Pindah Server Stabil (Server Hop)"
+HopBtn.Text = "🚀 Pindah Server Instan (Server Hop)"
 HopBtn.TextSize, HopBtn.Font = 11, Enum.Font.GothamBold
 HopBtn.ZIndex = 102
 HopBtn.Parent = Container
