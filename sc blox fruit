@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE HUB (FINAL CLEAN KICK TO LOBBY)
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - NO SERVER HOP)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -11,23 +11,27 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Ultimate_v29.json"
+local FileName = "BloxFruitsHub_Clean_v22.json"
 
 local Settings = {
     FruitNotifier = true,
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 200,
-    FlyHeight = 5,
-    AutoStoreFruit = true,
+    FlightSpeed = 200,  -- Default pertama kali diatur ke 200
+    FlyHeight = 5,      
+    AutoStoreFruit = true,    
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
-    HUDPosition = {X = 0.05, Y = 0.15}
+    HUDPosition = {X = 0.05, Y = 0.15},
+    -- Pengaturan tambahan untuk fitur gabungan
+    AutoChest = false,
+    AutoStats = false,
+    SelectedStat = "Melee",
+    AuraEnabled = false
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -58,7 +62,7 @@ end
 
 -- Proteksi GUI untuk Executor
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsUltimateHub"
+ScreenGui.Name = "BloxFruitsHubClean"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -446,7 +450,7 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. AUTO STORE
+-- 5. FIXED AUTO STORE & TAMBAHAN FITUR (Auto Chest, Auto Stats, Aura)
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -466,6 +470,7 @@ local function autoStoreFruits()
                 local name = item.Name:lower()
                 if name:find("fruit") or name:find("rocket") or name:find("spin") or name:find("kitsune") or name:find("dragon") or name:find("dough") or name:find("buddha") or name:find("trex") or name:find("mammoth") then
                     local originalName = item:GetAttribute("OriginalName") or item.Name
+                    pcall(function() commF:InvokeServer("AddPoint", originalName, item) end) -- fallback aman
                     pcall(function() commF:InvokeServer("StoreFruit", originalName, item) end)
                     pcall(function() commF:InvokeServer("StoreFruit", item.Name) end)
                 end
@@ -481,6 +486,51 @@ local function autoStoreFruits()
         if character then
             for _, item in ipairs(character:GetChildren()) do
                 checkAndStore(item)
+            end
+        end
+    end)
+end
+
+-- Fitur Tambahan: Auto Chest Farm / Collect
+local function autoCollectChests()
+    if not Settings.AutoChest then return end
+    pcall(function()
+        local rootPart = getCharacterRootPart()
+        if not rootPart then return end
+        for _, v in ipairs(Workspace:GetChildren()) do
+            if v.Name:lower():find("chest") and v:FindFirstChild("HumanoidRootPart") or v:IsA("BasePart") then
+                local part = v:IsA("Model") and v.PrimaryPart or v
+                if part and (rootPart.Position - part.Position).Magnitude < 300 then
+                    rootPart.CFrame = part.CFrame
+                    task.wait(0.2)
+                end
+            end
+        end
+    end)
+end
+
+-- Fitur Tambahan: Auto Stats Upgrade
+local function autoUpgradeStats()
+    if not Settings.AutoStats then return end
+    pcall(function()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        local commF = remotes and remotes:FindFirstChild("CommF_")
+        if commF then
+            commF:InvokeServer("AddPoint", Settings.SelectedStat, 3)
+        end
+    end)
+end
+
+-- Fitur Tambahan: Auto Buso / Aura Handler
+local function checkBusoAura()
+    if not Settings.AuraEnabled then return end
+    pcall(function()
+        local character = LocalPlayer.Character
+        if character and not character:FindFirstChild("HasBuso") then
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            local commF = remotes and remotes:FindFirstChild("CommF_")
+            if commF then
+                commF:InvokeServer("Buso")
             end
         end
     end)
@@ -510,7 +560,7 @@ task.spawn(function()
 end)
 
 -- =====================================================================
--- 6. MONITORING STATUS & NOTIFIKASI
+-- 6. MONITORING STATUS & NOTIFIKASI (ANTI-SPAM)
 -- =====================================================================
 task.spawn(function()
     local lastStatus = nil 
@@ -518,6 +568,9 @@ task.spawn(function()
     while task.wait(3) do 
         pcall(function()
             autoStoreFruits()
+            autoCollectChests()
+            autoUpgradeStats()
+            checkBusoAura()
 
             local hasFruitNow = false
             for _, obj in ipairs(Workspace:GetChildren()) do
@@ -593,19 +646,7 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. ANTI-TOKEN REFRESH HOP (CLEAN EXIT TO LOBBY)
--- =====================================================================
-local function safeServerHop()
-    showCustomNotification("🚀 Kembali ke Menu Utama secara Bersih...", Color3.fromRGB(241, 196, 15))
-    
-    pcall(function()
-        -- Keluar secara halus ke lobi untuk melewati validasi token teleport Roblox
-        LocalPlayer:Kick("\n[Blox Fruits Hub] Keluar ke lobi utama. Silakan masuk server baru secara manual.")
-    end)
-end
-
--- =====================================================================
--- 9. MENU UTAMA GUI (LENGKAP DENGAN SCROLL)
+-- 8. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -654,7 +695,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Ultimate (Bypass Token)"
+TitleLabel.Text = "Blox Fruits Hub | Clean v22 (Extended + No Hop)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -682,7 +723,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 750)
+Container.CanvasSize = UDim2.new(0, 0, 0, 850)
 Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -769,7 +810,12 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("4. Kecepatan Terbang (100 - 500)")
+createSectionHeader("4. Fitur Tambahan (Chest & Stats)")
+createToggle("Auto Collect Chest", "AutoChest", nil)
+createToggle("Auto Upgrade Stats", "AutoStats", nil)
+createToggle("Auto Buso (Aura)", "AuraEnabled", nil)
+
+createSectionHeader("5. Pengaturan Kecepatan Terbang (100 - 500)")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -800,7 +846,7 @@ SpeedBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("5. Ketinggian Terbang")
+createSectionHeader("6. Pengaturan Ketinggian Terbang")
 
 local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -831,29 +877,9 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Pindah Server Aman")
-
-local HopBtn = Instance.new("TextButton")
-HopBtn.Size = UDim2.new(0.9, 0, 0, 36)
-HopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
-HopBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
-HopBtn.Text = "🚀 Keluar ke Lobi (Ganti Server Manual)"
-HopBtn.TextSize, HopBtn.Font = 11, Enum.Font.GothamBold
-HopBtn.ZIndex = 102
-HopBtn.Parent = Container
-
-local hopCorner = Instance.new("UICorner")
-hopCorner.CornerRadius = UDim.new(0, 6)
-hopCorner.Parent = HopBtn
-
-HopBtn.MouseButton1Click:Connect(function()
-    safeServerHop()
-end)
-
 createSectionHeader("7. Performa")
 createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-showCustomNotification("✅ Blox Fruits Ultimate Hub Berhasil Dimuat!", Color3.fromRGB(46, 204, 113))
-print("Blox Fruits Ultimate Hub Berhasil Dimuat!")
+print("Blox Fruits Hub Clean (No Server Hop) Berhasil Dimuat!")
