@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - NO SERVER HOP)
+-- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - FINAL NPC FIX)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -13,14 +13,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v22.json"
+local FileName = "BloxFruitsHub_Clean_v24.json"
 
 local Settings = {
     FruitNotifier = true,
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 200,  -- Default pertama kali diatur ke 200
+    FlightSpeed = 200,  
     FlyHeight = 5,      
     AutoStoreFruit = true,    
     FruitESP = true,
@@ -488,7 +488,7 @@ local function autoStoreFruits()
 end
 
 -- =====================================================================
--- 5.1 HOVER MISSION NPC LOGIC (TAMBAHAN FITUR AMAN)
+-- 5.1 PERFECTION HOVER MISSION NPC LOGIC (MENCARI "Quest" / "NPC" / Folder NPC)
 -- =====================================================================
 local activeHoverConnection = nil
 local function toggleHoverMissionNPC(state)
@@ -503,23 +503,51 @@ local function toggleHoverMissionNPC(state)
         local root = getCharacterRootPart()
         if not root then return end
         
-        local closest = nil
-        local dist = math.huge
-        for _, v in pairs(Workspace:GetChildren()) do
-            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
-                local vName = v.Name:lower()
-                if vName:find("quest") or vName:find("npc") or vName:find("military") or vName:find("bandit") then
-                    local d = (root.Position - v.HumanoidRootPart.Position).Magnitude
-                    if d < dist then 
-                        dist = d
-                        closest = v.HumanoidRootPart 
+        local closestNPC = nil
+        local minDist = math.huge
+        
+        -- Fungsi pengecekan objek sebagai NPC Quest Blox Fruits
+        local function checkModel(v)
+            if v:IsA("Model") and v ~= LocalPlayer.Character then
+                local hrp = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso")
+                local nameLower = v.Name:lower()
+                
+                -- Deteksi NPC jika namanya mengandung "quest", "giver", "npc", atau ada objek BillboardGui / Level di dalamnya
+                local isQuestNPC = nameLower:find("quest") or nameLower:find("giver") or nameLower:find("bandit") or nameLower:find("marine") or nameLower:find("pirate")
+                
+                if not isQuestNPC then
+                    -- Cek apakah ada BillboardGui bertuliskan Level/Quest di dalam model tersebut
+                    for _, child in ipairs(v:GetDescendants()) do
+                        if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+                            isQuestNPC = true
+                            break
+                        end
+                    end
+                end
+
+                if hrp and isQuestNPC then
+                    local d = (root.Position - hrp.Position).Magnitude
+                    if d < minDist then
+                        minDist = d
+                        closestNPC = hrp
                     end
                 end
             end
         end
+
+        -- Cari di dalam Workspace secara langsung atau di dalam folder "NPCs" / "Quest" jika ada
+        for _, v in pairs(Workspace:GetChildren()) do
+            checkModel(v)
+            if v:IsA("Folder") then
+                for _, subV in pairs(v:GetChildren()) do
+                    checkModel(subV)
+                end
+            end
+        end
         
-        if closest and dist <= 150 then
-            root.CFrame = CFrame.new(closest.Position + Vector3.new(0, Settings.NPCHeightOffset, 0))
+        -- Jika NPC Quest terdeteksi di radius 350 studs, langsung melayang di atasnya
+        if closestNPC and minDist <= 350 then
+            root.CFrame = CFrame.new(closestNPC.Position + Vector3.new(0, Settings.NPCHeightOffset, 0))
         end
     end)
 end
@@ -680,7 +708,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v22 (No Hop)"
+TitleLabel.Text = "Blox Fruits Hub | Clean v24 (Quest NPC Fix)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -796,7 +824,7 @@ end)
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
 createSectionHeader("3.1 Tambahan Fitur Quest/NPC")
-createToggle("Hover Misi NPC", "HoverMissionNPC", function(state)
+createToggle("Hover Misi NPC (Quest Fixed)", "HoverMissionNPC", function(state)
     toggleHoverMissionNPC(state)
 end)
 
@@ -872,4 +900,4 @@ if Settings.HoverMissionNPC then
     toggleHoverMissionNPC(true)
 end
 
-print("Blox Fruits Hub Clean (No Server Hop) Berhasil Dimuat!")
+print("Blox Fruits Hub Clean v24 Berhasil Dimuat!")
