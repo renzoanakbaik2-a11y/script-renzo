@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (WIDE MENU & CLEAN DROPDOWN)
+-- BLOX FRUITS ULTIMATE SCRIPT (CUSTOMIZED ORDER & WEAPON SELECTOR)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_WideMenu_v26.json"
+local FileName = "BloxFruitsHub_CustomOrder_v27.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -32,7 +32,8 @@ local Settings = {
     MobHeightOffset = 5,
     AutoAuraAttack = false,
     AuraRange = 30,
-    AuraAttackSpeed = 100
+    AuraAttackSpeed = 100,
+    SelectedWeapon = "Melee"
 }
 
 local function loadSettings()
@@ -61,7 +62,7 @@ local function saveSettings()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubWide"
+ScreenGui.Name = "BloxFruitsHubCustom"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -505,8 +506,58 @@ local function toggleHoverNearestMob(state)
 end
 
 -- =====================================================================
--- 6. AUTO AURA ATTACK
+-- 6. AUTO AURA ATTACK (DENGAN PEMILIHAN WEAPON/EQUIPMENT)
 -- =====================================================================
+local function equipSelectedWeapon()
+    pcall(function()
+        local character = LocalPlayer.Character
+        local backpack = LocalPlayer.Backpack
+        if not character or not backpack then return end
+
+        local targetType = Settings.SelectedWeapon or "Melee"
+        local equippedTool = nil
+        for _, child in ipairs(character:GetChildren()) do
+            if child:IsA("Tool") then
+                local name = child.Name:lower()
+                if targetType == "Melee" and (child:GetAttribute("ToolType") == "Melee" or not child:FindFirstChild("Handle") or name:find("combat") or name:find("step") or name:find("claw") or name:find("fist") or name:find("water") or name:find("dragon") or name:find("superhuman") or name:find("godhuman") or name:find("electric")) then
+                    equippedTool = child
+                    break
+                elseif targetType == "Fruit" and (name:find("fruit") or name:find("rocket") or name:find("dough") or name:find("kitsune") or name:find("buddha")) then
+                    equippedTool = child
+                    break
+                elseif targetType == "Sword" and (name:find("sword") or name:find("katana") or name:find("blade") or name:find("saber") or name:find("tushita") or name:find("dark") or name:find("culling") or name:find("buddy") or name:find("hallow")) then
+                    equippedTool = child
+                    break
+                elseif targetType == "Gun" and (name:find("gun") or name:find("rifle") or name:find("musket") or name:find("kabucha") or name:find("soul") or name:find("bazooka")) then
+                    equippedTool = child
+                    break
+                end
+            end
+        end
+
+        if not equippedTool then
+            for _, child in ipairs(backpack:GetChildren()) do
+                if child:IsA("Tool") then
+                    local name = child.Name:lower()
+                    if targetType == "Melee" then
+                        character.Humanoid:EquipTool(child)
+                        break
+                    elseif targetType == "Fruit" and (name:find("fruit") or name:find("rocket") or name:find("dough") or name:find("kitsune") or name:find("buddha")) then
+                        character.Humanoid:EquipTool(child)
+                        break
+                    elseif targetType == "Sword" and (name:find("sword") or name:find("katana") or name:find("blade") or name:find("saber") or name:find("tushita")) then
+                        character.Humanoid:EquipTool(child)
+                        break
+                    elseif targetType == "Gun" and (name:find("gun") or name:find("rifle") or name:find("musket") or name:find("kabucha")) then
+                        character.Humanoid:EquipTool(child)
+                        break
+                    end
+                end
+            end
+        end
+    end)
+end
+
 local activeAuraConnection = nil
 local function toggleAutoAuraAttack(state)
     if not state then
@@ -530,6 +581,7 @@ local function toggleAutoAuraAttack(state)
         lastAttackTick = tick()
 
         pcall(function()
+            equipSelectedWeapon()
             local foundTarget = false
 
             for _, plr in ipairs(Players:GetPlayers()) do
@@ -718,7 +770,7 @@ if Settings.AutoAuraAttack then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (UKURAN LEBIH LEBAR & PINGGIRAN PAS)
+-- 8. MENU UTAMA GUI (URUTAN NOMOR, UKURAN LEBAR & PINGGIRAN PAS)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 45, 0, 45)
@@ -738,7 +790,7 @@ OpenStroke.Color = Color3.fromRGB(255, 100, 100)
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
--- Menu utama diperbesar lebarnya menjadi 440px agar tombol & dropdown tidak sempit
+-- Menu utama diperbesar lebarnya menjadi 440px agar tombol & dropdown pas di sisi kiri & kanan
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 440, 0, 420)
 MainFrame.Position = UDim2.new(0.5, -220, 0.5, -210)
@@ -796,7 +848,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, -8, 1, -38)
 Container.Position = UDim2.new(0, 4, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 1000)
+Container.CanvasSize = UDim2.new(0, 0, 0, 1100)
 Container.ScrollBarThickness = 5
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -993,7 +1045,7 @@ local function createDropdown(title, settingKey, options, unit, onSelectCallback
 end
 
 -- =====================================================================
--- PENYUSUNAN MENU
+-- PENYUSUNAN MENU SESUAI PERMINTAAN (URUTAN 1 SAMPAI 4, NO. 1 DI ATAS)
 -- =====================================================================
 
 createCategoryHeader("1. NOTIFIKASI & INFO")
@@ -1008,15 +1060,21 @@ createToggle("Auto Store Fruit", "AutoStoreFruit", nil)
 
 createCategoryHeader("3. FITUR COMBAT & MOB")
 createToggle("Auto Aura Attack (Player/Mob)", "AutoAuraAttack", function(s) toggleAutoAuraAttack(s) end)
+createDropdown("Pilih Senjata (Weapon)", "SelectedWeapon", {"Melee", "Fruit", "Sword", "Gun"}, "", nil)
 createDropdown("Kecepatan Pukul", "AuraAttackSpeed", {100, 200, 300, 400, 500}, "", nil)
 
 createToggle("Hover Nearest Mob", "HoverNearestMob", function(s) toggleHoverNearestMob(s) end)
-createDropdown("Tinggi Mob Offset", "MobHeightOffset", {3, 5, 8, 10}, "m", nil)
+createDropdown("Tinggi Mob Offset", "MobHeightOffset", {5, 10, 15, 20}, "", nil)
 
 createCategoryHeader("4. UTILITIES & TERBANG")
 createToggle("Auto Join Team", "AutoJoinEnabled", function(s) if s then joinTeam() end end)
+createDropdown("Pilih Tim (Team)", "SelectedTeam", {"Pirates", "Marines"}, "", function(team)
+    Settings.SelectedTeam = team
+    saveSettings()
+    joinTeam()
+end)
 createDropdown("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, "", nil)
 createDropdown("Tinggi Terbang", "FlyHeight", {10, 20, 30, 40}, "", nil)
 createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-print("Blox Fruits Hub - Wide Menu Berhasil Dimuat!")
+print("Blox Fruits Hub - Custom Ordered Menu Berhasil Dimuat!")
