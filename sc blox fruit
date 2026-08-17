@@ -1,6 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - NO SERVER HOP)
--- UPDATED WITH: Fly to NPC, Basic Attack Speed & Modifiers
+-- BLOX FRUITS ULTIMATE SCRIPT (UNIVERSAL EXECUTOR SAFE FIX)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -14,7 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v23.json"
+local FileName = "BloxFruitsHub_Clean_v25.json"
 
 local Settings = {
     FruitNotifier = true,
@@ -28,56 +27,66 @@ local Settings = {
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
-    -- New Settings
     SelectedNPC = "Bandit",
     FlyToNPCEnabled = false,
     FastAttackEnabled = false,
     AttackSpeedMultiplier = 2
 }
 
--- Sistem Save & Load Settings (JSON)
+-- Sistem Save & Load Settings (Aman untuk Semua Executor)
 local function loadSettings()
-    if readfile and pcall(readfile, FileName) then
-        local success, data = pcall(function()
-            return HttpService:JSONDecode(readfile(FileName))
-        end)
-        if success and type(data) == "table" then
-            for k, v in pairs(data) do
-                Settings[k] = v
+    pcall(function()
+        if readfile and pcall(readfile, FileName) then
+            local success, data = pcall(function()
+                return HttpService:JSONDecode(readfile(FileName))
+            end)
+            if success and type(data) == "table" then
+                for k, v in pairs(data) do
+                    Settings[k] = v
+                end
             end
         end
-    end
+    end)
 end
 loadSettings()
 
 local function saveSettings()
-    if writefile then
-        local success, encoded = pcall(function()
-            return HttpService:JSONEncode(Settings)
-        end)
-        if success then
-            writefile(FileName, encoded)
+    pcall(function()
+        if writefile then
+            local success, encoded = pcall(function()
+                return HttpService:JSONEncode(Settings)
+            end)
+            if success then
+                writefile(FileName, encoded)
+            end
         end
-    end
+    end)
 end
 
--- Proteksi GUI untuk Executor
+-- Proteksi GUI Universal (Support Synapse, Delta, Arceus X, Fluxus, CodeX, Hydrogen)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsHubClean"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
+local protected = false
 pcall(function()
     if syn and syn.protect_gui then
         syn.protect_gui(ScreenGui)
         ScreenGui.Parent = CoreGui
+        protected = true
     elseif gethui then
         ScreenGui.Parent = gethui()
-    else
-        ScreenGui.Parent = CoreGui
+        protected = true
     end
 end)
+
+if not protected then
+    pcall(function()
+        ScreenGui.Parent = CoreGui
+    end)
+end
 
 if not ScreenGui.Parent then
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -142,7 +151,7 @@ ServerTimeLabel.TextSize, ServerTimeLabel.Font = 10, Enum.Font.GothamBold
 ServerTimeLabel.ZIndex = 81
 ServerTimeLabel.Parent = StatsHudFrame
 
--- Dragging Widget
+-- Dragging Widget Aman Mobile & PC
 local dragging, dragInput, dragStart, startPos
 StatsHudFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -166,8 +175,9 @@ end)
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
-        local newX = startPos.X.Scale + (delta.X / Workspace.CurrentCamera.ViewportSize.X)
-        local newY = startPos.Y.Scale + (delta.Y / Workspace.CurrentCamera.ViewportSize.Y)
+        local viewportSize = Workspace.CurrentCamera.ViewportSize
+        local newX = startPos.X.Scale + (delta.X / viewportSize.X)
+        local newY = startPos.Y.Scale + (delta.Y / viewportSize.Y)
         
         StatsHudFrame.Position = UDim2.new(newX, 0, newY, 0)
         Settings.HUDPosition.X = newX
@@ -305,7 +315,7 @@ end
 
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
-ESPFolder.Parent = CoreGui
+ESPFolder.Parent = ScreenGui
 
 local function clearESP()
     ESPFolder:ClearAllChildren()
@@ -450,7 +460,6 @@ local function collectNearestFruit()
     end
 end
 
--- Fly to NPC System
 local function getTargetNPC()
     local enemiesFolder = Workspace:FindFirstChild("Enemies")
     if enemiesFolder then
@@ -464,7 +473,6 @@ local function getTargetNPC()
             end
         end
     end
-    -- Fallback search workspace
     for _, obj in ipairs(Workspace:GetChildren()) do
         if obj:IsA("Model") and obj.Name:lower() == Settings.SelectedNPC:lower() then
             local hrp = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso")
@@ -482,32 +490,31 @@ local function flyToNPC()
     pcall(function()
         local npcRoot = getTargetNPC()
         if npcRoot and not activeFlyConnection then
-            smoothFlyTo(npcRoot.CFrame + CFrame.new(0, 0, 3).Position, function()
-                -- Keep locked or loop logic if enabled
+            smoothFlyTo(npcRoot.CFrame + Vector3.new(0, 3, 0), function()
             end)
         end
     end)
 end
 
 -- =====================================================================
--- 4.5. FAST BASIC ATTACK SYSTEM
+-- 4.5. FAST BASIC ATTACK SYSTEM (UNIVERSAL)
 -- =====================================================================
 task.spawn(function()
     while task.wait(0.1) do
         if Settings.FastAttackEnabled then
             pcall(function()
-                local combatFramework = debug and debug.getupvalues and rawget(require(LocalPlayer.PlayerScripts.Clientérence or ReplicatedStorage:WaitForChild("CombatFramework", 2)), "Client")
-                -- Alternative remote/click simulation for basic attacks
                 local vim = game:GetService("VirtualInputManager")
-                vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                if vim then
+                    vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                    vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                end
             end)
         end
     end
 end)
 
 -- =====================================================================
--- 5. FIXED AUTO STORE
+-- 5. AUTO STORE BUAH
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -575,7 +582,7 @@ task.spawn(function()
 end)
 
 -- =====================================================================
--- 6. MONITORING STATUS & NOTIFIKASI (ANTI-SPAM)
+-- 6. MONITORING STATUS & NOTIFIKASI
 -- =====================================================================
 task.spawn(function()
     local lastStatus = nil 
@@ -658,7 +665,7 @@ if Settings.FpsBoost then
 end
 
 -- =====================================================================
--- 8. MENU UTAMA GUI (SCROLLABLE & FIXED SETTINGS)
+-- 8. MENU UTAMA GUI (FIXED & SCROLLABLE)
 -- =====================================================================
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 50, 0, 50)
@@ -707,7 +714,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v23 (Updated)"
+TitleLabel.Text = "Blox Fruits Hub | v25 (Universal Safe)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -822,7 +829,7 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("4. Pengaturan Kecepatan Terbang (100 - 500)")
+createSectionHeader("4. Pengaturan Kecepatan Terbang")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -945,4 +952,4 @@ createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Hub Clean (No Server Hop) Updated Berhasil Dimuat!")
+print("Blox Fruits Hub v25 (Universal Safe) Berhasil Dimuat!")
