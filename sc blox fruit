@@ -1,6 +1,5 @@
 -- =====================================================================
 -- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - NO SERVER HOP)
--- FITUR: TERBANG DI ATAS KEPALA NPC MISI
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -21,16 +20,15 @@ local Settings = {
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 200,  
+    FlightSpeed = 200,  -- Default pertama kali diatur ke 200
     FlyHeight = 5,      
     AutoStoreFruit = true,    
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
-    -- Fitur Baru: Hover di atas NPC Misi
     HoverMissionNPC = false,
-    NPCHeightOffset = 6 -- Jarak ketinggian di atas kepala NPC
+    NPCHeightOffset = 6
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -449,149 +447,6 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 4.1 FITUR BARU: HOVER DI ATAS KEPALA NPC MISI
--- =====================================================================
-local activeHoverConnection = nil
-
-local function getClosestMissionNPC()
-    local rootPart = getCharacterRootPart()
-    if not rootPart then return nil end
-
-    local closestNPC = nil
-    local shortestDist = math.huge
-
-    -- Fungsi bantu untuk memeriksa apakah objek adalah NPC Misi Blox Fruits
-    local function checkFolder(folder)
-        if not folder then return end
-        for _, npc in ipairs(folder:GetChildren()) do
-            if npc:IsA("Model") then
-                local humanoid = npc:FindFirstChildOfClass("Humanoid")
-                local hrp = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso")
-                if humanoid and hrp then
-                    -- NPC Misi di Blox Fruits biasanya memiliki nama tertentu atau indikator dialog/quest
-                    local nameLower = npc.Name:lower()
-                    if nameLower:find("quest") or nameLower:find("bandit") == false and (npc:FindFirstChild("Head") or npc:FindFirstChild("Humanoid")) then
-                        -- Cek jarak
-                        local dist = (rootPart.Position - hrp.Position).Magnitude
-                        if dist < shortestDist then
-                            shortestDist = dist
-                            closestNPC = hrp
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    -- Mencari NPC di Workspace secara umum (biasanya berada di folder NPCs atau Workspace langsung)
-    pcall(function()
-        if Workspace:FindFirstChild("NPCs") then
-            checkFolder(Workspace.NPCs)
-        end
-        -- Fallback mencari langsung di Workspace
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
-                -- Filter agar tidak mendeteksi pemain lain atau musuh biasa
-                if not Players:GetPlayerFromCharacter(obj) and obj.Name ~= "Character" then
-                    local dist = (rootPart.Position - obj.HumanoidRootPart.Position).Magnitude
-                    if dist < shortestDist then
-                        shortestDist = dist
-                        closestNPC = obj.HumanoidRootPart
-                    end
-                end
-            end
-        end
-    end)
-
-    return closestNPC
-end
-
-local function toggleHoverMissionNPC(state)
-    if state then
-        if activeHoverConnection then
-            activeHoverConnection:Disconnect()
-            activeHoverConnection = nil
-        end
-
-        local character = LocalPlayer.Character
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.PlatformStand = true end
-
-        local noclipConnection
-        noclipConnection = RunService.Stepped:Connect(function()
-            pcall(function()
-                if character then
-                    for _, part in ipairs(character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
-                    end
-                end
-            end)
-        end)
-
-        local rootPart = getCharacterRootPart()
-        if not rootPart then return end
-
-        local bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bodyVelocity.Parent = rootPart
-
-        local bodyGyro = Instance.new("BodyGyro")
-        bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-        bodyGyro.CFrame = rootPart.CFrame
-        bodyGyro.Parent = rootPart
-
-        activeHoverConnection = RunService.Heartbeat:Connect(function()
-            local currentRoot = getCharacterRootPart()
-            if not Settings.HoverMissionNPC or not currentRoot or not character or not character.Parent then
-                if noclipConnection then noclipConnection:Disconnect() end
-                if bodyVelocity then bodyVelocity:Destroy() end
-                if bodyGyro then bodyGyro:Destroy() end
-                if humanoid then humanoid.PlatformStand = false end
-                if activeHoverConnection then activeHoverConnection:Disconnect() activeHoverConnection = nil end
-                return
-            end
-
-            local npcPart = getClosestMissionNPC()
-            if npcPart then
-                -- Posisi tepat di atas kepala NPC (menambah tinggi sebesar Settings.NPCHeightOffset)
-                local targetPos = npcPart.Position + Vector3.new(0, Settings.NPCHeightOffset, 0)
-                local currentPos = currentRoot.Position
-                local direction = (targetPos - currentPos)
-                local distance = direction.Magnitude
-
-                if distance > 1 then
-                    bodyVelocity.Velocity = direction.Unit * math.min(300, distance * 20)
-                else
-                    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-                end
-                bodyGyro.CFrame = CFrame.new(currentPos, npcPart.Position)
-            else
-                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-            end
-        end)
-    else
-        if activeHoverConnection then
-            activeHoverConnection:Disconnect()
-            activeHoverConnection = nil
-        end
-        local character = LocalPlayer.Character
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.PlatformStand = false end
-        local rootPart = getCharacterRootPart()
-        if rootPart then
-            for _, v in ipairs(rootPart:GetChildren()) do
-                if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then
-                    v:Destroy()
-                end
-            end
-        end
-    end
-end
-
--- =====================================================================
 -- 5. FIXED AUTO STORE
 -- =====================================================================
 local function autoStoreFruits()
@@ -628,6 +483,43 @@ local function autoStoreFruits()
             for _, item in ipairs(character:GetChildren()) do
                 checkAndStore(item)
             end
+        end
+    end)
+end
+
+-- =====================================================================
+-- 5.1 HOVER MISSION NPC LOGIC (TAMBAHAN FITUR AMAN)
+-- =====================================================================
+local activeHoverConnection = nil
+local function toggleHoverMissionNPC(state)
+    if not state then 
+        if activeHoverConnection then activeHoverConnection:Disconnect() activeHoverConnection = nil end
+        return 
+    end
+    
+    if activeHoverConnection then activeHoverConnection:Disconnect() end
+    activeHoverConnection = RunService.Heartbeat:Connect(function()
+        if not Settings.HoverMissionNPC then return end
+        local root = getCharacterRootPart()
+        if not root then return end
+        
+        local closest = nil
+        local dist = math.huge
+        for _, v in pairs(Workspace:GetChildren()) do
+            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                local vName = v.Name:lower()
+                if vName:find("quest") or vName:find("npc") or vName:find("military") or vName:find("bandit") then
+                    local d = (root.Position - v.HumanoidRootPart.Position).Magnitude
+                    if d < dist then 
+                        dist = d
+                        closest = v.HumanoidRootPart 
+                    end
+                end
+            end
+        end
+        
+        if closest and dist <= 150 then
+            root.CFrame = CFrame.new(closest.Position + Vector3.new(0, Settings.NPCHeightOffset, 0))
         end
     end)
 end
@@ -788,7 +680,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v22 (NPC Hover)"
+TitleLabel.Text = "Blox Fruits Hub | Clean v22 (No Hop)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -903,12 +795,12 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("4. Fitur Khusus: Hover di Atas NPC Misi")
-createToggle("Terbang di Atas NPC Misi", "HoverMissionNPC", function(state)
+createSectionHeader("3.1 Tambahan Fitur Quest/NPC")
+createToggle("Hover Misi NPC", "HoverMissionNPC", function(state)
     toggleHoverMissionNPC(state)
 end)
 
-createSectionHeader("5. Pengaturan Kecepatan Terbang (100 - 500)")
+createSectionHeader("4. Pengaturan Kecepatan Terbang (100 - 500)")
 
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -939,7 +831,7 @@ SpeedBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("6. Pengaturan Ketinggian Terbang")
+createSectionHeader("5. Pengaturan Ketinggian Terbang")
 
 local HeightBtn = Instance.new("TextButton")
 HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
@@ -947,7 +839,8 @@ HeightBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
 HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
 HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
-HeightBtn.ZIndex, HeightBtn.Parent = 102, Container
+HeightBtn.ZIndex = 102
+HeightBtn.Parent = Container
 
 local hCorner = Instance.new("UICorner")
 hCorner.CornerRadius = UDim.new(0, 6)
@@ -969,9 +862,14 @@ HeightBtn.MouseButton1Click:Connect(function()
     saveSettings()
 end)
 
-createSectionHeader("7. Performa")
+createSectionHeader("6. Performa")
 createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Hub Clean (NPC Hover) Berhasil Dimuat!")
+-- Jalankan status awal HoverMissionNPC jika diset true dari file config
+if Settings.HoverMissionNPC then
+    toggleHoverMissionNPC(true)
+end
+
+print("Blox Fruits Hub Clean (No Server Hop) Berhasil Dimuat!")
