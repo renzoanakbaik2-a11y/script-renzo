@@ -1,5 +1,6 @@
 -- =====================================================================
 -- BLOX FRUITS ULTIMATE SCRIPT (CLEAN VERSION - NO SERVER HOP)
+-- FITUR: TERBANG DI ATAS KEPALA NPC MISI
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -20,18 +21,16 @@ local Settings = {
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 200,  -- Default pertama kali diatur ke 200
+    FlightSpeed = 200,  
     FlyHeight = 5,      
     AutoStoreFruit = true,    
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
-    -- Pengaturan tambahan untuk fitur gabungan
-    AutoChest = false,
-    AutoStats = false,
-    SelectedStat = "Melee",
-    AuraEnabled = false
+    -- Fitur Baru: Hover di atas NPC Misi
+    HoverMissionNPC = false,
+    NPCHeightOffset = 6 -- Jarak ketinggian di atas kepala NPC
 }
 
 -- Sistem Save & Load Settings (JSON)
@@ -450,7 +449,150 @@ local function collectNearestFruit()
 end
 
 -- =====================================================================
--- 5. FIXED AUTO STORE & TAMBAHAN FITUR (Auto Chest, Auto Stats, Aura)
+-- 4.1 FITUR BARU: HOVER DI ATAS KEPALA NPC MISI
+-- =====================================================================
+local activeHoverConnection = nil
+
+local function getClosestMissionNPC()
+    local rootPart = getCharacterRootPart()
+    if not rootPart then return nil end
+
+    local closestNPC = nil
+    local shortestDist = math.huge
+
+    -- Fungsi bantu untuk memeriksa apakah objek adalah NPC Misi Blox Fruits
+    local function checkFolder(folder)
+        if not folder then return end
+        for _, npc in ipairs(folder:GetChildren()) do
+            if npc:IsA("Model") then
+                local humanoid = npc:FindFirstChildOfClass("Humanoid")
+                local hrp = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso")
+                if humanoid and hrp then
+                    -- NPC Misi di Blox Fruits biasanya memiliki nama tertentu atau indikator dialog/quest
+                    local nameLower = npc.Name:lower()
+                    if nameLower:find("quest") or nameLower:find("bandit") == false and (npc:FindFirstChild("Head") or npc:FindFirstChild("Humanoid")) then
+                        -- Cek jarak
+                        local dist = (rootPart.Position - hrp.Position).Magnitude
+                        if dist < shortestDist then
+                            shortestDist = dist
+                            closestNPC = hrp
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Mencari NPC di Workspace secara umum (biasanya berada di folder NPCs atau Workspace langsung)
+    pcall(function()
+        if Workspace:FindFirstChild("NPCs") then
+            checkFolder(Workspace.NPCs)
+        end
+        -- Fallback mencari langsung di Workspace
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
+                -- Filter agar tidak mendeteksi pemain lain atau musuh biasa
+                if not Players:GetPlayerFromCharacter(obj) and obj.Name ~= "Character" then
+                    local dist = (rootPart.Position - obj.HumanoidRootPart.Position).Magnitude
+                    if dist < shortestDist then
+                        shortestDist = dist
+                        closestNPC = obj.HumanoidRootPart
+                    end
+                end
+            end
+        end
+    end)
+
+    return closestNPC
+end
+
+local function toggleHoverMissionNPC(state)
+    if state then
+        if activeHoverConnection then
+            activeHoverConnection:Disconnect()
+            activeHoverConnection = nil
+        end
+
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.PlatformStand = true end
+
+        local noclipConnection
+        noclipConnection = RunService.Stepped:Connect(function()
+            pcall(function()
+                if character then
+                    for _, part in ipairs(character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end)
+
+        local rootPart = getCharacterRootPart()
+        if not rootPart then return end
+
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyVelocity.Parent = rootPart
+
+        local bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bodyGyro.CFrame = rootPart.CFrame
+        bodyGyro.Parent = rootPart
+
+        activeHoverConnection = RunService.Heartbeat:Connect(function()
+            local currentRoot = getCharacterRootPart()
+            if not Settings.HoverMissionNPC or not currentRoot or not character or not character.Parent then
+                if noclipConnection then noclipConnection:Disconnect() end
+                if bodyVelocity then bodyVelocity:Destroy() end
+                if bodyGyro then bodyGyro:Destroy() end
+                if humanoid then humanoid.PlatformStand = false end
+                if activeHoverConnection then activeHoverConnection:Disconnect() activeHoverConnection = nil end
+                return
+            end
+
+            local npcPart = getClosestMissionNPC()
+            if npcPart then
+                -- Posisi tepat di atas kepala NPC (menambah tinggi sebesar Settings.NPCHeightOffset)
+                local targetPos = npcPart.Position + Vector3.new(0, Settings.NPCHeightOffset, 0)
+                local currentPos = currentRoot.Position
+                local direction = (targetPos - currentPos)
+                local distance = direction.Magnitude
+
+                if distance > 1 then
+                    bodyVelocity.Velocity = direction.Unit * math.min(300, distance * 20)
+                else
+                    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                end
+                bodyGyro.CFrame = CFrame.new(currentPos, npcPart.Position)
+            else
+                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            end
+        end)
+    else
+        if activeHoverConnection then
+            activeHoverConnection:Disconnect()
+            activeHoverConnection = nil
+        end
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.PlatformStand = false end
+        local rootPart = getCharacterRootPart()
+        if rootPart then
+            for _, v in ipairs(rootPart:GetChildren()) do
+                if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then
+                    v:Destroy()
+                end
+            end
+        end
+    end
+end
+
+-- =====================================================================
+-- 5. FIXED AUTO STORE
 -- =====================================================================
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
@@ -470,7 +612,6 @@ local function autoStoreFruits()
                 local name = item.Name:lower()
                 if name:find("fruit") or name:find("rocket") or name:find("spin") or name:find("kitsune") or name:find("dragon") or name:find("dough") or name:find("buddha") or name:find("trex") or name:find("mammoth") then
                     local originalName = item:GetAttribute("OriginalName") or item.Name
-                    pcall(function() commF:InvokeServer("AddPoint", originalName, item) end) -- fallback aman
                     pcall(function() commF:InvokeServer("StoreFruit", originalName, item) end)
                     pcall(function() commF:InvokeServer("StoreFruit", item.Name) end)
                 end
@@ -486,51 +627,6 @@ local function autoStoreFruits()
         if character then
             for _, item in ipairs(character:GetChildren()) do
                 checkAndStore(item)
-            end
-        end
-    end)
-end
-
--- Fitur Tambahan: Auto Chest Farm / Collect
-local function autoCollectChests()
-    if not Settings.AutoChest then return end
-    pcall(function()
-        local rootPart = getCharacterRootPart()
-        if not rootPart then return end
-        for _, v in ipairs(Workspace:GetChildren()) do
-            if v.Name:lower():find("chest") and v:FindFirstChild("HumanoidRootPart") or v:IsA("BasePart") then
-                local part = v:IsA("Model") and v.PrimaryPart or v
-                if part and (rootPart.Position - part.Position).Magnitude < 300 then
-                    rootPart.CFrame = part.CFrame
-                    task.wait(0.2)
-                end
-            end
-        end
-    end)
-end
-
--- Fitur Tambahan: Auto Stats Upgrade
-local function autoUpgradeStats()
-    if not Settings.AutoStats then return end
-    pcall(function()
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-        local commF = remotes and remotes:FindFirstChild("CommF_")
-        if commF then
-            commF:InvokeServer("AddPoint", Settings.SelectedStat, 3)
-        end
-    end)
-end
-
--- Fitur Tambahan: Auto Buso / Aura Handler
-local function checkBusoAura()
-    if not Settings.AuraEnabled then return end
-    pcall(function()
-        local character = LocalPlayer.Character
-        if character and not character:FindFirstChild("HasBuso") then
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-            local commF = remotes and remotes:FindFirstChild("CommF_")
-            if commF then
-                commF:InvokeServer("Buso")
             end
         end
     end)
@@ -568,9 +664,6 @@ task.spawn(function()
     while task.wait(3) do 
         pcall(function()
             autoStoreFruits()
-            autoCollectChests()
-            autoUpgradeStats()
-            checkBusoAura()
 
             local hasFruitNow = false
             for _, obj in ipairs(Workspace:GetChildren()) do
@@ -695,7 +788,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | Clean v22 (Extended + No Hop)"
+TitleLabel.Text = "Blox Fruits Hub | Clean v22 (NPC Hover)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -723,7 +816,7 @@ local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -35)
 Container.Position = UDim2.new(0, 0, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 850)
+Container.CanvasSize = UDim2.new(0, 0, 0, 750)
 Container.ScrollBarThickness = 6
 Container.ZIndex = 101
 Container.Parent = MainFrame
@@ -810,10 +903,10 @@ end)
 
 createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
 
-createSectionHeader("4. Fitur Tambahan (Chest & Stats)")
-createToggle("Auto Collect Chest", "AutoChest", nil)
-createToggle("Auto Upgrade Stats", "AutoStats", nil)
-createToggle("Auto Buso (Aura)", "AuraEnabled", nil)
+createSectionHeader("4. Fitur Khusus: Hover di Atas NPC Misi")
+createToggle("Terbang di Atas NPC Misi", "HoverMissionNPC", function(state)
+    toggleHoverMissionNPC(state)
+end)
 
 createSectionHeader("5. Pengaturan Kecepatan Terbang (100 - 500)")
 
@@ -854,8 +947,7 @@ HeightBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
 HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
 HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
-HeightBtn.ZIndex = 102
-HeightBtn.Parent = Container
+HeightBtn.ZIndex, HeightBtn.Parent = 102, Container
 
 local hCorner = Instance.new("UICorner")
 hCorner.CornerRadius = UDim.new(0, 6)
@@ -882,4 +974,4 @@ createToggle("FPS Boost", "FpsBoost", function(state)
     applyFpsBoost(state) 
 end)
 
-print("Blox Fruits Hub Clean (No Server Hop) Berhasil Dimuat!")
+print("Blox Fruits Hub Clean (NPC Hover) Berhasil Dimuat!")
