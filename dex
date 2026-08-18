@@ -1,74 +1,430 @@
--- ==========================================
--- [BAGIAN 5] FITUR UTAMA: AUTO COLLECT (AMAN DARI BASE)
--- ==========================================
+-- ==============================================================================
+-- DEWA CODING: ULTRA OMNI-FINDER V7.0 (AUTO-REFRESH TRIPLE COLUMN & SKIP)
+-- ==============================================================================
 
-local autoCollectBtn = Instance.new("TextButton")
-autoCollectBtn.Name = "AutoCollectButton"
-autoCollectBtn.Size = UDim2.new(0, 220, 0, 45)
-autoCollectBtn.Position = UDim2.new(0.5, -110, 0, 60)
-autoCollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-autoCollectBtn.Text = "Auto Collect: OFF"
-autoCollectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-autoCollectBtn.TextSize = 14
-autoCollectBtn.Font = Enum.Font.SourceSansBold
-autoCollectBtn.Parent = mainFrame
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
 
-local autoCollectAktif = false
-autoCollectBtn.MouseButton1Click:Connect(function()
-    autoCollectAktif = not autoCollectAktif
-    
-    if autoCollectAktif then
-        autoCollectBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        autoCollectBtn.Text = "Auto Collect: ON"
-        
-        task.spawn(function()
-            while autoCollectAktif do
-                local karakter = game:GetService("Players").LocalPlayer.Character
-                if karakter and karakter:FindFirstChild("HumanoidRootPart") then
-                    local posAwal = karakter.HumanoidRootPart.Position
-                    local targetKetemu = nil
-                    
-                    -- Cari benda yang punya TouchInterest di seluruh workspace
-                    for _, descendant in ipairs(workspace:GetDescendants()) do
-                        if descendant:IsA("TouchInterest") and descendant.Parent then
-                            local partTarget = descendant.Parent
-                            
-                            -- Pastikan itu berupa BasePart dan BUKAN bagian dari base (misal: cek apakah ada di dalam folder Base/Tycoon)
-                            if partTarget:IsA("BasePart") then
-                                
-                                -- CEK TAMBAHAN (PENGAMAN):
-                                -- 1. Pastikan tidak masuk ke folder Base (Biasanya nama foldernya "Plots", "Bases", atau "Tycoons")
-                                local isBase = false
-                                local parentCek = partTarget.Parent
-                                while parentCek and parentCek ~= workspace do
-                                    if parentCek.Name:lower():find("base") or parentCek.Name:lower():find("plot") or parentCek.Name:lower():find("tycoon") then
-                                        isBase = true
-                                        break
-                                    end
-                                    parentCek = parentCek.Parent
-                                end
-                                
-                                -- Kalau BUKAN base, jadikan target!
-                                if not isBase then
-                                    targetKetemu = partTarget
-                                    break -- Ambil satu dulu yang terdekat/ketemu
-                                end
-                                
-                            end
-                        end
-                    end
-                    
-                    -- Kalau target yang bukan base ketemu, langsung teleport ke situ!
-                    if targetKetemu then
-                        karakter.HumanoidRootPart.CFrame = targetKetemu.CFrame
-                    end
-                    
-                end
-                task.wait(0.4)
-            end
-        end)
-    else
-        autoCollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        autoCollectBtn.Text = "Auto Collect: OFF"
+-- Hapus instance lama agar tidak bentrok
+pcall(function()
+    if CoreGui:FindFirstChild("DewaOmniFinder") then
+        CoreGui.DewaOmniFinder:Destroy()
     end
 end)
+
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "DewaOmniFinder"
+ScreenGui.ResetOnSpawn = false
+
+-- ==============================================================================
+-- 1. FLOATING TOGGLE BUTTON
+-- ==============================================================================
+local ToggleBtn = Instance.new("TextButton", ScreenGui)
+ToggleBtn.Size = UDim2.new(0, 150, 0, 42)
+ToggleBtn.Position = UDim2.new(0, 20, 0.4, 0)
+ToggleBtn.Text = "⚡ OMNI-FINDER V7"
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
+ToggleBtn.BorderSizePixel = 2
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 11
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
+
+-- ==============================================================================
+-- 2. UTILITY DASHBOARD (MAIN UI PANEL)
+-- ==============================================================================
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 640, 0, 440)
+MainFrame.Position = UDim2.new(0.5, -320, 0.5, -220)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = false
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+-- Header Bar
+local TopBar = Instance.new("Frame", MainFrame)
+TopBar.Size = UDim2.new(1, 0, 0, 38)
+TopBar.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+TopBar.BorderSizePixel = 0
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.Text = "⚡ DEWA OMNI-FINDER: DYNAMIC REFRESH & SKIP"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 11
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+
+local CloseBtn = Instance.new("TextButton", TopBar)
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -34, 0.5, -14)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 11
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+end)
+
+-- ==============================================================================
+-- 3. KONTROL PANEL (GRID TOMBOL & FITUR SKIP)
+-- ==============================================================================
+local ControlGrid = Instance.new("Frame", MainFrame)
+ControlGrid.Size = UDim2.new(0.96, 0, 0, 42)
+ControlGrid.Position = UDim2.new(0.02, 0, 0.10, 0)
+ControlGrid.BackgroundTransparency = 1
+
+local UIBuilderLayout = Instance.new("UIListLayout", ControlGrid)
+UIBuilderLayout.FillDirection = Enum.FillDirection.Horizontal
+UIBuilderLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIBuilderLayout.Padding = UDim.new(0, 6)
+
+-- Tombol 1: Scan
+local ScanBtn = Instance.new("TextButton", ControlGrid)
+ScanBtn.Size = UDim2.new(0, 120, 1, 0)
+ScanBtn.Text = "🔄 SCAN SEMUA"
+ScanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+ScanBtn.Font = Enum.Font.GothamBold
+ScanBtn.TextSize = 9
+Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
+
+-- Tombol 2: Skip Objek (Auto Refresh Susunan & Kolom)
+local SkipBtn = Instance.new("TextButton", ControlGrid)
+SkipBtn.Size = UDim2.new(0, 125, 1, 0)
+SkipBtn.Text = "⏭️ SKIP OBJEK"
+SkipBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SkipBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+SkipBtn.Font = Enum.Font.GothamBold
+SkipBtn.TextSize = 9
+Instance.new("UICorner", SkipBtn).CornerRadius = UDim.new(0, 6)
+
+-- Tombol 3: Raycast 3D Click
+local RaycastBtn = Instance.new("TextButton", ControlGrid)
+RaycastBtn.Size = UDim2.new(0, 130, 1, 0)
+RaycastBtn.Text = "🎯 3D CLICK: OFF"
+RaycastBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RaycastBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+RaycastBtn.Font = Enum.Font.GothamBold
+RaycastBtn.TextSize = 9
+Instance.new("UICorner", RaycastBtn).CornerRadius = UDim.new(0, 6)
+
+-- Tombol 4: Pull Item
+local PullBtn = Instance.new("TextButton", ControlGrid)
+PullBtn.Size = UDim2.new(0, 120, 1, 0)
+PullBtn.Text = "🧲 PULL: OFF"
+PullBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PullBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+PullBtn.Font = Enum.Font.GothamBold
+PullBtn.TextSize = 9
+Instance.new("UICorner", PullBtn).CornerRadius = UDim.new(0, 6)
+
+-- Status Info Display
+local StatusLabel = Instance.new("TextLabel", MainFrame)
+StatusLabel.Size = UDim2.new(0.96, 0, 0, 28)
+StatusLabel.Position = UDim2.new(0.02, 0, 0.21, 0)
+StatusLabel.Text = "Status: Silakan 'SCAN SEMUA' lalu gunakan 'SKIP OBJEK' untuk mengganti susunan world."
+StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextSize = 9
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
+StatusLabel.TextWrapped = true
+StatusLabel.BackgroundTransparency = 1
+
+-- ==============================================================================
+-- 4. TRIPLE COLUMN NAVIGATOR SEJAJAR
+-- ==============================================================================
+local Col1 = Instance.new("ScrollingFrame", MainFrame)
+Col1.Size = UDim2.new(0.31, 0, 0.62, 0)
+Col1.Position = UDim2.new(0.02, 0, 0.30, 0)
+Col1.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+Col1.BorderSizePixel = 0
+Col1.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", Col1).CornerRadius = UDim.new(0, 6)
+local L1 = Instance.new("UIListLayout", Col1)
+L1.SortOrder = Enum.SortOrder.LayoutOrder
+L1.Padding = UDim.new(0, 4)
+
+local Col2 = Instance.new("ScrollingFrame", MainFrame)
+Col2.Size = UDim2.new(0.31, 0, 0.62, 0)
+Col2.Position = UDim2.new(0.345, 0, 0.30, 0)
+Col2.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+Col2.BorderSizePixel = 0
+Col2.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", Col2).CornerRadius = UDim.new(0, 6)
+local L2 = Instance.new("UIListLayout", Col2)
+L2.SortOrder = Enum.SortOrder.LayoutOrder
+L2.Padding = UDim.new(0, 4)
+
+local Col3 = Instance.new("ScrollingFrame", MainFrame)
+Col3.Size = UDim2.new(0.31, 0, 0.62, 0)
+Col3.Position = UDim2.new(0.67, 0, 0.30, 0)
+Col3.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+Col3.BorderSizePixel = 0
+Col3.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", Col3).CornerRadius = UDim.new(0, 6)
+local L3 = Instance.new("UIListLayout", Col3)
+L3.SortOrder = Enum.SortOrder.LayoutOrder
+L3.Padding = UDim.new(0, 4)
+
+-- Judul Kolom Sejajar
+local T1 = Instance.new("TextLabel", MainFrame)
+T1.Size = UDim2.new(0.31, 0, 0, 18)
+T1.Position = UDim2.new(0.02, 0, 0.27, 0)
+T1.Text = "1. DAFTAR OBJEK:"
+T1.TextColor3 = Color3.fromRGB(255, 255, 255)
+T1.Font = Enum.Font.GothamBold
+T1.TextSize = 9
+T1.BackgroundTransparency = 1
+
+local T2 = Instance.new("TextLabel", MainFrame)
+T2.Size = UDim2.new(0.31, 0, 0, 18)
+T2.Position = UDim2.new(0.345, 0, 0.27, 0)
+T2.Text = "2. HIRARKI FOLDER:"
+T2.TextColor3 = Color3.fromRGB(255, 255, 255)
+T2.Font = Enum.Font.GothamBold
+T2.TextSize = 9
+T2.BackgroundTransparency = 1
+
+local T3 = Instance.new("TextLabel", MainFrame)
+T3.Size = UDim2.new(0.31, 0, 0, 18)
+T3.Position = UDim2.new(0.67, 0, 0.27, 0)
+T3.Text = "3. ISI DALAM FOLDER:"
+T3.TextColor3 = Color3.fromRGB(255, 255, 255)
+T3.Font = Enum.Font.GothamBold
+T3.TextSize = 9
+T3.BackgroundTransparency = 1
+
+local HighlightFolder = Instance.new("Folder", ScreenGui)
+HighlightFolder.Name = "OmniFinderHighlights"
+
+-- ==============================================================================
+-- 5. LOGIKA UTAMA & AUTO-REFRESH KELOMPOK OBJEK
+-- ==============================================================================
+local scannedObjects = {}
+local currentIndex = 0
+local RaycastMode = false
+local PullMode = false
+
+-- Fungsi Mengisi Kolom 3 (Isi Folder)
+local function populateCol3(folderItem)
+    for _, child in pairs(Col3:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    
+    local count = 0
+    for _, subObj in pairs(folderItem:GetChildren()) do
+        count = count + 1
+        local subBtn = Instance.new("TextButton")
+        subBtn.Size = UDim2.new(1, -4, 0, 24)
+        subBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+        subBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+        subBtn.Font = Enum.Font.Code
+        subBtn.TextSize = 9
+        subBtn.Text = " - " .. subObj.Name .. " [" .. subObj.ClassName .. "]"
+        subBtn.TextXAlignment = Enum.TextXAlignment.Left
+        subBtn.Parent = Col3
+        Instance.new("UICorner", subBtn).CornerRadius = UDim.new(0, 4)
+    end
+    Col3.CanvasSize = UDim2.new(0, 0, 0, count * 26)
+end
+
+-- Fungsi Memperbarui Kolom 2 (Hirarki Induk) secara Otomatis
+local function showTripleHierarchy(targetObj)
+    for _, child in pairs(Col2:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    for _, child in pairs(Col3:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    
+    local current = targetObj.Parent
+    local lineage = {}
+    while current and current ~= game do
+        table.insert(lineage, 1, current)
+        current = current.Parent
+    end
+    
+    local count = 0
+    for _, folderItem in ipairs(lineage) do
+        count = count + 1
+        local fBtn = Instance.new("TextButton")
+        fBtn.Size = UDim2.new(1, -4, 0, 26)
+        fBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+        fBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
+        fBtn.Font = Enum.Font.Code
+        fBtn.TextSize = 9
+        fBtn.Text = "📁 " .. folderItem.Name
+        fBtn.TextXAlignment = Enum.TextXAlignment.Left
+        fBtn.Parent = Col2
+        Instance.new("UICorner", fBtn).CornerRadius = UDim.new(0, 4)
+        
+        fBtn.MouseButton1Click:Connect(function()
+            populateCol3(folderItem)
+        end)
+    end
+    Col2.CanvasSize = UDim2.new(0, 0, 0, count * 28)
+    
+    -- Otomatis tampilkan isi dari folder tingkat paling dekat dengan objek
+    if #lineage > 0 then
+        populateCol3(lineage[#lineage])
+    end
+end
+
+-- Fungsi Target Utama (Pindah Objek, Pindah Garis Hijau, & Refresh Kolom Sejajar)
+local function selectTargetObject(obj, index)
+    if not obj or not obj.Parent then return end
+    currentIndex = index
+    HighlightFolder:ClearAllChildren()
+    
+    pcall(function()
+        local box = Instance.new("SelectionBox")
+        box.Adornee = obj
+        box.Color3 = Color3.fromRGB(0, 255, 128)
+        box.LineThickness = 0.09
+        box.Parent = HighlightFolder
+    end)
+    
+    -- Segarkan susunan kolom 2 dan kolom 3 secara otomatis menyesuaikan objek baru
+    showTripleHierarchy(obj)
+    StatusLabel.Text = "Aktif [" .. currentIndex .. "/" .. #scannedObjects .. "]: " .. obj.Name .. " (" .. obj.ClassName .. ")"
+end
+
+-- Tombol Scan Workspace
+ScanBtn.MouseButton1Click:Connect(function()
+    ScanBtn.Text = "MEMINDAI..."
+    ScanBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+    
+    task.spawn(function()
+        for _, child in pairs(Col1:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+        for _, child in pairs(Col2:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+        for _, child in pairs(Col3:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+        HighlightFolder:ClearAllChildren()
+        
+        scannedObjects = {}
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj.Name and (obj:IsA("BasePart") or obj:IsA("Model")) then
+                table.insert(scannedObjects, obj)
+            end
+        end
+        
+        for i, obj in ipairs(scannedObjects) do
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, -4, 0, 24)
+            btn.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+            btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+            btn.Font = Enum.Font.Code
+            btn.TextSize = 9
+            btn.Text = i .. ". " .. obj.Name
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            btn.Parent = Col1
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+            
+            btn.MouseButton1Click:Connect(function()
+                selectTargetObject(obj, i)
+            end)
+        end
+        Col1.CanvasSize = UDim2.new(0, 0, 0, #scannedObjects * 26)
+        ScanBtn.Text = "🔄 SCAN SEMUA"
+        ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+        
+        if #scannedObjects > 0 then
+            selectTargetObject(scannedObjects[1], 1)
+        end
+    end)
+end)
+
+-- Tombol Skip Objek (Mengganti Susunan World & Kolom Secara Otomatis)
+SkipBtn.MouseButton1Click:Connect(function()
+    if #scannedObjects == 0 then
+        StatusLabel.Text = "Error: Belum scan objek! Klik Scan Dulu."
+        return
+    end
+    
+    currentIndex = currentIndex + 1
+    if currentIndex > #scannedObjects then
+        currentIndex = 1
+    end
+    
+    local nextObj = scannedObjects[currentIndex]
+    if nextObj then
+        selectTargetObject(nextObj, currentIndex)
+    end
+end)
+
+-- Tombol 3D Raycast Click Mode
+RaycastBtn.MouseButton1Click:Connect(function()
+    RaycastMode = not RaycastMode
+    RaycastBtn.Text = RaycastMode and "🎯 3D CLICK: ON" or "🎯 3D CLICK: OFF"
+    RaycastBtn.BackgroundColor3 = RaycastMode and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+end)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not RaycastMode or gpe then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local mousePos = UserInputService:GetMouseLocation()
+        local unitRay = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
+        
+        local rayParams = RaycastParams.new()
+        rayParams.FilterType = Enum.RaycastFilterType.Exclude
+        rayParams.FilterDescendantsInstances = {player.Character, HighlightFolder}
+        
+        local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1500, rayParams)
+        if result and result.Instance then
+            local hitPart = result.Instance
+            MainFrame.Visible = true
+            showTripleHierarchy(hitPart)
+            HighlightFolder:ClearAllChildren()
+            
+            pcall(function()
+                local box = Instance.new("SelectionBox")
+                box.Adornee = hitPart
+                box.Color3 = Color3.fromRGB(255, 100, 0)
+                box.LineThickness = 0.09
+                box.Parent = HighlightFolder
+            end)
+            StatusLabel.Text = "3D Click Target: " .. hitPart.Name
+        end
+    end
+end)
+
+-- Tombol Auto Pull Item
+PullBtn.MouseButton1Click:Connect(function()
+    PullMode = not PullMode
+    PullBtn.Text = PullMode and "🧲 PULL: ON" or "🧲 PULL: OFF"
+    PullBtn.BackgroundColor3 = PullMode and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+end)
+
+RunService.Heartbeat:Connect(function()
+    if PullMode then
+        pcall(function()
+            local char = player.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local myPos = char.HumanoidRootPart.CFrame
+            
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and not obj.Anchored and obj ~= char and not obj:IsDescendantOf(char) then
+                    local size = obj.Size
+                    if size.X < 4 and size.Y < 4 and size.Z < 4 then
+                        obj.CFrame = myPos + Vector3.new(0, 2, 0)
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+print("⚡ DEWA OMNI-FINDER V7.0 LOADED SUCCESSFULLY! ⚡")
