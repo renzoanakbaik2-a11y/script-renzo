@@ -1,5 +1,5 @@
 -- ==============================================================================
--- DEWA CODING: ULTRA OMNI-FINDER V7.0 (AUTO-REFRESH TRIPLE COLUMN & SKIP)
+-- DEWA CODING: ULTRA OMNI-FINDER V6.0 (TRIPLE COLUMN & SKIP FEATURE)
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -26,7 +26,7 @@ ScreenGui.ResetOnSpawn = false
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
 ToggleBtn.Size = UDim2.new(0, 150, 0, 42)
 ToggleBtn.Position = UDim2.new(0, 20, 0.4, 0)
-ToggleBtn.Text = "⚡ OMNI-FINDER V7"
+ToggleBtn.Text = "⚡ OMNI-FINDER V6"
 ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 ToggleBtn.BorderColor3 = Color3.fromRGB(0, 255, 128)
@@ -38,7 +38,7 @@ ToggleBtn.Draggable = true
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
 
 -- ==============================================================================
--- 2. UTILITY DASHBOARD (MAIN UI PANEL)
+-- 2. UTILITY DASHBOARD (MAIN UI PANEL - DIPERLEBAR UNTUK 3 KOLOM)
 -- ==============================================================================
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 640, 0, 440)
@@ -60,7 +60,7 @@ Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, -40, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "⚡ DEWA OMNI-FINDER: DYNAMIC REFRESH & SKIP"
+Title.Text = "⚡ DEWA OMNI-FINDER: TRIPLE SEED & SKIP MODE"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 11
@@ -107,7 +107,7 @@ ScanBtn.Font = Enum.Font.GothamBold
 ScanBtn.TextSize = 9
 Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
 
--- Tombol 2: Skip Objek (Auto Refresh Susunan & Kolom)
+-- Tombol 2: Skip Objek Berikutnya
 local SkipBtn = Instance.new("TextButton", ControlGrid)
 SkipBtn.Size = UDim2.new(0, 125, 1, 0)
 SkipBtn.Text = "⏭️ SKIP OBJEK"
@@ -141,7 +141,7 @@ Instance.new("UICorner", PullBtn).CornerRadius = UDim.new(0, 6)
 local StatusLabel = Instance.new("TextLabel", MainFrame)
 StatusLabel.Size = UDim2.new(0.96, 0, 0, 28)
 StatusLabel.Position = UDim2.new(0.02, 0, 0.21, 0)
-StatusLabel.Text = "Status: Silakan 'SCAN SEMUA' lalu gunakan 'SKIP OBJEK' untuk mengganti susunan world."
+StatusLabel.Text = "Status: Silakan 'SCAN SEMUA' atau gunakan tombol 'SKIP OBJEK' untuk menelusuri map."
 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
 StatusLabel.Font = Enum.Font.Code
 StatusLabel.TextSize = 9
@@ -151,7 +151,7 @@ StatusLabel.TextWrapped = true
 StatusLabel.BackgroundTransparency = 1
 
 -- ==============================================================================
--- 4. TRIPLE COLUMN NAVIGATOR SEJAJAR
+-- 4. TRIPLE COLUMN NAVIGATOR (SEJAJAR: 1. OBJEK, 2. FOLDER INDUK, 3. SUB-FOLDER/ISI)
 -- ==============================================================================
 local Col1 = Instance.new("ScrollingFrame", MainFrame)
 Col1.Size = UDim2.new(0.31, 0, 0.62, 0)
@@ -214,18 +214,19 @@ T3.Font = Enum.Font.GothamBold
 T3.TextSize = 9
 T3.BackgroundTransparency = 1
 
+-- Folder Penyimpanan Kotak Visual (SelectionBox) di Map Game
 local HighlightFolder = Instance.new("Folder", ScreenGui)
 HighlightFolder.Name = "OmniFinderHighlights"
 
 -- ==============================================================================
--- 5. LOGIKA UTAMA & AUTO-REFRESH KELOMPOK OBJEK
+-- 5. LOGIKA UTAMA & SISTEM SKIP OBJEK
 -- ==============================================================================
 local scannedObjects = {}
 local currentIndex = 0
 local RaycastMode = false
 local PullMode = false
 
--- Fungsi Mengisi Kolom 3 (Isi Folder)
+-- Fungsi Mengisi Kolom 3 (Isi Folder saat folder di kolom 2 diklik)
 local function populateCol3(folderItem)
     for _, child in pairs(Col3:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
     
@@ -246,7 +247,7 @@ local function populateCol3(folderItem)
     Col3.CanvasSize = UDim2.new(0, 0, 0, count * 26)
 end
 
--- Fungsi Memperbarui Kolom 2 (Hirarki Induk) secara Otomatis
+-- Fungsi Mengisi Kolom 2 (Hirarki Folder Induk dari Objek)
 local function showTripleHierarchy(targetObj)
     for _, child in pairs(Col2:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
     for _, child in pairs(Col3:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
@@ -274,17 +275,13 @@ local function showTripleHierarchy(targetObj)
         
         fBtn.MouseButton1Click:Connect(function()
             populateCol3(folderItem)
+            StatusLabel.Text = "Melihat isi folder: " .. folderItem.Name
         end)
     end
     Col2.CanvasSize = UDim2.new(0, 0, 0, count * 28)
-    
-    -- Otomatis tampilkan isi dari folder tingkat paling dekat dengan objek
-    if #lineage > 0 then
-        populateCol3(lineage[#lineage])
-    end
 end
 
--- Fungsi Target Utama (Pindah Objek, Pindah Garis Hijau, & Refresh Kolom Sejajar)
+-- Fungsi Fokus ke Objek Tertentu (Dilengkapi Garis Kotak Hijau)
 local function selectTargetObject(obj, index)
     if not obj or not obj.Parent then return end
     currentIndex = index
@@ -298,9 +295,8 @@ local function selectTargetObject(obj, index)
         box.Parent = HighlightFolder
     end)
     
-    -- Segarkan susunan kolom 2 dan kolom 3 secara otomatis menyesuaikan objek baru
     showTripleHierarchy(obj)
-    StatusLabel.Text = "Aktif [" .. currentIndex .. "/" .. #scannedObjects .. "]: " .. obj.Name .. " (" .. obj.ClassName .. ")"
+    StatusLabel.Text = "Objek [" .. currentIndex .. "/" .. #scannedObjects .. "]: " .. obj.Name .. " (" .. obj.ClassName .. ")"
 end
 
 -- Tombol Scan Workspace
@@ -347,16 +343,16 @@ ScanBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Tombol Skip Objek (Mengganti Susunan World & Kolom Secara Otomatis)
+-- Tombol Skip Objek (Melompat ke Objek Berikutnya Secara Otomatis)
 SkipBtn.MouseButton1Click:Connect(function()
     if #scannedObjects == 0 then
-        StatusLabel.Text = "Error: Belum scan objek! Klik Scan Dulu."
+        StatusLabel.Text = "Error: Belum ada objek yang di-scan! Klik Scan dulu."
         return
     end
     
     currentIndex = currentIndex + 1
     if currentIndex > #scannedObjects then
-        currentIndex = 1
+        currentIndex = 1 -- Kembali ke awal jika sudah mentok di ujung
     end
     
     local nextObj = scannedObjects[currentIndex]
@@ -427,4 +423,4 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("⚡ DEWA OMNI-FINDER V7.0 LOADED SUCCESSFULLY! ⚡")
+print("⚡ DEWA OMNI-FINDER V6.0 TRIPLE COLUMN LOADED! ⚡")
