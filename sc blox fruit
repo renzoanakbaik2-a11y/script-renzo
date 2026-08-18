@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (DIRECT FULL CODE REVISION - COMPLETE)
+-- BLOX FRUITS ULTIMATE SCRIPT (DIRECT FULL CODE REVISION - FIXED)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -847,12 +847,16 @@ TitleLabel.Parent = TopBar
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 24, 0, 24)
 CloseButton.Position = UDim2.new(0.93, 0, 0.12, 0)
-CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseButton.TextSize, CloseButton.Font = 12, Enum.Font.GothamBold
-CloseButton.ZIndex = 103
+CloseButton.ZIndex = 102
 CloseButton.Parent = TopBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 4)
+CloseCorner.Parent = CloseButton
 
 CloseButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
@@ -860,4 +864,104 @@ end)
 
 OpenButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Tab System Container
+local Container = Instance.new("ScrollingFrame")
+Container.Size = UDim2.new(1, -20, 1, -45)
+Container.Position = UDim2.new(0, 10, 0, 38)
+Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0, 0, 0, 600)
+Container.ScrollBarThickness = 4
+Container.ZIndex = 101
+Container.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.Parent = Container
+
+-- Helper function to create toggles cleanly
+local function createToggle(name, default, callback)
+    local ToggleFrame = Instance.new("Frame")
+    ToggleFrame.Size = UDim2.new(1, 0, 0, 35)
+    ToggleFrame.BackgroundColor3 = Color3.fromRGB(22, 25, 35)
+    ToggleFrame.BorderSizePixel = 0
+    ToggleFrame.ZIndex = 102
+    ToggleFrame.Parent = Container
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = ToggleFrame
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.7, 0, 1, 0)
+    Label.Position = UDim2.new(0.03, 0, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = name
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.TextSize, Label.Font = 11, Enum.Font.GothamBold
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.ZIndex = 103
+    Label.Parent = ToggleFrame
+
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0, 50, 0, 22)
+    Button.Position = UDim2.new(0.82, 0, 0.2, 0)
+    Button.BackgroundColor3 = default and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(50, 50, 60)
+    Button.Text = default and "ON" or "OFF"
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize, Button.Font = 10, Enum.Font.GothamBold
+    Button.ZIndex = 103
+    Button.Parent = ToggleFrame
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 4)
+    BtnCorner.Parent = Button
+
+    local state = default
+    Button.MouseButton1Click:Connect(function()
+        state = not state
+        Button.Text = state and "ON" or "OFF"
+        Button.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(50, 50, 60)
+        callback(state)
+    end)
+end
+
+createToggle("Auto Collect Fruits", Settings.AutoCollectFruit, function(val)
+    Settings.AutoCollectFruit = val
+    saveSettings()
+end)
+
+createToggle("Fruit ESP", Settings.FruitESP, function(val)
+    Settings.FruitESP = val
+    saveSettings()
+end)
+
+createToggle("Fruit Notifier & Sound", Settings.FruitNotifier, function(val)
+    Settings.FruitNotifier = val
+    saveSettings()
+end)
+
+createToggle("Auto Store Fruit", Settings.AutoStoreFruit, function(val)
+    Settings.AutoStoreFruit = val
+    saveSettings()
+end)
+
+createToggle("Auto Aura / Attack Mobs", Settings.AutoAuraAttack, function(val)
+    Settings.AutoAuraAttack = val
+    toggleAutoAuraAttack(val)
+    saveSettings()
+end)
+
+createToggle("Hover Nearest Mob Safely", Settings.HoverNearestMob, function(val)
+    Settings.HoverNearestMob = val
+    toggleHoverNearestMob(val)
+    saveSettings()
+end)
+
+createToggle("FPS Boost", Settings.FpsBoost, function(val)
+    Settings.FpsBoost = val
+    applyFpsBoost(val)
+    saveSettings()
 end)
