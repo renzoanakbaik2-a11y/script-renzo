@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLOX FRUITS ULTIMATE SCRIPT (FIXED FLY, MOB FLIGHT & ATTACK SETTINGS)
+-- BLOX FRUITS ULTIMATE SCRIPT (DIRECT FULL CODE REVISION)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -11,81 +11,72 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local Stats = game:GetService("Stats")
 
 local LocalPlayer = Players.LocalPlayer
-local FileName = "BloxFruitsHub_Clean_v26.json"
+local FileName = "BloxFruitsHub_CustomOrder_v37.json"
 
 local Settings = {
     FruitNotifier = true,
     AutoJoinEnabled = true,
     SelectedTeam = "Pirates",
     FpsBoost = false,
-    FlightSpeed = 200,  
-    FlyHeight = 5,      
-    AutoStoreFruit = true,    
+    FlightSpeed = 200,
+    FlyHeight = 15,
+    AutoStoreFruit = true,
     FruitESP = true,
     AutoCollectFruit = true,
     FruitStatsHUD = true,
     HUDPosition = {X = 0.05, Y = 0.15},
-    SelectedMob = "Bandit",
-    FlyToMobEnabled = false,
-    FastAttackEnabled = false,
-    AttackSpeedMultiplier = 2,
-    AttackHeightOffset = 3 -- Ketinggian pukul bisa diatur sampai 10
+    HoverNearestMob = false,
+    MobHeightOffset = 6,
+    AutoAuraAttack = false,
+    AuraRange = 65,
+    AuraAttackSpeed = 40,
+    SelectedWeapon = "Melee"
 }
 
 local function loadSettings()
-    pcall(function()
-        if readfile and pcall(readfile, FileName) then
-            local success, data = pcall(function()
-                return HttpService:JSONDecode(readfile(FileName))
-            end)
-            if success and type(data) == "table" then
-                for k, v in pairs(data) do
-                    Settings[k] = v
-                end
+    if readfile and pcall(readfile, FileName) then
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(readfile(FileName))
+        end)
+        if success and type(data) == "table" then
+            for k, v in pairs(data) do
+                Settings[k] = v
             end
         end
-    end)
+    end
 end
 loadSettings()
 
 local function saveSettings()
-    pcall(function()
-        if writefile then
-            local success, encoded = pcall(function()
-                return HttpService:JSONEncode(Settings)
-            end)
-            if success then
-                writefile(FileName, encoded)
-            end
+    if writefile then
+        local success, encoded = pcall(function()
+            return HttpService:JSONEncode(Settings)
+        end)
+        if success then
+            writefile(FileName, encoded)
         end
-    end)
+    end
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsHubClean"
+ScreenGui.Name = "BloxFruitsHubCustom"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local protected = false
 pcall(function()
     if syn and syn.protect_gui then
         syn.protect_gui(ScreenGui)
         ScreenGui.Parent = CoreGui
-        protected = true
     elseif gethui then
         ScreenGui.Parent = gethui()
-        protected = true
+    else
+        ScreenGui.Parent = CoreGui
     end
 end)
-
-if not protected then
-    pcall(function()
-        ScreenGui.Parent = CoreGui
-    end)
-end
 
 if not ScreenGui.Parent then
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -99,11 +90,8 @@ local function getCharacterRootPart()
     return nil
 end
 
--- =====================================================================
--- 1. WIDGET STATISTIK BUAH & SERVER AKTIF
--- =====================================================================
 local StatsHudFrame = Instance.new("Frame")
-StatsHudFrame.Size = UDim2.new(0, 190, 0, 75)
+StatsHudFrame.Size = UDim2.new(0, 190, 0, 98)
 StatsHudFrame.Position = UDim2.new(Settings.HUDPosition.X, 0, Settings.HUDPosition.Y, 0)
 StatsHudFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 StatsHudFrame.BackgroundTransparency = 0.15
@@ -150,6 +138,16 @@ ServerTimeLabel.TextSize, ServerTimeLabel.Font = 10, Enum.Font.GothamBold
 ServerTimeLabel.ZIndex = 81
 ServerTimeLabel.Parent = StatsHudFrame
 
+local PingLabel = Instance.new("TextLabel")
+PingLabel.Size = UDim2.new(1, 0, 0, 22)
+PingLabel.Position = UDim2.new(0, 0, 0, 70)
+PingLabel.BackgroundTransparency = 1
+PingLabel.Text = "Ping: 0 ms"
+PingLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
+PingLabel.TextSize, PingLabel.Font = 10, Enum.Font.GothamBold
+PingLabel.ZIndex = 81
+PingLabel.Parent = StatsHudFrame
+
 local dragging, dragInput, dragStart, startPos
 StatsHudFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -173,9 +171,8 @@ end)
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
-        local viewportSize = Workspace.CurrentCamera.ViewportSize
-        local newX = startPos.X.Scale + (delta.X / viewportSize.X)
-        local newY = startPos.Y.Scale + (delta.Y / viewportSize.Y)
+        local newX = startPos.X.Scale + (delta.X / Workspace.CurrentCamera.ViewportSize.X)
+        local newY = startPos.Y.Scale + (delta.Y / Workspace.CurrentCamera.ViewportSize.Y)
         
         StatsHudFrame.Position = UDim2.new(newX, 0, newY, 0)
         Settings.HUDPosition.X = newX
@@ -184,9 +181,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- =====================================================================
--- 2. SISTEM NOTIFIKASI
--- =====================================================================
 local NotifFrame = Instance.new("Frame")
 NotifFrame.Size = UDim2.new(0, 380, 0, 50)
 NotifFrame.AnchorPoint = Vector2.new(0.5, 0)
@@ -201,14 +195,14 @@ local NotifCorner = Instance.new("UICorner")
 NotifCorner.CornerRadius = UDim.new(0, 8)
 NotifCorner.Parent = NotifFrame
 
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Thickness = 2
-UIStroke.Parent = NotifFrame
+local UIStrokeNotif = Instance.new("UIStroke")
+UIStrokeNotif.Thickness = 2
+UIStrokeNotif.Parent = NotifFrame
 
 task.spawn(function()
     while true do
         for i = 0, 1, 0.05 do
-            UIStroke.Color = Color3.fromHSV(i, 1, 1)
+            UIStrokeNotif.Color = Color3.fromHSV(i, 1, 1)
             task.wait(1)
         end
     end
@@ -268,9 +262,6 @@ local function playFruitSound()
     end)
 end
 
--- =====================================================================
--- 3. DETEKSI NAMA PULAU & ESP BUAH
--- =====================================================================
 local function getIslandName(position)
     local x, z = position.X, position.Z
     if math.abs(x) < 2000 and math.abs(z) < 2000 then
@@ -313,7 +304,7 @@ end
 
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
-ESPFolder.Parent = ScreenGui
+ESPFolder.Parent = CoreGui
 
 local function clearESP()
     ESPFolder:ClearAllChildren()
@@ -355,12 +346,8 @@ local function updateFruitESP()
     end)
 end
 
--- =====================================================================
--- 4. STABILIZED FLY, AUTO COLLECT & FLY TO MOB SYSTEM
--- =====================================================================
 local activeFlyConnection = nil
-
-local function smoothFlyTo(targetCFrame, customOffset, onComplete)
+local function smoothFlyTo(targetCFrame, onComplete)
     local rootPart = getCharacterRootPart()
     if not rootPart then return end
 
@@ -370,8 +357,8 @@ local function smoothFlyTo(targetCFrame, customOffset, onComplete)
     end
 
     local currentSpeed = math.clamp(Settings.FlightSpeed, 30, 500)
-    local heightOffset = customOffset or math.clamp(Settings.FlyHeight, 0, 25)
-    local adjustedTarget = targetCFrame.Position + Vector3.new(0, heightOffset, 0)
+    local currentHeight = math.clamp(Settings.FlyHeight, 0, 50)
+    local adjustedTarget = targetCFrame.Position + Vector3.new(0, currentHeight, 0)
 
     local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -416,8 +403,7 @@ local function smoothFlyTo(targetCFrame, customOffset, onComplete)
         local direction = (targetPos - currentPos)
         local distance = direction.Magnitude
 
-        -- Toleransi jarak agar tidak overshoot / mental ke atas
-        if distance < 3 then
+        if distance < 4 then
             if noclipConnection then noclipConnection:Disconnect() end
             if bodyVelocity then bodyVelocity:Destroy() end
             if bodyGyro then bodyGyro:Destroy() end
@@ -427,7 +413,7 @@ local function smoothFlyTo(targetCFrame, customOffset, onComplete)
             return
         end
 
-        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 12)
+        bodyVelocity.Velocity = direction.Unit * math.min(currentSpeed, distance * 15)
         bodyGyro.CFrame = CFrame.new(currentPos, targetPos)
     end)
 end
@@ -453,77 +439,204 @@ local function collectNearestFruit()
     end
 
     if targetFruit then
-        -- Ketinggian pas ke buah (offset 1 agar tepat menyentuh buah tanpa mental)
-        smoothFlyTo(targetFruit.CFrame, 1, function()
+        smoothFlyTo(targetFruit.CFrame, function()
             task.wait(0.5)
             collectNearestFruit()
         end)
     end
 end
 
-local function getTargetMob()
-    local enemiesFolder = Workspace:FindFirstChild("Enemies")
-    if enemiesFolder then
-        for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-            if enemy.Name:lower() == Settings.SelectedMob:lower() then
-                local hrp = enemy:FindFirstChild("HumanoidRootPart")
-                local hum = enemy:FindFirstChildOfClass("Humanoid")
-                if hrp and hum and hum.Health > 0 then
-                    return hrp
+local activeHoverMobConnection = nil
+local function toggleHoverNearestMob(state)
+    if not state then 
+        if activeHoverMobConnection then 
+            activeHoverMobConnection:Disconnect() 
+            activeHoverMobConnection = nil 
+        end
+        return 
+    end
+    
+    if activeHoverMobConnection then activeHoverMobConnection:Disconnect() end
+    
+    activeHoverMobConnection = RunService.Heartbeat:Connect(function()
+        if not Settings.HoverNearestMob then return end
+        local root = getCharacterRootPart()
+        if not root then return end
+        
+        local closestMob = nil
+        local minDist = math.huge
+        
+        local function scanMobModel(model)
+            if model:IsA("Model") and model ~= LocalPlayer.Character then
+                local humanoid = model:FindFirstChildOfClass("Humanoid")
+                local hrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
+                
+                if humanoid and hrp and humanoid.Health > 0 then
+                    local isPlayer = Players:GetPlayerFromCharacter(model)
+                    if not isPlayer then
+                        local d = (root.Position - hrp.Position).Magnitude
+                        if d < minDist then
+                            minDist = d
+                            closestMob = hrp
+                        end
+                    end
                 end
             end
         end
-    end
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        if obj:IsA("Model") and obj.Name:lower() == Settings.SelectedMob:lower() then
-            local hrp = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso")
-            local hum = obj:FindFirstChildOfClass("Humanoid")
-            if hrp and hum and hum.Health > 0 then
-                return hrp
+
+        local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
+        for _, folderName in ipairs(mobFolderNames) do
+            local folder = Workspace:FindFirstChild(folderName)
+            if folder then
+                for _, mob in pairs(folder:GetChildren()) do
+                    scanMobModel(mob)
+                end
             end
         end
-    end
-    return nil
-end
-
-local function flyToMob()
-    if not Settings.FlyToMobEnabled then return end
-    pcall(function()
-        local mobRoot = getTargetMob()
-        if mobRoot and not activeFlyConnection then
-            -- Menggunakan AttackHeightOffset yang bisa disetting sampai 10
-            smoothFlyTo(mobRoot.CFrame, Settings.AttackHeightOffset, function()
-            end)
+        
+        if closestMob then
+            local safeOffset = math.clamp(Settings.MobHeightOffset, 3, 10)
+            root.CFrame = CFrame.new(closestMob.Position + Vector3.new(0, safeOffset, 0))
         end
     end)
 end
 
--- =====================================================================
--- 4.5. FAST BASIC ATTACK SYSTEM (DENGAN KECEPATAN BISA DISETTING)
--- =====================================================================
-task.spawn(function()
-    while task.wait() do
-        if Settings.FastAttackEnabled then
-            pcall(function()
-                local vim = game:GetService("VirtualInputManager")
-                if vim then
-                    -- Mengulangi klik sesuai kelipatan serangan (1x sampai 3x)
-                    local loops = math.clamp(Settings.AttackSpeedMultiplier, 1, 3)
-                    for i = 1, loops do
-                        vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                        vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+local function equipSelectedWeapon()
+    pcall(function()
+        local character = LocalPlayer.Character
+        local backpack = LocalPlayer.Backpack
+        if not character or not backpack then return end
+
+        local targetType = Settings.SelectedWeapon or "Melee"
+        
+        local function matchesCategory(itemName, category)
+            itemName = itemName:lower()
+            if category == "Melee" then
+                return itemName:find("combat") or itemName:find("step") or itemName:find("claw") or itemName:find("fist") or itemName:find("water") or itemName:find("dragon") or itemName:find("superhuman") or itemName:find("godhuman") or itemName:find("electric") or itemName:find("sanguine") or itemName:find("sharkman") or itemName:find("death")
+            elseif category == "Fruit" then
+                return itemName:find("fruit") or itemName:find("rocket") or itemName:find("spin") or itemName:find("spring") or itemName:find("chop") or itemName:find("spike") or itemName:find("flame") or itemName:find("falcon") or itemName:find("ice") or itemName:find("sand") or itemName:find("dark") or itemName:find("diamond") or itemName:find("light") or itemName:find("rubber") or itemName:find("barrier") or itemName:find("ghost") or itemName:find("magma") or itemName:find("quake") or itemName:find("buddha") or itemName:find("love") or itemName:find("spider") or itemName:find("phoenix") or itemName:find("portal") or itemName:find("pain") or itemName:find("blizzard") or itemName:find("gravity") or itemName:find("mammoth") or itemName:find("trex") or itemName:find("dough") or itemName:find("shadow") or itemName:find("venom") or itemName:find("control") or itemName:find("spirit") or itemName:find("dragon") or itemName:find("leopard") or itemName:find("kitsune")
+            elseif category == "Sword" then
+                return itemName:find("sword") or itemName:find("katana") or itemName:find("blade") or itemName:find("saber") or itemName:find("tushita") or itemName:find("culling") or itemName:find("buddy") or itemName:find("hallow") or itemName:find("dark") or itemName:find("pole") or itemName:find("rengoku") or itemName:find("wando") or itemName:find("shisui") or itemName:find("bisento") or itemName:find("midnight") or itemName:find("cavendish") or itemName:find("foxlamp")
+            elseif category == "Gun" then
+                return itemName:find("gun") or itemName:find("rifle") or itemName:find("musket") or itemName:find("kabucha") or itemName:find("soul") or itemName:find("bazooka") or itemName:find("flintlock") or itemName:find("cannon") or itemName:find("acidum") or itemName:find("serpent")
+            end
+            return false
+        end
+
+        for _, child in ipairs(character:GetChildren()) do
+            if child:IsA("Tool") and matchesCategory(child.Name, targetType) then
+                return 
+            end
+        end
+
+        local targetTool = nil
+        for _, child in ipairs(backpack:GetChildren()) do
+            if child:IsA("Tool") and matchesCategory(child.Name, targetType) then
+                targetTool = child
+                break
+            end
+        end
+
+        if not targetTool then
+            for _, child in ipairs(character:GetChildren()) do
+                if child:IsA("Tool") and matchesCategory(child.Name, targetType) then
+                    targetTool = child
+                    break
+                end
+            end
+        end
+
+        if targetTool and targetTool.Parent == backpack then
+            character.Humanoid:EquipTool(targetTool)
+        end
+    end)
+end
+
+local activeAuraConnection = nil
+local function toggleAutoAuraAttack(state)
+    if not state then
+        if activeAuraConnection then
+            activeAuraConnection:Disconnect()
+            activeAuraConnection = nil
+        end
+        return
+    end
+
+    if activeAuraConnection then activeAuraConnection:Disconnect() end
+
+    local lastAttackTick = 0
+    activeAuraConnection = RunService.Heartbeat:Connect(function()
+        if not Settings.AutoAuraAttack then return end
+        local root = getCharacterRootPart()
+        if not root then return end
+
+        local speedSetting = tonumber(Settings.AuraAttackSpeed) or 40
+        local interval = speedSetting / 1000 
+        if tick() - lastAttackTick < interval then return end
+        lastAttackTick = tick()
+
+        pcall(function()
+            equipSelectedWeapon()
+            local foundTarget = false
+            local targetPos = nil
+
+            local mobFolderNames = {"Enemies", "Enemy", "Monster", "Monsters"}
+            for _, folderName in ipairs(mobFolderNames) do
+                local folder = Workspace:FindFirstChild(folderName)
+                if folder then
+                    for _, mob in pairs(folder:GetChildren()) do
+                        local mRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
+                        local mHum = mob:FindFirstChildOfClass("Humanoid")
+                        if mRoot and mHum and mHum.Health > 0 then
+                            local distanceToMob = (root.Position - mRoot.Position).Magnitude
+                            if distanceToMob <= Settings.AuraRange then
+                                foundTarget = true
+                                targetPos = mRoot.Position
+                                break
+                            end
+                        end
                     end
                 end
-            end)
-            -- Jeda interval diatur berdasarkan multiplier agar kecepatan serangannya terasa dinamis
-            task.wait(0.15 / Settings.AttackSpeedMultiplier)
-        end
-    end
-end)
+                if foundTarget then break end
+            end
 
--- =====================================================================
--- 5. AUTO STORE BUAH
--- =====================================================================
+            if not foundTarget then
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= LocalPlayer and plr.Character then
+                        local pRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+                        local pHum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        if pRoot and pHum and pHum.Health > 0 then
+                            if (root.Position - pRoot.Position).Magnitude <= Settings.AuraRange then
+                                foundTarget = true
+                                targetPos = pRoot.Position
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+
+            if foundTarget and targetPos then
+                root.CFrame = CFrame.lookAt(root.Position, Vector3.new(targetPos.X, root.Position.Y, targetPos.Z))
+                
+                local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                local combatRemote = remotes and remotes:FindFirstChild("Combat")
+                if combatRemote then
+                    combatRemote:InvokeServer(targetPos)
+                else
+                    local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                    if tool and tool:FindFirstChild("Handle") then
+                        local remoteEvent = tool:FindFirstChild("RemoteEvent") or tool:FindFirstChild("AttackRemote")
+                        if remoteEvent then
+                            remoteEvent:FireServer(targetPos)
+                        end
+                    end
+                end
+            end
+        end)
+    end)
+end
+
 local function autoStoreFruits()
     if not Settings.AutoStoreFruit then return end
     
@@ -562,7 +675,6 @@ local function autoStoreFruits()
     end)
 end
 
--- Loop Statistik & ESP
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
@@ -581,17 +693,23 @@ task.spawn(function()
             local minutes = math.floor((uptimeSeconds % 3600) / 60)
             local seconds = uptimeSeconds % 60
             ServerTimeLabel.Text = string.format("Server Aktif: %02d:%02d:%02d", hours, minutes, seconds)
-            
-            if Settings.FlyToMobEnabled and not activeFlyConnection then
-                flyToMob()
+
+            local pingVal = 0
+            pcall(function()
+                pingVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            end)
+            PingLabel.Text = "Ping: " .. pingVal .. " ms"
+            if pingVal < 150 then
+                PingLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+            elseif pingVal < 300 then
+                PingLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
+            else
+                PingLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
             end
         end)
     end
 end)
 
--- =====================================================================
--- 6. MONITORING STATUS & NOTIFIKASI
--- =====================================================================
 task.spawn(function()
     local lastStatus = nil 
     task.wait(5) 
@@ -629,9 +747,6 @@ task.spawn(function()
     end
 end)
 
--- =====================================================================
--- 7. AUTO JOIN TEAM & FPS BOOST
--- =====================================================================
 local function joinTeam()
     if not Settings.AutoJoinEnabled then return end
     pcall(function()
@@ -666,17 +781,17 @@ local function applyFpsBoost(state)
 end
 
 if Settings.FpsBoost then
-    task.spawn(function()
-        task.wait(2)
-        applyFpsBoost(true)
-    end)
+    task.spawn(function() task.wait(2) applyFpsBoost(true) end)
+end
+if Settings.HoverNearestMob then
+    task.spawn(function() task.wait(2) toggleHoverNearestMob(true) end)
+end
+if Settings.AutoAuraAttack then
+    task.spawn(function() task.wait(2) toggleAutoAuraAttack(true) end)
 end
 
--- =====================================================================
--- 8. MENU UTAMA GUI (FIXED & SCROLLABLE)
--- =====================================================================
 local OpenButton = Instance.new("ImageButton")
-OpenButton.Size = UDim2.new(0, 50, 0, 50)
+OpenButton.Size = UDim2.new(0, 45, 0, 45)
 OpenButton.Position = UDim2.new(0.02, 0, 0.35, 0)
 OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 OpenButton.Image = "rbxassetid://72916050815889"
@@ -685,7 +800,7 @@ OpenButton.ZIndex = 999
 OpenButton.Parent = ScreenGui
 
 local OpenCorner = Instance.new("UICorner")
-OpenCorner.CornerRadius = UDim.new(0, 12)
+OpenCorner.CornerRadius = UDim.new(0, 10)
 OpenCorner.Parent = OpenButton
 
 local OpenStroke = Instance.new("UIStroke")
@@ -694,26 +809,26 @@ OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 420, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -190)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
+MainFrame.Size = UDim2.new(0, 440, 0, 420)
+MainFrame.Position = UDim2.new(0.5, -220, 0.5, -210)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
 MainFrame.ZIndex = 100
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.CornerRadius = UDim.new(0, 8)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Color = Color3.fromRGB(255, 100, 100)
-MainStroke.Thickness = 2
+MainStroke.Thickness = 1.5
 MainStroke.Parent = MainFrame
 
 local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(1, 0, 0, 35)
-TopBar.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
+TopBar.Size = UDim2.new(1, 0, 0, 32)
+TopBar.BackgroundColor3 = Color3.fromRGB(22, 25, 35)
 TopBar.BorderSizePixel = 0
 TopBar.ZIndex = 101
 TopBar.Parent = MainFrame
@@ -722,68 +837,70 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.03, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Blox Fruits Hub | v26 (Perfect Fixed)"
+TitleLabel.Text = "Blox Fruits Hub | Ultimate Menu"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-TitleLabel.TextSize, TitleLabel.Font = 10, Enum.Font.GothamBold
+TitleLabel.TextSize, TitleLabel.Font = 12, Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.ZIndex = 102
 TitleLabel.Parent = TopBar
 
 local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 28, 0, 28)
-CloseButton.Position = UDim2.new(0.93, 0, 0.1, 0)
+CloseButton.Size = UDim2.new(0, 24, 0, 24)
+CloseButton.Position = UDim2.new(0.93, 0, 0.12, 0)
 CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextSize, CloseButton.Font = 12, Enum.Font.GothamBold
+CloseButton.TextSize, CloseButton.Font = 10, Enum.Font.GothamBold
 CloseButton.ZIndex = 102
 CloseButton.Parent = TopBar
 
 local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.CornerRadius = UDim.new(0, 4)
 CloseCorner.Parent = CloseButton
 
 OpenButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 CloseButton.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
 local Container = Instance.new("ScrollingFrame")
-Container.Size = UDim2.new(1, 0, 1, -35)
-Container.Position = UDim2.new(0, 0, 0, 35)
+Container.Size = UDim2.new(1, -8, 1, -38)
+Container.Position = UDim2.new(0, 4, 0, 35)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 0, 950)
-Container.ScrollBarThickness = 6
+Container.CanvasSize = UDim2.new(0, 0, 0, 1200)
+Container.ScrollBarThickness = 5
 Container.ZIndex = 101
 Container.Parent = MainFrame
 
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.Padding = UDim.new(0, 6)
 UIListLayout.Parent = Container
 
-local function createSectionHeader(text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(0.9, 0, 0, 28)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.TextColor3 = Color3.fromRGB(255, 100, 100)
-    lbl.TextSize, lbl.Font = 11, Enum.Font.GothamBold
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.ZIndex = 102
-    lbl.Parent = Container
-    return lbl
+local function createCategoryHeader(categoryName)
+    local header = Instance.new("TextLabel")
+    header.Size = UDim2.new(1, -10, 0, 24)
+    header.Position = UDim2.new(0, 5, 0, 0)
+    header.BackgroundTransparency = 1
+    header.Text = "--- " .. categoryName .. " ---"
+    header.TextColor3 = Color3.fromRGB(255, 215, 0)
+    header.TextSize = 11
+    header.Font = Enum.Font.GothamBold
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.ZIndex = 102
+    header.Parent = Container
 end
 
 local function createToggle(text, settingKey, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 32)
+    btn.Size = UDim2.new(1, -10, 0, 32)
+    btn.Position = UDim2.new(0, 5, 0, 0)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 11
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.ZIndex = 102
     
     local state = Settings[settingKey]
-    btn.Text = text .. ": " .. (state and "ON" or "OFF")
-    btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
+    btn.Text = " > " .. text .. ": " .. (state and "ON" or "OFF")
+    btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(180, 40, 40)
     btn.Parent = Container
 
     local corner = Instance.new("UICorner")
@@ -793,195 +910,190 @@ local function createToggle(text, settingKey, callback)
     btn.MouseButton1Click:Connect(function()
         Settings[settingKey] = not Settings[settingKey]
         local newState = Settings[settingKey]
-        btn.Text = text .. ": " .. (newState and "ON" or "OFF")
-        btn.BackgroundColor3 = newState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(200, 50, 50)
+        btn.Text = " > " .. text .. ": " .. (newState and "ON" or "OFF")
+        btn.BackgroundColor3 = newState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(180, 40, 40)
         saveSettings()
         if callback then callback(newState) end
     end)
     return btn
 end
 
-createSectionHeader("1. Auto Join Tim")
-createToggle("Auto Join Tim", "AutoJoinEnabled", function(state)
-    if state then joinTeam() end
-end)
+local function createSettingButton(text, onClick)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -10, 0, 32)
+    btn.Position = UDim2.new(0, 5, 0, 0)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+    btn.Text = " [ * ] " .. text
+    btn.ZIndex = 102
+    btn.Parent = Container
 
-createSectionHeader("2. Notifikasi & Live Map Stats HUD")
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(onClick)
+    return btn
+end
+
+local function createDropdown(title, settingKey, options, unit, onSelectCallback)
+    local collapsedHeight = 32
+    local itemHeight = 26
+    local maxVisibleItems = 4
+    local calculatedListHeight = math.min(#options, maxVisibleItems) * itemHeight
+    local totalExpandedHeight = collapsedHeight + calculatedListHeight + 8
+
+    local dropFrame = Instance.new("Frame")
+    dropFrame.Size = UDim2.new(1, -10, 0, collapsedHeight)
+    dropFrame.Position = UDim2.new(0, 5, 0, 0)
+    dropFrame.BackgroundColor3 = Color3.fromRGB(22, 25, 35)
+    dropFrame.BorderSizePixel = 0
+    dropFrame.ClipsDescendants = true
+    dropFrame.ZIndex = 150
+    dropFrame.Parent = Container
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = dropFrame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(45, 52, 70)
+    stroke.Thickness = 1
+    stroke.Parent = dropFrame
+
+    local mainBtn = Instance.new("TextButton")
+    mainBtn.Size = UDim2.new(1, 0, 0, collapsedHeight)
+    mainBtn.BackgroundTransparency = 1
+    mainBtn.Font = Enum.Font.GothamBold
+    mainBtn.TextSize = 11
+    mainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    mainBtn.TextXAlignment = Enum.TextXAlignment.Left
+    mainBtn.ZIndex = 151
+    mainBtn.Parent = dropFrame
+
+    local currentVal = Settings[settingKey]
+    local unitText = (unit ~= "" and " " .. unit) or ""
+    mainBtn.Text = "   " .. title .. ": " .. tostring(currentVal) .. unitText
+
+    local arrowLabel = Instance.new("TextLabel")
+    arrowLabel.Size = UDim2.new(0, 30, 0, collapsedHeight)
+    arrowLabel.Position = UDim2.new(1, -35, 0, 0)
+    arrowLabel.BackgroundTransparency = 1
+    arrowLabel.Text = "▼"
+    arrowLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    arrowLabel.TextSize = 10
+    arrowLabel.Font = Enum.Font.GothamBold
+    arrowLabel.ZIndex = 151
+    arrowLabel.Parent = dropFrame
+
+    local optionsContainer = Instance.new("ScrollingFrame")
+    optionsContainer.Size = UDim2.new(1, -10, 0, calculatedListHeight)
+    optionsContainer.Position = UDim2.new(0, 5, 0, collapsedHeight + 4)
+    optionsContainer.BackgroundTransparency = 1
+    optionsContainer.CanvasSize = UDim2.new(0, 0, 0, #options * itemHeight)
+    optionsContainer.ScrollBarThickness = 4
+    optionsContainer.ZIndex = 152
+    optionsContainer.Parent = dropFrame
+
+    local optLayout = Instance.new("UIListLayout")
+    optLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    optLayout.Padding = UDim.new(0, 2)
+    optLayout.Parent = optionsContainer
+
+    local isOpen = false
+
+    mainBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        if isOpen then
+            arrowLabel.Text = "▲"
+            TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, -10, 0, totalExpandedHeight)
+            }):Play()
+        else
+            arrowLabel.Text = "▼"
+            TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+                Size = UDim2.new(1, -10, 0, collapsedHeight)
+            }):Play()
+        end
+    end)
+
+    for _, opt in ipairs(options) do
+        local optBtn = Instance.new("TextButton")
+        optBtn.Size = UDim2.new(1, -4, 0, itemHeight - 2)
+        optBtn.BackgroundColor3 = (opt == Settings[settingKey]) and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(30, 35, 48)
+        optBtn.Font = Enum.Font.GothamBold
+        optBtn.TextSize = 10
+        optBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        optBtn.TextXAlignment = Enum.TextXAlignment.Left
+        optBtn.ZIndex = 153
+        optBtn.Parent = optionsContainer
+
+        local optCorner = Instance.new("UICorner")
+        optCorner.CornerRadius = UDim.new(0, 4)
+        optCorner.Parent = optBtn
+
+        local optPadding = Instance.new("UIPadding")
+        optPadding.PaddingLeft = UDim.new(0, 10)
+        optPadding.Parent = optBtn
+
+        optBtn.Text = tostring(opt) .. unitText
+
+        optBtn.MouseButton1Click:Connect(function()
+            Settings[settingKey] = opt
+            mainBtn.Text = "   " .. title .. ": " .. tostring(opt) .. unitText
+            saveSettings()
+
+            for _, child in ipairs(optionsContainer:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child.BackgroundColor3 = Color3.fromRGB(30, 35, 48)
+                end
+            end
+            optBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+
+            isOpen = false
+            arrowLabel.Text = "▼"
+            TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+                Size = UDim2.new(1, -10, 0, collapsedHeight)
+            }):Play()
+
+            if onSelectCallback then onSelectCallback(opt) end
+        end)
+    end
+end
+
+createCategoryHeader("1. NOTIFIKASI & INFO")
 createToggle("Fruit Notifier", "FruitNotifier", nil)
-createToggle("Live Fruit & Server HUD", "FruitStatsHUD", function(state)
-    StatsHudFrame.Visible = state
-end)
-createToggle("ESP Buah", "FruitESP", function(state)
-    if not state then clearESP() end
-end)
+createToggle("Live HUD Stats", "FruitStatsHUD", function(s) StatsHudFrame.Visible = s end)
 
-createSectionHeader("3. Auto Collect & Store Fruit")
+createCategoryHeader("2. LIVE BUAH & ESP")
+createToggle("Fruit ESP", "FruitESP", function(s) if not s then clearESP() end end)
 createToggle("Auto Collect Fruit", "AutoCollectFruit", nil)
+createSettingButton("⚡ Ambil Paksa Semua Buah Sekarang", function() collectNearestFruit() end)
+createToggle("Auto Store Fruit", "AutoStoreFruit", nil)
 
-local CollectBtn = Instance.new("TextButton")
-CollectBtn.Size = UDim2.new(0.9, 0, 0, 32)
-CollectBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
-CollectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CollectBtn.Text = "⚡ Ambil Paksa Semua Buah Sekarang"
-CollectBtn.TextSize, CollectBtn.Font = 11, Enum.Font.GothamBold
-CollectBtn.ZIndex = 102
-CollectBtn.Parent = Container
-
-local cCorner = Instance.new("UICorner")
-cCorner.CornerRadius = UDim.new(0, 6)
-cCorner.Parent = CollectBtn
-
-CollectBtn.MouseButton1Click:Connect(function()
-    collectNearestFruit()
-end)
-
-createToggle("Auto Store Buah ke Tas", "AutoStoreFruit", nil)
-
-createSectionHeader("4. Pengaturan Kecepatan Terbang")
-
-local SpeedBtn = Instance.new("TextButton")
-SpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
-SpeedBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
-SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
-SpeedBtn.TextSize, SpeedBtn.Font = 11, Enum.Font.GothamBold
-SpeedBtn.ZIndex = 102
-SpeedBtn.Parent = Container
-
-local sCorner = Instance.new("UICorner")
-sCorner.CornerRadius = UDim.new(0, 6)
-sCorner.Parent = SpeedBtn
-
-SpeedBtn.MouseButton1Click:Connect(function()
-    if Settings.FlightSpeed == 100 then
-        Settings.FlightSpeed = 200
-    elseif Settings.FlightSpeed == 200 then
-        Settings.FlightSpeed = 300
-    elseif Settings.FlightSpeed == 300 then
-        Settings.FlightSpeed = 400
-    elseif Settings.FlightSpeed == 400 then
-        Settings.FlightSpeed = 500
-    else
-        Settings.FlightSpeed = 100
-    end
-    SpeedBtn.Text = "Kecepatan Terbang: " .. Settings.FlightSpeed .. " / 500"
+createCategoryHeader("3. FITUR COMBAT & MOB")
+createToggle("Auto Aura Attack (Player/Mob)", "AutoAuraAttack", function(s) toggleAutoAuraAttack(s) end)
+createDropdown("Pilih Senjata (Weapon)", "SelectedWeapon", {"Melee", "Fruit", "Sword", "Gun"}, "", function(opt)
+    Settings.SelectedWeapon = opt
     saveSettings()
+    equipSelectedWeapon()
 end)
+createDropdown("Kecepatan Pukul (ms)", "AuraAttackSpeed", {25, 40, 50, 100, 150, 200, 300}, "ms", nil)
 
-createSectionHeader("5. Pengaturan Ketinggian Terbang")
+createToggle("Hover Nearest Mob", "HoverNearestMob", function(s) toggleHoverNearestMob(s) end)
+createDropdown("Tinggi Mob Offset", "MobHeightOffset", {4, 6, 8, 10}, "", nil)
 
-local HeightBtn = Instance.new("TextButton")
-HeightBtn.Size = UDim2.new(0.9, 0, 0, 32)
-HeightBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
-HeightBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
-HeightBtn.TextSize, HeightBtn.Font = 11, Enum.Font.GothamBold
-HeightBtn.ZIndex = 102
-HeightBtn.Parent = Container
-
-local hCorner = Instance.new("UICorner")
-hCorner.CornerRadius = UDim.new(0, 6)
-hCorner.Parent = HeightBtn
-
-HeightBtn.MouseButton1Click:Connect(function()
-    if Settings.FlyHeight == 3 then
-        Settings.FlyHeight = 5
-    elseif Settings.FlyHeight == 5 then
-        Settings.FlyHeight = 10
-    elseif Settings.FlyHeight == 10 then
-        Settings.FlyHeight = 15
-    elseif Settings.FlyHeight == 15 then
-        Settings.FlyHeight = 20
-    else
-        Settings.FlyHeight = 3
-    end
-    HeightBtn.Text = "Ketinggian Terbang: " .. Settings.FlyHeight .. " Studs"
+createCategoryHeader("4. UTILITIES & TERBANG")
+createToggle("Auto Join Team", "AutoJoinEnabled", function(s) if s then joinTeam() end end)
+createDropdown("Pilih Tim (Team)", "SelectedTeam", {"Pirates", "Marines"}, "", function(team)
+    Settings.SelectedTeam = team
     saveSettings()
+    joinTeam()
 end)
+createDropdown("Kecepatan Terbang", "FlightSpeed", {100, 200, 300, 400, 500}, "", nil)
+createDropdown("Tinggi Terbang", "FlyHeight", {5, 10, 15, 20}, "", nil)
+createToggle("FPS Boost", "FpsBoost", function(s) applyFpsBoost(s) end)
 
-createSectionHeader("6. Terbang ke Mob (Target Mob)")
-createToggle("Terbang ke Target Mob", "FlyToMobEnabled", nil)
-
-local MobBtn = Instance.new("TextButton")
-MobBtn.Size = UDim2.new(0.9, 0, 0, 32)
-MobBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
-MobBtn.TextColor3 = Color3.fromRGB(40, 40, 40)
-MobBtn.Text = "Target Mob: " .. Settings.SelectedMob
-MobBtn.TextSize, MobBtn.Font = 11, Enum.Font.GothamBold
-MobBtn.ZIndex = 102
-MobBtn.Parent = Container
-
-local mCorner = Instance.new("UICorner")
-mCorner.CornerRadius = UDim.new(0, 6)
-mCorner.Parent = MobBtn
-
-MobBtn.MouseButton1Click:Connect(function()
-    if Settings.SelectedMob == "Bandit" then
-        Settings.SelectedMob = "Marine"
-    elseif Settings.SelectedMob == "Marine" then
-        Settings.SelectedMob = "Brute"
-    else
-        Settings.SelectedMob = "Bandit"
-    end
-    MobBtn.Text = "Target Mob: " .. Settings.SelectedMob
-    saveSettings()
-end)
-
--- Ketinggian Pukul / Ketinggian Posisi ke Mob (Bisa diatur dari 1 sampai 10)
-createSectionHeader("7. Ketinggian Pukul Mob (Maks 10 Studs)")
-local OffsetBtn = Instance.new("TextButton")
-OffsetBtn.Size = UDim2.new(0.9, 0, 0, 32)
-OffsetBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
-OffsetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OffsetBtn.Text = "Ketinggian Pukul: " .. Settings.AttackHeightOffset .. " Studs"
-OffsetBtn.TextSize, OffsetBtn.Font = 11, Enum.Font.GothamBold
-OffsetBtn.ZIndex = 102
-OffsetBtn.Parent = Container
-
-local aoCorner = Instance.new("UICorner")
-aoCorner.CornerRadius = UDim.new(0, 6)
-aoCorner.Parent = OffsetBtn
-
-OffsetBtn.MouseButton1Click:Connect(function()
-    Settings.AttackHeightOffset = Settings.AttackHeightOffset + 1
-    if Settings.AttackHeightOffset > 10 then
-        Settings.AttackHeightOffset = 1
-    end
-    OffsetBtn.Text = "Ketinggian Pukul: " .. Settings.AttackHeightOffset .. " Studs"
-    saveSettings()
-end)
-
-createSectionHeader("8. Fast Basic Attack & Kecepatan Pukul")
-createToggle("Fast Basic Attack", "FastAttackEnabled", nil)
-
-local AttackSpeedBtn = Instance.new("TextButton")
-AttackSpeedBtn.Size = UDim2.new(0.9, 0, 0, 32)
-AttackSpeedBtn.BackgroundColor3 = Color3.fromRGB(22, 160, 133)
-AttackSpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AttackSpeedBtn.Text = "Kelipatan Serangan: " .. Settings.AttackSpeedMultiplier .. "x"
-AttackSpeedBtn.TextSize, AttackSpeedBtn.Font = 11, Enum.Font.GothamBold
-AttackSpeedBtn.ZIndex = 102
-AttackSpeedBtn.Parent = Container
-
-local asCorner = Instance.new("UICorner")
-asCorner.CornerRadius = UDim.new(0, 6)
-asCorner.Parent = AttackSpeedBtn
-
-AttackSpeedBtn.MouseButton1Click:Connect(function()
-    if Settings.AttackSpeedMultiplier == 1 then
-        Settings.AttackSpeedMultiplier = 2
-    elseif Settings.AttackSpeedMultiplier == 2 then
-        Settings.AttackSpeedMultiplier = 3
-    else
-        Settings.AttackSpeedMultiplier = 1
-    end
-    AttackSpeedBtn.Text = "Kelipatan Serangan: " .. Settings.AttackSpeedMultiplier .. "x"
-    saveSettings()
-end)
-
-createSectionHeader("9. Performa")
-createToggle("FPS Boost", "FpsBoost", function(state)
-    applyFpsBoost(state) 
-end)
-
-print("Blox Fruits Hub v26 (Perfect Fixed) Berhasil Dimuat!")
+print("Blox Fruits Hub - Direct Revision Loaded Successfully!")
