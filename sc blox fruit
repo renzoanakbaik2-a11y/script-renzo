@@ -1,100 +1,9 @@
 -- ==========================================
--- SCRIPT MENU: FIGHT OTHERS FOR BRAINROTS!
+-- [BAGIAN 5] FITUR UTAMA: AUTO COLLECT BEBAS FOLDER
 -- ==========================================
 
--- Hapus menu lama jika script dijalankan ulang
-if game.CoreGui:FindFirstChild("BrainrotMenuUI") then
-    game.CoreGui.BrainrotMenuUI:Destroy()
-end
-
--- 1. Wadah Utama Layar (ScreenGui)
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BrainrotMenuUI"
-screenGui.Parent = game.CoreGui
-
--- 2. Tombol Mengambang (Floating Button) untuk Buka/Tutup Menu
-local openButton = Instance.new("TextButton")
-openButton.Name = "OpenButton"
-openButton.Size = UDim2.new(0, 110, 0, 40)
-openButton.Position = UDim2.new(0, 20, 0.5, -20)
-openButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-openButton.BorderColor3 = Color3.fromRGB(100, 100, 100)
-openButton.Text = "MENU"
-openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-openButton.TextSize = 14
-openButton.Font = Enum.Font.SourceSansBold
-openButton.Parent = screenGui
-
--- Membuat Tombol Buka/Tutup bisa digeser (Draggable) di layar HP/PC
-local dragging, dragInput, dragStart, startPos
-openButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = openButton.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-openButton.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        openButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- 3. Kotak Menu Utama (Medium Size)
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 260, 0, 320)
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -160)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
-mainFrame.Visible = false -- Awalnya ditutup, dibuka lewat tombol MENU
-mainFrame.Parent = screenGui
-
--- Judul Menu
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 40)
-titleLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-titleLabel.Text = " BRAINROT SCRIPT HUB"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 15
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = mainFrame
-
--- Tombol Close (X) di dalam Menu
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 40, 0, 40)
-closeButton.Position = UDim2.new(1, -40, 0, 0)
-closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 16
-closeButton.Font = Enum.Font.SourceSansBold
-closeButton.Parent = mainFrame
-
-closeButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-end)
-
-openButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-end)
-
--- 4. TOMBOL FITUR: Auto Collect Brainrot
 local autoCollectBtn = Instance.new("TextButton")
+autoCollectBtn.Name = "AutoCollectButton"
 autoCollectBtn.Size = UDim2.new(0, 220, 0, 45)
 autoCollectBtn.Position = UDim2.new(0.5, -110, 0, 60)
 autoCollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -104,7 +13,6 @@ autoCollectBtn.TextSize = 14
 autoCollectBtn.Font = Enum.Font.SourceSansBold
 autoCollectBtn.Parent = mainFrame
 
--- Logika Tombol Auto Collect
 local autoCollectAktif = false
 autoCollectBtn.MouseButton1Click:Connect(function()
     autoCollectAktif = not autoCollectAktif
@@ -113,20 +21,41 @@ autoCollectBtn.MouseButton1Click:Connect(function()
         autoCollectBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
         autoCollectBtn.Text = "Auto Collect: ON"
         
-        -- Jalankan fungsi pencarian/collect di background
         task.spawn(function()
             while autoCollectAktif do
-                -- CATATAN: Nanti kita sesuaikan nama objek Brainrot di game ini
-                local workspaceChildren = workspace:GetChildren()
-                for _, obj in ipairs(workspaceChildren) do
-                    -- Contoh pengecekan objek (nanti disesuaikan dengan nama asli brainrot di game)
-                    if obj.Name == "Brainrot" or obj:FindFirstChild("TouchInterest") then
-                        local karakter = game:GetService("Players").LocalPlayer.Character
-                        if karakter and karakter:FindFirstChild("HumanoidRootPart") then
-                            -- Teleport atau sentuh objek
-                            karakter.HumanoidRootPart.CFrame = obj:GetModelCFrame()
+                local karakter = game:GetService("Players").LocalPlayer.Character
+                if karakter and karakter:FindFirstChild("HumanoidRootPart") then
+                    
+                    local targetKetemu = nil
+                    
+                    -- Jelajahi isi Workspace untuk mencari objek yang bisa diambil
+                    for _, obj in ipairs(workspace:GetChildren()) do
+                        -- Pastikan BUKAN pemain, BUKAN kamera, dan BUKAN lantai (ArenaTiles)
+                        if obj ~= karakter and obj.Name ~= "ArenaTiles" and obj.Name ~= "Terrain" then
+                            
+                            -- Jika bentuknya Model (biasanya item 3D melayang)
+                            if obj:IsA("Model") then
+                                local primaryPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                                if primaryPart then
+                                    -- Pastikan posisinya di atas tanah (tidak di dalam base/tycoon)
+                                    targetKetemu = primaryPart
+                                    break
+                                end
+                                
+                            -- Jika bentuknya Part biasa yang ada TouchInterest-nya
+                            elseif obj:IsA("BasePart") and obj:FindFirstChild("TouchInterest") then
+                                targetKetemu = obj
+                                break
+                            end
+                            
                         end
                     end
+                    
+                    -- Jika itemnya ketemu, langsung teleport badan ke sana!
+                    if targetKetemu then
+                        karakter.HumanoidRootPart.CFrame = targetKetemu.CFrame + Vector3.new(0, 3, 0) -- Teleport sedikit di atasnya biar aman
+                    end
+                    
                 end
                 task.wait(0.5)
             end
