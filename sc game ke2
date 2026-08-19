@@ -1,4 +1,4 @@
--- Script GUI Shadow SC V24 (Auto Collect, Auto Extract, & Server Hop)
+-- Script GUI Shadow SC V27 (Precise Floor Zone Landing)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -16,7 +16,7 @@ ScreenGui.Name = "ShadowSC_GUI"
 ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 260) -- Diperpanjang sedikit untuk tombol Server Hop
+MainFrame.Size = UDim2.new(0, 220, 0, 260)
 MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 MainFrame.BorderSizePixel = 0
@@ -34,7 +34,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Shadow SC V24"
+Title.Text = "Shadow SC V27"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -211,7 +211,7 @@ task.spawn(function()
     end
 end)
 
--- Loop Auto Extract (Menuju zona hijau terdekat saat pintu terbuka)
+-- Loop Auto Extract V27 (Langsung menuju ke zona hijau lantai terdekat)
 task.spawn(function()
     while true do
         task.wait(1)
@@ -247,28 +247,31 @@ task.spawn(function()
                         end
                         
                         if targetZone then
-                            local speed = 45
+                            -- Gerakkan karakter secara mulus langsung ke atas zona hijau di lantai
+                            local speed = 40
                             local dist = (hrp.Position - targetZone.Position).Magnitude
-                            local dur = math.clamp(dist / speed, 0.3, 2.5)
+                            local dur = math.clamp(dist / speed, 0.3, 2)
                             
                             local tween = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), {CFrame = targetZone.CFrame + Vector3.new(0, 3, 0)})
                             tween:Play()
                             task.wait(dur)
                             
-                            local timeout = 5
+                            -- Jeda sebentar untuk animasi game / kestabilan posisi
+                            local timeout = 4
                             while timeout > 0 do
                                 if not getgenv().AutoExtract then break end
                                 local vel = hrp.AssemblyLinearVelocity.Magnitude
                                 if vel > 15 then
                                     task.wait(0.3)
                                 else
-                                    task.wait(0.5)
+                                    task.wait(0.3)
                                     break
                                 end
                                 timeout = timeout - 0.2
                                 task.wait(0.2)
                             end
                             
+                            -- Tunggu hitung mundur ekstraksi selesai
                             task.wait(6)
                             task.wait(5)
                         end
@@ -279,4 +282,4 @@ task.spawn(function()
     end
 end)
 
-print("Shadow SC V24 Loaded Successfully with Server Hop!")
+print("Shadow SC V27 Loaded Successfully!")
