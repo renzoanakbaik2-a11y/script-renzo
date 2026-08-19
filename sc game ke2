@@ -15,7 +15,7 @@ MainFrame.Visible = false
 
 -- Label Versi Menu
 local Title = Instance.new("TextLabel", MainFrame)
-Title.Text = "Brainrot Farmer - v7"
+Title.Text = "Brainrot Farmer - v8"
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 Title.TextColor3 = Color3.new(1, 1, 1)
@@ -29,14 +29,14 @@ ToggleButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Tombol On/Off Bypass Animasi Gerbang
+-- Tombol On/Off Smart Mode
 local WalkButton = Instance.new("TextButton", MainFrame)
 WalkButton.Size = UDim2.new(0.8, 0, 0, 40)
 WalkButton.Position = UDim2.new(0.1, 0, 0.2, 0)
-WalkButton.Text = "Bypass Gate Anim: OFF"
+WalkButton.Text = "Smart Gate: OFF"
 WalkButton.MouseButton1Click:Connect(function()
     autoWalkEnabled = not autoWalkEnabled
-    WalkButton.Text = autoWalkEnabled and "Bypass Gate Anim: ON" or "Bypass Gate Anim: OFF"
+    WalkButton.Text = autoWalkEnabled and "Smart Gate: ON" or "Smart Gate: OFF"
 end)
 
 -- Tombol Auto-Hop Server
@@ -54,12 +54,38 @@ HopButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Fungsi mencari zona hijau tujuan akhir
-local function getNearestGreenZone()
-    local character = player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
-    local hrp = character.HumanoidRootPart
+-- Fungsi untuk mengecek apakah gerbang/tembok sudah terbuka
+-- (Memeriksa apakah part tembok sudah hilang, transparan, atau CanCollide-nya false)
+local function isGateOpen()
+    local extractionZone = workspace:FindFirstChild("World") 
+        and workspace.World:FindFirstChild("Arena") 
+        and workspace.World.Arena:FindFirstChild("ExtractionZone") 
     
+    if extractionZone then
+        -- Cek apakah ada objek tembok/pintu yang menghalangi
+        -- Jika temboknya hilang atau tidak bisa ditabrak lagi (CanCollide == false), berarti terbuka
+        local wall = extractionZone:FindFirstChild("Wall") -- Sesuaikan jika nama temboknya berbeda
+        if wall and wall:IsA("BasePart") then
+            if wall.CanCollide == false or wall.Transparency >= 0.9 then
+                return true
+            else
+                return false
+            end
+        end
+    end
+    
+    -- Jika script tidak menemukan tembok spesifik, kita anggap terbuka saat folder FlashExtract aktif/bisa diakses
+    local flashFolder = workspace:FindFirstChild("World")
+        and workspace.World:FindFirstChild("Arena")
+        and workspace.World.Arena:FindFirstChild("ExtractionZone")
+        and workspace.World.Arena.ExtractionZone:FindFirstChild("North")
+        and workspace.World.Arena.ExtractionZone.North:FindFirstChild("FlashExtract")
+        
+    return flashFolder ~= nil
+end
+
+-- Fungsi mencari zona hijau sebelah kiri (FlashExtract)
+local function getLeftGreenZone()
     local extractionFolder = workspace:FindFirstChild("World")
         and workspace.World:FindFirstChild("Arena")
         and workspace.World.Arena:FindFirstChild("ExtractionZone")
@@ -68,40 +94,40 @@ local function getNearestGreenZone()
     
     if not extractionFolder then return nil end
     
-    local nearestPart = nil
-    local shortestDistance = math.huge
-    
+    -- Mengambil part pertama yang ada di dalam folder FlashExtract (zona hijau kiri pemain biasa)
     for _, part in ipairs(extractionFolder:GetChildren()) do
         if part:IsA("BasePart") then
-            local distance = (hrp.Position - part.Position).Magnitude
-            if distance < shortestDistance then
-                shortestDistance = distance
-                nearestPart = part
-            end
+            return part
         end
     end
     
-    return nearestPart
+    return nil
 end
 
-local hasBypassed = false
+local hasTeleported = false
 
+-- Loop Utama
 RunService.RenderStepped:Connect(function()
     if autoWalkEnabled then
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
         
         if hrp then
-            local targetZone = getNearestGreenZone()
-            if targetZone and not hasBypassed then
-                -- Langsung pindahkan posisi karakter menembus area gerbang ke dalam zona hijau
-                -- Ini membuat game mengira karakter sudah melewati area trigger secara instan tanpa memutar animasi jalan/hancur
-                hrp.CFrame = targetZone.CFrame + Vector3.new(0, 3, 0)
-                hasBypassed = true
-                print("Berhasil bypass animasi gerbang!")
+            -- 1. Cek dulu apakah gerbang sudah terbuka
+            if isGateOpen() then
+                -- 2. Jika gerbang sudah terbuka dan belum sempat teleport, baru pindah ke zona hijau kiri
+                if not hasTeleported then
+                    local targetZone = getLeftGreenZone()
+                    if targetZone then
+                        hrp.CFrame = targetZone.CFrame + Vector3.new(0, 3, 0)
+                        hasTeleported = true
+                        print("Gerbang terbuka! Berhasil teleport ke zona hijau kiri.")
+                    end
+                end
+            else
+                -- Jika gerbang masih tertutup, reset status supaya nanti pas ronde baru buka, dia bisa teleport lagi
+                hasTeleported = false
             end
         end
-    else
-        hasBypassed = false
     end
 end)
