@@ -1,4 +1,4 @@
--- Script GUI Shadow SC V22 (Smart Condition: Gate Open + Holding Brainrot)
+-- Script GUI Shadow SC V23 (Fixed Extraction Flow & Direct Zone Targeting)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -32,7 +32,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Shadow SC V22"
+Title.Text = "Shadow SC V23"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -167,38 +167,7 @@ task.spawn(function()
     end
 end)
 
--- Fungsi untuk mengecek apakah player sedang membawa brainrot
-local function isHoldingBrainrot()
-    local char = LocalPlayer.Character
-    if not char then return false end
-    
-    -- Cek apakah ada objek brainrot yang menempel di karakter (di tangan/badan)
-    for _, child in pairs(char:GetChildren()) do
-        local name = child.Name:lower()
-        if name:find("brainrot") or name:find("item") or child:IsA("Tool") then
-            return true
-        end
-    end
-    
-    -- Cek juga apakah ada indikator teks atau status di PlayerGui yang menunjukkan sedang membawa item
-    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if playerGui then
-        for _, gui in pairs(playerGui:GetDescendants()) do
-            if gui:IsA("TextLabel") and gui.Visible then
-                local text = gui.Text:lower()
-                if text:find("carrying") or text:find("holding") or text:find("kg") then
-                    return true
-                end
-            end
-        end
-    end
-    
-    -- Sebagai fallback pengaman tambahan: cek apakah berat badan / kapasitas bawaan player tidak 0 (artinya sedang bawa sesuatu)
-    -- Jika game ini pakai sistem berat badan seperti "0 / 4450 kg", kita bisa asumsikan player bawa brainrot jika dia tidak tangan kosong.
-    return true -- Jika pengecekan spesifik di atas belum tentu akurat, script ini memastikan pengecekan folder aktif
-end
-
--- Loop Auto Extract (Syarat: Gerbang Buka + Bawa Brainrot)
+-- Loop Auto Extract V23 (Langsung menuju zona hijau terdekat saat pintu terbuka)
 task.spawn(function()
     while true do
         task.wait(1)
@@ -208,84 +177,64 @@ task.spawn(function()
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 if not hrp then return end
                 
-                -- SYARAT 1: Cek apakah player sedang membawa brainrot
-                -- (Jika ingin memastikan murni dari karakter, kita pastikan karakternya memegang item atau ada objek nempel)
-                local holdingItem = false
-                for _, obj in pairs(char:GetChildren()) do
-                    if obj:IsA("Tool") or obj.Name:lower():find("brainrot") then
-                        holdingItem = true
-                        break
-                    end
-                end
-                
-                -- Jika player tidak sedang memegang brainrot, script diam dan lanjut memantau
-                if not holdingItem then return end
-                
-                -- SYARAT 2: Cek apakah gerbang/zona hijau sudah terbuka di map
                 local world = Workspace:FindFirstChild("World")
                 local arena = world and world:FindFirstChild("Arena")
                 local extractZone = arena and arena:FindFirstChild("ExtractionZone")
                 
                 if extractZone then
-                    local targetGate = nil
                     local greenZones = {}
                     
+                    -- Kumpulkan semua zona hijau yang aktif muncul di map
                     for _, part in pairs(extractZone:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            local nameLower = part.Name:lower()
-                            if nameLower:find("extractionzone") then
-                                table.insert(greenZones, part)
-                            elseif nameLower:find("wall") or nameTier:find("flash") or nameLower:find("gate") then
-                                targetGate = part
-                            end
+                        if part:IsA("BasePart") and part.Name:lower():find("extractionzone") then
+                            table.insert(greenZones, part)
                         end
                     end
                     
-                    -- Jika gerbang dan zona hijau ada (terbuka) DAN player bawa brainrot, jalankan alur ekstraksi!
-                    if targetGate and #greenZones > 0 then
-                        -- 1. Jalan/terbang ke arah gerbang
-                        local speed = 40
-                        local dist = (hrp.Position - targetGate.Position).Magnitude
-                        local dur = math.clamp(dist / speed, 0.3, 2)
-                        local tween = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), {CFrame = targetGate.CFrame + Vector3.new(0, 2, 0)})
-                        tween:Play()
-                        task.wait(dur)
+                    -- Jika zona hijau terdeteksi muncul (artinya pintu/sesi ekstraksi terbuka)
+                    if #greenZones > 0 then
+                        -- Cari zona hijau yang posisinya paling dekat dengan karakter
+                        local targetZone = nil
+                        local shortestDist = math.huge
                         
-                        -- 2. Jeda / mati sementara untuk animasi game (terpental atau lolos mulus)
-                        local timeout = 5
-                        while timeout > 0 do
-                            if not getgenv().AutoExtract then break end
-                            local vel = hrp.AssemblyLinearVelocity.Magnitude
-                            if vel > 15 then
-                                task.wait(0.3)
-                            else
-                                task.wait(0.5)
-                                break
-                            end
-                            timeout = timeout - 0.2
-                            task.wait(0.2)
-                        end
-                        
-                        -- 3. Lanjut bergerak ke zona hijau terdekat
-                        local targetGreen = nil
-                        local shortDist = math.huge
                         for _, gz in pairs(greenZones) do
-                            local d = (gz.Position - hrp.Position).Magnitude
-                            if d < shortDist then
-                                shortDist = d
-                                targetGreen = gz
+                            local dist = (gz.Position - hrp.Position).Magnitude
+                            if dist < shortestDist then
+                                shortestDist = dist
+                                targetZone = gz
                             end
                         end
                         
-                        if targetGreen then
-                            local dist2 = (hrp.Position - targetGreen.Position).Magnitude
-                            local dur2 = math.clamp(dist2 / speed, 0.2, 1.5)
-                            local tween2 = TweenService:Create(hrp, TweenInfo.new(dur2, Enum.EasingStyle.Linear), {CFrame = targetGreen.CFrame + Vector3.new(0, 3, 0)})
-                            tween2:Play()
-                            task.wait(dur2)
+                        if targetZone then
+                            -- 1. Karakter bergerak/terbang mulus menuju zona hijau terdekat
+                            local speed = 45
+                            local dist = (hrp.Position - targetZone.Position).Magnitude
+                            local dur = math.clamp(dist / speed, 0.3, 2.5)
                             
-                            -- 4. Diam di atas zona hijau menunggu hitung mundur selesai
+                            local tween = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), {CFrame = targetZone.CFrame + Vector3.new(0, 3, 0)})
+                            tween:Play()
+                            task.wait(dur)
+                            
+                            -- 2. JEDA / PAUSE SEMENTARA UNTUK ANIMASI:
+                            -- Membiarkan animasi game berjalan (jika strength kecil dia akan terpental/berhenti sebentar, jika strength 4000+ dia langsung diam mulus)
+                            local timeout = 5
+                            while timeout > 0 do
+                                if not getgenv().AutoExtract then break end
+                                local vel = hrp.AssemblyLinearVelocity.Magnitude
+                                if vel > 15 then
+                                    task.wait(0.3) -- Masih terpental, tunggu sebentar
+                                else
+                                    task.wait(0.5) -- Sudah stabil / mendarat di zona
+                                    break
+                                end
+                                timeout = timeout - 0.2
+                                task.wait(0.2)
+                            end
+                            
+                            -- 3. Diam di atas zona hijau menunggu hitung mundur selesai sampai masuk base
                             task.wait(6)
+                            
+                            -- 4. Jeda pengaman agar script menunggu ronde berikutnya
                             task.wait(5)
                         end
                     end
@@ -295,4 +244,4 @@ task.spawn(function()
     end
 end)
 
-print("Shadow SC V22 Loaded Successfully!")
+print("Shadow SC V23 Loaded Successfully!")
