@@ -1,12 +1,12 @@
 -- ==========================================
--- SCRIPT HUB: RACKET RIVALS (MENU + TELEPORT TO BALL)
+-- SCRIPT HUB: RACKET RIVALS (SMART TP + AUTO HIT)
 -- ==========================================
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 1. Bersihkan menu lama jika dijalankan ulang
+-- 1. Bersihkan menu lama
 if playerGui:FindFirstChild("RacketRivalsMenu") then
     playerGui.RacketRivalsMenu:Destroy()
 end
@@ -17,7 +17,7 @@ screenGui.Name = "RacketRivalsMenu"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- 3. Tombol Mengambang (MENU) untuk Membuka/Menutup Menu (Bisa Digeser)
+-- 3. Tombol Mengambang (MENU)
 local openButton = Instance.new("TextButton")
 openButton.Name = "OpenButton"
 openButton.Size = UDim2.new(0, 110, 0, 40)
@@ -30,7 +30,7 @@ openButton.TextSize = 14
 openButton.Font = Enum.Font.SourceSansBold
 openButton.Parent = screenGui
 
--- Logika Geser (Draggable) untuk Tombol MENU di HP
+-- Logika Geser (Draggable) Tombol MENU
 local dragging, dragInput, dragStart, startPos
 openButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -53,28 +53,28 @@ game:GetService("UserInputService").InputChanged:Connect(function(input)
     end
 end)
 
--- 4. Kotak Menu Utama (Medium Size)
+-- 4. Kotak Menu Utama
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 260, 0, 200)
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -100)
+mainFrame.Size = UDim2.new(0, 260, 0, 220)
+mainFrame.Position = UDim2.new(0.5, -130, 0.5, -110)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
-mainFrame.Visible = false -- Awalnya tertutup
+mainFrame.Visible = false
 mainFrame.Parent = screenGui
 
--- Judul di dalam Kotak Menu
+-- Judul Menu
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 40)
 titleLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-titleLabel.Text = " RACKET RIVALS CHEAT"
+titleLabel.Text = " RACKET RIVALS PRO HUB"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextSize = 15
 titleLabel.Font = Enum.Font.SourceSansBold
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = mainFrame
 
--- Tombol Close (X) di dalam Menu
+-- Tombol Close (X)
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 40, 0, 40)
 closeButton.Position = UDim2.new(1, -40, 0, 0)
@@ -95,39 +95,53 @@ end)
 
 
 -- ==========================================
--- 5. FITUR: TELEPORT TO BALL (SHUTTLE)
+-- 5. FITUR: SMART TP + AUTO SWING/HIT PRESISI
 -- ==========================================
 
-local tpBallBtn = Instance.new("TextButton")
-tpBallBtn.Name = "TpBallButton"
-tpBallBtn.Size = UDim2.new(0, 220, 0, 45)
-tpBallBtn.Position = UDim2.new(0.5, -110, 0, 60)
-tpBallBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-tpBallBtn.Text = "Teleport to Ball: OFF"
-tpBallBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-tpBallBtn.TextSize = 14
-tpBallBtn.Font = Enum.Font.SourceSansBold
-tpBallBtn.Parent = mainFrame
+local autoPlayBtn = Instance.new("TextButton")
+autoPlayBtn.Name = "AutoPlayButton"
+autoPlayBtn.Size = UDim2.new(0, 220, 0, 45)
+autoPlayBtn.Position = UDim2.new(0.5, -110, 0, 60)
+autoPlayBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+autoPlayBtn.Text = "Smart Auto Play: OFF"
+autoPlayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoPlayBtn.TextSize = 14
+autoPlayBtn.Font = Enum.Font.SourceSansBold
+autoPlayBtn.Parent = mainFrame
 
-local tpBallAktif = false
+local autoPlayAktif = false
 
-tpBallBtn.MouseButton1Click:Connect(function()
-    tpBallAktif = not tpBallAktif
+-- Fungsi pendukung untuk memicu tombol pukul game secara otomatis (Virtual Click / Remote Event)
+local function pukulBolaOtomatis()
+    -- Biasanya game olahraga menggunakan ClickDetector, Tool Activation, atau RemoteEvent.
+    -- Kita picu tool yang sedang dipegang player (jika ada raket di tangan)
+    local karakter = player.Character
+    if karakter then
+        local tool = karakter:FindFirstChildOfClass("Tool")
+        if tool then
+            tool:Activate() -- Otomatis mengayunkan raket yang sedang dipegang
+        end
+    end
+end
+
+autoPlayBtn.MouseButton1Click:Connect(function()
+    autoPlayAktif = not autoPlayAktif
     
-    if tpBallAktif then
-        tpBallBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        tpBallBtn.Text = "Teleport to Ball: ON"
+    if autoPlayAktif then
+        autoPlayBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        autoPlayBtn.Text = "Smart Auto Play: ON"
         
         task.spawn(function()
-            while tpBallAktif do
+            local sudahPukul = false
+            
+            while autoPlayAktif do
                 local karakter = player.Character
                 if karakter and karakter:FindFirstChild("HumanoidRootPart") then
                     local rootPart = karakter.HumanoidRootPart
                     local targetBola = nil
                     
-                    -- Cari bola/shuttle di dalam Workspace Racket Rivals
+                    -- Cari bola/shuttle di Workspace
                     for _, obj in ipairs(workspace:GetDescendants()) do
-                        -- Biasanya objek bola dinamai "ball", "shuttle", atau objek kecil yang aktif bergerak
                         local namaObj = obj.Name:lower()
                         if obj:IsA("BasePart") and (namaObj:find("ball") or namaObj:find("shuttle") or namaObj:find("birdie")) then
                             targetBola = obj
@@ -135,16 +149,36 @@ tpBallBtn.MouseButton1Click:Connect(function()
                         end
                     end
                     
-                    -- Teleport langsung mendekati bola
                     if targetBola then
-                        rootPart.CFrame = targetBola.CFrame + Vector3.new(0, 0, 0)
+                        local jarakKeBola = (rootPart.Position - targetBola.Position).Magnitude
+                        
+                        -- BATAS JARAK JANGKAUAN RAKET (Misalnya dalam radius 7 meter dari pemain)
+                        if jarakKeBola <= 7 then
+                            -- Teleport presisi tepat di dekat bola jika belum dipukul
+                            rootPart.CFrame = targetBola.CFrame + Vector3.new(0, 0, 0)
+                            
+                            -- Pukul bola SEKALI saja saat masuk jangkauan (tidak spam)
+                            if not sudahPukul then
+                                pukulBolaOtomatis()
+                                sudahPukul = true
+                                task.wait(0.4) -- Jeda agar animasi pukul selesai
+                            end
+                        else
+                            -- Reset status pukul jika bola menjauh lagi
+                            sudahPukul = false
+                            
+                            -- Jika bola masih di area kita dan agak jauh, dekati secara cerdas
+                            if jarakKeBola < 35 then
+                                rootPart.CFrame = targetBola.CFrame + Vector3.new(0, 0, 0)
+                            end
+                        end
                     end
                 end
-                task.wait(0.2) -- Pengecekan super cepat karena bola raket bergerak cepat
+                task.wait(0.1)
             end
         end)
     else
-        tpBallBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        tpBallBtn.Text = "Teleport to Ball: OFF"
+        autoPlayBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        autoPlayBtn.Text = "Smart Auto Play: OFF"
     end
 end)
