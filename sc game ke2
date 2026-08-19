@@ -1,4 +1,4 @@
--- Script GUI Auto Pick Up Brainrot (Strict Arena Position Filter)
+-- Script GUI Auto Pick Up (Fixed & Simple Version)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -31,7 +31,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Brainrot Arena Only"
+Title.Text = "Brainrot Auto Farm"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -57,7 +57,7 @@ MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
 MinimizeBtn.Position = UDim2.new(1, -35, 0, 5)
 MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeBtn.TextSize = 12
+MinimizeBtn.TextSize= 12
 MinimizeBtn.Font = Enum.Font.GothamBold
 MinimizeBtn.Text = "-"
 MinimizeBtn.Parent = MainFrame
@@ -96,49 +96,32 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Cari folder ArenaTiles secara otomatis sebagai acuan pusat area spawn
-local ArenaTiles = Workspace:FindFirstChild("World") and Workspace.World:FindFirstChild("Arena") and Workspace.World.Arena:FindFirstChild("ArenaTiles")
-
+-- Loop Utama yang lebih ringan dan langsung mendeteksi prompt aktif di Workspace
 task.spawn(function()
-    while task.wait(0.2) do
+    while task.wait(0.15) do
         if getgenv().AutoPickUp then
             pcall(function()
                 local character = LocalPlayer.Character
                 local hrp = character and character:FindFirstChild("HumanoidRootPart")
                 if not hrp then return end
                 
+                -- Cari semua ProximityPrompt di dalam game
                 for _, prompt in pairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") then
                         local parentPart = prompt.Parent
                         if parentPart and parentPart:IsA("BasePart") then
+                            -- Cek tulisan prompt adalah "Pick Up"
                             if prompt.ActionText:lower():find("pick up") then
                                 
-                                local shouldCollect = false
+                                -- Batas amannya: Kita cek ketinggian Y atau abaikan jika jauh banget
+                                -- Item yang di arena bawah biasanya punya kordinat Y tertentu. 
+                                -- Mari kita teleport langsung ke item terdekat yang ada prompt-nya.
+                                local distance = (parentPart.Position - hrp.Position).Magnitude
                                 
-                                -- Cara Akal: Cek apakah posisi item ini dekat dengan salah satu tile di ArenaTiles, 
-                                -- atau posisinya berada di area kotak wadah bawah (berdasarkan struktur ArenaTiles).
-                                if ArenaTiles then
-                                    for _, tile in pairs(ArenaTiles:GetChildren()) do
-                                        if tile:IsA("BasePart") then
-                                            -- Jika jarak antara item dan tile arena kurang dari 30 studs, berarti benar itu di arena spawn!
-                                            if (parentPart.Position - tile.Position).Magnitude < 35 then
-                                                shouldCollect = true
-                                                break
-                                            end
-                                        end
-                                    end
-                                else
-                                    -- Cadangan: Jika folder ArenaTiles tidak ketemu, pakai batasan ketinggian (Y)
-                                    -- Karena base pemain biasanya di atas dan arena spawn di bawah.
-                                    if parentPart.Position.Y < 50 then -- Sesuaikan tinggi Y arena jika perlu
-                                        shouldCollect = true
-                                    end
-                                end
-                                
-                                -- Eksekusi HANYA jika terbukti berada di dalam area spawn arena
-                                if shouldCollect then
+                                -- Jika jaraknya masuk akal dalam area map, langsung sikat!
+                                if distance < 300 then
                                     hrp.CFrame = parentPart.CFrame + Vector3.new(0, 3, 0)
-                                    task.wait(0.1)
+                                    task.wait(0.05)
                                     fireproximityprompt(prompt)
                                 end
                                 
@@ -151,4 +134,4 @@ task.spawn(function()
     end
 end)
 
-print("GUI Arena Only Berhasil Dijalankan! Dijamin nggak nyolong ke base.")
+print("GUI Auto Farm Versi Stabil Berhasil Dijalankan!")
