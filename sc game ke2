@@ -1,4 +1,4 @@
--- Script GUI Auto Pick Up & Auto Extraction - V16 (Dynamic Animation & Strength-Aware Wait)
+-- Script GUI Auto Pick Up & Auto Extraction - V19 (Instant Collect & Gate-Triggered Extract)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -32,7 +32,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Brainrot Auto Farm V16"
+Title.Text = "Brainrot Auto Farm V19"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -123,7 +123,7 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Fungsi terbang mulus
+-- Fungsi terbang mulus khusus untuk Extraction
 local function smoothFlyTo(targetCFrame)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -140,7 +140,7 @@ local function smoothFlyTo(targetCFrame)
     task.wait(duration)
 end
 
--- Loop Auto Collect
+-- Loop Auto Collect (Teleport instan ke posisi brainrot)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -170,10 +170,11 @@ task.spawn(function()
                                 end
                                 
                                 if not isInBase then
-                                    smoothFlyTo(part.CFrame + Vector3.new(0, 3, 0))
-                                    task.wait(0.1)
+                                    -- Teleport instan langsung ke atas brainrot
+                                    hrp.CFrame = part.CFrame + Vector3.new(0, 3, 0)
+                                    task.wait(0.05)
                                     fireproximityprompt(p)
-                                    task.wait(0.2)
+                                    task.wait(0.1)
                                 end
                             end
                         end
@@ -184,10 +185,10 @@ task.spawn(function()
     end
 end)
 
--- Loop Auto Extract dengan Smart Physics Wait (Menyesuaikan durasi animasi game secara otomatis)
+-- Loop Auto Extract (Diam sampai pintu terbuka, lalu terbang mulus ke zona hijau)
 task.spawn(function()
     while true do
-        task.wait(2)
+        task.wait(1)
         if getgenv().AutoExtract then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -199,44 +200,36 @@ task.spawn(function()
                 local extractZone = arena and arena:FindFirstChild("ExtractionZone")
                 
                 if extractZone then
-                    local closestPart = nil
-                    local shortestDist = math.huge
+                    local targetPart = nil
                     
                     for _, part in pairs(extractZone:GetDescendants()) do
                         if part:IsA("BasePart") and part.Name:lower():find("extractionzone") then
-                            local dist = (part.Position - hrp.Position).Magnitude
-                            if dist < shortestDist then
-                                shortestDist = dist
-                                closestPart = part
-                            end
+                            targetPart = part
+                            break 
                         end
                     end
                     
-                    if closestPart then
-                        -- 1. Terbang mulus ke arah gerbang/zona hijau
-                        smoothFlyTo(closestPart.CFrame + Vector3.new(0, 3, 0))
+                    -- Kalau zona hijau sudah muncul (pintu terbuka), baru bergerak terbang mulus ke sana!
+                    if targetPart then
+                        smoothFlyTo(targetPart.CFrame + Vector3.new(0, 3, 0))
                         
-                        -- 2. SMART WAITER (Menunggu animasi game selesai berapapun durasinya):
-                        -- Script akan memantau kecepatan gerak karakter (velocity). 
-                        -- Selama karakter masih terlempar/terpental (kecepatannya tinggi), script akan terus menunggu 
-                        -- dan tidak akan memaksa bergerak sampai karakternya benar-benar stabil/berhenti bergerak.
-                        local timeout = 8 -- Batas maksimal pengaman (detik)
-                        while timeout > 0 do
+                        local maxWait = 5
+                        local elapsed = 0
+                        while elapsed < maxWait do
                             if not getgenv().AutoExtract then break end
-                            
                             local currentVelocity = hrp.AssemblyLinearVelocity.Magnitude
-                            -- Jika kecepatan karakter sudah rendah (artinya animasi terpental sudah selesai / sudah mendarat)
-                            if currentVelocity < 5 then
-                                task.wait(0.5) -- Beri jeda sepersekian detik untuk memastikan stabil
+                            if currentVelocity > 15 then
+                                task.wait(0.3)
+                            else
+                                task.wait(0.5)
                                 break
                             end
-                            
+                            elapsed = elapsed + 0.2
                             task.wait(0.2)
-                            timeout = timeout - 0.2
                         end
                         
-                        -- 3. Setelah animasi game selesai dan karakter tenang di atas zona, tunggu hitung mundur ekstraksi
-                        task.wait(6) 
+                        task.wait(6) -- Tunggu hitung mundur ekstraksi selesai
+                        task.wait(5) -- Jeda menunggu ronde berikutnya
                     end
                 end
             end)
@@ -244,4 +237,4 @@ task.spawn(function()
     end
 end)
 
-print("Brainrot Fixed V16 Loaded with Smart Velocity Waiter!")
+print("Brainrot Fixed V19 Loaded Successfully!")
