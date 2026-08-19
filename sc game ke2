@@ -1,12 +1,10 @@
 -- ==========================================
--- SCRIPT HUB: RACKET RIVALS (MOBILE UI TOUCH SPAM)
+-- SCRIPT HUB: RACKET RIVALS (FIXED BUTTON & TOGGLE)
 -- ==========================================
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-local guiService = game:GetService("GuiService")
-local vim = game:GetService("VirtualInputManager")
 
 -- 1. Bersihkan menu lama
 if playerGui:FindFirstChild("RacketRivalsMenu") then
@@ -19,32 +17,18 @@ screenGui.Name = "RacketRivalsMenu"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- 3. Tombol Menu (Bisa Digeser)
+-- 3. Tombol Menu (DIAM / TIDAK BISA DIGESER)
 local openButton = Instance.new("TextButton")
 openButton.Name = "OpenButton"
 openButton.Size = UDim2.new(0, 110, 0, 40)
-openButton.Position = UDim2.new(0, 20, 0.4, 0)
+openButton.Position = UDim2.new(0, 20, 0.4, 0) -- Posisi tetap di pinggir layar
 openButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 openButton.Text = "MENU"
 openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 openButton.Font = Enum.Font.SourceSansBold
 openButton.Parent = screenGui
 
--- Logika Drag (Geser Tombol)
-local dragging, dragInput, dragStart, startPos
-openButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true; dragStart = input.Position; startPos = openButton.Position
-    end
-end)
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        openButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- 4. Kotak Menu
+-- 4. Kotak Menu Utama
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 260, 0, 160)
 mainFrame.Position = UDim2.new(0.5, -130, 0.5, -80)
@@ -52,16 +36,7 @@ mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.Visible = false
 mainFrame.Parent = screenGui
 
-local opBtn = Instance.new("TextButton")
-opBtn.Size = UDim2.new(0, 220, 0, 50)
-opBtn.Position = UDim2.new(0.5, -110, 0, 65)
-opBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-opBtn.Text = "Mobile Auto Play: OFF"
-opBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-opBtn.TextSize = 14
-opBtn.Font = Enum.Font.SourceSansBold
-opBtn.Parent = mainFrame
-
+-- Tombol Buka/Tutup Menu Utama
 openButton.MouseButton1Click:Connect(function() 
     mainFrame.Visible = not mainFrame.Visible 
 end)
@@ -70,24 +45,39 @@ local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 35, 0, 35)
 closeBtn.Position = UDim2.new(1, -35, 0, 0)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.Font = Enum.Font.SourceSansBold
-closeButton.Parent = mainFrame
-closeBtn.MouseButton1Click:Connect(function() mainFrame.Visible = false end)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.Parent = mainFrame
+closeBtn.MouseButton1Click:Connect(function() 
+    mainFrame.Visible = false 
+end)
+
+-- Tombol Fitur Auto Play (Toggle ON/OFF yang diperbaiki)
+local opBtn = Instance.new("TextButton")
+opBtn.Size = UDim2.new(0, 220, 0, 50)
+opBtn.Position = UDim2.new(0.5, -110, 0, 65)
+opBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+opBtn.Text = "Mobile Auto Play: OFF"
+opBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+opBtn.TextSize = 13
+opBtn.Font = Enum.Font.SourceSansBold
+opBtn.Parent = mainFrame
 
 
 -- ==========================================
--- 5. LOGIKA HP: CARI TOMBOL PUKUL DI LAYAR & SPAM TP
+-- 5. LOGIKA UTAMA (TP + SPAM PUKUL + ZONA AMAN)
 -- ==========================================
 
 local autoAktif = false
+
 opBtn.MouseButton1Click:Connect(function()
     autoAktif = not autoAktif
-    opBtn.BackgroundColor3 = autoAktif and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-    opBtn.Text = autoAktif and "Mobile Auto Play: ON" or "Mobile Auto Play: OFF"
     
     if autoAktif then
+        opBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        opBtn.Text = "Mobile Auto Play: ON"
+        
         task.spawn(function()
             while autoAktif do
                 local karakter = player.Character
@@ -110,47 +100,33 @@ opBtn.MouseButton1Click:Connect(function()
                         local bolaZ = targetBola.Position.Z
                         local playerZ = rootPart.Position.Z
                         
-                        -- LOGIKA ZONA: Jika bola terlalu jauh di depan (wilayah musuh), karakter diam
+                        -- Logika Zona: Jika bola terlalu jauh ke depan (wilayah musuh), karakter diam
                         local diZonaKita = true
                         if math.abs(bolaZ - playerZ) > 55 then
                             diZonaKita = false
                         end
                         
                         if diZonaKita then
-                            -- 1. TELEPORT KE BOLA
+                            -- Teleport ke bola
                             rootPart.CFrame = targetBola.CFrame
                             
-                            -- 2. CARI TOMBOL PUKUL DI UI HP LALU SPAM KLIK VIRTUAL
-                            for _, gui in ipairs(playerGui:GetDescendants()) do
-                                if gui:IsA("TextButton" or "ImageButton") then
-                                    local namaGui = gui.Name:lower()
-                                    -- Mendeteksi tombol aksi pukul berdasarkan nama atau fungsinya di game
-                                    if namaGui:find("hit") or namaGui:find("swing") or namaGui:find("attack") or namaGui:find("action") or namaGui:find("skill") or gui.AbsoluteSize.X > 50 then
-                                        -- Simulasi sentuhan/klik pada tombol tersebut secara otomatis
-                                        pcall(function()
-                                            for _, conn in ipairs(getconnections(gui.MouseButton1Click)) do
-                                                conn:Fire()
-                                            end
-                                        end)
-                                    end
-                                end
-                            end
-                            
-                            -- Sebagai cadangan, simulasi klik di area tengah tombol pukul layar HP
+                            -- Spam tombol pukul / aksi di HP secara virtual
                             local vim = game:GetService("VirtualInputManager")
                             pcall(function()
-                                -- Mengetuk area tombol pukul di layar secara otomatis (posisi tombol di HP kamu)
                                 vim:SendMouseButtonEvent(480, 550, 0, true, game, 1)
                                 task.wait(0.01)
                                 vim:SendMouseButtonEvent(480, 550, 0, false, game, 1)
                             end)
                         else
-                            -- DI ZONA MUSUH: DIAM TENANG
+                            -- Di zona musuh: Karakter diam tenang
                         end
                     end
                 end
-                task.wait(0.03) -- Kecepatan spam tinggi
+                task.wait(0.03)
             end
         end)
+    else
+        opBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        opBtn.Text = "Mobile Auto Play: OFF"
     end
 end)
