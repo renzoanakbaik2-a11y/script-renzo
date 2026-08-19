@@ -13,9 +13,9 @@ MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MainFrame.Visible = false
 
--- Label Versi Menu (bisa diubah setiap update)
+-- Label Versi Menu
 local Title = Instance.new("TextLabel", MainFrame)
-Title.Text = "Brainrot Farmer - v4"
+Title.Text = "Brainrot Farmer - v5"
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 Title.TextColor3 = Color3.new(1, 1, 1)
@@ -29,14 +29,14 @@ ToggleButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Tombol On/Off Auto-Walk
+-- Tombol On/Off Fitur
 local WalkButton = Instance.new("TextButton", MainFrame)
 WalkButton.Size = UDim2.new(0.8, 0, 0, 40)
 WalkButton.Position = UDim2.new(0.1, 0, 0.2, 0)
-WalkButton.Text = "Smart Walk: OFF"
+WalkButton.Text = "Instant Teleport: OFF"
 WalkButton.MouseButton1Click:Connect(function()
     autoWalkEnabled = not autoWalkEnabled
-    WalkButton.Text = autoWalkEnabled and "Smart Walk: ON" or "Smart Walk: OFF"
+    WalkButton.Text = autoWalkEnabled and "Instant Teleport: ON" or "Instant Teleport: OFF"
 end)
 
 -- Tombol Auto-Hop Server
@@ -56,20 +56,16 @@ end)
 
 -- Fungsi untuk mengecek apakah pintu/tembok sudah terbuka
 local function isDoorOpen()
-    -- Disini mengecek apakah part tembok/pintu sudah tidak menghalangi (CanCollide false atau Transparansi > 0.5)
-    -- Kamu bisa sesuaikan nama path temboknya jika diperlukan
     local wallPart = workspace:FindFirstChild("World") 
         and workspace.World:FindFirstChild("Arena") 
         and workspace.World.Arena:FindFirstChild("ExtractionZone") 
     
     if wallPart and wallPart:IsA("BasePart") then
         if wallPart.CanCollide == false or wallPart.Transparency > 0.5 then
-            return true -- Pintu terbuka
+            return true
         end
-        return false -- Pintu masih tertutup
+        return false
     end
-    
-    -- Jika foldernya tidak ditemukan, kita set default 'true' agar tetap bisa jalan
     return true
 end
 
@@ -82,6 +78,7 @@ local function getNearestGreenZone()
     local extractionFolder = workspace:FindFirstChild("World")
         and workspace.World:FindFirstChild("Arena")
         and workspace.World.Arena:FindFirstChild("ExtractionZone")
+        and workspace.World.Arena:FindFirstChild("ExtractionZone") -- Disesuaikan
         and workspace.World.Arena.ExtractionZone:FindFirstChild("North")
         and workspace.World.Arena.ExtractionZone.North:FindFirstChild("FlashExtract")
     
@@ -103,24 +100,28 @@ local function getNearestGreenZone()
     return nearestPart
 end
 
--- Loop Utama Smart Auto-Walk
+-- Variabel penanda agar teleport tidak berulang-ulang terus di tempat yang sama
+local hasTeleported = false
+
 RunService.RenderStepped:Connect(function()
     if autoWalkEnabled then
         local character = player.Character
-        local humanoid = character and character:FindFirstChild("Humanoid")
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
         
-        if humanoid and hrp then
-            -- LOGIKA UTAMA: Cek apakah pintu terbuka
+        if hrp then
             if isDoorOpen() then
-                -- Jika pintu terbuka, jalan ke zona hijau terdekat
-                local targetZone = getNearestGreenZone()
-                if targetZone then
-                    humanoid:MoveTo(targetZone.Position)
+                if not hasTeleported then
+                    local targetZone = getNearestGreenZone()
+                    if targetZone then
+                        -- Teleport langsung ke atas zona hijau dengan sedikit ketinggian agar tidak nyangkut
+                        hrp.CFrame = targetZone.CFrame + Vector3.new(0, 3, 0)
+                        hasTeleported = true
+                        print("Berhasil teleport ke zona hijau!")
+                    end
                 end
             else
-                -- Jika pintu masih tertutup / ronde belum selesai, karakter diam di tempat
-                humanoid:MoveTo(hrp.Position)
+                -- Reset status teleport jika gerbang tertutup kembali (untuk ronde berikutnya)
+                hasTeleported = false
             end
         end
     end
