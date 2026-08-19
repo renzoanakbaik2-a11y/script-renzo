@@ -1,4 +1,4 @@
--- Script GUI Auto Pick Up Brainrot - V6 Tile-Locked (Anti-Base Maling)
+-- Script GUI Auto Pick Up Brainrot - V7 Dynamic Radius (Anti-Diam & Anti-Maling)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -33,7 +33,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Brainrot Fixed V6"
+Title.Text = "Brainrot Fixed V7"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -135,46 +135,43 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Loop Utama V6: Hanya mengambil item yang berada di dalam folder ArenaTiles atau yang namanya berawalan Tile_
+-- Loop Utama V7: Deteksi Prompt "Pick Up" dinamis dengan Batasan Jarak Arena (Radius)
 task.spawn(function()
     while true do
-        task.wait(0.2)
+        task.wait(0.15)
         if getgenv().AutoPickUp then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 if not hrp then return end
                 
-                -- Cari folder ArenaTiles di dalam workspace
-                local arenaTiles = Workspace:FindFirstChild("World") 
-                    and Workspace.World:FindFirstChild("Arena") 
-                    and Workspace.World.Arena:FindFirstChild("ArenaTiles")
-                
-                if arenaTiles then
-                    for _, tile in pairs(arenaTiles:GetChildren()) do
-                        if not getgenv().AutoPickUp then break end
+                for _, p in pairs(Workspace:GetDescendants()) do
+                    if not getgenv().AutoPickUp then break end
+                    
+                    if p:IsA("ProximityPrompt") then
+                        local actionText = tostring(p.ActionText):lower()
                         
-                        -- Cek apakah tile tersebut memiliki ProximityPrompt atau ada item di atasnya
-                        for _, p in pairs(tile:GetChildren()) do
-                            if p:IsA("ProximityPrompt") and tostring(p.ActionText):lower():find("pick up") then
-                                hrp.CFrame = tile.CFrame + Vector3.new(0, 3, 0)
-                                task.wait(0.1)
-                                fireproximityprompt(p)
-                                task.wait(0.2)
-                            end
-                        end
-                        
-                        -- Cek juga untuk anak dari anak tile jika prompt-nya ada di dalam model brainrot yang spawn di atas tile
-                        for _, descendant in pairs(tile:GetDescendants()) do
-                            if not getgenv().AutoPickUp then break end
-                            if descendant:IsA("ProximityPrompt") and tostring(descendant.ActionText):lower():find("pick up") then
-                                local parentPart = descendant.Parent
-                                if parentPart and parentPart:IsA("BasePart") then
-                                    hrp.CFrame = parentPart.CFrame + Vector3.new(0, 3, 0)
+                        -- Cek apakah prompt tersebut adalah untuk mengambil item ("pick up")
+                        if actionText:find("pick up") then
+                            local part = p.Parent
+                            if part and part:IsA("BasePart") then
+                                
+                                -- Ambil posisi bagian item yang ada prompt-nya
+                                local itemPos = part.Position
+                                
+                                -- FILTER AMAN: 
+                                -- 1. Ketinggian Y harus di bawah area base pemain (di area arena bawah)
+                                -- 2. Jarak dari karakter kita tidak terlalu jauh (misal dalam radius 60 studs) 
+                                --    agar tidak mengejar prompt yang ada di base orang lain yang jauh.
+                                local distanceFromPlayer = (itemPos - hrp.Position).Magnitude
+                                
+                                if itemPos.Y < 45 and distanceFromPlayer < 70 then
+                                    hrp.CFrame = CFrame.new(itemPos.X, itemPos.Y + 3, itemPos.Z)
+                                    task.wait(0.05)
+                                    fireproximityprompt(p)
                                     task.wait(0.1)
-                                    fireproximityprompt(descendant)
-                                    task.wait(0.2)
                                 end
+                                
                             end
                         end
                     end
@@ -184,4 +181,4 @@ task.spawn(function()
     end
 end)
 
-print("Brainrot Fixed V6 Loaded Successfully!")
+print("Brainrot Fixed V7 Loaded Successfully!")
