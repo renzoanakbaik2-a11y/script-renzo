@@ -15,7 +15,7 @@ MainFrame.Visible = false
 
 -- Label Versi Menu (bisa diubah setiap update)
 local Title = Instance.new("TextLabel", MainFrame)
-Title.Text = "Brainrot Farmer - v3"
+Title.Text = "Brainrot Farmer - v4"
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 Title.TextColor3 = Color3.new(1, 1, 1)
@@ -33,13 +33,13 @@ end)
 local WalkButton = Instance.new("TextButton", MainFrame)
 WalkButton.Size = UDim2.new(0.8, 0, 0, 40)
 WalkButton.Position = UDim2.new(0.1, 0, 0.2, 0)
-WalkButton.Text = "Auto-Walk Green: OFF"
+WalkButton.Text = "Smart Walk: OFF"
 WalkButton.MouseButton1Click:Connect(function()
     autoWalkEnabled = not autoWalkEnabled
-    WalkButton.Text = autoWalkEnabled and "Auto-Walk Green: ON" or "Auto-Walk Green: OFF"
+    WalkButton.Text = autoWalkEnabled and "Smart Walk: ON" or "Smart Walk: OFF"
 end)
 
--- Tombol Auto-Hop Server (Klik teks/tombol untuk pindah server)
+-- Tombol Auto-Hop Server
 local HopButton = Instance.new("TextButton", MainFrame)
 HopButton.Size = UDim2.new(0.8, 0, 0, 40)
 HopButton.Position = UDim2.new(0.1, 0, 0.5, 0)
@@ -54,7 +54,26 @@ HopButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Fungsi untuk mencari bagian zona hijau terdekat berdasarkan struktur folder FlashExtract
+-- Fungsi untuk mengecek apakah pintu/tembok sudah terbuka
+local function isDoorOpen()
+    -- Disini mengecek apakah part tembok/pintu sudah tidak menghalangi (CanCollide false atau Transparansi > 0.5)
+    -- Kamu bisa sesuaikan nama path temboknya jika diperlukan
+    local wallPart = workspace:FindFirstChild("World") 
+        and workspace.World:FindFirstChild("Arena") 
+        and workspace.World.Arena:FindFirstChild("ExtractionZone") 
+    
+    if wallPart and wallPart:IsA("BasePart") then
+        if wallPart.CanCollide == false or wallPart.Transparency > 0.5 then
+            return true -- Pintu terbuka
+        end
+        return false -- Pintu masih tertutup
+    end
+    
+    -- Jika foldernya tidak ditemukan, kita set default 'true' agar tetap bisa jalan
+    return true
+end
+
+-- Fungsi mencari zona hijau terdekat
 local function getNearestGreenZone()
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -84,16 +103,24 @@ local function getNearestGreenZone()
     return nearestPart
 end
 
--- Loop Utama Auto-Walk
+-- Loop Utama Smart Auto-Walk
 RunService.RenderStepped:Connect(function()
     if autoWalkEnabled then
         local character = player.Character
         local humanoid = character and character:FindFirstChild("Humanoid")
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
         
-        if humanoid then
-            local targetZone = getNearestGreenZone()
-            if targetZone then
-                humanoid:MoveTo(targetZone.Position)
+        if humanoid and hrp then
+            -- LOGIKA UTAMA: Cek apakah pintu terbuka
+            if isDoorOpen() then
+                -- Jika pintu terbuka, jalan ke zona hijau terdekat
+                local targetZone = getNearestGreenZone()
+                if targetZone then
+                    humanoid:MoveTo(targetZone.Position)
+                end
+            else
+                -- Jika pintu masih tertutup / ronde belum selesai, karakter diam di tempat
+                humanoid:MoveTo(hrp.Position)
             end
         end
     end
