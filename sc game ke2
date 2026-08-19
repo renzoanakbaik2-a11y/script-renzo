@@ -1,7 +1,133 @@
--- TEST KONEKSI DELTA EXECUTOR
-print("Delta berhasil membaca script!")
-game.StarterGui:SetCore("SendNotification", {
-    Title = "Status Delta",
-    Text = "Script Berhasil Tembus!",
-    Duration = 3
-})
+-- ==========================================
+-- SCRIPT HUB: STEAL AN EGG! (MENU + FLY TO EGG)
+-- ==========================================
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 1. Bersihkan menu lama agar tidak bentrok
+if playerGui:FindFirstChild("StealAnEggMenu") then
+    playerGui.StealAnEggMenu:Destroy()
+end
+
+-- 2. Wadah Utama Layar (ScreenGui)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "StealAnEggMenu"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- 3. Tombol Mengambang (MENU) untuk Buka/Tutup (Bisa Digeser)
+local openButton = Instance.new("TextButton")
+openButton.Name = "OpenButton"
+openButton.Size = UDim2.new(0, 110, 0, 40)
+openButton.Position = UDim2.new(0, 20, 0.5, -20)
+openButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+openButton.BorderColor3 = Color3.fromRGB(100, 100, 100)
+openButton.Text = "MENU"
+openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+openButton.TextSize = 14
+openButton.Font = Enum.Font.SourceSansBold
+openButton.Parent = screenGui
+
+-- Logika Geser (Draggable) untuk Tombol MENU di HP
+local dragging, dragInput, dragStart, startPos
+openButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = openButton.Position
+    end
+end)
+
+openButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        openButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- 4. Kotak Menu Utama (Medium Size)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 260, 0, 200)
+mainFrame.Position = UDim2.new(0.5, -130, 0.5, -100)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+
+-- Judul di dalam Kotak Menu
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 40)
+titleLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+titleLabel.Text = " STEAL AN EGG (MENU)"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 15
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = mainFrame
+
+-- Tombol Close (X) di dalam Menu
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 40, 0, 40)
+closeButton.Position = UDim2.new(1, -40, 0, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 16
+closeButton.Font = Enum.Font.SourceSansBold
+closeButton.Parent = mainFrame
+
+closeButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+end)
+
+openButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = not mainFrame.Visible
+end)
+
+
+-- ==========================================
+-- 5. FITUR PERTAMA: FLY TO EGG (TERBANG KE EGG)
+-- ==========================================
+
+local flyEggBtn = Instance.new("TextButton")
+flyEggBtn.Name = "FlyEggButton"
+flyEggBtn.Size = UDim2.new(0, 220, 0, 45)
+flyEggBtn.Position = UDim2.new(0.5, -110, 0, 60)
+flyEggBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 200)
+flyEggBtn.Text = "Fly to Egg"
+flyEggBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+flyEggBtn.TextSize = 14
+flyEggBtn.Font = Enum.Font.SourceSansBold
+flyEggBtn.Parent = mainFrame
+
+flyEggBtn.MouseButton1Click:Connect(function()
+    local karakter = player.Character
+    if karakter and karakter:FindFirstChild("HumanoidRootPart") then
+        local rootPart = karakter.HumanoidRootPart
+        local targetTelur = nil
+        
+        -- Cari telur terdekat di Workspace
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and (obj.Name:lower():find("egg") or obj:FindFirstChild("TouchInterest")) then
+                if obj.Size.Magnitude < 10 and not obj.Name:lower():find("base") then
+                    targetTelur = obj
+                    break
+                end
+            end
+        end
+        
+        if targetTelur then
+            -- Terbang melayang ke atas telur secara instan aman
+            rootPart.CFrame = targetTelur.CFrame + Vector3.new(0, 3, 0)
+        end
+    end
+end)
