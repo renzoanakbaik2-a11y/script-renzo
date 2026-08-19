@@ -1,5 +1,5 @@
 -- ==========================================
--- RACKET RIVALS: FINAL MOBILE TOUCH HIT & SMART TP
+-- RACKET RIVALS: BRUTAL SPAM HIT & TP (TEST VERSION)
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -13,6 +13,7 @@ end
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "RacketRivalsMenu"
 screenGui.ResetOnSpawn = false
+screenGui.Parent = screenGui -- (diperbaiki ke playerGui di bawah)
 screenGui.Parent = playerGui
 
 local openButton = Instance.new("TextButton")
@@ -48,93 +49,32 @@ closeBtn.MouseButton1Click:Connect(function()
     mainFrame.Visible = false 
 end)
 
+-- Tombol Brutal Spam (Gabungan TP nempel + Spam Hit tanpa henti)
+local brutalBtn = Instance.new("TextButton")
+brutalBtn.Size = UDim2.new(0, 220, 0, 55)
+brutalBtn.Position = UDim2.new(0.5, -110, 0, 70)
+brutalBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+brutalBtn.Text = "Brutal Spam TP & Hit: OFF"
+brutalBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+brutalBtn.TextSize = 13
+brutalBtn.Font = Enum.Font.SourceSansBold
+brutalBtn.Parent = mainFrame
 
--- ==========================================
--- TOMBOL 1: AUTO HIT (MENARGET TOMBOL LAYAR HP)
--- ==========================================
-local attackBtn = Instance.new("TextButton")
-attackBtn.Size = UDim2.new(0, 220, 0, 45)
-attackBtn.Position = UDim2.new(0.5, -110, 0, 50)
-attackBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-attackBtn.Text = "Mobile Auto Hit: OFF"
-attackBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-attackBtn.TextSize = 13
-attackBtn.Font = Enum.Font.SourceSansBold
-attackBtn.Parent = mainFrame
-
-local attackAktif = false
-attackBtn.MouseButton1Click:Connect(function()
-    attackAktif = not attackAktif
-    attackBtn.BackgroundColor3 = attackAktif and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-    attackBtn.Text = attackAktif and "Mobile Auto Hit: ON" or "Mobile Auto Hit: OFF"
+local brutalAktif = false
+brutalBtn.MouseButton1Click:Connect(function()
+    brutalAktif = not brutalAktif
+    brutalBtn.BackgroundColor3 = brutalAktif and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+    brutalBtn.Text = brutalAktif and "Brutal Spam TP & Hit: ON" or "Brutal Spam TP & Hit: OFF"
     
-    if attackAktif then
+    if brutalAktif then
         task.spawn(function()
-            while attackAktif do
-                local karakter = player.Character
-                if karakter then
-                    -- 1. Coba aktifkan tool raket jika terdeteksi
-                    local tool = karakter:FindFirstChildOfClass("Tool") or player.Backpack:FindFirstChildOfClass("Tool")
-                    if tool then tool:Activate() end
-                    
-                    -- 2. Menelusuri dan memicu tombol aksi pukul (ikon kok) di dalam PlayerGui secara otomatis
-                    for _, gui in ipairs(playerGui:GetDescendants()) do
-                        if gui:IsA("ImageButton") or gui:IsA("TextButton") then
-                            local namaGui = gui.Name:lower()
-                            -- Tombol aksi game biasanya berupa tombol besar atau mengandung kata kunci pukul/hit/action
-                            if gui.AbsoluteSize.X > 60 or namaGui:find("hit") or namaGui:find("swing") or namaGui:find("attack") or namaGui:find("action") or namaGui:find("button") then
-                                pcall(function()
-                                    -- Meniru klik pada tombol layar tersebut
-                                    for _, cb in ipairs(getgenv().debug and {} or {}) do end -- dummy safety
-                                    -- Memicu event sentuh tombol game
-                                    if gui:FindFirstChildWhichIsA("UITextSizeConstraint") or gui.AbsoluteSize.X > 70 then
-                                        -- Mengirimkan sinyal klik langsung ke tombol game
-                                        local VirtualUser = game:GetService("VirtualUser")
-                                        VirtualUser:Button1Down(Vector2.new(gui.AbsolutePosition.X + 20, gui.AbsolutePosition.Y + 20))
-                                        task.wait(0.02)
-                                        VirtualUser:Button1Up(Vector2.new(gui.AbsolutePosition.X + 20, gui.AbsolutePosition.Y + 20))
-                                    end
-                                end)
-                            end
-                        end
-                    end
-                end
-                task.wait(0.1)
-            end
-        end)
-    end
-end)
-
-
--- ==========================================
--- TOMBOL 2: SMART LANDING TP (TELEPORT SEKALI KE TITIK JATUH DI ZONA KITA)
--- ==========================================
-local tpBtn = Instance.new("TextButton")
-tpBtn.Size = UDim2.new(0, 220, 0, 45)
-tpBtn.Position = UDim2.new(0.5, -110, 0, 110)
-tpBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-tpBtn.Text = "Smart Landing TP: OFF"
-tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-tpBtn.TextSize = 13
-tpBtn.Font = Enum.Font.SourceSansBold
-tpBtn.Parent = mainFrame
-
-local tpAktif = false
-tpBtn.MouseButton1Click:Connect(function()
-    tpAktif = not tpAktif
-    tpBtn.BackgroundColor3 = tpAktif and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-    tpBtn.Text = tpAktif and "Smart Landing TP: ON" or "Smart Landing TP: OFF"
-    
-    if tpAktif then
-        task.spawn(function()
-            local sudahTeleport = false
-            
-            while tpAktif do
+            while brutalAktif do
                 local karakter = player.Character
                 if karakter and karakter:FindFirstChild("HumanoidRootPart") then
                     local rootPart = karakter.HumanoidRootPart
                     local targetBola = nil
                     
+                    -- Cari bola di Workspace
                     for _, obj in ipairs(workspace:GetDescendants()) do
                         if obj:IsA("BasePart") then
                             local n = obj.Name:lower()
@@ -146,29 +86,32 @@ tpBtn.MouseButton1Click:Connect(function()
                     end
                     
                     if targetBola then
-                        local bolaPos = targetBola.Position
-                        local playerPos = rootPart.Position
+                        local bolaZ = targetBola.Position.Z
+                        local playerZ = rootPart.Position.Z
                         
-                        -- Logika Zona: Pastikan bola berada di area setengah lapangan kita (tidak teleport ke zona musuh)
-                        local jarakZ = bolaPos.Z - playerPos.Z
-                        local diZonaKita = (jarakZ >= -40 and jarakZ <= 40)
-                        
-                        if diZonaKita then
-                            -- Teleport sekali saja ke titik bawah lantai tempat bola akan mendarat
-                            if not sudahTeleport then
-                                local titikJatuh = Vector3.new(bolaPos.X, rootPart.Position.Y, bolaPos.Z)
-                                rootPart.CFrame = CFrame.new(titikJatuh)
-                                sudahTeleport = true
+                        -- Logika Zona: Cek apakah bola di area kita
+                        if math.abs(bolaZ - playerZ) <= 50 then
+                            -- TELEPORT MENEMPEL PAS DI BADAN BOLA (Supaya raket otomatis kena sentuh)
+                            rootPart.CFrame = targetBola.CFrame
+                            
+                            -- SPAM HIT BRUTAL: Aktifkan Tool + Tembak SEMUA RemoteEvent yang ada di game secara bersamaan
+                            local tool = karakter:FindFirstChildOfClass("Tool") or player.Backpack:FindFirstChildOfClass("Tool")
+                            if tool then 
+                                pcall(function() tool:Activate() end) 
                             end
-                        else
-                            -- Jika bola di zona musuh, reset agar tidak teleport ke sana
-                            sudahTeleport = false
+                            
+                            for _, v in ipairs(workspace:GetDescendants()) do
+                                if v:IsA("RemoteEvent") then
+                                    pcall(function()
+                                        v:FireServer()
+                                        v:FireServer(targetBola) -- Memaksa kirim data bola ke server game
+                                    end)
+                                end
+                            end
                         end
-                    else
-                        sudahTeleport = false
                     end
                 end
-                task.wait(0.1)
+                task.wait(0.02) -- Kecepatan super ngebut tanpa jeda
             end
         end)
     end
