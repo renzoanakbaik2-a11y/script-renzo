@@ -1,12 +1,12 @@
 -- ==========================================
--- SCRIPT HUB: RACKET RIVALS (DUAL FEATURES: TP PREDIKSI + AUTO ATTACK)
+-- RACKET RIVALS: CLEAN STABLE REVISION (DELTA SAFE)
 -- ==========================================
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 1. Bersihkan menu lama
+-- 1. Bersihkan menu lama agar tidak dobel
 if playerGui:FindFirstChild("RacketRivalsMenu") then
     playerGui.RacketRivalsMenu:Destroy()
 end
@@ -17,7 +17,7 @@ screenGui.Name = "RacketRivalsMenu"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- 3. Tombol Menu (DIAM DI TEMPAT / TIDAK BISA DIGESER)
+-- 3. Tombol Menu (Diam di Tempat / Tidak Bisa Digeser)
 local openButton = Instance.new("TextButton")
 openButton.Name = "OpenButton"
 openButton.Size = UDim2.new(0, 110, 0, 40)
@@ -28,7 +28,7 @@ openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 openButton.Font = Enum.Font.SourceSansBold
 openButton.Parent = screenGui
 
--- 4. Kotak Menu Utama (Lebih besar sedikit untuk 2 tombol)
+-- 4. Kotak Menu Utama
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 260, 0, 190)
 mainFrame.Position = UDim2.new(0.5, -130, 0.5, -95)
@@ -54,7 +54,7 @@ end)
 
 
 -- ==========================================
--- TOMBOL 1: AUTO BASIC ATTACK (SPAM PUKUL)
+-- TOMBOL 1: AUTO BASIC ATTACK (AMAN UNTUK HP)
 -- ==========================================
 local attackBtn = Instance.new("TextButton")
 attackBtn.Size = UDim2.new(0, 220, 0, 45)
@@ -77,13 +77,13 @@ attackBtn.MouseButton1Click:Connect(function()
             while attackAktif do
                 local karakter = player.Character
                 if karakter then
-                    -- Metode 1: Mengaktifkan tool raket di tangan/tas
+                    -- Mengaktifkan tool raket di tangan atau tas secara aman
                     local tool = karakter:FindFirstChildOfClass("Tool") or player.Backpack:FindFirstChildOfClass("Tool")
                     if tool then
                         tool:Activate()
                     end
                     
-                    -- Metode 2: Menembak RemoteEvent pukul game secara langsung
+                    -- Memicu remote event pukul bawaan game
                     for _, remote in ipairs(workspace:GetDescendants()) do
                         if remote:IsA("RemoteEvent") then
                             local rName = remote.Name:lower()
@@ -92,25 +92,8 @@ attackBtn.MouseButton1Click:Connect(function()
                             end
                         end
                     end
-                    
-                    -- Metode 3: Otomatis mencari tombol sentuh pukul di layar HP lalu men-trigger-nya
-                    for _, gui in ipairs(playerGui:GetDescendants()) do
-                        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-                            local gName = gui.Name:lower()
-                            if gName:find("hit") or gName:find("swing") or gName:find("attack") or gName:find("action") then
-                                pcall(function()
-                                    for _, conn in ipairs(getconnections(gui.MouseButton1Click)) do
-                                        conn:Fire()
-                                    end
-                                    for _, conn in ipairs(getconnections(gui.Activated)) do
-                                        conn:Fire()
-                                    end
-                                end)
-                            end
-                        end
-                    end
                 end
-                task.wait(0.05) -- Spam kecepatan pukul
+                task.wait(0.08)
             end
         end)
     end
@@ -118,7 +101,7 @@ end)
 
 
 -- ==========================================
--- TOMBOL 2: TELEPORT KE TITIK JATUH BOLA (PREDIKSI)
+-- TOMBOL 2: TELEPORT KE TITIK JATUH BOLA (PREDIKSI SEKALI JALAN)
 -- ==========================================
 local tpBtn = Instance.new("TextButton")
 tpBtn.Size = UDim2.new(0, 220, 0, 45)
@@ -134,7 +117,6 @@ local tpAktif = false
 tpBtn.MouseButton1Click:Connect(function()
     tpAktif = not tpAktif
     tpBtn.BackgroundColor3 = tpAktif and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-    tpBtn.Text = tpAktif and "Teleport Landing: ON" : "Teleport Landing: OFF" -- (Diperbaiki bawah)
     tpBtn.Text = tpAktif and "Teleport Landing: ON" or "Teleport Landing: OFF"
     
     if tpAktif then
@@ -169,16 +151,13 @@ tpBtn.MouseButton1Click:Connect(function()
                         end
                         
                         if diZonaKita then
-                            -- TELEPORT SEKALI SAJA KE TITIK JATUH (Bukan spam teleport)
+                            -- TELEPORT SEKALI SAJA KE TITIK JATUH (Tidak kedap-kedip)
                             if not sudahTeleport then
-                                -- Prediksi titik jatuh bola di atas lantai (Y disesuaikan dengan posisi lantai lapangan)
                                 local posisiJatuh = Vector3.new(targetBola.Position.X, rootPart.Position.Y, targetBola.Position.Z)
                                 rootPart.CFrame = CFrame.new(posisiJatuh + Vector3.new(0, 0, 1))
-                                
                                 sudahTeleport = true
                             end
                         else
-                            -- Jika bola kembali ke zona musuh, reset status teleport agar siap untuk bola berikutnya
                             sudahTeleport = false
                         end
                     else
