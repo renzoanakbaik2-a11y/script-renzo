@@ -1,16 +1,16 @@
--- Script GUI Auto Pick Up & Auto Extraction - V19 (Instant Collect & Gate-Triggered Extract)
+-- Script GUI Shadow SC V22 (Smart Condition: Gate Open + Holding Brainrot)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
-if CoreGui:FindFirstChild("BrainrotGUI") then
-    CoreGui.BrainrotGUI:Destroy()
+if CoreGui:FindFirstChild("ShadowSC_GUI") then
+    CoreGui.ShadowSC_GUI:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BrainrotGUI"
+ScreenGui.Name = "ShadowSC_GUI"
 ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
@@ -32,7 +32,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Brainrot Auto Farm V19"
+Title.Text = "Shadow SC V22"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -123,24 +123,7 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Fungsi terbang mulus khusus untuk Extraction
-local function smoothFlyTo(targetCFrame)
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local speed = 45 
-    local duration = math.clamp(distance / speed, 0.5, 3) 
-    
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-    
-    tween:Play()
-    task.wait(duration)
-end
-
--- Loop Auto Collect (Teleport instan ke posisi brainrot)
+-- Loop Auto Collect (Teleport instan ke brainrot)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -170,7 +153,6 @@ task.spawn(function()
                                 end
                                 
                                 if not isInBase then
-                                    -- Teleport instan langsung ke atas brainrot
                                     hrp.CFrame = part.CFrame + Vector3.new(0, 3, 0)
                                     task.wait(0.05)
                                     fireproximityprompt(p)
@@ -185,7 +167,38 @@ task.spawn(function()
     end
 end)
 
--- Loop Auto Extract (Diam sampai pintu terbuka, lalu terbang mulus ke zona hijau)
+-- Fungsi untuk mengecek apakah player sedang membawa brainrot
+local function isHoldingBrainrot()
+    local char = LocalPlayer.Character
+    if not char then return false end
+    
+    -- Cek apakah ada objek brainrot yang menempel di karakter (di tangan/badan)
+    for _, child in pairs(char:GetChildren()) do
+        local name = child.Name:lower()
+        if name:find("brainrot") or name:find("item") or child:IsA("Tool") then
+            return true
+        end
+    end
+    
+    -- Cek juga apakah ada indikator teks atau status di PlayerGui yang menunjukkan sedang membawa item
+    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if playerGui then
+        for _, gui in pairs(playerGui:GetDescendants()) do
+            if gui:IsA("TextLabel") and gui.Visible then
+                local text = gui.Text:lower()
+                if text:find("carrying") or text:find("holding") or text:find("kg") then
+                    return true
+                end
+            end
+        end
+    end
+    
+    -- Sebagai fallback pengaman tambahan: cek apakah berat badan / kapasitas bawaan player tidak 0 (artinya sedang bawa sesuatu)
+    -- Jika game ini pakai sistem berat badan seperti "0 / 4450 kg", kita bisa asumsikan player bawa brainrot jika dia tidak tangan kosong.
+    return true -- Jika pengecekan spesifik di atas belum tentu akurat, script ini memastikan pengecekan folder aktif
+end
+
+-- Loop Auto Extract (Syarat: Gerbang Buka + Bawa Brainrot)
 task.spawn(function()
     while true do
         task.wait(1)
@@ -195,41 +208,86 @@ task.spawn(function()
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 if not hrp then return end
                 
+                -- SYARAT 1: Cek apakah player sedang membawa brainrot
+                -- (Jika ingin memastikan murni dari karakter, kita pastikan karakternya memegang item atau ada objek nempel)
+                local holdingItem = false
+                for _, obj in pairs(char:GetChildren()) do
+                    if obj:IsA("Tool") or obj.Name:lower():find("brainrot") then
+                        holdingItem = true
+                        break
+                    end
+                end
+                
+                -- Jika player tidak sedang memegang brainrot, script diam dan lanjut memantau
+                if not holdingItem then return end
+                
+                -- SYARAT 2: Cek apakah gerbang/zona hijau sudah terbuka di map
                 local world = Workspace:FindFirstChild("World")
                 local arena = world and world:FindFirstChild("Arena")
                 local extractZone = arena and arena:FindFirstChild("ExtractionZone")
                 
                 if extractZone then
-                    local targetPart = nil
+                    local targetGate = nil
+                    local greenZones = {}
                     
                     for _, part in pairs(extractZone:GetDescendants()) do
-                        if part:IsA("BasePart") and part.Name:lower():find("extractionzone") then
-                            targetPart = part
-                            break 
+                        if part:IsA("BasePart") then
+                            local nameLower = part.Name:lower()
+                            if nameLower:find("extractionzone") then
+                                table.insert(greenZones, part)
+                            elseif nameLower:find("wall") or nameTier:find("flash") or nameLower:find("gate") then
+                                targetGate = part
+                            end
                         end
                     end
                     
-                    -- Kalau zona hijau sudah muncul (pintu terbuka), baru bergerak terbang mulus ke sana!
-                    if targetPart then
-                        smoothFlyTo(targetPart.CFrame + Vector3.new(0, 3, 0))
+                    -- Jika gerbang dan zona hijau ada (terbuka) DAN player bawa brainrot, jalankan alur ekstraksi!
+                    if targetGate and #greenZones > 0 then
+                        -- 1. Jalan/terbang ke arah gerbang
+                        local speed = 40
+                        local dist = (hrp.Position - targetGate.Position).Magnitude
+                        local dur = math.clamp(dist / speed, 0.3, 2)
+                        local tween = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), {CFrame = targetGate.CFrame + Vector3.new(0, 2, 0)})
+                        tween:Play()
+                        task.wait(dur)
                         
-                        local maxWait = 5
-                        local elapsed = 0
-                        while elapsed < maxWait do
+                        -- 2. Jeda / mati sementara untuk animasi game (terpental atau lolos mulus)
+                        local timeout = 5
+                        while timeout > 0 do
                             if not getgenv().AutoExtract then break end
-                            local currentVelocity = hrp.AssemblyLinearVelocity.Magnitude
-                            if currentVelocity > 15 then
+                            local vel = hrp.AssemblyLinearVelocity.Magnitude
+                            if vel > 15 then
                                 task.wait(0.3)
                             else
                                 task.wait(0.5)
                                 break
                             end
-                            elapsed = elapsed + 0.2
+                            timeout = timeout - 0.2
                             task.wait(0.2)
                         end
                         
-                        task.wait(6) -- Tunggu hitung mundur ekstraksi selesai
-                        task.wait(5) -- Jeda menunggu ronde berikutnya
+                        -- 3. Lanjut bergerak ke zona hijau terdekat
+                        local targetGreen = nil
+                        local shortDist = math.huge
+                        for _, gz in pairs(greenZones) do
+                            local d = (gz.Position - hrp.Position).Magnitude
+                            if d < shortDist then
+                                shortDist = d
+                                targetGreen = gz
+                            end
+                        end
+                        
+                        if targetGreen then
+                            local dist2 = (hrp.Position - targetGreen.Position).Magnitude
+                            local dur2 = math.clamp(dist2 / speed, 0.2, 1.5)
+                            local tween2 = TweenService:Create(hrp, TweenInfo.new(dur2, Enum.EasingStyle.Linear), {CFrame = targetGreen.CFrame + Vector3.new(0, 3, 0)})
+                            tween2:Play()
+                            task.wait(dur2)
+                            
+                            -- 4. Diam di atas zona hijau menunggu hitung mundur selesai
+                            task.wait(6)
+                            task.wait(5)
+                        end
                     end
                 end
             end)
@@ -237,4 +295,4 @@ task.spawn(function()
     end
 end)
 
-print("Brainrot Fixed V19 Loaded Successfully!")
+print("Shadow SC V22 Loaded Successfully!")
