@@ -1,8 +1,10 @@
--- Script GUI Shadow SC V23 (Fixed Extraction Flow & Direct Zone Targeting)
+-- Script GUI Shadow SC V24 (Auto Collect, Auto Extract, & Server Hop)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 if CoreGui:FindFirstChild("ShadowSC_GUI") then
@@ -14,7 +16,7 @@ ScreenGui.Name = "ShadowSC_GUI"
 ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 215)
+MainFrame.Size = UDim2.new(0, 220, 0, 260) -- Diperpanjang sedikit untuk tombol Server Hop
 MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 MainFrame.BorderSizePixel = 0
@@ -32,16 +34,17 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Shadow SC V23"
+Title.Text = "Shadow SC V24"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
 TitleCorner.CornerRadius = UDim.new(0, 10)
 TitleCorner.Parent = Title
 
+-- Tombol 1: Auto Collect
 local CollectBtn = Instance.new("TextButton")
-CollectBtn.Size = UDim2.new(0.85, 0, 0, 40)
-CollectBtn.Position = UDim2.new(0.075, 0, 0.25, 0)
+CollectBtn.Size = UDim2.new(0.85, 0, 0, 35)
+CollectBtn.Position = UDim2.new(0.075, 0, 0.18, 0)
 CollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CollectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CollectBtn.TextSize = 13
@@ -53,9 +56,10 @@ local CollectCorner = Instance.new("UICorner")
 CollectCorner.CornerRadius = UDim.new(0, 8)
 CollectCorner.Parent = CollectBtn
 
+-- Tombol 2: Auto Extract
 local ExtractBtn = Instance.new("TextButton")
-ExtractBtn.Size = UDim2.new(0.85, 0, 0, 40)
-ExtractBtn.Position = UDim2.new(0.075, 0, 0.58, 0)
+ExtractBtn.Size = UDim2.new(0.85, 0, 0, 35)
+ExtractBtn.Position = UDim2.new(0.075, 0, 0.38, 0)
 ExtractBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 ExtractBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ExtractBtn.TextSize = 13
@@ -67,6 +71,22 @@ local ExtractCorner = Instance.new("UICorner")
 ExtractCorner.CornerRadius = UDim.new(0, 8)
 ExtractCorner.Parent = ExtractBtn
 
+-- Tombol 3: Server Hop
+local HopButton = Instance.new("TextButton")
+HopButton.Size = UDim2.new(0.85, 0, 0, 35)
+HopButton.Position = UDim2.new(0.075, 0, 0.58, 0)
+HopButton.BackgroundColor3 = Color3.fromRGB(50, 120, 200)
+HopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+HopButton.TextSize = 13
+HopButton.Font = Enum.Font.GothamBold
+HopButton.Text = "Server Hop"
+HopButton.Parent = MainFrame
+
+local HopCorner = Instance.new("UICorner")
+HopCorner.CornerRadius = UDim.new(0, 8)
+HopCorner.Parent = HopButton
+
+-- Tombol Minimize
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
 MinimizeBtn.Position = UDim2.new(1, -35, 0, 5)
@@ -106,6 +126,30 @@ ExtractBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Fitur Server Hop
+HopButton.MouseButton1Click:Connect(function()
+    HopButton.Text = "Pindah Server..."
+    pcall(function()
+        local servers = {}
+        local req = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
+        local body = HttpService:JSONDecode(req)
+        if body and body.data then
+            for _, s in pairs(body.data) do
+                if type(s) == "table" and s.maxPlayers and s.playing and s.playing < s.maxPlayers and s.id ~= game.JobId then
+                    table.insert(servers, s.id)
+                end
+            end
+        end
+        if #servers > 0 then
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], LocalPlayer)
+        else
+            HopButton.Text = "Gagal, Coba Lagi"
+            task.wait(2)
+            HopButton.Text = "Server Hop"
+        end
+    end)
+end)
+
 local isMinimized = false
 MinimizeBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
@@ -118,7 +162,7 @@ MinimizeBtn.MouseButton1Click:Connect(function()
         MainFrame.Size = UDim2.new(0, 220, 0, 40)
         MinimizeBtn.Text = "+"
     else
-        MainFrame.Size = UDim2.new(0, 220, 0, 215)
+        MainFrame.Size = UDim2.new(0, 220, 0, 260)
         MinimizeBtn.Text = "-"
     end
 end)
@@ -167,7 +211,7 @@ task.spawn(function()
     end
 end)
 
--- Loop Auto Extract V23 (Langsung menuju zona hijau terdekat saat pintu terbuka)
+-- Loop Auto Extract (Menuju zona hijau terdekat saat pintu terbuka)
 task.spawn(function()
     while true do
         task.wait(1)
@@ -184,16 +228,13 @@ task.spawn(function()
                 if extractZone then
                     local greenZones = {}
                     
-                    -- Kumpulkan semua zona hijau yang aktif muncul di map
                     for _, part in pairs(extractZone:GetDescendants()) do
                         if part:IsA("BasePart") and part.Name:lower():find("extractionzone") then
                             table.insert(greenZones, part)
                         end
                     end
                     
-                    -- Jika zona hijau terdeteksi muncul (artinya pintu/sesi ekstraksi terbuka)
                     if #greenZones > 0 then
-                        -- Cari zona hijau yang posisinya paling dekat dengan karakter
                         local targetZone = nil
                         local shortestDist = math.huge
                         
@@ -206,7 +247,6 @@ task.spawn(function()
                         end
                         
                         if targetZone then
-                            -- 1. Karakter bergerak/terbang mulus menuju zona hijau terdekat
                             local speed = 45
                             local dist = (hrp.Position - targetZone.Position).Magnitude
                             local dur = math.clamp(dist / speed, 0.3, 2.5)
@@ -215,26 +255,21 @@ task.spawn(function()
                             tween:Play()
                             task.wait(dur)
                             
-                            -- 2. JEDA / PAUSE SEMENTARA UNTUK ANIMASI:
-                            -- Membiarkan animasi game berjalan (jika strength kecil dia akan terpental/berhenti sebentar, jika strength 4000+ dia langsung diam mulus)
                             local timeout = 5
                             while timeout > 0 do
                                 if not getgenv().AutoExtract then break end
                                 local vel = hrp.AssemblyLinearVelocity.Magnitude
                                 if vel > 15 then
-                                    task.wait(0.3) -- Masih terpental, tunggu sebentar
+                                    task.wait(0.3)
                                 else
-                                    task.wait(0.5) -- Sudah stabil / mendarat di zona
+                                    task.wait(0.5)
                                     break
                                 end
                                 timeout = timeout - 0.2
                                 task.wait(0.2)
                             end
                             
-                            -- 3. Diam di atas zona hijau menunggu hitung mundur selesai sampai masuk base
                             task.wait(6)
-                            
-                            -- 4. Jeda pengaman agar script menunggu ronde berikutnya
                             task.wait(5)
                         end
                     end
@@ -244,4 +279,4 @@ task.spawn(function()
     end
 end)
 
-print("Shadow SC V23 Loaded Successfully!")
+print("Shadow SC V24 Loaded Successfully with Server Hop!")
