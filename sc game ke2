@@ -1,10 +1,153 @@
--- Script Tester ProximityPrompt
-print("--- TESTER DIMULAI ---")
-local count = 0
-for _, v in pairs(game:GetService("Workspace"):GetDescendants()) do
-    if v:IsA("ProximityPrompt") then
-        count = count + 1
-        print("Ketemu Prompt:", v.ActionText, "pada objek:", v.Parent.Name)
-    end
+-- Script GUI Auto Pick Up Brainrot (Pedestal & Arena Filter)
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+
+if CoreGui:FindFirstChild("BrainrotGUI") then
+    CoreGui.BrainrotGUI:Destroy()
 end
-print("Total ProximityPrompt yang terdeteksi di map:", count)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BrainrotGUI"
+ScreenGui.Parent = CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 220, 0, 160)
+MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+Title.Font = Enum.Font.GothamBold
+Title.Text = "Brainrot Perfect Farm"
+Title.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = Title
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0.85, 0, 0, 45)
+ToggleButton.Position = UDim2.new(0.075, 0, 0.35, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 14
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Text = "Status: OFF"
+ToggleButton.Parent = MainFrame
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 8)
+ToggleCorner.Parent = ToggleButton
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -35, 0, 5)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.TextSize = 12
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Text = "-"
+MinimizeBtn.Parent = MainFrame
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 6)
+MinimizeBtn.Parent = MainFrame
+
+getgenv().AutoPickUp = false
+
+ToggleButton.MouseButton1Click:Connect(function()
+    getgenv().AutoPickUp = not getgenv().AutoPickUp
+    if getgenv().AutoPickUp then
+        ToggleButton.Text = "Status: ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+    else
+        ToggleButton.Text = "Status: OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    end
+end)
+
+local isMinimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    for _, child in pairs(MainFrame:GetChildren()) do
+        if child:IsA("GuiObject") and child ~= Title and child ~= MinimizeBtn then
+            child.Visible = not isMinimized
+        end
+    end
+    if isMinimized then
+        MainFrame.Size = UDim2.new(0, 220, 0, 40)
+        MinimizeBtn.Text = "+"
+    else
+        MainFrame.Size = UDim2.new(0, 220, 0, 160)
+        MinimizeBtn.Text = "-"
+    end
+end)
+
+-- Loop Utama dengan Filter Area Spawn Bawah & Abaikan Pedestal Base Pemain
+task.spawn(function()
+    while task.wait(0.2) do
+        if getgenv().AutoPickUp then
+            pcall(function()
+                local character = LocalPlayer.Character
+                local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+                
+                for _, prompt in pairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        local parentPart = prompt.Parent
+                        if parentPart and parentPart:IsA("BasePart") then
+                            
+                            local actionText = prompt.ActionText:lower()
+                            local parentName = parentPart.Name:lower()
+                            
+                            -- Syarat 1: Harus bertuliskan "pick up"
+                            if actionText:find("pick up") then
+                                
+                                -- Syarat 2: JANGAN SENTUH jika objeknya adalah Pedestal yang ada di base pemain
+                                -- (Biasanya Pedestal base pemain berada di lantai atas atau di dalam folder base)
+                                local isAtBasePedestal = false
+                                local ancestor = parentPart.Parent
+                                while ancestor and ancestor ~= Workspace do
+                                    local ancName = ancestor.Name:lower()
+                                    if ancName:find("base") or ancName:find("plot") or ancName:find("owner") then
+                                        isAtBasePedestal = true
+                                        break
+                                    end
+                                    ancestor = ancestor.Parent
+                                end
+                                
+                                -- Syarat 3: Pastikan posisinya berada di arena wadah bawah (ketinggian Y di bawah area base)
+                                local pos = parentPart.Position
+                                local isInArenaArea = (pos.Y < 50) -- Sesuaikan jika arena bawah memiliki batas Y tertentu
+                                
+                                -- Eksekusi HANYA jika itu "Pick Up", bukan di base orang, dan berada di area arena
+                                if not isAtBasePedestal and isInArenaArea then
+                                    hrp.CFrame = CFrame.new(pos.X, pos.Y + 3, pos.Z)
+                                    task.wait(0.1)
+                                    fireproximityprompt(prompt)
+                                end
+                                
+                            end
+                            
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+print("GUI Perfect Farm Berhasil Dijalankan!")
