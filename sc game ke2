@@ -1,101 +1,5 @@
 -- ==========================================
--- SCRIPT HUB: STEAL AN EGG! (FINAL COMBINED VERSION)
--- ==========================================
-
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
--- 1. Bersihkan menu lama jika dijalankan ulang agar tidak bentrok
-if playerGui:FindFirstChild("StealAnEggMenu") then
-    playerGui.StealAnEggMenu:Destroy()
-end
-
--- 2. Wadah Utama Layar (ScreenGui)
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "StealAnEggMenu"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
-
--- 3. Tombol Utama (MENU) untuk Mengontrol Tampilan (Bisa Digeser)
-local openButton = Instance.new("TextButton")
-openButton.Name = "OpenButton"
-openButton.Size = UDim2.new(0, 110, 0, 40)
-openButton.Position = UDim2.new(0, 20, 0.4, 0)
-openButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-openButton.BorderColor3 = Color3.fromRGB(100, 100, 100)
-openButton.Text = "MENU"
-openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-openButton.TextSize = 14
-openButton.Font = Enum.Font.SourceSansBold
-openButton.Parent = screenGui
-
--- Logika Geser (Draggable) untuk Tombol MENU di HP
-local dragging, dragInput, dragStart, startPos
-openButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = openButton.Position
-    end
-end)
-
-openButton.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        openButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- 4. Kotak Menu Utama (Medium Size)
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 260, 0, 200)
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -100)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
-mainFrame.Visible = false -- Awalnya disembunyikan
-mainFrame.Parent = screenGui
-
--- Judul di dalam Kotak Menu
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 40)
-titleLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-titleLabel.Text = " STEAL AN EGG SCRIPT"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 15
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = mainFrame
-
--- Tombol Close (X) di dalam Menu
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 40, 0, 40)
-closeButton.Position = UDim2.new(1, -40, 0, 0)
-closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 16
-closeButton.Font = Enum.Font.SourceSansBold
-closeButton.Parent = mainFrame
-
-closeButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-end)
-
-openButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-end)
-
-
--- ==========================================
--- 5. FITUR: AUTO FLY TO EGG (TERBANG HALUS)
+-- FITUR: TERBANG MENUJU EGG DENGAN ANIMASI JALAN/MELAYANG
 -- ==========================================
 
 local flyEggBtn = Instance.new("TextButton")
@@ -103,7 +7,7 @@ flyEggBtn.Name = "FlyEggButton"
 flyEggBtn.Size = UDim2.new(0, 220, 0, 45)
 flyEggBtn.Position = UDim2.new(0.5, -110, 0, 60)
 flyEggBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-flyEggBtn.Text = "Auto Fly Egg: OFF"
+flyEggBtn.Text = "Auto Fly Anim: OFF"
 flyEggBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 flyEggBtn.TextSize = 14
 flyEggBtn.Font = Enum.Font.SourceSansBold
@@ -116,13 +20,14 @@ flyEggBtn.MouseButton1Click:Connect(function()
     
     if autoFlyAktif then
         flyEggBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        flyEggBtn.Text = "Auto Fly Egg: ON"
+        flyEggBtn.Text = "Auto Fly Anim: ON"
         
         task.spawn(function()
             while autoFlyAktif do
                 local karakter = player.Character
-                if karakter and karakter:FindFirstChild("HumanoidRootPart") then
+                if karakter and karakter:FindFirstChild("HumanoidRootPart") and karakter:FindFirstChild("Humanoid") then
                     local rootPart = karakter.HumanoidRootPart
+                    local humanoid = karakter.Humanoid
                     local targetTelur = nil
                     
                     -- Cari telur di workspace
@@ -135,16 +40,29 @@ flyEggBtn.MouseButton1Click:Connect(function()
                         end
                     end
                     
-                    -- Terbang meluncur halus ke telur (Bukan Teleport)
+                    -- Kalau telur ketemu, terbang dengan animasi jalan ke arahnya
                     if targetTelur then
+                        -- 1. Angkat sedikit posisi terbang ke udara biar kelihatan melayang
+                        local titikTerbang = targetTelur.Position + Vector3.new(0, 5, 0)
+                        
+                        -- Nyalakan mode melayang biar gak jatuh ke tanah
                         local bv = Instance.new("BodyVelocity")
-                        bv.MaxForce = Vector3.new(1, 1, 1) * 100000
-                        bv.Velocity = (targetTelur.Position - rootPart.Position).Unit * 50
+                        bv.MaxForce = Vector3.new(1, 1, 1) * 30000
+                        bv.Velocity = Vector3.new(0, 0, 0) -- Tahan posisi di udara
                         bv.Parent = rootPart
                         
-                        task.wait(1) -- Durasi meluncur terbang
+                        -- 2. Gunakan MoveTo supaya animasi jalan/gerak karakter tetap terpancing ke arah telur
+                        humanoid:MoveTo(titikTerbang)
+                        
+                        -- Biarkan karakternya "berjalan" di udara menuju titik telur
+                        repeat
+                            task.wait(0.1)
+                            bv.Velocity = (titikTerbang - rootPart.Position).Unit * 16 -- Kecepatan jalan normal dengan animasi
+                        until (rootPart.Position - titikTerbang).Magnitude < 3 or not autoFlyAktif
+                        
+                        -- Hapus penahan udara pas sudah sampai di atas telur
                         bv:Destroy()
-                        task.wait(0.3)
+                        task.wait(0.5)
                     end
                 end
                 task.wait(1.5)
@@ -152,6 +70,6 @@ flyEggBtn.MouseButton1Click:Connect(function()
         end)
     else
         flyEggBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        flyEggBtn.Text = "Auto Fly Egg: OFF"
+        flyEggBtn.Text = "Auto Fly Anim: OFF"
     end
 end)
