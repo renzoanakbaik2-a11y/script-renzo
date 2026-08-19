@@ -1,21 +1,21 @@
 -- ==========================================
--- SCRIPT HUB: RACKET RIVALS (CORE GUI VERSION)
+-- SCRIPT HUB: RACKET RIVALS (ULTRA LIGHTWEIGHT & SAFE)
 -- ==========================================
 
-local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
--- 1. Bersihkan menu lama dari CoreGui agar tidak bentrok
-if CoreGui:FindFirstChild("RacketRivalsMenu") then
-    CoreGui.RacketRivalsMenu:Destroy()
+-- 1. Bersihkan menu lama
+if playerGui:FindFirstChild("RacketRivalsMenu") then
+    playerGui.RacketRivalsMenu:Destroy()
 end
 
--- 2. Wadah Utama Layar menggunakan CoreGui (Tembus Proteksi Game)
+-- 2. Wadah Utama Layar (ScreenGui)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "RacketRivalsMenu"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = CoreGui
+screenGui.Parent = playerGui
 
 -- 3. Tombol Mengambang (MENU) (Bisa Digeser)
 local openButton = Instance.new("TextButton")
@@ -92,7 +92,7 @@ end)
 
 
 -- ==========================================
--- 5. FITUR: ZONA AMAN + BERJALAN MENUJU BOLA
+-- 5. FITUR: AUTO HIT RINGAN (DELTA SAFE)
 -- ==========================================
 
 local autoPlayBtn = Instance.new("TextButton")
@@ -100,7 +100,7 @@ autoPlayBtn.Name = "AutoPlayButton"
 autoPlayBtn.Size = UDim2.new(0, 220, 0, 45)
 autoPlayBtn.Position = UDim2.new(0.5, -110, 0, 60)
 autoPlayBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-autoPlayBtn.Text = "Zona Aman & Jalan: OFF"
+autoPlayBtn.Text = "Auto Hit Safe: OFF"
 autoPlayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 autoPlayBtn.TextSize = 14
 autoPlayBtn.Font = Enum.Font.SourceSansBold
@@ -113,42 +113,23 @@ autoPlayBtn.MouseButton1Click:Connect(function()
     
     if autoPlayAktif then
         autoPlayBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        autoPlayBtn.Text = "Zona Aman & Jalan: ON"
+        autoPlayBtn.Text = "Auto Hit Safe: ON"
         
         task.spawn(function()
             while autoPlayAktif do
                 local karakter = player.Character
-                if karakter and karakter:FindFirstChild("HumanoidRootPart") and karakter:FindFirstChild("Humanoid") then
-                    local rootPart = karakter.HumanoidRootPart
-                    local humanoid = karakter.Humanoid
-                    local targetBola = nil
-                    
-                    -- Cari bola di Workspace
-                    for _, obj in ipairs(workspace:GetDescendants()) do
-                        local namaObj = obj.Name:lower()
-                        if obj:IsA("BasePart") and (namaObj:find("ball") or namaObj:find("shuttle") or namaObj:find("birdie")) then
-                            targetBola = obj
-                            break
-                        end
-                    end
-                    
-                    if targetBola then
-                        local posisiBolaZ = targetBola.Position.Z
-                        local batasTengahZona = 0 
-                        local bolaDiZonaKita = (posisiBolaZ <= batasTengahZona)
-                        
-                        if bolaDiZonaKita then
-                            humanoid:MoveTo(targetBola.Position)
-                        else
-                            humanoid:MoveTo(rootPart.Position)
-                        end
+                if karakter then
+                    -- Picu tool yang sedang dipegang secara aman tanpa scan workspace berat
+                    local tool = karakter:FindFirstChildOfClass("Tool")
+                    if tool then
+                        tool:Activate()
                     end
                 end
-                task.wait(0.1)
+                task.wait(0.5) -- Jeda aman agar executor tidak overload
             end
         end)
     else
         autoPlayBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        autoPlayBtn.Text = "Zona Aman & Jalan: OFF"
+        autoPlayBtn.Text = "Auto Hit Safe: OFF"
     end
 end)
