@@ -1,18 +1,18 @@
 -- ==========================================
--- SCRIPT MENU UTAMA: FIGHT OTHERS FOR BRAINROTS!
+-- SCRIPT HUB: STEAL AN EGG! (AUTO STEAL + TELEPORT BASE)
 -- ==========================================
 
--- 1. Bersihkan menu lama jika sudah pernah dibuka
-if game.CoreGui:FindFirstChild("BrainrotMenuUI") then
-    game.CoreGui.BrainrotMenuUI:Destroy()
+-- 1. Hapus menu lama jika script dijalankan ulang
+if game.CoreGui:FindFirstChild("StealAnEggMenu") then
+    game.CoreGui.StealAnEggMenu:Destroy()
 end
 
--- 2. Buat Wadah Utama (ScreenGui)
+-- 2. Wadah Utama Layar (ScreenGui)
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BrainrotMenuUI"
+screenGui.Name = "StealAnEggMenu"
 screenGui.Parent = game.CoreGui
 
--- 3. Tombol Mengambang (MENU) untuk membuka/tutup kotak
+-- 3. Tombol Mengambang (Floating Button) untuk Buka/Tutup Menu (Bisa Digeser)
 local openButton = Instance.new("TextButton")
 openButton.Name = "OpenButton"
 openButton.Size = UDim2.new(0, 110, 0, 40)
@@ -25,7 +25,7 @@ openButton.TextSize = 14
 openButton.Font = Enum.Font.SourceSansBold
 openButton.Parent = screenGui
 
--- Fitur Geser (Draggable) untuk Tombol MENU
+-- Logika Geser (Draggable) untuk Tombol MENU
 local dragging, dragInput, dragStart, startPos
 openButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -51,8 +51,8 @@ end)
 -- 4. Kotak Menu Utama (Medium Size)
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 260, 0, 220)
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -110)
+mainFrame.Size = UDim2.new(0, 260, 0, 240)
+mainFrame.Position = UDim2.new(0.5, -130, 0.5, -120)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
 mainFrame.Visible = false -- Awalnya disembunyikan
@@ -62,7 +62,7 @@ mainFrame.Parent = screenGui
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 40)
 titleLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-titleLabel.Text = " BRAINROT SCRIPT HUB"
+titleLabel.Text = " STEAL AN EGG SCRIPT"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextSize = 15
 titleLabel.Font = Enum.Font.SourceSansBold
@@ -80,7 +80,6 @@ closeButton.TextSize = 16
 closeButton.Font = Enum.Font.SourceSansBold
 closeButton.Parent = mainFrame
 
--- Fungsi Tombol Buka & Tutup Menu
 closeButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = false
 end)
@@ -89,4 +88,68 @@ openButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = not mainFrame.Visible
 end)
 
-print("Script Menu Berhasil Dijalankan!")
+
+-- ==========================================
+-- 5. FITUR UTAMA: AUTO STEAL + TELEPORT BASE
+-- ==========================================
+
+local autoStealBtn = Instance.new("TextButton")
+autoStealBtn.Name = "AutoStealButton"
+autoStealBtn.Size = UDim2.new(0, 220, 0, 45)
+autoStealBtn.Position = UDim2.new(0.5, -110, 0, 60)
+autoStealBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+autoStealBtn.Text = "Auto Steal + Safe Base: OFF"
+autoStealBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoStealBtn.TextSize = 13
+autoStealBtn.Font = Enum.Font.SourceSansBold
+autoStealBtn.Parent = mainFrame
+
+local autoStealAktif = false
+autoStealBtn.MouseButton1Click:Connect(function()
+    autoStealAktif = not autoStealAktif
+    
+    if autoStealAktif then
+        autoStealBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        autoStealBtn.Text = "Auto Steal + Safe Base: ON"
+        
+        task.spawn(function()
+            while autoStealAktif do
+                local player = game:GetService("Players").LocalPlayer
+                local karakter = player.Character
+                
+                if karakter and karakter:FindFirstChild("HumanoidRootPart") then
+                    
+                    -- Simpan posisi awal (Base) sebelum teleport nyolong
+                    local posisiBase = karakter.HumanoidRootPart.CFrame
+                    local targetTelur = nil
+                    
+                    -- Cari telur/item di workspace
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        if obj:IsA("BasePart") and (obj.Name:lower():find("egg") or obj:FindFirstChild("TouchInterest")) then
+                            -- Pastikan ukuran kecil dan bukan bagian base sendiri
+                            if obj.Size.Magnitude < 8 and not obj.Name:lower():find("base") then
+                                targetTelur = obj
+                                break
+                            end
+                        end
+                    end
+                    
+                    -- Kalau telur ketemu, teleport ke telur, lalu langsung kabur balik ke base!
+                    if targetTelur then
+                        -- 1. Teleport ke posisi telur untuk mengambilnya
+                        karakter.HumanoidRootPart.CFrame = targetTelur.CFrame
+                        task.wait(0.3) -- Jeda sepersekian detik buat ambil
+                        
+                        -- 2. Otomatis Teleport balik ke Base supaya aman dari kejaran
+                        karakter.HumanoidRootPart.CFrame = posisiBase
+                    end
+                    
+                end
+                task.wait(1)
+            end
+        end)
+    else
+        autoStealBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        autoStealBtn.Text = "Auto Steal + Safe Base: OFF"
+    end
+end)
