@@ -1,27 +1,27 @@
 -- ==========================================
--- SCRIPT HUB: STEAL AN EGG! (FULL MENU + FLY TO EGG)
+-- SCRIPT HUB: STEAL AN EGG! (FINAL COMBINED VERSION)
 -- ==========================================
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local CoreGui = game:GetService("CoreGui")
+local playerGui = player:WaitForChild("PlayerGui")
 
--- 1. Bersihkan menu lama jika sudah ada
-if CoreGui:FindFirstChild("StealAnEggMenu") then
-    CoreGui.StealAnEggMenu:Destroy()
+-- 1. Bersihkan menu lama jika dijalankan ulang agar tidak bentrok
+if playerGui:FindFirstChild("StealAnEggMenu") then
+    playerGui.StealAnEggMenu:Destroy()
 end
 
--- 2. Wadah Utama Layar (ScreenGui) menggunakan CoreGui agar stabil di Delta
+-- 2. Wadah Utama Layar (ScreenGui)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "StealAnEggMenu"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = CoreGui
+screenGui.Parent = playerGui
 
--- 3. Tombol Mengambang (MENU) untuk Buka/Tutup
+-- 3. Tombol Utama (MENU) untuk Mengontrol Tampilan (Bisa Digeser)
 local openButton = Instance.new("TextButton")
 openButton.Name = "OpenButton"
 openButton.Size = UDim2.new(0, 110, 0, 40)
-openButton.Position = UDim2.new(0, 20, 0.5, -20)
+openButton.Position = UDim2.new(0, 20, 0.4, 0)
 openButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 openButton.BorderColor3 = Color3.fromRGB(100, 100, 100)
 openButton.Text = "MENU"
@@ -56,11 +56,11 @@ end)
 -- 4. Kotak Menu Utama (Medium Size)
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 260, 0, 220)
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -110)
+mainFrame.Size = UDim2.new(0, 260, 0, 200)
+mainFrame.Position = UDim2.new(0.5, -130, 0.5, -100)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
-mainFrame.Visible = false
+mainFrame.Visible = false -- Awalnya disembunyikan
 mainFrame.Parent = screenGui
 
 -- Judul di dalam Kotak Menu
@@ -95,7 +95,7 @@ end)
 
 
 -- ==========================================
--- 5. TOMBOL FITUR: AUTO FLY TO EGG (ON/OFF)
+-- 5. FITUR: AUTO FLY TO EGG (TERBANG HALUS)
 -- ==========================================
 
 local flyEggBtn = Instance.new("TextButton")
@@ -135,10 +135,16 @@ flyEggBtn.MouseButton1Click:Connect(function()
                         end
                     end
                     
-                    -- Teleport melayang ke telur
+                    -- Terbang meluncur halus ke telur (Bukan Teleport)
                     if targetTelur then
-                        rootPart.CFrame = targetTelur.CFrame + Vector3.new(0, 3, 0)
-                        task.wait(0.4)
+                        local bv = Instance.new("BodyVelocity")
+                        bv.MaxForce = Vector3.new(1, 1, 1) * 100000
+                        bv.Velocity = (targetTelur.Position - rootPart.Position).Unit * 50
+                        bv.Parent = rootPart
+                        
+                        task.wait(1) -- Durasi meluncur terbang
+                        bv:Destroy()
+                        task.wait(0.3)
                     end
                 end
                 task.wait(1.5)
