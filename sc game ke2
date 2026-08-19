@@ -1,5 +1,5 @@
 -- ==========================================
--- SCRIPT HUB: RACKET RIVALS (FIXED COURT BORDER & WALKING)
+-- SCRIPT HUB: RACKET RIVALS (CLEAN & FIXED)
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -82,10 +82,6 @@ closeButton.TextSize = 16
 closeButton.Font = Enum.Font.SourceSansBold
 closeButton.Parent = mainFrame
 
-closeButton.MouseButton1Click:Connect(function5) -- (diperbaiki di bawah)
-    mainFrame.Visible = false
-end)
-
 closeButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = false
 end)
@@ -137,23 +133,13 @@ autoPlayBtn.MouseButton1Click:Connect(function()
                     end
                     
                     if targetBola then
-                        -- TENTUKAN BATAS ZONA LAPANGAN (Berdasarkan sumbu Z atau X)
-                        -- Asumsi lapangan kita berada di sisi tertentu koordinat Z.
-                        -- Kamu bisa melihat apakah posisi Z bola bernilai positif atau negatif saat di zona kamu.
-                        -- Contoh logika batasan: Misalkan batas tengah lapangan ada di angka Z = 0.
-                        -- Jika bola masuk ke area musuh (misalnya Z > 0), karakter diam. Jika di area kita (Z <= 0), karakter mengejar.
-                        
                         local posisiBolaZ = targetBola.Position.Z
-                        
-                        -- BATAS TENGAH (Bisa disesuaikan dengan posisi map game aslinya)
-                        local batasTengahZona = 0 -- Ubah angka ini nanti jika lapanganmu menghadap arah lain
-                        local bolaDiZonaKita = (posisiBolaZ <= batasTengahZona) -- Ganti tanda '<=' atau '>=' sesuai arah lapangan
+                        local batasTengahZona = 0 
+                        local bolaDiZonaKita = (posisiBolaZ <= batasTengahZona)
                         
                         if bolaDiZonaKita then
-                            -- Gunakan Humanoid:MoveTo() agar karakter BERJALAN mulus mendekati bola
                             humanoid:MoveTo(targetBola.Position)
                         else
-                            -- Kalau bola masuk zona lawan, karakter berhenti bergerak/diam di tempat
                             humanoid:MoveTo(rootPart.Position)
                         end
                     end
