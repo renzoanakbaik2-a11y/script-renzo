@@ -1,4 +1,4 @@
--- Script GUI Auto Pick Up Brainrot - V7 Dynamic Radius (Anti-Diam & Anti-Maling)
+-- Script GUI Auto Pick Up Brainrot - V8 (Anti-Base Local Prompt Fix)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -33,7 +33,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Brainrot Fixed V7"
+Title.Text = "Brainrot Fixed V8"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -135,10 +135,10 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Loop Utama V7: Deteksi Prompt "Pick Up" dinamis dengan Batasan Jarak Arena (Radius)
+-- Loop Utama V8: Deteksi ProximityPrompt dengan Filter Pengaman Base/Pedestal Lokal
 task.spawn(function()
     while true do
-        task.wait(0.15)
+        task.wait(0.2)
         if getgenv().AutoPickUp then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -151,25 +151,31 @@ task.spawn(function()
                     if p:IsA("ProximityPrompt") then
                         local actionText = tostring(p.ActionText):lower()
                         
-                        -- Cek apakah prompt tersebut adalah untuk mengambil item ("pick up")
                         if actionText:find("pick up") then
                             local part = p.Parent
                             if part and part:IsA("BasePart") then
                                 
-                                -- Ambil posisi bagian item yang ada prompt-nya
-                                local itemPos = part.Position
+                                -- CEK PENGAMAN: Apakah prompt ini berada di dalam struktur base/pedestal pemain?
+                                local isInBase = false
+                                local ancestor = part.Parent
+                                while ancestor and ancestor ~= Workspace do
+                                    local name = ancestor.Name:lower()
+                                    -- Jika foldernya mengandung kata base, plot, atau pedestal milik player
+                                    if name:find("base") or name:find("plot") or name:find("pedestal") or name:find("owner") then
+                                        isInBase = true
+                                        break
+                                    end
+                                    ancestor = ancestor.Parent
+                                end
                                 
-                                -- FILTER AMAN: 
-                                -- 1. Ketinggian Y harus di bawah area base pemain (di area arena bawah)
-                                -- 2. Jarak dari karakter kita tidak terlalu jauh (misal dalam radius 60 studs) 
-                                --    agar tidak mengejar prompt yang ada di base orang lain yang jauh.
-                                local distanceFromPlayer = (itemPos - hrp.Position).Magnitude
+                                -- HANYA jalankan jika BUKAN di base/pedestal DAN jaraknya masuk akal di arena tengah
+                                local distanceFromPlayer = (part.Position - hrp.Position).Magnitude
                                 
-                                if itemPos.Y < 45 and distanceFromPlayer < 70 then
-                                    hrp.CFrame = CFrame.new(itemPos.X, itemPos.Y + 3, itemPos.Z)
-                                    task.wait(0.05)
-                                    fireproximityprompt(p)
+                                if not isInBase and distanceFromPlayer < 80 then
+                                    hrp.CFrame = CFrame.new(part.Position.X, part.Position.Y + 3, part.Position.Z)
                                     task.wait(0.1)
+                                    fireproximityprompt(p)
+                                    task.wait(0.2)
                                 end
                                 
                             end
@@ -181,4 +187,4 @@ task.spawn(function()
     end
 end)
 
-print("Brainrot Fixed V7 Loaded Successfully!")
+print("Brainrot Fixed V8 Loaded Successfully!")
