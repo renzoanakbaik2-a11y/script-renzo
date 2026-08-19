@@ -1,4 +1,4 @@
--- Script GUI Auto Pick Up Brainrot - V8 (Anti-Base Local Prompt Fix)
+-- Script GUI Auto Pick Up Brainrot - V9 (Global Arena Reach)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -33,7 +33,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Brainrot Fixed V8"
+Title.Text = "Brainrot Fixed V9"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -135,7 +135,7 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Loop Utama V8: Deteksi ProximityPrompt dengan Filter Pengaman Base/Pedestal Lokal
+-- Loop Utama V9: Global Reach Tanpa Batasan Jarak Karakter (Langsung Teleport dari Base ke Arena)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -155,12 +155,11 @@ task.spawn(function()
                             local part = p.Parent
                             if part and part:IsA("BasePart") then
                                 
-                                -- CEK PENGAMAN: Apakah prompt ini berada di dalam struktur base/pedestal pemain?
+                                -- Pengecekan Base/Pedestal
                                 local isInBase = false
                                 local ancestor = part.Parent
                                 while ancestor and ancestor ~= Workspace do
                                     local name = ancestor.Name:lower()
-                                    -- Jika foldernya mengandung kata base, plot, atau pedestal milik player
                                     if name:find("base") or name:find("plot") or name:find("pedestal") or name:find("owner") then
                                         isInBase = true
                                         break
@@ -168,10 +167,8 @@ task.spawn(function()
                                     ancestor = ancestor.Parent
                                 end
                                 
-                                -- HANYA jalankan jika BUKAN di base/pedestal DAN jaraknya masuk akal di arena tengah
-                                local distanceFromPlayer = (part.Position - hrp.Position).Magnitude
-                                
-                                if not isInBase and distanceFromPlayer < 80 then
+                                -- Hapus batasan jarak dari player, jadi dari base pun langsung disambar ke arena!
+                                if not isInBase then
                                     hrp.CFrame = CFrame.new(part.Position.X, part.Position.Y + 3, part.Position.Z)
                                     task.wait(0.1)
                                     fireproximityprompt(p)
@@ -187,4 +184,4 @@ task.spawn(function()
     end
 end)
 
-print("Brainrot Fixed V8 Loaded Successfully!")
+print("Brainrot Fixed V9 Loaded Successfully!")
