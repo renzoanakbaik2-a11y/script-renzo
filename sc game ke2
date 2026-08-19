@@ -1,21 +1,21 @@
 -- ==========================================
--- SCRIPT HUB: RACKET RIVALS (CLEAN & FIXED)
+-- SCRIPT HUB: RACKET RIVALS (CORE GUI VERSION)
 -- ==========================================
 
+local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 
--- 1. Bersihkan menu lama
-if playerGui:FindFirstChild("RacketRivalsMenu") then
-    playerGui.RacketRivalsMenu:Destroy()
+-- 1. Bersihkan menu lama dari CoreGui agar tidak bentrok
+if CoreGui:FindFirstChild("RacketRivalsMenu") then
+    CoreGui.RacketRivalsMenu:Destroy()
 end
 
--- 2. Wadah Utama Layar (ScreenGui)
+-- 2. Wadah Utama Layar menggunakan CoreGui (Tembus Proteksi Game)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "RacketRivalsMenu"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+screenGui.Parent = CoreGui
 
 -- 3. Tombol Mengambang (MENU) (Bisa Digeser)
 local openButton = Instance.new("TextButton")
