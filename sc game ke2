@@ -1,4 +1,4 @@
--- Script GUI Auto Pick Up Brainrot (Strict Arena Coordinates)
+-- Script GUI Auto Pick Up Brainrot (Folder-Locked Arena - V3 Update)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -27,13 +27,14 @@ local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 10)
 UICorner.Parent = MainFrame
 
+-- Judul Menu V3
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Strict Arena Farm"
+Title.Text = "Brainrot Fixed V3"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -137,7 +138,7 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Loop Utama dengan Filter Koordinat Kotak Arena Spawn
+-- Loop Utama: Hanya scan objek yang berada di dalam folder Arena atau World bagian tengah
 task.spawn(function()
     while task.wait(0.2) do
         if getgenv().AutoPickUp then
@@ -146,7 +147,13 @@ task.spawn(function()
                 local hrp = character and character:FindFirstChild("HumanoidRootPart")
                 if not hrp then return end
                 
-                for _, prompt in pairs(Workspace:GetDescendants()) do
+                -- Cari folder Arena yang menyimpan ubin spawn di game ini
+                local arenaFolder = Workspace:FindFirstChild("World") and Workspace.World:FindFirstChild("Arena")
+                
+                -- Jika folder Arena ketemu, kita cari prompt HANYA di dalam area arena tersebut
+                local searchTarget = arenaFolder or Workspace
+                
+                for _, prompt in pairs(searchTarget:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") then
                         local parentPart = prompt.Parent
                         if parentPart and parentPart:IsA("BasePart") then
@@ -156,25 +163,8 @@ task.spawn(function()
                                 
                                 local pos = parentPart.Position
                                 
-                                -- ========================================================
-                                -- FILTER KOTAK ARENA (BATAS KOORDINAT X dan Z)
-                                -- Arena spawn berada di wadah kotak tengah. 
-                                -- Kita tentukan batas titik tengah (Center) beserta ukuran radius kotaknya (Range).
-                                -- ========================================================
-                                
-                                -- CATATAN: Jika karakternya masih melompat ke base luar, 
-                                -- pastikan titik pusat arena (Center X & Z) sudah sesuai dengan posisi wadah di game ini.
-                                
-                                local arenaCenterX = 0  -- Ganti angka ini jika titik tengah arena bergeser
-                                local arenaCenterZ = 0  -- Ganti angka ini jika titik tengah arena bergeser
-                                local maxRadius = 80    -- Ukuran luas area kotak arena (dalam studs)
-                                
-                                local distanceFromCenter = math.sqrt((pos.X - arenaCenterX)^2 + (pos.Z - arenaCenterZ)^2)
-                                
-                                -- Syarat mutlak: Harus bertuliskan "pick up", ketinggian Y di bawah base, dan jarak dari pusat arena tidak boleh keluar dari kotak wadah
-                                local isInArenaBox = (distanceFromCenter <= maxRadius) and (pos.Y < 40)
-                                
-                                if isInArenaBox then
+                                -- Validasi ketat: Pastikan tidak menyentuh area atas (base pemain)
+                                if pos.Y < 45 then
                                     hrp.CFrame = CFrame.new(pos.X, pos.Y + 3, pos.Z)
                                     task.wait(0.1)
                                     fireproximityprompt(prompt)
@@ -190,4 +180,4 @@ task.spawn(function()
     end
 end)
 
-print("GUI Strict Coordinates Loaded!")
+print("GUI Brainrot Fixed V3 Loaded!")
