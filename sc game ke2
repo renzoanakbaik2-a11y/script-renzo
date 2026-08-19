@@ -1,133 +1,118 @@
-local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
-local RunService = game:GetService("RunService")
+-- Memuat Library UI (Orion Library)
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 
-local player = Players.LocalPlayer
-local autoWalkEnabled = false
+-- Membuat Window Utama
+local Window = OrionLib:MakeWindow({Name = "Shadow SC V33 - Fight Others For Brainrots", HidePremium = false, SaveConfig = true, ConfigFolder = "ShadowConfig"})
 
--- Membuat GUI Menu
-local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 220, 0, 280)
-MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-MainFrame.Visible = false
+-- Membuat Tab Utama
+local Tab = Window:MakeTab({
+    Name = "Main Features",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
 
--- Label Versi Menu
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Text = "Brainrot Farmer - v8"
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-Title.TextColor3 = Color3.new(1, 1, 1)
+-- Variabel Status Fitur (On/Off)
+local AutoFarmActive = false
 
--- Tombol Buka/Tutup Menu
-local ToggleButton = Instance.new("TextButton", ScreenGui)
-ToggleButton.Size = UDim2.new(0, 100, 0, 40)
-ToggleButton.Position = UDim2.new(0.1, 0, 0.05, 0)
-ToggleButton.Text = "Buka Menu"
-ToggleButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
--- Tombol On/Off Smart Mode
-local WalkButton = Instance.new("TextButton", MainFrame)
-WalkButton.Size = UDim2.new(0.8, 0, 0, 40)
-WalkButton.Position = UDim2.new(0.1, 0, 0.2, 0)
-WalkButton.Text = "Smart Gate: OFF"
-WalkButton.MouseButton1Click:Connect(function()
-    autoWalkEnabled = not autoWalkEnabled
-    WalkButton.Text = autoWalkEnabled and "Smart Gate: ON" or "Smart Gate: OFF"
-end)
-
--- Tombol Auto-Hop Server
-local HopButton = Instance.new("TextButton", MainFrame)
-HopButton.Size = UDim2.new(0.8, 0, 0, 40)
-HopButton.Position = UDim2.new(0.1, 0, 0.5, 0)
-HopButton.Text = "Hop Server"
-HopButton.MouseButton1Click:Connect(function()
-    local success, servers = pcall(function()
-        return game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?limit=100"))
-    end)
-    if success and servers and servers.data then
-        local server = servers.data[math.random(1, #servers.data)]
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, player)
-    end
-end)
-
--- Fungsi untuk mengecek apakah gerbang/tembok sudah terbuka
--- (Memeriksa apakah part tembok sudah hilang, transparan, atau CanCollide-nya false)
-local function isGateOpen()
-    local extractionZone = workspace:FindFirstChild("World") 
-        and workspace.World:FindFirstChild("Arena") 
-        and workspace.World.Arena:FindFirstChild("ExtractionZone") 
-    
-    if extractionZone then
-        -- Cek apakah ada objek tembok/pintu yang menghalangi
-        -- Jika temboknya hilang atau tidak bisa ditabrak lagi (CanCollide == false), berarti terbuka
-        local wall = extractionZone:FindFirstChild("Wall") -- Sesuaikan jika nama temboknya berbeda
-        if wall and wall:IsA("BasePart") then
-            if wall.CanCollide == false or wall.Transparency >= 0.9 then
-                return true
-            else
-                return false
-            end
-        end
-    end
-    
-    -- Jika script tidak menemukan tembok spesifik, kita anggap terbuka saat folder FlashExtract aktif/bisa diakses
-    local flashFolder = workspace:FindFirstChild("World")
-        and workspace.World:FindFirstChild("Arena")
-        and workspace.World.Arena:FindFirstChild("ExtractionZone")
-        and workspace.World.Arena.ExtractionZone:FindFirstChild("North")
-        and workspace.World.Arena.ExtractionZone.North:FindFirstChild("FlashExtract")
-        
-    return flashFolder ~= nil
-end
-
--- Fungsi mencari zona hijau sebelah kiri (FlashExtract)
-local function getLeftGreenZone()
-    local extractionFolder = workspace:FindFirstChild("World")
-        and workspace.World:FindFirstChild("Arena")
-        and workspace.World.Arena:FindFirstChild("ExtractionZone")
-        and workspace.World.Arena.ExtractionZone:FindFirstChild("North")
-        and workspace.World.Arena.ExtractionZone.North:FindFirstChild("FlashExtract")
-    
-    if not extractionFolder then return nil end
-    
-    -- Mengambil part pertama yang ada di dalam folder FlashExtract (zona hijau kiri pemain biasa)
-    for _, part in ipairs(extractionFolder:GetChildren()) do
-        if part:IsA("BasePart") then
-            return part
-        end
-    end
-    
-    return nil
-end
-
-local hasTeleported = false
-
--- Loop Utama
-RunService.RenderStepped:Connect(function()
-    if autoWalkEnabled then
-        local character = player.Character
-        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        
-        if hrp then
-            -- 1. Cek dulu apakah gerbang sudah terbuka
-            if isGateOpen() then
-                -- 2. Jika gerbang sudah terbuka dan belum sempat teleport, baru pindah ke zona hijau kiri
-                if not hasTeleported then
-                    local targetZone = getLeftGreenZone()
-                    if targetZone then
-                        hrp.CFrame = targetZone.CFrame + Vector3.new(0, 3, 0)
-                        hasTeleported = true
-                        print("Gerbang terbuka! Berhasil teleport ke zona hijau kiri.")
-                    end
+-- Fungsi Utama Logika (Cek Pintu -> Jalan ke Gerbang -> Jalan ke Zona Hijau)
+local function runAutoLogic()
+    task.spawn(function()
+        while AutoFarmActive do
+            local player = game.Players.LocalPlayer
+            local character = player.Character or player.CharacterAdded:Wait()
+            local humanoid = character:WaitForChild("Humanoid")
+            local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+            
+            -- ==========================================
+            -- 1. LOGIKA PENGECEKAN PINTU
+            -- ==========================================
+            -- Sesuaikan path "Workspace.Pintu" dengan nama objek pintu asli di game ini
+            local door = workspace:FindFirstChild("Pintu") 
+            
+            local isDoorOpen = false
+            if door then
+                -- Contoh logika: Pintu dianggap terbuka jika transparansinya > 0.5 atau posisinya bergeser
+                -- Kamu bisa mengubah kondisi ini sesuai dengan struktur game aslinya (misal: door.Transparency > 0.5)
+                if door.Transparency > 0.5 or not door.CanCollide then
+                    isDoorOpen = true
                 end
             else
-                -- Jika gerbang masih tertutup, reset status supaya nanti pas ronde baru buka, dia bisa teleport lagi
-                hasTeleported = false
+                -- Jika script tidak menemukan objek pintu, asumsikan jalur bebas/terbuka
+                isDoorOpen = true 
             end
+            
+            if isDoorOpen then
+                print("Pintu Terbuka! Karakter mulai berjalan ke gerbang...")
+                
+                -- ==========================================
+                -- 2. JALAN KE GERBANG
+                -- ==========================================
+                -- Ganti Vector3 ini dengan koordinat posisi gerbang
+                local gatePosition = Vector3.new(15, 0, 10) 
+                humanoid:MoveTo(gatePosition)
+                humanoid.MoveFinished:Wait() -- Menunggu sampai karakter sampai di gerbang
+                
+                -- ==========================================
+                -- 3. JALAN KE ZONA HIJAU (AREA EKSTRAKSI)
+                -- ==========================================
+                print("Melewati gerbang, menuju Zona Hijau...")
+                -- Ganti Vector3 ini dengan koordinat posisi zona hijau/ekstraksi di foto
+                local greenZonePosition = Vector3.new(45, 0, 25) 
+                humanoid:MoveTo(greenZonePosition)
+                humanoid.MoveFinished:Wait() -- Menunggu sampai di zona hijau
+                
+                print("Sampai di Zona Hijau, bersiap mengekstrak...")
+                task.wait(2) -- Jeda sebentar sebelum mengulang siklus
+            else
+                print("Pintu masih tertutup, menunggu...")
+            end
+            
+            task.wait(1) -- Jeda perulangan loop agar tidak lag
+        end
+    end)
+end
+
+--- ==========================================
+-- PEMBUATAN TOMBOL MENU & TOGGLE UI
+--- ==========================================
+
+Tab:AddToggle({
+    Name = "Auto Walk to Green Zone",
+    Default = false,
+    Callback = function(Value)
+        AutoFarmActive = Value
+        if AutoFarmActive then
+            OrionLib:MakeNotification({
+                Name = "Fitur Diaktifkan",
+                Content = "Auto jalan ke zona hijau dinyalakan!",
+                Image = "rbxassetid://4483345998",
+                Time = 3
+            })
+            runAutoLogic() -- Menjalankan fungsi otomatis saat tombol di-ON-kan
+        else
+            OrionLib:MakeNotification({
+                Name = "Fitur Dimatikan",
+                Content = "Auto jalan dimatikan.",
+                Image = "rbxassetid://4483345998",
+                Time = 3
+            })
         end
     end
-end)
+})
+
+-- Tombol Tambahan untuk Teleport Instan (Opsional jika ingin cepat)
+Tab:AddButton({
+    Name = "Teleport Instan ke Zona Hijau",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            -- Ganti koordinat ini sesuai titik zona hijau tujuan
+            character.HumanoidRootPart.CFrame = CFrame.new(45, 5, 25)
+            print("Berhasil berteleportasi ke zona hijau!")
+        end
+    end
+})
+
+-- Mengakhiri dan merender GUI
+OrionLib:Init()
