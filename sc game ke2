@@ -1,5 +1,5 @@
 -- ==========================================
--- SCRIPT HUB: RACKET RIVALS (ULTRA LIGHTWEIGHT & SAFE)
+-- SCRIPT HUB: RACKET RIVALS (ULTIMATE ZONE + TP + SPAM)
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -17,119 +17,96 @@ screenGui.Name = "RacketRivalsMenu"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- 3. Tombol Mengambang (MENU) (Bisa Digeser)
+-- 3. Tombol Menu (Bisa Digeser)
 local openButton = Instance.new("TextButton")
 openButton.Name = "OpenButton"
 openButton.Size = UDim2.new(0, 110, 0, 40)
 openButton.Position = UDim2.new(0, 20, 0.4, 0)
 openButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-openButton.BorderColor3 = Color3.fromRGB(100, 100, 100)
 openButton.Text = "MENU"
 openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-openButton.TextSize = 14
 openButton.Font = Enum.Font.SourceSansBold
 openButton.Parent = screenGui
 
+-- Logika Drag (Geser)
 local dragging, dragInput, dragStart, startPos
 openButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = openButton.Position
+        dragging = true; dragStart = input.Position; startPos = openButton.Position
     end
 end)
-
-openButton.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
 game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
+    if dragging and input.UserInputType == Enum.UserInputType.Touch then
         local delta = input.Position - dragStart
         openButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 
--- 4. Kotak Menu Utama
+-- 4. Kotak Menu
 local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 260, 0, 200)
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -100)
+mainFrame.Size = UDim2.new(0, 260, 0, 150)
+mainFrame.Position = UDim2.new(0.5, -130, 0.5, -75)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
 mainFrame.Visible = false
 mainFrame.Parent = screenGui
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 40)
-titleLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-titleLabel.Text = " RACKET RIVALS PRO HUB"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 15
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = mainFrame
+local opBtn = Instance.new("TextButton")
+opBtn.Size = UDim2.new(0, 220, 0, 50)
+opBtn.Position = UDim2.new(0.5, -110, 0.5, -25)
+opBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+opBtn.Text = "Smart Zone TP + Spam: OFF"
+opBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+opBtn.Parent = mainFrame
+openButton.MouseButton1Click:Connect(function() mainFrame.Visible = not mainFrame.Visible end)
 
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 40, 0, 40)
-closeButton.Position = UDim2.new(1, -40, 0, 0)
-closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 16
-closeButton.Font = Enum.Font.SourceSansBold
-closeButton.Parent = mainFrame
-
-closeButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-end)
-
-openButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-end)
-
-
--- ==========================================
--- 5. FITUR: AUTO HIT RINGAN (DELTA SAFE)
--- ==========================================
-
-local autoPlayBtn = Instance.new("TextButton")
-autoPlayBtn.Name = "AutoPlayButton"
-autoPlayBtn.Size = UDim2.new(0, 220, 0, 45)
-autoPlayBtn.Position = UDim2.new(0.5, -110, 0, 60)
-autoPlayBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-autoPlayBtn.Text = "Auto Hit Safe: OFF"
-autoPlayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-autoPlayBtn.TextSize = 14
-autoPlayBtn.Font = Enum.Font.SourceSansBold
-autoPlayBtn.Parent = mainFrame
-
-local autoPlayAktif = false
-
-autoPlayBtn.MouseButton1Click:Connect(function()
-    autoPlayAktif = not autoPlayAktif
+-- 5. LOGIKA UTAMA (TP + SPAM + ZONA)
+local opAktif = false
+opBtn.MouseButton1Click:Connect(function()
+    opAktif = not opAktif
+    opBtn.BackgroundColor3 = opAktif and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+    opBtn.Text = opAktif and "Smart Zone TP + Spam: ON" or "Smart Zone TP + Spam: OFF"
     
-    if autoPlayAktif then
-        autoPlayBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        autoPlayBtn.Text = "Auto Hit Safe: ON"
-        
+    if opAktif then
         task.spawn(function()
-            while autoPlayAktif do
+            while opAktif do
                 local karakter = player.Character
-                if karakter then
-                    -- Picu tool yang sedang dipegang secara aman tanpa scan workspace berat
-                    local tool = karakter:FindFirstChildOfClass("Tool")
-                    if tool then
-                        tool:Activate()
+                if karakter and karakter:FindFirstChild("HumanoidRootPart") then
+                    local rootPart = karakter.HumanoidRootPart
+                    local targetBola = nil
+                    
+                    -- Cari Bola
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        if obj:IsA("BasePart") then
+                            local n = obj.Name:lower()
+                            if n:find("ball") or n:find("shuttle") or n:find("birdie") then
+                                targetBola = obj
+                                break
+                            end
+                        end
+                    end
+                    
+                    -- LOGIKA ZONA & TELEPORT
+                    if targetBola then
+                        local bolaZ = targetBola.Position.Z
+                        local batasTengah = 0 -- Garis tengah lapangan
+                        
+                        -- JIKA BOLA DI ZONA KITA (Misal Z <= 0)
+                        if bolaZ <= batasTengah then
+                            rootPart.CFrame = targetBola.CFrame
+                            
+                            -- Spam Attack Speed
+                            local tool = karakter:FindFirstChildOfClass("Tool")
+                            if tool then tool:Activate() end
+                            for _, r in ipairs(karakter:GetDescendants()) do
+                                if r:IsA("RemoteEvent") then pcall(function() r:FireServer() end) end
+                            end
+                        else
+                            -- JIKA BOLA DI ZONA LAWAN, JANGAN TELEPORT/SERANG
+                        end
                     end
                 end
-                task.wait(0.5) -- Jeda aman agar executor tidak overload
+                task.wait(0.03) -- Kecepatan Spam Tinggi
             end
         end)
-    else
-        autoPlayBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        autoPlayBtn.Text = "Auto Hit Safe: OFF"
     end
 end)
