@@ -1,16 +1,21 @@
 -- ==========================================
--- SCRIPT HUB: STEAL AN EGG! (FINAL STABLE VERSION)
+-- SCRIPT HUB: STEAL AN EGG! (SPECIAL DELTA EXECUTOR VERSION)
 -- ==========================================
 
--- 1. Hapus menu lama jika script dijalankan ulang
-if game.CoreGui:FindFirstChild("StealAnEggMenu") then
-    game.CoreGui.StealAnEggMenu:Destroy()
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 1. Hapus menu lama jika script dijalankan ulang agar tidak bentrok
+if playerGui:FindFirstChild("StealAnEggMenu") then
+    playerGui.StealAnEggMenu:Destroy()
 end
 
--- 2. Wadah Utama Layar (ScreenGui)
+-- 2. Wadah Utama Layar (ScreenGui) - Masuk ke PlayerGui khusus Delta
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "StealAnEggMenu"
-screenGui.Parent = game.CoreGui
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
 
 -- 3. Tombol Mengambang (Floating Button) untuk Buka/Tutup Menu (Bisa Digeser)
 local openButton = Instance.new("TextButton")
@@ -25,7 +30,7 @@ openButton.TextSize = 14
 openButton.Font = Enum.Font.SourceSansBold
 openButton.Parent = screenGui
 
--- Logika Geser (Draggable) untuk Tombol MENU
+-- Logika Geser (Draggable) untuk Tombol MENU di HP
 local dragging, dragInput, dragStart, startPos
 openButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -62,7 +67,7 @@ mainFrame.Parent = screenGui
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 40)
 titleLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-titleLabel.Text = " STEAL AN EGG SCRIPT"
+titleLabel.Text = " STEAL AN EGG (DELTA)"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextSize = 15
 titleLabel.Font = Enum.Font.SourceSansBold
@@ -90,7 +95,7 @@ end)
 
 
 -- ==========================================
--- 5. FITUR UTAMA: AUTO FLY & STEAL + SAFE BASE
+-- 5. FITUR UTAMA: AUTO STEAL & SAFE BASE (DELTA SAFE)
 -- ==========================================
 
 local autoStealBtn = Instance.new("TextButton")
@@ -98,7 +103,7 @@ autoStealBtn.Name = "AutoStealButton"
 autoStealBtn.Size = UDim2.new(0, 220, 0, 45)
 autoStealBtn.Position = UDim2.new(0.5, -110, 0, 60)
 autoStealBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-autoStealBtn.Text = "Auto Fly Steal: OFF"
+autoStealBtn.Text = "Auto Steal Base: OFF"
 autoStealBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 autoStealBtn.TextSize = 14
 autoStealBtn.Font = Enum.Font.SourceSansBold
@@ -106,38 +111,15 @@ autoStealBtn.Parent = mainFrame
 
 local autoStealAktif = false
 
--- Fungsi Terbang Halus (Stabil & Aman dari Error)
-local function terbangHalusKe(posisiTujuanCFrame, kecepatan)
-    local player = game:GetService("Players").LocalPlayer
-    local karakter = player.Character
-    if not (karakter and karakter:FindFirstChild("HumanoidRootPart") and karakter:FindFirstChild("Humanoid")) then return end
-    
-    local rootPart = karakter.HumanoidRootPart
-    local humanoid = karakter.Humanoid
-    
-    humanoid.PlatformStand = true
-    
-    local targetPos = posisiTujuanCFrame.Position
-    while autoStealAktif and (rootPart.Position - targetPos).Magnitude > 3 do
-        local arah = (targetPos - rootPart.Position).Unit
-        rootPart.CFrame = rootPart.CFrame + (arah * (kecepatan / 20))
-        task.wait(0.03)
-    end
-    
-    rootPart.CFrame = posisiTujuanCFrame
-    humanoid.PlatformStand = false
-end
-
 autoStealBtn.MouseButton1Click:Connect(function()
     autoStealAktif = not autoStealAktif
     
     if autoStealAktif then
         autoStealBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        autoStealBtn.Text = "Auto Fly Steal: ON"
+        autoStealBtn.Text = "Auto Steal Base: ON"
         
         task.spawn(function()
             while autoStealAktif do
-                local player = game:GetService("Players").LocalPlayer
                 local karakter = player.Character
                 
                 if karakter and karakter:FindFirstChild("HumanoidRootPart") then
@@ -145,7 +127,7 @@ autoStealBtn.MouseButton1Click:Connect(function()
                     local posisiBase = rootPart.CFrame
                     local targetTelur = nil
                     
-                    -- Cari telur/item di workspace
+                    -- Cari telur di dalam Workspace
                     for _, obj in ipairs(workspace:GetDescendants()) do
                         if obj:IsA("BasePart") and (obj.Name:lower():find("egg") or obj:FindFirstChild("TouchInterest")) then
                             if obj.Size.Magnitude < 10 and not obj.Name:lower():find("base") then
@@ -156,28 +138,16 @@ autoStealBtn.MouseButton1Click:Connect(function()
                     end
                     
                     if targetTelur then
-                        -- 1. Terbang naik ke udara
-                        local posisiAtas = rootPart.CFrame + Vector3.new(0, 15, 0)
-                        terbangHalusKe(posisiAtas, 35)
+                        -- 1. Teleport ke atas posisi telur
+                        rootPart.CFrame = targetTelur.CFrame + Vector3.new(0, 3, 0)
+                        task.wait(0.3)
                         
-                        -- 2. Terbang meluncur ke atas telur
-                        local titikAtasTelur = targetTelur.CFrame + Vector3.new(0, 15, 0)
-                        terbangHalusKe(titikAtasTelur, 50)
+                        -- 2. Turun nempel ke telur
+                        rootPart.CFrame = targetTelur.CFrame
+                        task.wait(0.3)
                         
-                        -- 3. Turun mendekati telur untuk mengambilnya
-                        local titikTelurDeket = targetTelur.CFrame + Vector3.new(0, 1, 0)
-                        terbangHalusKe(titikTelurDeket, 20)
-                        task.wait(0.4)
-                        
-                        -- 4. Terbang naik lagi membawa telur
-                        terbangHalusKe(titikAtasTelur, 50)
-                        
-                        -- 5. Terbang balik ke arah base
-                        local titikAtasBase = posisiBase + Vector3.new(0, 15, 0)
-                        terbangHalusKe(titikAtasBase, 50)
-                        
-                        -- 6. Turun halus kembali ke base
-                        terbangHalusKe(posisiBase, 25)
+                        -- 3. Teleport balik aman ke Base
+                        rootPart.CFrame = posisiBase
                     end
                     
                 end
@@ -186,6 +156,6 @@ autoStealBtn.MouseButton1Click:Connect(function()
         end)
     else
         autoStealBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        autoStealBtn.Text = "Auto Fly Steal: OFF"
+        autoStealBtn.Text = "Auto Steal Base: OFF"
     end
 end)
