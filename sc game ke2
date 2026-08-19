@@ -1,118 +1,134 @@
--- ==========================================
--- RACKET RIVALS: BRUTAL SPAM HIT & TP (TEST VERSION)
--- ==========================================
-
+-- Script GUI Auto Pick Up Brainrot (With Toggle Menu)
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
 
-if playerGui:FindFirstChild("RacketRivalsMenu") then
-    playerGui.RacketRivalsMenu:Destroy()
+-- Hapus GUI lama jika script dijalankan ulang
+if CoreGui:FindFirstChild("BrainrotGUI") then
+    CoreGui.BrainrotGUI:Destroy()
 end
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "RacketRivalsMenu"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = screenGui -- (diperbaiki ke playerGui di bawah)
-screenGui.Parent = playerGui
+-- Membuat ScreenGui Utama
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BrainrotGUI"
+ScreenGui.Parent = CoreGui
 
-local openButton = Instance.new("TextButton")
-openButton.Name = "OpenButton"
-openButton.Size = UDim2.new(0, 110, 0, 40)
-openButton.Position = UDim2.new(0, 20, 0.4, 0)
-openButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-openButton.Text = "MENU"
-openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-openButton.Font = Enum.Font.SourceSansBold
-openButton.Parent = screenGui
+-- Membuat Frame Utama (Menu)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 220, 0, 160)
+MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- Bisa digeser-geser di layar
+MainFrame.Parent = ScreenGui
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 260, 0, 190)
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -95)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.Visible = false
-mainFrame.Parent = screenGui
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
 
-openButton.MouseButton1Click:Connect(function() 
-    mainFrame.Visible = not mainFrame.Visible 
+-- Judul Menu
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+Title.Font = Enum.Font.GothamBold
+Title.Text = "Brainrot Auto PickUp"
+Title.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = Title
+
+-- Tombol Toggle On/Off Auto-Farm
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0.85, 0, 0, 45)
+ToggleButton.Position = UDim2.new(0.075, 0, 0.35, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Merah (Off)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 14
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Text = "Status: OFF"
+ToggleButton.Parent = MainFrame
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 8)
+ToggleCorner.Parent = ToggleButton
+
+-- Tombol Minimalkan / Sembunyikan Menu (Minimize Button)
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -35, 0, 5)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.TextSize = 12
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Text = "-"
+MinimizeBtn.Parent = MainFrame
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 6)
+MinimizeBtn.Parent = MainFrame
+
+-- Status Variabel
+getgenv().AutoPickUp = false
+
+-- Logika Tombol On/Off
+ToggleButton.MouseButton1Click:Connect(function()
+    getgenv().AutoPickUp = not getgenv().AutoPickUp
+    if getgenv().AutoPickUp then
+        ToggleButton.Text = "Status: ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 100) -- Hijau (On)
+    else
+        ToggleButton.Text = "Status: OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Merah (Off)
+    end
 end)
 
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 35, 0, 35)
-closeBtn.Position = UDim2.new(1, -35, 0, 0)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeBtn.Text = "X"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.Font = Enum.Font.SourceSansBold
-closeBtn.Parent = mainFrame
-closeBtn.MouseButton1Click:Connect(function() 
-    mainFrame.Visible = false 
+-- Logika Tombol Minimize (Buka/Tutup Menu)
+local isMinimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    for _, child in pairs(MainFrame:GetChildren()) do
+        if child:IsA("GuiObject") and child ~= Title and child ~= MinimizeBtn then
+            child.Visible = not isMinimized
+        end
+    end
+    if isMinimized then
+        MainFrame.Size = UDim2.new(0, 220, 0, 40)
+        MinimizeBtn.Text = "+"
+    else
+        MainFrame.Size = UDim2.new(0, 220, 0, 160)
+        MinimizeBtn.Text = "-"
+    end
 end)
 
--- Tombol Brutal Spam (Gabungan TP nempel + Spam Hit tanpa henti)
-local brutalBtn = Instance.new("TextButton")
-brutalBtn.Size = UDim2.new(0, 220, 0, 55)
-brutalBtn.Position = UDim2.new(0.5, -110, 0, 70)
-brutalBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-brutalBtn.Text = "Brutal Spam TP & Hit: OFF"
-brutalBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-brutalBtn.TextSize = 13
-brutalBtn.Font = Enum.Font.SourceSansBold
-brutalBtn.Parent = mainFrame
-
-local brutalAktif = false
-brutalBtn.MouseButton1Click:Connect(function()
-    brutalAktif = not brutalAktif
-    brutalBtn.BackgroundColor3 = brutalAktif and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-    brutalBtn.Text = brutalAktif and "Brutal Spam TP & Hit: ON" or "Brutal Spam TP & Hit: OFF"
-    
-    if brutalAktif then
-        task.spawn(function()
-            while brutalAktif do
-                local karakter = player.Character
-                if karakter and karakter:FindFirstChild("HumanoidRootPart") then
-                    local rootPart = karakter.HumanoidRootPart
-                    local targetBola = nil
-                    
-                    -- Cari bola di Workspace
-                    for _, obj in ipairs(workspace:GetDescendants()) do
-                        if obj:IsA("BasePart") then
-                            local n = obj.Name:lower()
-                            if n:find("ball") or n:find("shuttle") or n:find("birdie") or n:find("tennis") then
-                                targetBola = obj
-                                break
-                            end
-                        end
-                    end
-                    
-                    if targetBola then
-                        local bolaZ = targetBola.Position.Z
-                        local playerZ = rootPart.Position.Z
-                        
-                        -- Logika Zona: Cek apakah bola di area kita
-                        if math.abs(bolaZ - playerZ) <= 50 then
-                            -- TELEPORT MENEMPEL PAS DI BADAN BOLA (Supaya raket otomatis kena sentuh)
-                            rootPart.CFrame = targetBola.CFrame
-                            
-                            -- SPAM HIT BRUTAL: Aktifkan Tool + Tembak SEMUA RemoteEvent yang ada di game secara bersamaan
-                            local tool = karakter:FindFirstChildOfClass("Tool") or player.Backpack:FindFirstChildOfClass("Tool")
-                            if tool then 
-                                pcall(function() tool:Activate() end) 
-                            end
-                            
-                            for _, v in ipairs(workspace:GetDescendants()) do
-                                if v:IsA("RemoteEvent") then
-                                    pcall(function()
-                                        v:FireServer()
-                                        v:FireServer(targetBola) -- Memaksa kirim data bola ke server game
-                                    end)
-                                end
+-- Loop Utama Auto Pick Up
+task.spawn(function()
+    while task.wait(0.2) do
+        if getgenv().AutoPickUp then
+            pcall(function()
+                local character = LocalPlayer.Character
+                local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+                
+                for _, prompt in pairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        local parentPart = prompt.Parent
+                        if parentPart and parentPart:IsA("BasePart") then
+                            if prompt.ActionText:lower():find("pick up") then
+                                hrp.CFrame = parentPart.CFrame + Vector3.new(0, 3, 0)
+                                task.wait(0.1)
+                                fireproximityprompt(prompt)
                             end
                         end
                     end
                 end
-                task.wait(0.02) -- Kecepatan super ngebut tanpa jeda
-            end
-        end)
+            end)
+        end
     end
 end)
+
+print("GUI Auto Pick Up berhasil dimuat!")
