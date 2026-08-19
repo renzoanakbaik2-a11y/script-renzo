@@ -1,4 +1,4 @@
--- Script GUI Shadow SC V27 (Precise Floor Zone Landing)
+-- Script GUI Shadow SC V28 (Floor Lock & Precise Zone Approach)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -34,7 +34,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Shadow SC V27"
+Title.Text = "Shadow SC V28"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -211,7 +211,7 @@ task.spawn(function()
     end
 end)
 
--- Loop Auto Extract V27 (Langsung menuju ke zona hijau lantai terdekat)
+-- Loop Auto Extract V28 (Anti-Fly / Tetap di Lantai Menuju Zona Hijau)
 task.spawn(function()
     while true do
         task.wait(1)
@@ -247,16 +247,24 @@ task.spawn(function()
                         end
                         
                         if targetZone then
-                            -- Gerakkan karakter secara mulus langsung ke atas zona hijau di lantai
+                            -- KUNCI UTAMA: Ambil posisi X dan Z dari zona hijau, tapi tinggi (Y) DIBUAT SAMA PERSIS dengan karakter (lantai dasar)
+                            -- Agar karakter TIDAK BISA TERBANG KE ATAS/MENEMBUS, melainkan jalan lurus di lantai.
+                            local currentPos = hrp.Position
+                            local floorTargetPos = Vector3.new(targetZone.Position.X, currentPos.Y, targetZone.Position.Z)
+                            
                             local speed = 40
-                            local dist = (hrp.Position - targetZone.Position).Magnitude
+                            local dist = (currentPos - floorTargetPos).Magnitude
                             local dur = math.clamp(dist / speed, 0.3, 2)
                             
-                            local tween = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), {CFrame = targetZone.CFrame + Vector3.new(0, 3, 0)})
+                            -- Geser secara horizontal di lantai menuju area zona hijau
+                            local tween = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), {CFrame = CFrame.new(floorTargetPos)})
                             tween:Play()
                             task.wait(dur)
                             
-                            -- Jeda sebentar untuk animasi game / kestabilan posisi
+                            -- Setelah sampai di area zona lantai tersebut, sesuaikan sedikit posisinya pas di atas zona hijau
+                            hrp.CFrame = CFrame.new(targetZone.Position.X, currentPos.Y, targetZone.Position.Z) + Vector3.new(0, 3, 0)
+                            
+                            -- Jeda sebentar untuk animasi game (efek mental atau stabil)
                             local timeout = 4
                             while timeout > 0 do
                                 if not getgenv().AutoExtract then break end
@@ -282,4 +290,4 @@ task.spawn(function()
     end
 end)
 
-print("Shadow SC V27 Loaded Successfully!")
+print("Shadow SC V28 Loaded Successfully!")
