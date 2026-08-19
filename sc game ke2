@@ -1,4 +1,4 @@
--- Script GUI Shadow SC V40 (Forced Walk to Open Gate)
+-- Script GUI Shadow SC V42 (Aggressive Walk to Zone After Animation Ends)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -33,7 +33,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Shadow SC V40"
+Title.Text = "Shadow SC V42"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -210,7 +210,7 @@ task.spawn(function()
     end
 end)
 
--- Loop Auto Extract V40 (Forced Walk Check tanpa batas jarak ketat)
+-- Loop Auto Extract V42 (Jalan ke gerbang -> Tunggu animasi selesai -> Agresif jalan ke zona hijau)
 task.spawn(function()
     while true do
         task.wait(1)
@@ -237,23 +237,44 @@ task.spawn(function()
                             end
                             
                             if #zoneParts > 0 then
-                                -- Ambil part pertama yang ketemu di folder FlashExtract sebagai tujuan utama jalan
-                                local targetPart = zoneParts[1]
+                                local firstPart = zoneParts[1]
+                                local lastPart = zoneParts[#zoneParts]
                                 
-                                if targetPart then
-                                    -- Paksa Humanoid jalan ke arah part tersebut secara berulang sampai dekat
-                                    local walkTime = tick()
-                                    repeat
-                                        if not getgenv().AutoExtract then break end
-                                        humanoid:MoveTo(targetPart.Position)
-                                        task.wait(0.5)
-                                    until (hrp.Position - targetPart.Position).Magnitude < 5 or (tick() - walkTime) > 12
-                                    
-                                    -- Setelah sampai di area zona, diam sebentar menunggu ekstraksi selesai
-                                    task.wait(6)
-                                    task.wait(5)
-                                    break
+                                -- TAHAP 1: Jalan ke gerbang depan
+                                local t1 = tick()
+                                repeat
+                                    if not getgenv().AutoExtract then break end
+                                    humanoid:MoveTo(firstPart.Position)
+                                    task.wait(0.3)
+                                until (hrp.Position - firstPart.Position).Magnitude < 6 or (tick() - t1) > 7
+                                
+                                -- TAHAP 2: Tunggu sampai animasi game selesai (kecepatan gerak/velocity karakter kembali stabil di bawah 15)
+                                local animTimeout = 6
+                                while animTimeout > 0 do
+                                    if not getgenv().AutoExtract then break end
+                                    local vel = hrp.AssemblyLinearVelocity.Magnitude
+                                    if vel > 15 then
+                                        task.wait(0.3) -- Masih dalam animasi / terpental
+                                    else
+                                        task.wait(0.2) -- Animasi selesai / berhenti
+                                        break
+                                    end
+                                    animTimeout = animTimeout - 0.2
+                                    task.wait(0.2)
                                 end
+                                
+                                -- TAHAP 3: BEGITU ANIMASI SELESAI, LANGSUNG PAKSA JALAN KE ZONA HIJAU (Last Part)
+                                local t3 = tick()
+                                repeat
+                                    if not getgenv().AutoExtract then break end
+                                    humanoid:MoveTo(lastPart.Position)
+                                    task.wait(0.2)
+                                until (hrp.Position - lastPart.Position).Magnitude < 4 or (tick() - t3) > 6
+                                
+                                -- TAHAP 4: Tunggu hitung mundur ekstraksi selesai
+                                task.wait(6)
+                                task.wait(5)
+                                break
                             end
                         end
                     end
@@ -263,4 +284,4 @@ task.spawn(function()
     end
 end)
 
-print("Shadow SC V40 Loaded Successfully!")
+print("Shadow SC V42 Loaded Successfully!")
