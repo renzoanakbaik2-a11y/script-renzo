@@ -1,287 +1,71 @@
--- Script GUI Shadow SC V42 (Aggressive Walk to Zone After Animation Ends)
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local CoreGui = game:GetService("CoreGui")
 local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
-local LocalPlayer = Players.LocalPlayer
+local VirtualUser = game:GetService("VirtualUser")
 
-if CoreGui:FindFirstChild("ShadowSC_GUI") then
-    CoreGui.ShadowSC_GUI:Destroy()
-end
+-- Konfigurasi
+local player = Players.LocalPlayer
+local runService = game:GetService("RunService")
+local autoWalkEnabled = false
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ShadowSC_GUI"
-ScreenGui.Parent = CoreGui
+-- Membuat GUI
+local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 200, 0, 250)
+MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MainFrame.Visible = false -- Default tertutup
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 260)
-MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+-- Header & Versi
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Text = "Brainrot Farmer - v1"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+Title.TextColor3 = Color3.new(1, 1, 1)
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
-UICorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 14
-Title.Font = Enum.Font.GothamBold
-Title.Text = "Shadow SC V42"
-Title.Parent = MainFrame
-
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 10)
-TitleCorner.Parent = Title
-
--- Tombol 1: Auto Collect
-local CollectBtn = Instance.new("TextButton")
-CollectBtn.Size = UDim2.new(0.85, 0, 0, 35)
-CollectBtn.Position = UDim2.new(0.075, 0, 0.18, 0)
-CollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-CollectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CollectBtn.TextSize = 13
-CollectBtn.Font = Enum.Font.GothamBold
-CollectBtn.Text = "Auto Collect: OFF"
-CollectBtn.Parent = MainFrame
-
-local CollectCorner = Instance.new("UICorner")
-CollectCorner.CornerRadius = UDim.new(0, 8)
-CollectCorner.Parent = CollectBtn
-
--- Tombol 2: Auto Extract
-local ExtractBtn = Instance.new("TextButton")
-ExtractBtn.Size = UDim2.new(0.85, 0, 0, 35)
-ExtractBtn.Position = UDim2.new(0.075, 0, 0.38, 0)
-ExtractBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-ExtractBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ExtractBtn.TextSize = 13
-ExtractBtn.Font = Enum.Font.GothamBold
-ExtractBtn.Text = "Auto Extract: OFF"
-ExtractBtn.Parent = MainFrame
-
-local ExtractCorner = Instance.new("UICorner")
-ExtractCorner.CornerRadius = UDim.new(0, 8)
-ExtractCorner.Parent = ExtractBtn
-
--- Tombol 3: Server Hop
-local HopButton = Instance.new("TextButton")
-HopButton.Size = UDim2.new(0.85, 0, 0, 35)
-HopButton.Position = UDim2.new(0.075, 0, 0.58, 0)
-HopButton.BackgroundColor3 = Color3.fromRGB(50, 120, 200)
-HopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-HopButton.TextSize = 13
-HopButton.Font = Enum.Font.GothamBold
-HopButton.Text = "Server Hop"
-HopButton.Parent = MainFrame
-
-local HopCorner = Instance.new("UICorner")
-HopCorner.CornerRadius = UDim.new(0, 8)
-HopCorner.Parent = HopButton
-
--- Tombol Minimize
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-MinimizeBtn.Position = UDim2.new(1, -35, 0, 5)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeBtn.TextSize = 12
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.Text = "-"
-MinimizeBtn.Parent = MainFrame
-
-local MinCorner = Instance.new("UICorner")
-MinCorner.CornerRadius = UDim.new(0, 6)
-MinimizeBtn.Parent = MainFrame
-
-getgenv().AutoCollect = false
-getgenv().AutoExtract = false
-
-CollectBtn.MouseButton1Click:Connect(function()
-    getgenv().AutoCollect = not getgenv().AutoCollect
-    if getgenv().AutoCollect then
-        CollectBtn.Text = "Auto Collect: ON"
-        CollectBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
-    else
-        CollectBtn.Text = "Auto Collect: OFF"
-        CollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    end
+-- Tombol Buka/Tutup (di luar menu)
+local ToggleButton = Instance.new("TextButton", ScreenGui)
+ToggleButton.Size = UDim2.new(0, 100, 0, 40)
+ToggleButton.Position = UDim2.new(0.1, 0, 0.05, 0)
+ToggleButton.Text = "Buka Menu"
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
 end)
 
-ExtractBtn.MouseButton1Click:Connect(function()
-    getgenv().AutoExtract = not getgenv().AutoExtract
-    if getgenv().AutoExtract then
-        ExtractBtn.Text = "Auto Extract: ON"
-        ExtractBtn.BackgroundColor3 = Color3.fromRGB(30, 220, 100)
-    else
-        ExtractBtn.Text = "Auto Extract: OFF"
-        ExtractBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-    end
+-- Tombol On/Off Auto-Walk
+local WalkButton = Instance.new("TextButton", MainFrame)
+WalkButton.Size = UDim2.new(0.8, 0, 0, 40)
+WalkButton.Position = UDim2.new(0.1, 0, 0.2, 0)
+WalkButton.Text = "Auto-Walk: OFF"
+WalkButton.MouseButton1Click:Connect(function()
+    autoWalkEnabled = not autoWalkEnabled
+    WalkButton.Text = autoWalkEnabled and "Auto-Walk: ON" or "Auto-Walk: OFF"
 end)
 
--- Fitur Server Hop
+-- Tombol Auto-Hop Server
+local HopButton = Instance.new("TextButton", MainFrame)
+HopButton.Size = UDim2.new(0.8, 0, 0, 40)
+HopButton.Position = UDim2.new(0.1, 0, 0.5, 0)
+HopButton.Text = "Hop Server"
 HopButton.MouseButton1Click:Connect(function()
-    HopButton.Text = "Pindah Server..."
-    pcall(function()
-        local servers = {}
-        local req = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
-        local body = HttpService:JSONDecode(req)
-        if body and body.data then
-            for _, s in pairs(body.data) do
-                if type(s) == "table" and s.maxPlayers and s.playing and s.playing < s.maxPlayers and s.id ~= game.JobId then
-                    table.insert(servers, s.id)
-                end
+    local servers = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?limit=100"))
+    local server = servers.data[math.random(1, #servers.data)]
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, player)
+end)
+
+-- Loop Auto-Walk
+runService.RenderStepped:Connect(function()
+    if autoWalkEnabled then
+        local flashExtractFolder = workspace:FindFirstChild("World")
+            and workspace.World:FindFirstChild("Arena")
+            and workspace.World.Arena:FindFirstChild("ExtractionZone")
+            and workspace.World.Arena.ExtractionZone:FindFirstChild("North")
+            and workspace.World.Arena.ExtractionZone.North:FindFirstChild("FlashExtract")
+        
+        if flashExtractFolder then
+            local target = flashExtractFolder:FindFirstChildWhichIsA("BasePart")
+            if target and player.Character and player.Character:FindFirstChild("Humanoid") then
+                player.Character.Humanoid:MoveTo(target.Position)
             end
         end
-        if #servers > 0 then
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], LocalPlayer)
-        else
-            HopButton.Text = "Gagal, Coba Lagi"
-            task.wait(2)
-            HopButton.Text = "Server Hop"
-        end
-    end)
-end)
-
-local isMinimized = false
-MinimizeBtn.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    for _, child in pairs(MainFrame:GetChildren()) do
-        if child:IsA("GuiObject") and child ~= Title and child ~= MinimizeBtn then
-            child.Visible = not isMinimized
-        end
-    end
-    if isMinimized then
-        MainFrame.Size = UDim2.new(0, 220, 0, 40)
-        MinimizeBtn.Text = "+"
-    else
-        MainFrame.Size = UDim2.new(0, 220, 0, 260)
-        MinimizeBtn.Text = "-"
     end
 end)
-
--- Loop Auto Collect (Teleport instan ke brainrot)
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if getgenv().AutoCollect then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
-                
-                for _, p in pairs(Workspace:GetDescendants()) do
-                    if not getgenv().AutoCollect then break end
-                    
-                    if p:IsA("ProximityPrompt") then
-                        local actionText = tostring(p.ActionText):lower()
-                        if actionText:find("pick up") then
-                            local part = p.Parent
-                            if part and part:IsA("BasePart") then
-                                local isInBase = false
-                                local ancestor = part.Parent
-                                while ancestor and ancestor ~= Workspace do
-                                    local name = ancestor.Name:lower()
-                                    if name:find("base") or name:find("plot") or name:find("pedestal") or name:find("owner") then
-                                        isInBase = true
-                                        break
-                                    end
-                                    ancestor = ancestor.Parent
-                                end
-                                
-                                if not isInBase then
-                                    hrp.CFrame = part.CFrame + Vector3.new(0, 3, 0)
-                                    task.wait(0.05)
-                                    fireproximityprompt(p)
-                                    task.wait(0.1)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- Loop Auto Extract V42 (Jalan ke gerbang -> Tunggu animasi selesai -> Agresif jalan ke zona hijau)
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if getgenv().AutoExtract then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-                if not hrp or not humanoid then return end
-                
-                local arena = Workspace:FindFirstChild("World") and Workspace.World:FindFirstChild("Arena")
-                local extractZone = arena and arena:FindFirstChild("ExtractionZone")
-                
-                if extractZone then
-                    for _, directionFolder in pairs(extractZone:GetChildren()) do
-                        local flashExtract = directionFolder:FindFirstChild("FlashExtract")
-                        if flashExtract then
-                            local zoneParts = {}
-                            
-                            for _, part in pairs(flashExtract:GetChildren()) do
-                                if part:IsA("BasePart") and part.Name:lower():find("extractionzoneflash") then
-                                    table.insert(zoneParts, part)
-                                end
-                            end
-                            
-                            if #zoneParts > 0 then
-                                local firstPart = zoneParts[1]
-                                local lastPart = zoneParts[#zoneParts]
-                                
-                                -- TAHAP 1: Jalan ke gerbang depan
-                                local t1 = tick()
-                                repeat
-                                    if not getgenv().AutoExtract then break end
-                                    humanoid:MoveTo(firstPart.Position)
-                                    task.wait(0.3)
-                                until (hrp.Position - firstPart.Position).Magnitude < 6 or (tick() - t1) > 7
-                                
-                                -- TAHAP 2: Tunggu sampai animasi game selesai (kecepatan gerak/velocity karakter kembali stabil di bawah 15)
-                                local animTimeout = 6
-                                while animTimeout > 0 do
-                                    if not getgenv().AutoExtract then break end
-                                    local vel = hrp.AssemblyLinearVelocity.Magnitude
-                                    if vel > 15 then
-                                        task.wait(0.3) -- Masih dalam animasi / terpental
-                                    else
-                                        task.wait(0.2) -- Animasi selesai / berhenti
-                                        break
-                                    end
-                                    animTimeout = animTimeout - 0.2
-                                    task.wait(0.2)
-                                end
-                                
-                                -- TAHAP 3: BEGITU ANIMASI SELESAI, LANGSUNG PAKSA JALAN KE ZONA HIJAU (Last Part)
-                                local t3 = tick()
-                                repeat
-                                    if not getgenv().AutoExtract then break end
-                                    humanoid:MoveTo(lastPart.Position)
-                                    task.wait(0.2)
-                                until (hrp.Position - lastPart.Position).Magnitude < 4 or (tick() - t3) > 6
-                                
-                                -- TAHAP 4: Tunggu hitung mundur ekstraksi selesai
-                                task.wait(6)
-                                task.wait(5)
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-print("Shadow SC V42 Loaded Successfully!")
