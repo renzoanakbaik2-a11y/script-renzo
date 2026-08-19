@@ -1,4 +1,4 @@
--- Script GUI Shadow SC V33 (Precise Center Teleport to Extraction Zone)
+-- Script GUI Shadow SC V35 (Gate-Triggered Instant Teleport to Active Zone)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -33,7 +33,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Shadow SC V33"
+Title.Text = "Shadow SC V35"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -210,7 +210,7 @@ task.spawn(function()
     end
 end)
 
--- Loop Auto Extract V33 (Teleport presisi ke titik tengah FlashExtract)
+-- Loop Auto Extract V35 (Mati total jika gerbang belum buka, langsung teleport ke zona terdekat saat gerbang buka)
 task.spawn(function()
     while true do
         task.wait(1)
@@ -225,34 +225,41 @@ task.spawn(function()
                 local extractZone = arena and arena:FindFirstChild("ExtractionZone")
                 
                 if extractZone then
+                    local allZones = {}
+                    
+                    -- Kumpulkan semua part zona hijau aktif dari seluruh arah (North, South, East, West, dll.)
                     for _, directionFolder in pairs(extractZone:GetChildren()) do
                         local flashExtract = directionFolder:FindFirstChild("FlashExtract")
                         if flashExtract then
-                            local zoneParts = {}
-                            
-                            -- Kumpulkan semua part zona flash yang ada di dalam FlashExtract
                             for _, part in pairs(flashExtract:GetChildren()) do
                                 if part:IsA("BasePart") and part.Name:lower():find("extractionzoneflash") then
-                                    table.insert(zoneParts, part)
+                                    table.insert(allZones, part)
                                 end
                             end
+                        end
+                    end
+                    
+                    -- Filter hanya ambil zona hijau yang PALING DEKAT dengan posisi pemain saat ini (sesuai level tembok yang sedang dihadapi)
+                    if #allZones > 0 then
+                        local closestZone = nil
+                        local minDistance = math.huge
+                        
+                        for _, zonePart in pairs(allZones) do
+                            local dist = (zonePart.Position - hrp.Position).Magnitude
+                            if dist < minDistance then
+                                minDistance = dist
+                                closestZone = zonePart
+                            end
+                        end
+                        
+                        -- SYARAT: Jika jaraknya dekat (artinya gerbang/zona di level tersebut sudah spawn/buka)
+                        if closestZone and minDistance < 150 then
+                            -- TELEPORT INSTAN TEPAT DI ATAS ZONA HIJAU TERDEKAT
+                            hrp.CFrame = closestZone.CFrame + Vector3.new(0, 3, 0)
                             
-                            -- Jika part zona ditemukan, hitung posisi rata-rata tengahnya agar pas di tengah zona
-                            if #zoneParts > 0 then
-                                local centerPos = Vector3.new(0, 0, 0)
-                                for _, p in pairs(zoneParts) do
-                                    centerPos = centerPos + p.Position
-                                end
-                                centerPos = centerPos / #zoneParts
-                                
-                                -- Teleport instan langsung ke tengah zona dengan ketinggian aman di atas lantai (+3)
-                                hrp.CFrame = CFrame.new(centerPos + Vector3.new(0, 3, 0))
-                                
-                                -- Tunggu hitung mundur ekstraksi selesai
-                                task.wait(6)
-                                task.wait(5)
-                                break
-                            end
+                            -- Tunggu hitung mundur ekstraksi selesai
+                            task.wait(6)
+                            task.wait(5) -- Jeda aman sebelum ronde berikutnya
                         end
                     end
                 end
@@ -261,4 +268,4 @@ task.spawn(function()
     end
 end)
 
-print("Shadow SC V33 Loaded Successfully with Precise Center Teleport!")
+print("Shadow SC V35 Loaded Successfully with Gate-Triggered Instant Teleport!")
