@@ -1,49 +1,92 @@
 -- ==========================================
--- [BAGIAN 5] FITUR UTAMA: AUTO COLLECT (METODE PAKSA)
+-- SCRIPT MENU UTAMA: FIGHT OTHERS FOR BRAINROTS!
 -- ==========================================
 
-local autoCollectBtn = Instance.new("TextButton")
-autoCollectBtn.Name = "AutoCollectButton"
-autoCollectBtn.Size = UDim2.new(0, 220, 0, 45)
-autoCollectBtn.Position = UDim2.new(0.5, -110, 0, 60)
-autoCollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-autoCollectBtn.Text = "Auto Collect: OFF"
-autoCollectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-autoCollectBtn.TextSize = 14
-autoCollectBtn.Font = Enum.Font.SourceSansBold
-autoCollectBtn.Parent = mainFrame
+-- 1. Bersihkan menu lama jika sudah pernah dibuka
+if game.CoreGui:FindFirstChild("BrainrotMenuUI") then
+    game.CoreGui.BrainrotMenuUI:Destroy()
+end
 
-local autoCollectAktif = false
-autoCollectBtn.MouseButton1Click:Connect(function()
-    autoCollectAktif = not autoCollectAktif
-    
-    if autoCollectAktif then
-        autoCollectBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        autoCollectBtn.Text = "Auto Collect: ON"
-        
-        task.spawn(function()
-            while autoCollectAktif do
-                local karakter = game:GetService("Players").LocalPlayer.Character
-                if karakter and karakter:FindFirstChild("HumanoidRootPart") then
-                    
-                    -- Cari semua benda di dalam Workspace secara menyeluruh
-                    for _, v in ipairs(workspace:GetDescendants()) do
-                        if v:IsA("BasePart") and v.Name ~= "ArenaTiles" and v.Name ~= "Terrain" then
-                            -- Cek apakah bagian itu punya interaksi atau ukuran seperti item
-                            if v.Size.Magnitude < 10 and (v:FindFirstChild("TouchInterest") or v:FindFirstChild("ProximityPrompt") or v:FindFirstChild("ClickDetector")) then
-                                karakter.HumanoidRootPart.CFrame = v.CFrame
-                                task.wait(0.2)
-                                break
-                            end
-                        end
-                    end
-                    
-                end
-                task.wait(0.3)
-            end
-        end)
-    else
-        autoCollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        autoCollectBtn.Text = "Auto Collect: OFF"
+-- 2. Buat Wadah Utama (ScreenGui)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BrainrotMenuUI"
+screenGui.Parent = game.CoreGui
+
+-- 3. Tombol Mengambang (MENU) untuk membuka/tutup kotak
+local openButton = Instance.new("TextButton")
+openButton.Name = "OpenButton"
+openButton.Size = UDim2.new(0, 110, 0, 40)
+openButton.Position = UDim2.new(0, 20, 0.5, -20)
+openButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+openButton.BorderColor3 = Color3.fromRGB(100, 100, 100)
+openButton.Text = "MENU"
+openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+openButton.TextSize = 14
+openButton.Font = Enum.Font.SourceSansBold
+openButton.Parent = screenGui
+
+-- Fitur Geser (Draggable) untuk Tombol MENU
+local dragging, dragInput, dragStart, startPos
+openButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = openButton.Position
     end
 end)
+
+openButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        openButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- 4. Kotak Menu Utama (Medium Size)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 260, 0, 220)
+mainFrame.Position = UDim2.new(0.5, -130, 0.5, -110)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
+mainFrame.Visible = false -- Awalnya disembunyikan
+mainFrame.Parent = screenGui
+
+-- Judul di dalam Kotak Menu
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 40)
+titleLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+titleLabel.Text = " BRAINROT SCRIPT HUB"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 15
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = mainFrame
+
+-- Tombol Close (X) di dalam Menu
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 40, 0, 40)
+closeButton.Position = UDim2.new(1, -40, 0, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 16
+closeButton.Font = Enum.Font.SourceSansBold
+closeButton.Parent = mainFrame
+
+-- Fungsi Tombol Buka & Tutup Menu
+closeButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+end)
+
+openButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = not mainFrame.Visible
+end)
+
+print("Script Menu Berhasil Dijalankan!")
