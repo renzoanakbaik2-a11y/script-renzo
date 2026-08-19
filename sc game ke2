@@ -15,7 +15,7 @@ MainFrame.Visible = false
 
 -- Label Versi Menu
 local Title = Instance.new("TextLabel", MainFrame)
-Title.Text = "Brainrot Farmer - v5"
+Title.Text = "Brainrot Farmer - v7"
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 Title.TextColor3 = Color3.new(1, 1, 1)
@@ -29,14 +29,14 @@ ToggleButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Tombol On/Off Fitur
+-- Tombol On/Off Bypass Animasi Gerbang
 local WalkButton = Instance.new("TextButton", MainFrame)
 WalkButton.Size = UDim2.new(0.8, 0, 0, 40)
 WalkButton.Position = UDim2.new(0.1, 0, 0.2, 0)
-WalkButton.Text = "Instant Teleport: OFF"
+WalkButton.Text = "Bypass Gate Anim: OFF"
 WalkButton.MouseButton1Click:Connect(function()
     autoWalkEnabled = not autoWalkEnabled
-    WalkButton.Text = autoWalkEnabled and "Instant Teleport: ON" or "Instant Teleport: OFF"
+    WalkButton.Text = autoWalkEnabled and "Bypass Gate Anim: ON" or "Bypass Gate Anim: OFF"
 end)
 
 -- Tombol Auto-Hop Server
@@ -54,22 +54,7 @@ HopButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Fungsi untuk mengecek apakah pintu/tembok sudah terbuka
-local function isDoorOpen()
-    local wallPart = workspace:FindFirstChild("World") 
-        and workspace.World:FindFirstChild("Arena") 
-        and workspace.World.Arena:FindFirstChild("ExtractionZone") 
-    
-    if wallPart and wallPart:IsA("BasePart") then
-        if wallPart.CanCollide == false or wallPart.Transparency > 0.5 then
-            return true
-        end
-        return false
-    end
-    return true
-end
-
--- Fungsi mencari zona hijau terdekat
+-- Fungsi mencari zona hijau tujuan akhir
 local function getNearestGreenZone()
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -78,7 +63,6 @@ local function getNearestGreenZone()
     local extractionFolder = workspace:FindFirstChild("World")
         and workspace.World:FindFirstChild("Arena")
         and workspace.World.Arena:FindFirstChild("ExtractionZone")
-        and workspace.World.Arena:FindFirstChild("ExtractionZone") -- Disesuaikan
         and workspace.World.Arena.ExtractionZone:FindFirstChild("North")
         and workspace.World.Arena.ExtractionZone.North:FindFirstChild("FlashExtract")
     
@@ -100,8 +84,7 @@ local function getNearestGreenZone()
     return nearestPart
 end
 
--- Variabel penanda agar teleport tidak berulang-ulang terus di tempat yang sama
-local hasTeleported = false
+local hasBypassed = false
 
 RunService.RenderStepped:Connect(function()
     if autoWalkEnabled then
@@ -109,20 +92,16 @@ RunService.RenderStepped:Connect(function()
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
         
         if hrp then
-            if isDoorOpen() then
-                if not hasTeleported then
-                    local targetZone = getNearestGreenZone()
-                    if targetZone then
-                        -- Teleport langsung ke atas zona hijau dengan sedikit ketinggian agar tidak nyangkut
-                        hrp.CFrame = targetZone.CFrame + Vector3.new(0, 3, 0)
-                        hasTeleported = true
-                        print("Berhasil teleport ke zona hijau!")
-                    end
-                end
-            else
-                -- Reset status teleport jika gerbang tertutup kembali (untuk ronde berikutnya)
-                hasTeleported = false
+            local targetZone = getNearestGreenZone()
+            if targetZone and not hasBypassed then
+                -- Langsung pindahkan posisi karakter menembus area gerbang ke dalam zona hijau
+                -- Ini membuat game mengira karakter sudah melewati area trigger secara instan tanpa memutar animasi jalan/hancur
+                hrp.CFrame = targetZone.CFrame + Vector3.new(0, 3, 0)
+                hasBypassed = true
+                print("Berhasil bypass animasi gerbang!")
             end
         end
+    else
+        hasBypassed = false
     end
 end)
