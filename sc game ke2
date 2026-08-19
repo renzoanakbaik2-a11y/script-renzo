@@ -1,7 +1,9 @@
--- Script GUI Auto Pick Up Brainrot (Pedestal & Arena Filter)
+-- Script GUI Auto Pick Up Brainrot (Strict Arena Coordinates)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 if CoreGui:FindFirstChild("BrainrotGUI") then
@@ -13,7 +15,7 @@ ScreenGui.Name = "BrainrotGUI"
 ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 160)
+MainFrame.Size = UDim2.new(0, 220, 0, 215)
 MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 MainFrame.BorderSizePixel = 0
@@ -31,7 +33,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Brainrot Perfect Farm"
+Title.Text = "Strict Arena Farm"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -39,8 +41,8 @@ TitleCorner.CornerRadius = UDim.new(0, 10)
 TitleCorner.Parent = Title
 
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0.85, 0, 0, 45)
-ToggleButton.Position = UDim2.new(0.075, 0, 0.35, 0)
+ToggleButton.Size = UDim2.new(0.85, 0, 0, 40)
+ToggleButton.Position = UDim2.new(0.075, 0, 0.25, 0)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.TextSize = 14
@@ -51,6 +53,20 @@ ToggleButton.Parent = MainFrame
 local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 8)
 ToggleCorner.Parent = ToggleButton
+
+local HopButton = Instance.new("TextButton")
+HopButton.Size = UDim2.new(0.85, 0, 0, 40)
+HopButton.Position = UDim2.new(0.075, 0, 0.58, 0)
+HopButton.BackgroundColor3 = Color3.fromRGB(50, 120, 200)
+HopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+HopButton.TextSize = 14
+HopButton.Font = Enum.Font.GothamBold
+HopButton.Text = "Server Hop"
+HopButton.Parent = MainFrame
+
+local HopCorner = Instance.new("UICorner")
+HopCorner.CornerRadius = UDim.new(0, 8)
+HopCorner.Parent = HopButton
 
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -79,6 +95,31 @@ ToggleButton.MouseButton1Click:Connect(function()
     end
 end)
 
+HopButton.MouseButton1Click:Connect(function()
+    HopButton.Text = "Pindah Server..."
+    pcall(function()
+        local servers = {}
+        local req = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
+        local body = HttpService:JSONDecode(req)
+        
+        if body and body.data then
+            for _, s in pairs(body.data) do
+                if type(s) == "table" and s.maxPlayers and s.playing and s.playing < s.maxPlayers and s.id ~= game.JobId then
+                    table.insert(servers, s.id)
+                end
+            end
+        end
+        
+        if #servers > 0 then
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], LocalPlayer)
+        else
+            HopButton.Text = "Gagal, Coba Lagi"
+            task.wait(2)
+            HopButton.Text = "Server Hop"
+        end
+    end)
+end)
+
 local isMinimized = false
 MinimizeBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
@@ -91,12 +132,12 @@ MinimizeBtn.MouseButton1Click:Connect(function()
         MainFrame.Size = UDim2.new(0, 220, 0, 40)
         MinimizeBtn.Text = "+"
     else
-        MainFrame.Size = UDim2.new(0, 220, 0, 160)
+        MainFrame.Size = UDim2.new(0, 220, 0, 215)
         MinimizeBtn.Text = "-"
     end
 end)
 
--- Loop Utama dengan Filter Area Spawn Bawah & Abaikan Pedestal Base Pemain
+-- Loop Utama dengan Filter Koordinat Kotak Arena Spawn
 task.spawn(function()
     while task.wait(0.2) do
         if getgenv().AutoPickUp then
@@ -111,30 +152,29 @@ task.spawn(function()
                         if parentPart and parentPart:IsA("BasePart") then
                             
                             local actionText = prompt.ActionText:lower()
-                            local parentName = parentPart.Name:lower()
-                            
-                            -- Syarat 1: Harus bertuliskan "pick up"
                             if actionText:find("pick up") then
                                 
-                                -- Syarat 2: JANGAN SENTUH jika objeknya adalah Pedestal yang ada di base pemain
-                                -- (Biasanya Pedestal base pemain berada di lantai atas atau di dalam folder base)
-                                local isAtBasePedestal = false
-                                local ancestor = parentPart.Parent
-                                while ancestor and ancestor ~= Workspace do
-                                    local ancName = ancestor.Name:lower()
-                                    if ancName:find("base") or ancName:find("plot") or ancName:find("owner") then
-                                        isAtBasePedestal = true
-                                        break
-                                    end
-                                    ancestor = ancestor.Parent
-                                end
-                                
-                                -- Syarat 3: Pastikan posisinya berada di arena wadah bawah (ketinggian Y di bawah area base)
                                 local pos = parentPart.Position
-                                local isInArenaArea = (pos.Y < 50) -- Sesuaikan jika arena bawah memiliki batas Y tertentu
                                 
-                                -- Eksekusi HANYA jika itu "Pick Up", bukan di base orang, dan berada di area arena
-                                if not isAtBasePedestal and isInArenaArea then
+                                -- ========================================================
+                                -- FILTER KOTAK ARENA (BATAS KOORDINAT X dan Z)
+                                -- Arena spawn berada di wadah kotak tengah. 
+                                -- Kita tentukan batas titik tengah (Center) beserta ukuran radius kotaknya (Range).
+                                -- ========================================================
+                                
+                                -- CATATAN: Jika karakternya masih melompat ke base luar, 
+                                -- pastikan titik pusat arena (Center X & Z) sudah sesuai dengan posisi wadah di game ini.
+                                
+                                local arenaCenterX = 0  -- Ganti angka ini jika titik tengah arena bergeser
+                                local arenaCenterZ = 0  -- Ganti angka ini jika titik tengah arena bergeser
+                                local maxRadius = 80    -- Ukuran luas area kotak arena (dalam studs)
+                                
+                                local distanceFromCenter = math.sqrt((pos.X - arenaCenterX)^2 + (pos.Z - arenaCenterZ)^2)
+                                
+                                -- Syarat mutlak: Harus bertuliskan "pick up", ketinggian Y di bawah base, dan jarak dari pusat arena tidak boleh keluar dari kotak wadah
+                                local isInArenaBox = (distanceFromCenter <= maxRadius) and (pos.Y < 40)
+                                
+                                if isInArenaBox then
                                     hrp.CFrame = CFrame.new(pos.X, pos.Y + 3, pos.Z)
                                     task.wait(0.1)
                                     fireproximityprompt(prompt)
@@ -150,4 +190,4 @@ task.spawn(function()
     end
 end)
 
-print("GUI Perfect Farm Berhasil Dijalankan!")
+print("GUI Strict Coordinates Loaded!")
