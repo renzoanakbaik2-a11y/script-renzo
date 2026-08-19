@@ -1,4 +1,4 @@
--- Script GUI Shadow SC V30 (Correct Sequence: Fly Through Gate First, Then Walk to Zone)
+-- Script GUI Shadow SC V31 (Exact Path FlashExtract Extraction)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -33,7 +33,7 @@ Title.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Shadow SC V30"
+Title.Text = "Shadow SC V31"
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -210,7 +210,7 @@ task.spawn(function()
     end
 end)
 
--- Loop Auto Extract V30 (Urutan: Terbang lewat gerbang dulu -> Selesai animasi -> Jalan ke zona hijau)
+-- Loop Auto Extract V31 (Menargetkan langsung folder FlashExtract berdasarkan gambar)
 task.spawn(function()
     while true do
         task.wait(1)
@@ -226,66 +226,45 @@ task.spawn(function()
                 local extractZone = arena and arena:FindFirstChild("ExtractionZone")
                 
                 if extractZone then
-                    local gateParts = {}
-                    local greenZones = {}
-                    
-                    for _, part in pairs(extractZone:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            local nameLower = part.Name:lower()
-                            if nameLower:find("extractionzone") then
-                                table.insert(greenZones, part)
-                            elseif nameLower:find("wall") or nameLower:find("gate") or nameLower:find("flash") then
-                                table.insert(gateParts, part)
-                            end
-                        end
-                    end
-                    
-                    -- Jika gerbang dan zona hijau aktif muncul
-                    if #greenZones > 0 then
-                        -- Cari bagian gerbang terdekat untuk proses terbang/lewat pertama
-                        local targetGate = nil
-                        local shortDist = math.huge
-                        for _, gate in pairs(gateParts) do
-                            local d = (gate.Position - hrp.Position).Magnitude
-                            if d < shortDist then
-                                shortDist = d
-                                targetGate = gate
-                            end
-                        end
-                        
-                        if targetGate then
-                            -- LANGKAH 1: Biarkan karakter terbang/maju ke arah gerbang Strength Needed
-                            humanoid:MoveTo(targetGate.Position)
-                            task.wait(1.5)
-                            
-                            -- LANGKAH 2: Tunggu sampai animasi terbang/lewat/mental selesai (stabil kembali)
-                            local timeout = 5
-                            while timeout > 0 do
-                                if not getgenv().AutoExtract then break end
-                                local vel = hrp.AssemblyLinearVelocity.Magnitude
-                                if vel > 15 then
-                                    task.wait(0.3) -- Masih terpental, tunggu animasi selesai
-                                else
-                                    task.wait(0.5) -- Sudah selesai terbang / stabil
-                                    break
-                                end
-                                timeout = timeout - 0.2
-                                task.wait(0.2)
-                            end
-                            
-                            -- LANGKAH 3: SETELAH SIAP/SELESAI TERBANG, BARU JALAN KE ZONA HIJAU
+                    -- Cari ke dalam semua arah mata angin (West, East, North, South, dll.) yang ada di ExtractionZone
+                    for _, directionFolder in pairs(extractZone:GetChildren()) do
+                        local flashExtract = directionFolder:FindFirstChild("FlashExtract")
+                        if flashExtract then
                             local targetZone = nil
                             local shortestDist = math.huge
-                            for _, gz in pairs(greenZones) do
-                                local dist = (gz.Position - hrp.Position).Magnitude
-                                if dist < shortestDist then
-                                    shortestDist = dist
-                                    targetZone = gz
+                            
+                            -- Cari part yang berawalan "ExtractionZoneFlash" di dalam FlashExtract
+                            for _, part in pairs(flashExtract:GetChildren()) do
+                                if part:IsA("BasePart") and part.Name:lower():find("extractionzoneflash") then
+                                    local dist = (part.Position - hrp.Position).Magnitude
+                                    if dist < shortestDist then
+                                        shortestDist = dist
+                                        targetZone = part
+                                    end
                                 end
                             end
                             
                             if targetZone then
-                                -- Karakter berjalan kaki secara natural ke kotak zona hijau
+                                -- LANGKAH 1: Biarkan karakter terbang/maju ke arah target zona/gerbang
+                                humanoid:MoveTo(targetZone.Position)
+                                task.wait(1.5)
+                                
+                                -- LANGKAH 2: Tunggu sampai animasi terbang/lewat/mental selesai stabil
+                                local timeout = 5
+                                while timeout > 0 do
+                                    if not getgenv().AutoExtract then break end
+                                    local vel = hrp.AssemblyLinearVelocity.Magnitude
+                                    if vel > 15 then
+                                        task.wait(0.3) -- Masih terpental, tunggu animasi selesai
+                                    else
+                                        task.wait(0.5) -- Sudah stabil
+                                        break
+                                    end
+                                    timeout = timeout - 0.2
+                                    task.wait(0.2)
+                                end
+                                
+                                -- LANGKAH 3: Jalan kaki natural menuju tepat di atas part zona hijau tersebut
                                 humanoid:MoveTo(targetZone.Position)
                                 
                                 local walkTime = tick()
@@ -297,6 +276,7 @@ task.spawn(function()
                                 -- LANGKAH 4: Diam di atas zona hijau menunggu hitung mundur ekstraksi selesai
                                 task.wait(6)
                                 task.wait(5)
+                                break
                             end
                         end
                     end
@@ -306,4 +286,4 @@ task.spawn(function()
     end
 end)
 
-print("Shadow SC V30 Loaded Successfully!")
+print("Shadow SC V31 Loaded Successfully with Exact Path!")
