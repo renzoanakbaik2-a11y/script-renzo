@@ -1,5 +1,5 @@
 -- ==========================================
--- 5. FITUR UTAMA: AUTO FLY KE TELUR & FLY BALIK BASE
+-- 5. FITUR UTAMA: AUTO FLY BERTAHAP (DIJAMIN MELUNCUR)
 -- ==========================================
 
 local autoStealBtn = Instance.new("TextButton")
@@ -13,26 +13,34 @@ autoStealBtn.TextSize = 14
 autoStealBtn.Font = Enum.Font.SourceSansBold
 autoStealBtn.Parent = mainFrame
 
--- Fungsi Tambahan: Terbang Meluncur secara Smooth dari Titik A ke Titik B
-local function terbangKe(posisiTujuan, kecepatan)
+-- Fungsi Terbang Mulus dengan Pergeseran Posisi (Step by Step)
+local function terbangHalusKe(posisiTujuanCFrame, kecepatan)
     local player = game:GetService("Players").LocalPlayer
     local karakter = player.Character
-    if not (karakter and karakter:FindFirstChild("HumanoidRootPart")) then return end
+    if not (karakter and karakter:FindFirstChild("HumanoidRootPart") and karakter:FindFirstChild("Humanoid")) then return end
     
     local rootPart = karakter.HumanoidRootPart
-    local TweenService = game:GetService("TweenService")
+    local humanoid = karakter.Humanoid
     
-    local jarak = (rootPart.Position - posisiTujuan.Position).Magnitude
-    local durasi = jarak / kecepatan -- Menghitung waktu terbang berdasarkan jarak
+    -- Matikan gravitasi & biarkan melayang
+    humanoid.PlatformStand = true
     
-    local tweenInfo = TweenInfo.new(durasi, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = posisiTujuan})
+    -- Lakukan pergeseran posisi perlahan-lahan (looping langkah kecil)
+    local targetPos = posisiTujuanCFrame.Position
+    while (rootPart.Position - targetPos).Magnitude > 3 do
+        if not autoStealBtn then break end -- Keluar kalau fitur dimatikan
+        
+        -- Hitung arah menuju tujuan
+        local arah = (targetPos - rootPart.Position).Unit
+        -- Geser posisi sedikit demi sedikit
+        rootPart.CFrame = rootPart.CFrame + (arah * (kecepatan / 20))
+        
+        task.wait(0.03) -- Jeda sangat cepat biar gerakannya mulus seperti terbang
+    end
     
-    -- Matikan gravitasi sementara biar melayang mulus
-    karakter.Humanoid.PlatformStand = true
-    tween:Play()
-    tween.Completed:Wait() -- Tunggu sampai terbangnya selesai
-    karakter.Humanoid.PlatformStand = false
+    -- Pas sampai, paskan posisinya persis ke tujuan
+    rootPart.CFrame = posisiTujuanCFrame
+    humanoid.PlatformStand = false
 end
 
 local autoStealAktif = false
@@ -50,7 +58,7 @@ autoStealBtn.MouseButton1Click:Connect(function()
                 
                 if karakter and karakter:FindFirstChild("HumanoidRootPart") then
                     local rootPart = karakter.HumanoidRootPart
-                    local posisiBase = rootPart.CFrame -- Simpan posisi base asal
+                    local posisiBase = rootPart.CFrame -- Simpan posisi asal base
                     local targetTelur = nil
                     
                     -- Cari telur/item di workspace
@@ -64,27 +72,28 @@ autoStealBtn.MouseButton1Click:Connect(function()
                     end
                     
                     if targetTelur then
-                        -- Kecepatan Terbang (Makin tinggi angkanya, makin cepat terbangnya)
-                        local speedFly = 80 
+                        -- 1. TERBANG NAIK KE UDARA (Ketinggian 15 stud di atas karakter sekarang)
+                        local posisiAtas = rootPart.CFrame + Vector3.new(0, 15, 0)
+                        terbangHalusKe(posisiAtas, 35)
                         
-                        -- 1. TERBANG KE ATAS TELUR (Posisi melayang di udara di atas telur)
+                        -- 2. TERBANG MELUNCUR MENUJU ATAS TELUR
                         local titikAtasTelur = targetTelur.CFrame + Vector3.new(0, 15, 0)
-                        terbangKe(titikAtasTelur, speedFly)
+                        terbangHalusKe(titikAtasTelur, 50)
                         
-                        -- 2. TURUN MENDEKAT KE TELUR UNTUK MENGAMBIL
+                        -- 3. TURUN PERLAHAN MENDEKATI TELUR UNTUK AMBIL
                         local titikTelurDeket = targetTelur.CFrame + Vector3.new(0, 1, 0)
-                        terbangKe(titikTelurDeket, 30) -- Turun agak pelan biar pas nempel telur
-                        task.wait(0.3) -- Jeda sebentar buat ambil telur
+                        terbangHalusKe(titikTelurDeket, 20)
+                        task.wait(0.4) -- Jeda sebentar supaya sentuhan fisiknya merespon
                         
-                        -- 3. TERBANG NAIK KEMBALI KE UDARA
-                        terbangKe(titikAtasTelur, speedFly)
+                        -- 4. TERBANG NAIK LAGI KE UDARA MEMBAWA TELUR
+                        terbangHalusKe(titikAtasTelur, 50)
                         
-                        -- 4. TERBANG BALIK KE BASE
+                        -- 5. TERBANG MELUNCUR BALIK KE ARAH BASE
                         local titikAtasBase = posisiBase + Vector3.new(0, 15, 0)
-                        terbangKe(titikAtasBase, speedFly)
+                        terbangHalusKe(titikAtasBase, 50)
                         
-                        -- 5. TURUN HALUS DI BASE
-                        terbangKe(posisiBase, 40)
+                        -- 6. TURUN HALUS KEMBALI KE BASE
+                        terbangHalusKe(posisiBase, 25)
                     end
                     
                 end
