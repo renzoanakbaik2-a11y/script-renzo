@@ -17,7 +17,7 @@ local function triggerParry()
     vim:SendKeyEvent(false, Enum.KeyCode.F, false, game)
 end
 
--- Looping Deteksi Universal (Mencari objek bergerak tercepat di sekitar)
+-- Looping Deteksi Stabil & Ringan untuk Executor
 local connection = nil
 local function startScript()
     if connection then return end
@@ -29,30 +29,29 @@ local function startScript()
         if not character or not character:FindFirstChild("HumanoidRootPart") then return end
         local rootPart = character.HumanoidRootPart
         
-        -- Pindai seluruh bagian di workspace untuk mencari objek yang melaju kencang ke arah kita
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and obj.Size.Magnitude < 15 and not obj.Anchored then
-                local distance = (obj.Position - rootPart.Position).Magnitude
+        -- Cari bola di folder Balls atau langsung di Workspace
+        local ballsFolder = workspace:FindFirstChild("Balls") or workspace
+        
+        for _, ball in pairs(ballsFolder:GetChildren()) do
+            if ball:IsA("BasePart") then
+                local distance = (ball.Position - rootPart.Position).Magnitude
                 
-                -- Hanya proses objek yang berada dalam radius jangkauan
+                -- Jika jarak bola sudah dekat (< 45 studs), lakukan kalkulasi kecepatan
                 if distance <= 45 then
-                    local velocity = obj.AssemblyLinearVelocity
+                    local velocity = ball.AssemblyLinearVelocity
                     local speed = velocity.Magnitude
                     
-                    -- Jika objek ini bergerak cukup cepat (kriteria bola Blade Ball)
-                    if speed > 20 then
-                        local toPlayer = (rootPart.Position - obj.Position).Unit
+                    if speed > 15 then
+                        local toPlayer = (rootPart.Position - ball.Position).Unit
                         local speedTowards = velocity:Dot(toPlayer)
                         
-                        -- Jika objek bergerak mendekati player
                         if speedTowards > 0 then
                             local timeToImpact = distance / speedTowards
                             
-                            -- Threshold otomatis: Semakin cepat bola di hit ke-3+, semakin peka pemicunya
-                            local threshold = math.clamp(0.4 + (speed * 0.001), 0.3, 0.7)
+                            -- Poin peka otomatis untuk kecepatan tinggi (hit ke-3+)
+                            local threshold = math.clamp(0.45 + (speed * 0.001), 0.3, 0.75)
                             
-                            -- Eksekusi pukulan jika waktu tubrukan tercapai atau jarak sudah sangat dekat (< 32 studs)
-                            if timeToImpact <= threshold or distance <= 32 then
+                            if timeToImpact <= threshold or distance <= 35 then
                                 triggerParry()
                             end
                         end
@@ -92,7 +91,7 @@ local function serverHop()
 end
 
 -- ==========================================
--- PEMBUATAN MENU GUI
+-- PEMBUATAN MENU GUI (FIXED SYNTAX)
 -- ==========================================
 if game.CoreGui:FindFirstChild("BladeBallProMenu") then
     game.CoreGui.BladeBallProMenu:Destroy()
@@ -122,7 +121,7 @@ Title.Parent = MainFrame
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 Title.Size = UDim2.new(0, 220, 0, 32)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "  Blade Ball Universal Fix"
+Title.Text = "  Blade Ball Executor Fix"
 Title.TextColor3 = Color3.fromRGB(220, 220, 220)
 Title.TextSize = 13
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -177,7 +176,7 @@ HopButton.MouseButton1Click:Connect(function()
 end)
 
 local isMinimized = false
-MinimizeButton.MouseButton1Click:Connect(function5
+MinimizeButton.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     if isMinimized then
         MainFrame.Size = UDim2.new(0, 220, 0, 32)
