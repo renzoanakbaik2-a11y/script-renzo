@@ -1,0 +1,107 @@
+-- Pastikan kamu menjalankan script ini menggunakan executor Roblox yang mendukung fungsi client (misal: Delta, Arceus X, Fluxus, dll)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local LocalPlayer = Players.LocalPlayer
+
+-- Status Toggle Auto Parry
+getgenv().AutoParryEnabled = false
+getgenv().DetectionDistance = 25 -- Jarak deteksi bola (bisa disesuaikan)
+
+-- Fungsi untuk melakukan klik / parry secara otomatis
+local function triggerParry()
+    -- Mengirim virtual input tombol 'F' atau klik kiri untuk parry
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+    task.wait(0.05)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+end
+
+-- Sistem Deteksi Bola Utama
+RunService.RenderStepped:Connect(function()
+    if not getgenv().AutoParryEnabled then return end
+    
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local rootPart = character.HumanoidRootPart
+    
+    -- Mencari bola di dalam Workspace (biasanya bernama "Ball")
+    local ballsFolder = workspace:FindFirstChild("Balls") or workspace
+    for _, ball in pairs(ballsFolder:GetChildren()) do
+        if ball.Name == "Ball" and ball:IsA("BasePart") then
+            -- Cek apakah bola menargetkan player kita (biasanya ada atribut atau properti target)
+            local distance = (ball.Position - rootPart.Position).Magnitude
+            
+            -- Hitung kecepatan bola untuk menyesuaikan jarak dinamis jika diperlukan
+            -- Jika bola sangat cepat, jarak deteksi bisa ditambah sedikit secara otomatis
+            local ballSpeed = ball.AssemblyLinearVelocity.Magnitude
+            local dynamicThreshold = math.clamp(getgenv().DetectionDistance + (ballSpeed * 0.05), 20, 50)
+            
+            if distance <= dynamicThreshold then
+                -- Cek apakah bola benar-benar bergerak ke arah kita
+                local directionToPlayer = (rootPart.Position - ball.Position).Unit
+                local ballDirection = ball.AssemblyLinearVelocity.Unit
+                local dotProduct = ballDirection:Dot(directionToPlayer)
+                
+                -- Jika bola mengarah ke kita (dotProduct > 0)
+                if dotProduct > 0.3 then
+                    triggerParry()
+                    task.wait(0.2) -- Jeda singkat agar tidak spam berlebihan
+                end
+            end
+        end
+    end
+end)
+
+-- ==========================================
+-- PEMBUATAN MENU SEDERHANA (UI TOGGLE)
+-- ==========================================
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local ToggleButton = Instance.new("TextButton")
+
+ScreenGui.Name = "BladeBallMenu"
+ScreenGui.Parent = game.CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
+MainFrame.Size = UDim2.new(0, 200, 0, 120)
+MainFrame.Active = true
+MainFrame.Draggable = true -- Menu bisa digeser-geser
+
+Title.Name = "Title"
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Title.Size = UDim2.new(0, 200, 0, 35)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "Blade Ball Auto Menu"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = MainFrame
+ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Warna Merah (OFF)
+ToggleButton.Position = UDim2.new(0.1, 0, 0.45, 0)
+ToggleButton.Size = UDim2.new(0, 160, 0, 45)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Text = "Auto Parry: OFF"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 14
+
+-- Logika Tombol On/Off
+ToggleButton.MouseButton1Click:Connect(function()
+    getgenv().AutoParryEnabled = not getgenv().AutoParryEnabled
+    
+    if getgenv().AutoParryEnabled then
+        ToggleButton.Text = "Auto Parry: ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50) -- Warna Hijau (ON)
+    else
+        ToggleButton.Text = "Auto Parry: OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Warna Merah (OFF)
+    end
+end)
