@@ -8,7 +8,7 @@ getgenv().AutoParryEnabled = false
 
 local lastParry = 0
 local function triggerParry()
-    if tick() - lastParry < 0.04 then return end
+    if tick() - lastParry < 0.03 then return end
     lastParry = tick()
 
     local vim = game:GetService("VirtualInputManager")
@@ -17,7 +17,7 @@ local function triggerParry()
     vim:SendKeyEvent(false, Enum.KeyCode.F, false, game)
 end
 
--- Looping Deteksi Cerdas (Fokus pada Target Merah & Curve)
+-- Looping Deteksi Universal (Mencari objek bergerak tercepat di sekitar)
 local connection = nil
 local function startScript()
     if connection then return end
@@ -29,236 +29,32 @@ local function startScript()
         if not character or not character:FindFirstChild("HumanoidRootPart") then return end
         local rootPart = character.HumanoidRootPart
         
-        local ballsFolder = workspace:FindFirstChild("Balls") or workspace
-        
-        for _, ball in pairs(ballsFolder:GetChildren()) do
-            if ball:IsA("BasePart") and (ball.Name == "Ball" or ball:FindFirstChild("Trail") or ball:GetAttribute("realBall") ~= nil) then
-                local distance = (ball.Position - rootPart.Position).Magnitude
-                local velocity = ball.AssemblyLinearVelocity
-                local speed = velocity.Magnitude
+        -- Pindai seluruh bagian di workspace untuk mencari objek yang melaju kencang ke arah kita
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Size.Magnitude < 15 and not obj.Anchored then
+                local distance = (obj.Position - rootPart.Position).Magnitude
                 
-                -- Cek apakah bola ini menargetkan kita (Atribut target dari game Blade Ball)
-                local targetAttr = ball:GetAttribute("target")
-                local isTargettingUs = (targetAttr == LocalPlayer.Name or targetAttr == LocalPlayer.UserId)
-                
-                local toPlayer = (rootPart.Position - ball.Position).Unit
-                local dot = velocity.Unit:Dot(toPlayer)
-                
-                -- Jika bola mengarah ke kita ATAU status target game sudah mengarah ke kita
-                if dot > 0.05 or isTargettingUs then
-                    local speedTowards = velocity:Dot(toPlayer)
+                -- Hanya proses objek yang berada dalam radius jangkauan
+                if distance <= 45 then
+                    local velocity = obj.AssemblyLinearVelocity
+                    local speed = velocity.Magnitude
                     
-                    -- Jika bola mendekat atau jarak sudah sangat dekat (mengatasi bola curve/belok mendadak)
-                    if speedTowards > 0 or distance <= 25 then
-                        local timeToImpact = speedTowards > 0 and (distance / speedTowards) else 99
+                    -- Jika objek ini bergerak cukup cepat (kriteria bola Blade Ball)
+                    if speed > 20 then
+                        local toPlayer = (rootPart.Position - obj.Position).Unit
+                        local speedTowards = velocity:Dot(toPlayer)
                         
-                        -- Penyesuaian khusus hit ke-3 dan seterusnya (Kecepatan tinggi / Curve)
-                        local dynamicThreshold = 0.4
-                        if speed > 80 then
-                            dynamicThreshold = 0.6 + (speed * 0.0012) -- Lebih peka terhadap perubahan arah
-                        end
-                        
-                        -- Jika karakter kita memerah (target aktif) atau jarak sudah masuk ambang batas
-                        if isTargettingUs or timeToImpact <= dynamicThreshold or distance <= 28 then
-                            triggerParry()
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local function stopScript()
-    if connection then
-        connection:Disconnect()
-        connection = nil
-    end
-end
-
--- Fungsi Server Hop
-local function serverHop()
-    local HttpService = game:GetService("HttpService")
-    local Servers = {}
-    local success = pcall(function()
-        local response = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
-        Servers = HttpService:JSONDecode(response).data
-    end)
-    
-    if success and Servers then
-        for _, s in pairs(Servers) do
-            if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
-                break
-            end
-        end
-    else
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-    end
-end
-
--- ==========================================
--- PEMBUATAN MENU GUI
--- ==========================================
-if game.CoreGui:FindFirstChild("BladeBallProMenu") then
-    game.CoreGui.BladeBallProMenu:Destroy()
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local Title = Instance.new("TextLabel")
-local ToggleButton = Instance.new("TextButton")
-local HopButton = Instance.new("TextButton")
-local MinimizeButton = Instance.new("TextButton")
-
-ScreenGui.Name = "BladeBallProMenu"
-ScreenGui.Parent = game.CoreGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-MainFrame.Size = UDim2.new(0, 220, 0, 175)
-MainFrame.Active = true
-MainFrame.Draggable = true
-
-Title.Name = "Title"
-Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Title.Size = UDim2.new(0, 220, 0, 32)
-Title.Font = Enum.Font.GothamBold
-Title.Text = "  Blade Ball Target Fix"
-Title.TextColor3 = Color3.fromRGB(220, 220, 220)
-Title.TextSize = 13
-Title.TextXAlignment = Enum.TextXAlignment.Left
-
-MinimizeButton.Name = "MinimizeButton"
-MinimizeButton.Parent = MainFrame
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-MinimizeButton.Position = UDim2.new(0.82, 0, 0.05, 0)
-MinimizeButton.Size = UDim2.new(0, 30, 0, 24)
-MinimizeButton.Font = Enum.Font.GothamBold
-MinimizeButton.Text = "-"
-MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeButton.TextSize = 14
-
-ToggleButton.Name = "ToggleButton"
-ToggleButton.Parent = MainFrame
-ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-ToggleButton.Position = UDim2.new(0.08, 0, 0.28, 0)
-ToggleButton.Size = UDim2.new(0, 185, 0, 45)
-ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Text = "Auto Parry: OFF"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextSize = 14
-
-HopButton.Name = "HopButton"
-HopButton.Parent = MainFrame
-HopButton.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
-HopButton.Position = UDim2.new(0.08, 0, 0.62, 0)
-HopButton.Size = UDim2.new(0, 185, 0, 45)
-HopButton.Font = Enum.Font.GothamBold
-HopButton.Text = "Server Hop (Pindah)"
-HopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-HopButton.TextSize = 14
-
-ToggleButton.MouseButton1Click:Connect(function()
-    getgenv().AutoParryEnabled = not getgenv().AutoParryEnabled
-    
-    if getgenv().AutoParryEnabled then
-        ToggleButton.Text = "Auto Parry: ON"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 180, 40)
-        startScript()
-    else
-        ToggleButton.Text = "Auto Parry: OFF"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        stopScript()
-    end
-end)
-
-HopButton.MouseButton1Click:Connect(function()
-    HopButton.Text = "Mencari Server..."
-    serverHop()
-end)
-
-local isMinimized = false
-MinimizeButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    if isMinimized then
-        MainFrame.Size = UDim2.new(0, 220, 0, 32)
-        ToggleButton.Visible = false
-        HopButton.Visible = false
-        MinimizeButton.Text = "+"
-    else
-        MainFrame.Size = UDim2.new(0, 220, 0, 175)
-        ToggleButton.Visible = true
-        HopButton.Visible = true
-        MinimizeButton.Text = "-"
-    end
-end)-- Pastikan executor kamu mendukung fungsi game client
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TeleportService = game:GetService("TeleportService")
-local LocalPlayer = Players.LocalPlayer
-
-getgenv().AutoParryEnabled = false
-
--- Cooldown sangat singkat khusus untuk mengatasi kecepatan tinggi beruntun
-local lastParry = 0
-local function triggerParry()
-    if tick() - lastParry < 0.05 then return end
-    lastParry = tick()
-
-    local vim = game:GetService("VirtualInputManager")
-    vim:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-    task.wait(0.01)
-    vim:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-end
-
--- Looping Deteksi dengan Skala Kecepatan Ekstrem
-local connection = nil
-local function startScript()
-    if connection then return end
-    
-    connection = RunService.Heartbeat:Connect(function()
-        if not getgenv().AutoParryEnabled then return end
-        
-        local character = LocalPlayer.Character
-        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-        local rootPart = character.HumanoidRootPart
-        
-        local ballsFolder = workspace:FindFirstChild("Balls") or workspace
-        
-        for _, ball in pairs(ballsFolder:GetChildren()) do
-            if ball:IsA("BasePart") and (ball.Name == "Ball" or ball:FindFirstChild("Trail") or ball:GetAttribute("realBall") ~= nil) then
-                local distance = (ball.Position - rootPart.Position).Magnitude
-                local velocity = ball.AssemblyLinearVelocity
-                local speed = velocity.Magnitude
-                
-                local toPlayer = (rootPart.Position - ball.Position).Unit
-                local dot = velocity.Unit:Dot(toPlayer)
-                
-                if dot > 0.1 then
-                    local speedTowards = velocity:Dot(toPlayer)
-                    if speedTowards > 0 then
-                        local timeToImpact = distance / speedTowards
-                        
-                        -- ==========================================================
-                        -- PENYESUAIAN KHUSUS HIT KE-3 (BOLA SUPER CEPAT)
-                        -- ==========================================================
-                        -- Jika kecepatan bola di atas rata-rata (biasanya terjadi di hit ke-3+),
-                        -- ambang batas waktu & jarak diperluas secara agresif agar tidak terlambat.
-                        local dynamicThreshold = 0.35
-                        if speed > 100 then
-                            dynamicThreshold = 0.55 + (speed * 0.001) -- Semakin cepat, semakin awal dipukul
-                        end
-                        
-                        -- Jarak darurat diperlebar hingga 30 studs khusus untuk kecepatan tinggi
-                        local emergencyDistance = speed > 100 and 32 or 22
-                        
-                        if timeToImpact <= dynamicThreshold or distance <= emergencyDistance then
-                            triggerParry()
+                        -- Jika objek bergerak mendekati player
+                        if speedTowards > 0 then
+                            local timeToImpact = distance / speedTowards
+                            
+                            -- Threshold otomatis: Semakin cepat bola di hit ke-3+, semakin peka pemicunya
+                            local threshold = math.clamp(0.4 + (speed * 0.001), 0.3, 0.7)
+                            
+                            -- Eksekusi pukulan jika waktu tubrukan tercapai atau jarak sudah sangat dekat (< 32 studs)
+                            if timeToImpact <= threshold or distance <= 32 then
+                                triggerParry()
+                            end
                         end
                     end
                 end
@@ -326,7 +122,7 @@ Title.Parent = MainFrame
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 Title.Size = UDim2.new(0, 220, 0, 32)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "  Blade Ball Anti-Speed Hub"
+Title.Text = "  Blade Ball Universal Fix"
 Title.TextColor3 = Color3.fromRGB(220, 220, 220)
 Title.TextSize = 13
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -381,7 +177,7 @@ HopButton.MouseButton1Click:Connect(function()
 end)
 
 local isMinimized = false
-MinimizeButton.MouseButton1Click:Connect(function()
+MinimizeButton.MouseButton1Click:Connect(function5
     isMinimized = not isMinimized
     if isMinimized then
         MainFrame.Size = UDim2.new(0, 220, 0, 32)
