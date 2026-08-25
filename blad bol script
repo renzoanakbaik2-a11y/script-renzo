@@ -34,14 +34,13 @@ local function SaveSettings()
 end
 
 -- ==========================================
--- MEMBUAT UI MENU (SHADOW SCRIPT v1.0)
+-- MEMBUAT UI MENU (SHADOW SCRIPT v1.2)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ShadowScriptGui"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Tombol Buka/Tutup Menu Utama
 local ToggleMenuBtn = Instance.new("TextButton")
 ToggleMenuBtn.Name = "ToggleMenuBtn"
 ToggleMenuBtn.Parent = ScreenGui
@@ -50,14 +49,13 @@ ToggleMenuBtn.Position = UDim2.new(0, 20, 0, 20)
 ToggleMenuBtn.Size = UDim2.new(0, 140, 0, 40)
 ToggleMenuBtn.Font = Enum.Font.SourceSansBold
 ToggleMenuBtn.Text = "SHADOW SCRIPT"
-ToggleMenuBtn.TextColor3 = Color3.fromRGB(150, 0, 255) -- Warna Ungu Khas "Shadow"
+ToggleMenuBtn.TextColor3 = Color3.fromRGB(150, 0, 255)
 ToggleMenuBtn.TextSize = 15
 
 local UICornerBtn = Instance.new("UICorner")
 UICornerBtn.CornerRadius = UDim.new(0, 8)
 UICornerBtn.Parent = ToggleMenuBtn
 
--- Frame Utama Menu
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
@@ -70,24 +68,21 @@ local UICornerFrame = Instance.new("UICorner")
 UICornerFrame.CornerRadius = UDim.new(0, 10)
 UICornerFrame.Parent = MainFrame
 
--- Garis Pinggir / Border Estetik
 local UIStroke = Instance.new("UIStroke")
 UIStroke.Parent = MainFrame
 UIStroke.Color = Color3.fromRGB(120, 0, 200)
 UIStroke.Thickness = 2
 
--- Teks Nama Script & Versi (Shadow Script v1.0)
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Parent = MainFrame
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Position = UDim2.new(0, 10, 0, 10)
 TitleLabel.Size = UDim2.new(0, 240, 0, 30)
 TitleLabel.Font = Enum.Font.SourceSansBold
-TitleLabel.Text = "Shadow Script v1.0"
+TitleLabel.Text = "Shadow Script v1.2"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 18
 
--- Fungsi Pembuat Tombol Toggle Fitur
 local function CreateToggle(name, yPos, settingKey, callback)
     local Btn = Instance.new("TextButton")
     Btn.Parent = MainFrame
@@ -112,36 +107,40 @@ local function CreateToggle(name, yPos, settingKey, callback)
     end)
 end
 
--- Event Buka/Tutup Menu
 ToggleMenuBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Membuat Tombol Fitur di dalam Menu
 CreateToggle("Auto Farm (Teleport)", 50, "AutoFarmLevel", function(state)
-    print("Auto Farm Teleport: " .. tostring(state))
+    print("Auto Farm v1.2: " + tostring(state))
 end)
 
 CreateToggle("Auto Skill (Attack)", 95, "AutoSkill", function(state)
-    print("Auto Skill: " .. tostring(state))
+    print("Auto Skill v1.2: " + tostring(state))
 end)
 
 CreateToggle("Instant Kill / Bypass", 140, "InstantKill", function(state)
-    print("Instant Kill: " .. tostring(state))
+    print("Instant Kill: " + tostring(state))
 end)
 
 -- ==========================================
--- LOGIKA TELEPORT & AUTO SKILL
+-- LOGIKA AUTO SKILL & TELEPORT DIPERBARUI
 -- ==========================================
 
 local function TriggerSkillButton()
     local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
     if playerGui then
         for _, gui in ipairs(playerGui:GetDescendants()) do
+            -- Mencari tombol skill berdasarkan struktur kotak skill di samping layar (seperti gambar yang kamu tandai)
             if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-                if string.lower(gui.Name):find("skill") or string.lower(gui.Name):find("attack") or string.lower(gui.Name):find("fight") then
+                local nameLower = string.lower(gui.Name)
+                -- Menargetkan tombol yang biasanya dipakai untuk skill/attack di game pet/turn-based
+                if nameLower:find("skill") or nameLower:find("attack") or nameLower:find("fight") or nameLower:find("move") or nameLower:find("button") then
                     pcall(function()
+                        -- Mensimulasikan klik 2 kali berturut-turut agar menu info terbuka lalu tereksekusi menyerang
                         for _, connection in ipairs(getconnections(gui.MouseButton1Click)) do
+                            connection:Fire()
+                            task.wait(0.05)
                             connection:Fire()
                         end
                     end)
@@ -151,7 +150,7 @@ local function TriggerSkillButton()
     end
 end
 
-local lastTeleportTick = 0
+local lastActionTick = 0
 
 RunService.RenderStepped:Connect(function()
     if not Settings.AutoFarmLevel then return end
@@ -163,9 +162,18 @@ RunService.RenderStepped:Connect(function()
     local targetBrainrot = nil
     local shortestDistance = math.huge
 
+    -- Cari musuh liar di map (menghindari player & pet sendiri)
     for _, obj in ipairs(workspace:GetChildren()) do
-        if obj:FindFirstChild("HumanoidRootPart") and obj ~= character and obj:FindFirstChild("Humanoid") then
-            if obj.Humanoid.Health > 0 then
+        if obj ~= character and obj:FindFirstChild("HumanoidRootPart") and obj:FindFirstChild("Humanoid") then
+            local isMyPetOrSelf = false
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if obj.Name == plr.Name or (plr.Character and obj == plr.Character) then
+                    isMyPetOrSelf = true
+                    break
+                end
+            end
+
+            if not isMyPetOrSelf and obj.Humanoid.Health > 0 then
                 local distance = (hrp.Position - obj.HumanoidRootPart.Position).Magnitude
                 if distance < shortestDistance then
                     shortestDistance = distance
@@ -175,28 +183,31 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- Teleport ke musuh & masuk ring
     if targetBrainrot and targetBrainrot:FindFirstChild("HumanoidRootPart") then
-        if tick() - lastTeleportTick > 1 then
-            lastTeleportTick = tick()
+        if tick() - lastActionTick > 2 then
+            lastActionTick = tick()
             
-            -- Teleport ke sebelah musuh
-            hrp.CFrame = targetBrainrot.HumanoidRootPart.CFrame + Vector3.new(0, 3, 3)
+            hrp.CFrame = targetBrainrot.HumanoidRootPart.CFrame + Vector3.new(0, 3, 4)
             
-            -- Masuk ke arena dengan menekan tombol F
-            task.wait(0.2)
+            task.wait(0.3)
             VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
             task.wait(0.1)
             VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
         end
     end
 
+    -- Eksekusi Auto Skill (Klik dua kali otomatis)
     if Settings.AutoSkill then
         TriggerSkillButton()
     end
 
+    -- Karena fitur Instant Kill diblokir server game, kita maksimalkan di Auto Skill yang menembak terus-menerus
     if Settings.InstantKill then
         if targetBrainrot and targetBrainrot:FindFirstChild("Humanoid") then
-            targetBrainrot.Humanoid.Health = 0
+            pcall(function()
+                targetBrainrot.Humanoid.Health = 0
+            end)
         end
     end
 end)
