@@ -1,192 +1,202 @@
--- Pastikan executor kamu mendukung fungsi game client
+local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local RunService = game:GetService("RunService")
-local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+
 local LocalPlayer = Players.LocalPlayer
+local SETTINGS_FILE = "ShadowScript_CatchABrainrot_Settings.json"
 
-getgenv().AutoParryEnabled = false
+local Settings = {
+    AutoFarmLevel = false,
+    InstantKill = false,
+    AutoSkill = true
+}
 
-local lastParry = 0
-local function triggerParry()
-    if tick() - lastParry < 0.03 then return end
-    lastParry = tick()
-
-    local vim = game:GetService("VirtualInputManager")
-    vim:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-    task.wait(0.01)
-    vim:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-end
-
--- Looping Deteksi Stabil & Ringan untuk Executor
-local connection = nil
-local function startScript()
-    if connection then return end
-    
-    connection = RunService.Heartbeat:Connect(function()
-        if not getgenv().AutoParryEnabled then return end
-        
-        local character = LocalPlayer.Character
-        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-        local rootPart = character.HumanoidRootPart
-        
-        -- Cari bola di folder Balls atau langsung di Workspace
-        local ballsFolder = workspace:FindFirstChild("Balls") or workspace
-        
-        for _, ball in pairs(ballsFolder:GetChildren()) do
-            if ball:IsA("BasePart") then
-                local distance = (ball.Position - rootPart.Position).Magnitude
-                
-                -- Jika jarak bola sudah dekat (< 45 studs), lakukan kalkulasi kecepatan
-                if distance <= 45 then
-                    local velocity = ball.AssemblyLinearVelocity
-                    local speed = velocity.Magnitude
-                    
-                    if speed > 15 then
-                        local toPlayer = (rootPart.Position - ball.Position).Unit
-                        local speedTowards = velocity:Dot(toPlayer)
-                        
-                        if speedTowards > 0 then
-                            local timeToImpact = distance / speedTowards
-                            
-                            -- Poin peka otomatis untuk kecepatan tinggi (hit ke-3+)
-                            local threshold = math.clamp(0.45 + (speed * 0.001), 0.3, 0.75)
-                            
-                            if timeToImpact <= threshold or distance <= 35 then
-                                triggerParry()
-                            end
-                        end
-                    end
-                end
-            end
-        end
+-- Load Settings
+if writefile and readfile and pcall(function() readfile(SETTINGS_FILE) end) then
+    local success, decoded = pcall(function()
+        return HttpService:JSONDecode(readfile(SETTINGS_FILE))
     end)
-end
-
-local function stopScript()
-    if connection then
-        connection:Disconnect()
-        connection = nil
+    if success and type(decoded) == "table" then
+        for k, v in pairs(decoded) do
+            Settings[k] = v
+        end
     end
 end
 
--- Fungsi Server Hop
-local function serverHop()
-    local HttpService = game:GetService("HttpService")
-    local Servers = {}
-    local success = pcall(function()
-        local response = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
-        Servers = HttpService:JSONDecode(response).data
-    end)
-    
-    if success and Servers then
-        for _, s in pairs(Servers) do
-            if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
-                break
-            end
-        end
-    else
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+local function SaveSettings()
+    if writefile then
+        pcall(function()
+            writefile(SETTINGS_FILE, HttpService:JSONEncode(Settings))
+        end)
     end
 end
 
 -- ==========================================
--- PEMBUATAN MENU GUI (FIXED SYNTAX)
+-- MEMBUAT UI MENU (SHADOW SCRIPT v1.0)
 -- ==========================================
-if game.CoreGui:FindFirstChild("BladeBallProMenu") then
-    game.CoreGui.BladeBallProMenu:Destroy()
-end
-
 local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ShadowScriptGui"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- Tombol Buka/Tutup Menu Utama
+local ToggleMenuBtn = Instance.new("TextButton")
+ToggleMenuBtn.Name = "ToggleMenuBtn"
+ToggleMenuBtn.Parent = ScreenGui
+ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleMenuBtn.Position = UDim2.new(0, 20, 0, 20)
+ToggleMenuBtn.Size = UDim2.new(0, 140, 0, 40)
+ToggleMenuBtn.Font = Enum.Font.SourceSansBold
+ToggleMenuBtn.Text = "SHADOW SCRIPT"
+ToggleMenuBtn.TextColor3 = Color3.fromRGB(150, 0, 255) -- Warna Ungu Khas "Shadow"
+ToggleMenuBtn.TextSize = 15
+
+local UICornerBtn = Instance.new("UICorner")
+UICornerBtn.CornerRadius = UDim.new(0, 8)
+UICornerBtn.Parent = ToggleMenuBtn
+
+-- Frame Utama Menu
 local MainFrame = Instance.new("Frame")
-local Title = Instance.new("TextLabel")
-local ToggleButton = Instance.new("TextButton")
-local HopButton = Instance.new("TextButton")
-local MinimizeButton = Instance.new("TextButton")
-
-ScreenGui.Name = "BladeBallProMenu"
-ScreenGui.Parent = game.CoreGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-MainFrame.Size = UDim2.new(0, 220, 0, 175)
-MainFrame.Active = true
-MainFrame.Draggable = true
+MainFrame.Position = UDim2.new(0, 20, 0, 75)
+MainFrame.Size = UDim2.new(0, 260, 0, 230)
+MainFrame.Visible = false
 
-Title.Name = "Title"
-Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Title.Size = UDim2.new(0, 220, 0, 32)
-Title.Font = Enum.Font.GothamBold
-Title.Text = "  Blade Ball Executor Fix"
-Title.TextColor3 = Color3.fromRGB(220, 220, 220)
-Title.TextSize = 13
-Title.TextXAlignment = Enum.TextXAlignment.Left
+local UICornerFrame = Instance.new("UICorner")
+UICornerFrame.CornerRadius = UDim.new(0, 10)
+UICornerFrame.Parent = MainFrame
 
-MinimizeButton.Name = "MinimizeButton"
-MinimizeButton.Parent = MainFrame
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-MinimizeButton.Position = UDim2.new(0.82, 0, 0.05, 0)
-MinimizeButton.Size = UDim2.new(0, 30, 0, 24)
-MinimizeButton.Font = Enum.Font.GothamBold
-MinimizeButton.Text = "-"
-MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeButton.TextSize = 14
+-- Garis Pinggir / Border Estetik
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Parent = MainFrame
+UIStroke.Color = Color3.fromRGB(120, 0, 200)
+UIStroke.Thickness = 2
 
-ToggleButton.Name = "ToggleButton"
-ToggleButton.Parent = MainFrame
-ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-ToggleButton.Position = UDim2.new(0.08, 0, 0.28, 0)
-ToggleButton.Size = UDim2.new(0, 185, 0, 45)
-ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Text = "Auto Parry: OFF"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextSize = 14
+-- Teks Nama Script & Versi (Shadow Script v1.0)
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Parent = MainFrame
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Position = UDim2.new(0, 10, 0, 10)
+TitleLabel.Size = UDim2.new(0, 240, 0, 30)
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.Text = "Shadow Script v1.0"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 18
 
-HopButton.Name = "HopButton"
-HopButton.Parent = MainFrame
-HopButton.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
-HopButton.Position = UDim2.new(0.08, 0, 0.62, 0)
-HopButton.Size = UDim2.new(0, 185, 0, 45)
-HopButton.Font = Enum.Font.GothamBold
-HopButton.Text = "Server Hop (Pindah)"
-HopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-HopButton.TextSize = 14
+-- Fungsi Pembuat Tombol Toggle Fitur
+local function CreateToggle(name, yPos, settingKey, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Parent = MainFrame
+    Btn.BackgroundColor3 = Settings[settingKey] and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
+    Btn.Position = UDim2.new(0, 15, 0, yPos)
+    Btn.Size = UDim2.new(0, 230, 0, 35)
+    Btn.Font = Enum.Font.SourceSansBold
+    Btn.Text = name .. ": " .. (Settings[settingKey] and "ON" or "OFF")
+    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.TextSize = 14
 
-ToggleButton.MouseButton1Click:Connect(function()
-    getgenv().AutoParryEnabled = not getgenv().AutoParryEnabled
-    
-    if getgenv().AutoParryEnabled then
-        ToggleButton.Text = "Auto Parry: ON"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 180, 40)
-        startScript()
-    else
-        ToggleButton.Text = "Auto Parry: OFF"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        stopScript()
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = Btn
+
+    Btn.MouseButton1Click:Connect(function()
+        Settings[settingKey] = not Settings[settingKey]
+        Btn.BackgroundColor3 = Settings[settingKey] and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
+        Btn.Text = name .. ": " .. (Settings[settingKey] and "ON" or "OFF")
+        SaveSettings()
+        if callback then callback(Settings[settingKey]) end
+    end)
+end
+
+-- Event Buka/Tutup Menu
+ToggleMenuBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Membuat Tombol Fitur di dalam Menu
+CreateToggle("Auto Farm (Teleport)", 50, "AutoFarmLevel", function(state)
+    print("Auto Farm Teleport: " .. tostring(state))
+end)
+
+CreateToggle("Auto Skill (Attack)", 95, "AutoSkill", function(state)
+    print("Auto Skill: " .. tostring(state))
+end)
+
+CreateToggle("Instant Kill / Bypass", 140, "InstantKill", function(state)
+    print("Instant Kill: " .. tostring(state))
+end)
+
+-- ==========================================
+-- LOGIKA TELEPORT & AUTO SKILL
+-- ==========================================
+
+local function TriggerSkillButton()
+    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if playerGui then
+        for _, gui in ipairs(playerGui:GetDescendants()) do
+            if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+                if string.lower(gui.Name):find("skill") or string.lower(gui.Name):find("attack") or string.lower(gui.Name):find("fight") then
+                    pcall(function()
+                        for _, connection in ipairs(getconnections(gui.MouseButton1Click)) do
+                            connection:Fire()
+                        end
+                    end)
+                end
+            end
+        end
     end
-end)
+end
 
-HopButton.MouseButton1Click:Connect(function()
-    HopButton.Text = "Mencari Server..."
-    serverHop()
-end)
+local lastTeleportTick = 0
 
-local isMinimized = false
-MinimizeButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    if isMinimized then
-        MainFrame.Size = UDim2.new(0, 220, 0, 32)
-        ToggleButton.Visible = false
-        HopButton.Visible = false
-        MinimizeButton.Text = "+"
-    else
-        MainFrame.Size = UDim2.new(0, 220, 0, 175)
-        ToggleButton.Visible = true
-        HopButton.Visible = true
-        MinimizeButton.Text = "-"
+RunService.RenderStepped:Connect(function()
+    if not Settings.AutoFarmLevel then return end
+
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = character.HumanoidRootPart
+
+    local targetBrainrot = nil
+    local shortestDistance = math.huge
+
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if obj:FindFirstChild("HumanoidRootPart") and obj ~= character and obj:FindFirstChild("Humanoid") then
+            if obj.Humanoid.Health > 0 then
+                local distance = (hrp.Position - obj.HumanoidRootPart.Position).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    targetBrainrot = obj
+                end
+            end
+        end
+    end
+
+    if targetBrainrot and targetBrainrot:FindFirstChild("HumanoidRootPart") then
+        if tick() - lastTeleportTick > 1 then
+            lastTeleportTick = tick()
+            
+            -- Teleport ke sebelah musuh
+            hrp.CFrame = targetBrainrot.HumanoidRootPart.CFrame + Vector3.new(0, 3, 3)
+            
+            -- Masuk ke arena dengan menekan tombol F
+            task.wait(0.2)
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+            task.wait(0.1)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+        end
+    end
+
+    if Settings.AutoSkill then
+        TriggerSkillButton()
+    end
+
+    if Settings.InstantKill then
+        if targetBrainrot and targetBrainrot:FindFirstChild("Humanoid") then
+            targetBrainrot.Humanoid.Health = 0
+        end
     end
 end)
