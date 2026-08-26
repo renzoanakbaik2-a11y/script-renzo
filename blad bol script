@@ -1,213 +1,138 @@
-local CoreGui = game:GetService("CoreGui")
+-- Blade Ball Auto Parry & UI Script
 local Players = game:GetService("Players")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local HttpService = game:GetService("HttpService")
-
 local LocalPlayer = Players.LocalPlayer
-local SETTINGS_FILE = "ShadowScript_CatchABrainrot_Settings.json"
 
+-- Configuration Table
 local Settings = {
-    AutoFarmLevel = false,
-    InstantKill = false,
-    AutoSkill = true
+    AutoParry = false,
+    HitDistance = 15,
+    AutoPingAdjust = true,
+    ConfigFile = "BladeBall_Config.json"
 }
 
--- Load Settings
-if writefile and readfile and pcall(function() readfile(SETTINGS_FILE) end) then
-    local success, decoded = pcall(function()
-        return HttpService:JSONDecode(readfile(SETTINGS_FILE))
-    end)
-    if success and type(decoded) == "table" then
-        for k, v in pairs(decoded) do
+-- Load Saved Settings
+if isfile and isfile(Settings.ConfigFile) then
+    pcall(function()
+        local data = HttpService:JSONDecode(readfile(Settings.ConfigFile))
+        for k, v in pairs(data) do
             Settings[k] = v
         end
-    end
+    end)
 end
 
+-- Save Settings Function
 local function SaveSettings()
     if writefile then
         pcall(function()
-            writefile(SETTINGS_FILE, HttpService:JSONEncode(Settings))
+            writefile(Settings.ConfigFile, HttpService:JSONEncode({
+                AutoParry = Settings.AutoParry,
+                HitDistance = Settings.HitDistance,
+                AutoPingAdjust = Settings.AutoPingAdjust
+            }))
         end)
     end
 end
 
--- ==========================================
--- MEMBUAT UI MENU (SHADOW SCRIPT v1.2)
--- ==========================================
+-- Create UI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ShadowScriptGui"
-ScreenGui.Parent = CoreGui
+ScreenGui.Name = "BladeBallUI"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local ToggleMenuBtn = Instance.new("TextButton")
-ToggleMenuBtn.Name = "ToggleMenuBtn"
-ToggleMenuBtn.Parent = ScreenGui
-ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ToggleMenuBtn.Position = UDim2.new(0, 20, 0, 20)
-ToggleMenuBtn.Size = UDim2.new(0, 140, 0, 40)
-ToggleMenuBtn.Font = Enum.Font.SourceSansBold
-ToggleMenuBtn.Text = "SHADOW SCRIPT"
-ToggleMenuBtn.TextColor3 = Color3.fromRGB(150, 0, 255)
-ToggleMenuBtn.TextSize = 15
+-- Toggle Button (Floating)
+local OpenBtn = Instance.new("TextButton")
+OpenBtn.Size = UDim2.new(0, 100, 0, 35)
+OpenBtn.Position = UDim2.new(0, 10, 0.4, 0)
+OpenBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenBtn.Text = "Toggle Menu"
+OpenBtn.Parent = ScreenGui
 
-local UICornerBtn = Instance.new("UICorner")
-UICornerBtn.CornerRadius = UDim.new(0, 8)
-UICornerBtn.Parent = ToggleMenuBtn
-
+-- Main Frame
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
+MainFrame.Size = UDim2.new(0, 260, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -110)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Position = UDim2.new(0, 20, 0, 75)
-MainFrame.Size = UDim2.new(0, 260, 0, 230)
+MainFrame.Active = true
+MainFrame.Draggable = true
 MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
 
-local UICornerFrame = Instance.new("UICorner")
-UICornerFrame.CornerRadius = UDim.new(0, 10)
-UICornerFrame.Parent = MainFrame
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Text = "Blade Ball Auto Parry"
+Title.Parent = MainFrame
 
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Parent = MainFrame
-UIStroke.Color = Color3.fromRGB(120, 0, 200)
-UIStroke.Thickness = 2
+-- Auto Parry Toggle Button
+local AutoParryBtn = Instance.new("TextButton")
+AutoParryBtn.Size = UDim2.new(0.8, 0, 0, 35)
+AutoParryBtn.Position = UDim2.new(0.1, 0, 0.25, 0)
+AutoParryBtn.BackgroundColor3 = Settings.AutoParry and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
+AutoParryBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoParryBtn.Text = "Auto Parry: " .. (Settings.AutoParry and "ON" or "OFF")
+AutoParryBtn.Parent = MainFrame
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Parent = MainFrame
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Position = UDim2.new(0, 10, 0, 10)
-TitleLabel.Size = UDim2.new(0, 240, 0, 30)
-TitleLabel.Font = Enum.Font.SourceSansBold
-TitleLabel.Text = "Shadow Script v1.2"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 18
+-- Save Config Button
+local SaveBtn = Instance.new("TextButton")
+SaveBtn.Size = UDim2.new(0.8, 0, 0, 35)
+SaveBtn.Position = UDim2.new(0.1, 0, 0.5, 0)
+SaveBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 200)
+SaveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SaveBtn.Text = "Save Settings"
+SaveBtn.Parent = MainFrame
 
-local function CreateToggle(name, yPos, settingKey, callback)
-    local Btn = Instance.new("TextButton")
-    Btn.Parent = MainFrame
-    Btn.BackgroundColor3 = Settings[settingKey] and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
-    Btn.Position = UDim2.new(0, 15, 0, yPos)
-    Btn.Size = UDim2.new(0, 230, 0, 35)
-    Btn.Font = Enum.Font.SourceSansBold
-    Btn.Text = name .. ": " .. (Settings[settingKey] and "ON" or "OFF")
-    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Btn.TextSize = 14
-
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 6)
-    Corner.Parent = Btn
-
-    Btn.MouseButton1Click:Connect(function()
-        Settings[settingKey] = not Settings[settingKey]
-        Btn.BackgroundColor3 = Settings[settingKey] and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
-        Btn.Text = name .. ": " .. (Settings[settingKey] and "ON" or "OFF")
-        SaveSettings()
-        if callback then callback(Settings[settingKey]) end
-    end)
-end
-
-ToggleMenuBtn.MouseButton1Click:Connect(function()
+-- UI Actions
+OpenBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
-CreateToggle("Auto Farm (Teleport)", 50, "AutoFarmLevel", function(state)
-    print("Auto Farm v1.2: " + tostring(state))
+AutoParryBtn.MouseButton1Click:Connect(function()
+    Settings.AutoParry = not Settings.AutoParry
+    AutoParryBtn.Text = "Auto Parry: " .. (Settings.AutoParry and "ON" or "OFF")
+    AutoParryBtn.BackgroundColor3 = Settings.AutoParry and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
 end)
 
-CreateToggle("Auto Skill (Attack)", 95, "AutoSkill", function(state)
-    print("Auto Skill v1.2: " + tostring(state))
+SaveBtn.MouseButton1Click:Connect(function()
+    SaveSettings()
+    SaveBtn.Text = "Saved!"
+    task.wait(1)
+    SaveBtn.Text = "Save Settings"
 end)
 
-CreateToggle("Instant Kill / Bypass", 140, "InstantKill", function(state)
-    print("Instant Kill: " + tostring(state))
-end)
-
--- ==========================================
--- LOGIKA AUTO SKILL & TELEPORT DIPERBARUI
--- ==========================================
-
-local function TriggerSkillButton()
-    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if playerGui then
-        for _, gui in ipairs(playerGui:GetDescendants()) do
-            -- Mencari tombol skill berdasarkan struktur kotak skill di samping layar (seperti gambar yang kamu tandai)
-            if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-                local nameLower = string.lower(gui.Name)
-                -- Menargetkan tombol yang biasanya dipakai untuk skill/attack di game pet/turn-based
-                if nameLower:find("skill") or nameLower:find("attack") or nameLower:find("fight") or nameLower:find("move") or nameLower:find("button") then
-                    pcall(function()
-                        -- Mensimulasikan klik 2 kali berturut-turut agar menu info terbuka lalu tereksekusi menyerang
-                        for _, connection in ipairs(getconnections(gui.MouseButton1Click)) do
-                            connection:Fire()
-                            task.wait(0.05)
-                            connection:Fire()
-                        end
-                    end)
-                end
-            end
-        end
-    end
+-- Parry Trigger Function
+local function Parry()
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
 end
 
-local lastActionTick = 0
-
-RunService.RenderStepped:Connect(function()
-    if not Settings.AutoFarmLevel then return end
+-- Ball Detection Loop
+RunService.PreRender:Connect(function()
+    if not Settings.AutoParry then return end
 
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    
     local hrp = character.HumanoidRootPart
-
-    local targetBrainrot = nil
-    local shortestDistance = math.huge
-
-    -- Cari musuh liar di map (menghindari player & pet sendiri)
-    for _, obj in ipairs(workspace:GetChildren()) do
-        if obj ~= character and obj:FindFirstChild("HumanoidRootPart") and obj:FindFirstChild("Humanoid") then
-            local isMyPetOrSelf = false
-            for _, plr in ipairs(Players:GetPlayers()) do
-                if obj.Name == plr.Name or (plr.Character and obj == plr.Character) then
-                    isMyPetOrSelf = true
-                    break
-                end
-            end
-
-            if not isMyPetOrSelf and obj.Humanoid.Health > 0 then
-                local distance = (hrp.Position - obj.HumanoidRootPart.Position).Magnitude
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    targetBrainrot = obj
-                end
-            end
-        end
-    end
-
-    -- Teleport ke musuh & masuk ring
-    if targetBrainrot and targetBrainrot:FindFirstChild("HumanoidRootPart") then
-        if tick() - lastActionTick > 2 then
-            lastActionTick = tick()
+    local balls = workspace:FindFirstChild("Balls") or workspace
+    
+    for _, ball in pairs(balls:GetChildren()) do
+        if ball:IsA("BasePart") and ball:getAttribute("Target") == LocalPlayer.Name then
+            local distance = (ball.Position - hrp.Position).Magnitude
+            local velocity = ball.AssemblyLinearVelocity.Magnitude
             
-            hrp.CFrame = targetBrainrot.HumanoidRootPart.CFrame + Vector3.new(0, 3, 4)
-            
-            task.wait(0.3)
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-            task.wait(0.1)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-        end
-    end
+            -- Dynamic Prediction Threshold
+            local ping = Settings.AutoPingAdjust and (LocalPlayer:GetNetworkPing() * 1000) or 50
+            local requiredDistance = Settings.HitDistance + (velocity * 0.05) + (ping * 0.1)
 
-    -- Eksekusi Auto Skill (Klik dua kali otomatis)
-    if Settings.AutoSkill then
-        TriggerSkillButton()
-    end
-
-    -- Karena fitur Instant Kill diblokir server game, kita maksimalkan di Auto Skill yang menembak terus-menerus
-    if Settings.InstantKill then
-        if targetBrainrot and targetBrainrot:FindFirstChild("Humanoid") then
-            pcall(function()
-                targetBrainrot.Humanoid.Health = 0
-            end)
+            if distance <= requiredDistance then
+                Parry()
+                break
+            end
         end
     end
 end)
