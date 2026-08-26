@@ -1,138 +1,275 @@
--- Blade Ball Auto Parry & UI Script
+--[[
+    Script Hub: Jump To Steal Soccer Players (Auto Farm Loop + Max Carry)
+]]
+
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local HttpService = game:GetService("HttpService")
-local LocalPlayer = Players.LocalPlayer
+local Player = Players.LocalPlayer
 
--- Configuration Table
-local Settings = {
-    AutoParry = false,
-    HitDistance = 15,
-    AutoPingAdjust = true,
-    ConfigFile = "BladeBall_Config.json"
-}
-
--- Load Saved Settings
-if isfile and isfile(Settings.ConfigFile) then
-    pcall(function()
-        local data = HttpService:JSONDecode(readfile(Settings.ConfigFile))
-        for k, v in pairs(data) do
-            Settings[k] = v
-        end
-    end)
+-- Hapus UI lama jika ada
+if CoreGui:FindFirstChild("SoccerStealHub") then
+    CoreGui.SoccerStealHub:Destroy()
 end
 
--- Save Settings Function
-local function SaveSettings()
-    if writefile then
-        pcall(function()
-            writefile(Settings.ConfigFile, HttpService:JSONEncode({
-                AutoParry = Settings.AutoParry,
-                HitDistance = Settings.HitDistance,
-                AutoPingAdjust = Settings.AutoPingAdjust
-            }))
-        end)
-    end
-end
-
--- Create UI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BladeBallUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Name = "SoccerStealHub"
+ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Toggle Button (Floating)
+-- Tombol Open (SC)
 local OpenBtn = Instance.new("TextButton")
-OpenBtn.Size = UDim2.new(0, 100, 0, 35)
-OpenBtn.Position = UDim2.new(0, 10, 0.4, 0)
-OpenBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenBtn.Text = "Toggle Menu"
+OpenBtn.Name = "OpenButton"
 OpenBtn.Parent = ScreenGui
+OpenBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+OpenBtn.Position = UDim2.new(0.02, 0, 0.15, 0)
+OpenBtn.Size = UDim2.new(0, 50, 0, 50)
+OpenBtn.Font = Enum.Font.SourceSansBold
+OpenBtn.Text = "SC"
+OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenBtn.TextSize = 20
 
--- Main Frame
+local OpenBtnCorner = Instance.new("UICorner")
+OpenBtnCorner.CornerRadius = UDim.new(0, 8)
+OpenBtnCorner.Parent = OpenBtn
+
+local OpenBtnStroke = Instance.new("UIStroke")
+OpenBtnStroke.Color = Color3.fromRGB(0, 162, 255)
+OpenBtnStroke.Thickness = 2
+OpenBtnStroke.Parent = OpenBtn
+
+-- Menu Utama
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 220)
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -110)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 320, 0, 440)
+MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = false
-MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(0, 162, 255)
+MainStroke.Thickness = 2
+MainStroke.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Text = "Blade Ball Auto Parry"
 Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+Title.Size = UDim2.new(0, 320, 0, 40)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "⚽ AUTO FARM LUCKY BLOCK ⚽"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
 
--- Auto Parry Toggle Button
-local AutoParryBtn = Instance.new("TextButton")
-AutoParryBtn.Size = UDim2.new(0.8, 0, 0, 35)
-AutoParryBtn.Position = UDim2.new(0.1, 0, 0.25, 0)
-AutoParryBtn.BackgroundColor3 = Settings.AutoParry and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
-AutoParryBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AutoParryBtn.Text = "Auto Parry: " .. (Settings.AutoParry and "ON" or "OFF")
-AutoParryBtn.Parent = MainFrame
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = Title
 
--- Save Config Button
-local SaveBtn = Instance.new("TextButton")
-SaveBtn.Size = UDim2.new(0.8, 0, 0, 35)
-SaveBtn.Position = UDim2.new(0.1, 0, 0.5, 0)
-SaveBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 200)
-SaveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SaveBtn.Text = "Save Settings"
-SaveBtn.Parent = MainFrame
+local TitleStroke = Instance.new("UIStroke")
+TitleStroke.Color = Color3.fromRGB(0, 162, 255)
+TitleStroke.Thickness = 1.5
+TitleStroke.Parent = Title
 
--- UI Actions
 OpenBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
-AutoParryBtn.MouseButton1Click:Connect(function()
-    Settings.AutoParry = not Settings.AutoParry
-    AutoParryBtn.Text = "Auto Parry: " .. (Settings.AutoParry and "ON" or "OFF")
-    AutoParryBtn.BackgroundColor3 = Settings.AutoParry and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
-end)
+-- Daftar Lucky Block (Sudah ditambah Japan Lucky Block)
+local blockTypes = {
+    "Common Lucky Block",
+    "Rare Lucky Block",
+    "Epic Lucky Block",
+    "Legendary Lucky Block",
+    "Mythic Lucky Block",
+    "Secret Lucky Block",
+    "OG Lucky Block",
+    "Champions Lucky Block",
+    "Spain Lucky Block",
+    "Soccer God Lucky Block",
+    "Ghost Lucky Block",
+    "Rainbow Lucky Block",
+    "Japan Lucky Block"
+}
 
-SaveBtn.MouseButton1Click:Connect(function()
-    SaveSettings()
-    SaveBtn.Text = "Saved!"
-    task.wait(1)
-    SaveBtn.Text = "Save Settings"
-end)
+local selectedFarmBlock = blockTypes[1]
+local maxCarryLimit = 1 -- Default limit bawa 1 block
+local isAutoFarmActive = false
 
--- Parry Trigger Function
-local function Parry()
-    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+local function createLabel(text, posY)
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = MainFrame
+    lbl.BackgroundTransparency = 1
+    lbl.Position = UDim2.new(0.05, 0, 0, posY)
+    lbl.Size = UDim2.new(0, 285, 0, 20)
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(0, 162, 255)
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    return lbl
 end
 
--- Ball Detection Loop
-RunService.PreRender:Connect(function()
-    if not Settings.AutoParry then return end
+-- 1. Pilihan Jenis Block untuk Auto Farm
+createLabel("Pilih Lucky Block yang mau di-Farm:", 50)
 
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    
-    local hrp = character.HumanoidRootPart
-    local balls = workspace:FindFirstChild("Balls") or workspace
-    
-    for _, ball in pairs(balls:GetChildren()) do
-        if ball:IsA("BasePart") and ball:getAttribute("Target") == LocalPlayer.Name then
-            local distance = (ball.Position - hrp.Position).Magnitude
-            local velocity = ball.AssemblyLinearVelocity.Magnitude
-            
-            -- Dynamic Prediction Threshold
-            local ping = Settings.AutoPingAdjust and (LocalPlayer:GetNetworkPing() * 1000) or 50
-            local requiredDistance = Settings.HitDistance + (velocity * 0.05) + (ping * 0.1)
+local BlockSelectBtn = Instance.new("TextButton")
+BlockSelectBtn.Parent = MainFrame
+BlockSelectBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+BlockSelectBtn.Position = UDim2.new(0.05, 0, 0, 75)
+BlockSelectBtn.Size = UDim2.new(0, 285, 0, 30)
+BlockSelectBtn.Font = Enum.Font.SourceSansBold
+BlockSelectBtn.Text = "Target: " .. selectedFarmBlock
+BlockSelectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+BlockSelectBtn.TextSize = 13
 
-            if distance <= requiredDistance then
-                Parry()
-                break
+local BBtnCorner = Instance.new("UICorner")
+BBtnCorner.CornerRadius = UDim.new(0, 6)
+BBtnCorner.Parent = BlockSelectBtn
+
+BlockSelectBtn.MouseButton1Click:Connect(function()
+    local idx = table.find(blockTypes, selectedFarmBlock)
+    if idx then
+        idx = idx + 1
+        if idx > #blockTypes then idx = 1 end
+        selectedFarmBlock = blockTypes[idx]
+        BlockSelectBtn.Text = "Target: " .. selectedFarmBlock
+    end
+end)
+
+-- 2. Pilihan Max Carry Limit (1 sampai 6)
+createLabel("Maximal Bawa Block (Upgrade / Carry Limit):", 120)
+
+local LimitBtn = Instance.new("TextButton")
+LimitBtn.Parent = MainFrame
+LimitBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+LimitBtn.Position = UDim2.new(0.05, 0, 0, 145)
+LimitBtn.Size = UDim2.new(0, 285, 0, 30)
+LimitBtn.Font = Enum.Font.SourceSansBold
+LimitBtn.Text = "Max Carry: " .. maxCarryLimit .. " Block"
+LimitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+LimitBtn.TextSize = 13
+
+local LBtnCorner = Instance.new("UICorner")
+LBtnCorner.CornerRadius = UDim.new(0, 6)
+LBtnCorner.Parent = LimitBtn
+
+LimitBtn.MouseButton1Click:Connect(function()
+    maxCarryLimit = maxCarryLimit + 1
+    if maxCarryLimit > 6 then
+        maxCarryLimit = 1
+    end
+    LimitBtn.Text = "Max Carry: " .. maxCarryLimit .. " Block"
+end)
+
+-- 3. Tombol Toggle ON/OFF Auto Farm Loop
+local ToggleFarmBtn = Instance.new("TextButton")
+ToggleFarmBtn.Parent = MainFrame
+ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+ToggleFarmBtn.Position = UDim2.new(0.05, 0, 0, 195)
+ToggleFarmBtn.Size = UDim2.new(0, 285, 0, 35)
+ToggleFarmBtn.Font = Enum.Font.SourceSansBold
+ToggleFarmBtn.Text = "Status Auto Farm: OFF"
+ToggleFarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleFarmBtn.TextSize = 14
+
+local TFBtnCorner = Instance.new("UICorner")
+TFBtnCorner.CornerRadius = UDim.new(0, 6)
+TFBtnCorner.Parent = ToggleFarmBtn
+
+ToggleFarmBtn.MouseButton1Click:Connect(function()
+    isAutoFarmActive = not isAutoFarmActive
+    if isAutoFarmActive then
+        ToggleFarmBtn.Text = "Status Auto Farm: ON 🟢"
+        ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 80)
+    else
+        ToggleFarmBtn.Text = "Status Auto Farm: OFF 🔴"
+        ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+    end
+end)
+
+-- 4. Fitur Auto Save (Background Silent Active)
+spawn(function()
+    while true do
+        pcall(function()
+            for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+                if v:IsA("RemoteEvent") and (string.lower(v.Name):find("save") or string.lower(v.Name):find("autosave")) then
+                    v:FireServer()
+                end
             end
+        end)
+        task.Wait(30)
+    end
+end)
+
+-- LOGIC UTAMA: Auto Loop Farm Teleport Block ke Base sesuai Max Limit
+task.spawn(function()
+    while true do
+        task.Wait(0.5)
+        if isAutoFarmActive then
+            pcall(function()
+                local char = Player.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                local rootPart = char.HumanoidRootPart
+                
+                local availableBlocks = {}
+                for _, obj in pairs(Workspace:GetChildren()) do
+                    if obj.Name == selectedFarmBlock then
+                        table.insert(availableBlocks, obj)
+                    end
+                end
+                
+                if #availableBlocks > 0 then
+                    local carriedCount = 0
+                    
+                    for _, block in ipairs(availableBlocks) do
+                        if carriedCount >= maxCarryLimit or not isAutoFarmActive then break end
+                        
+                        if block:IsA("Model") and block.PrimaryPart then
+                            block:SetPrimaryPartCFrame(rootPart.CFrame + Vector3.new(0, 3, 0))
+                        elseif block:IsA("BasePart") then
+                            block.CFrame = rootPart.CFrame + Vector3.new(0, 3, 0)
+                        end
+                        
+                        task.Wait(0.2)
+                        
+                        local baseDropPos = rootPart.Position + Vector3.new(0, 3, -5)
+                        if block:IsA("Model") and block.PrimaryPart then
+                            block:SetPrimaryPartCFrame(CFrame.new(baseDropPos))
+                        elseif block:IsA("BasePart") then
+                            block.CFrame = CFrame.new(baseDropPos)
+                        end
+                        
+                        carriedCount = carriedCount + 1
+                        task.Wait(0.3)
+                    end
+                end
+            end)
         end
     end
+end)
+
+-- Tombol Close
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Parent = MainFrame
+CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+CloseBtn.Position = UDim2.new(0.05, 0, 0, 390)
+CloseBtn.Size = UDim2.new(0, 285, 0, 30)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.Text = "Tutup Menu"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 13
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseBtn
+
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
 end)
