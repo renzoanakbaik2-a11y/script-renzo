@@ -1,5 +1,5 @@
 --[[
-    Script Hub: Jump To Steal Soccer Players (Safe Auto Pick Up with Base Filter)
+    Script Hub: Jump To Steal Soccer Players (Toggle SC Button & Clean UI)
 ]]
 
 local Players = game:GetService("Players")
@@ -7,7 +7,7 @@ local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local Player = Players.LocalPlayer
 
--- Hapus UI lama jika ada
+-- Hapus UI lama jika ada biar gak numpuk
 if CoreGui:FindFirstChild("SoccerStealHub") then
     CoreGui.SoccerStealHub:Destroy()
 end
@@ -17,7 +17,7 @@ ScreenGui.Name = "SoccerStealHub"
 ScreenGui.Parent = CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Tombol Open (SC) dengan pinggiran biru terang
+-- Tombol Open/Close (SC) dengan pinggiran biru terang
 local OpenBtn = Instance.new("TextButton")
 OpenBtn.Name = "OpenButton"
 OpenBtn.Parent = ScreenGui
@@ -44,7 +44,7 @@ MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 320, 0, 380)
+MainFrame.Size = UDim2.new(0, 320, 0, 340)
 MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -63,7 +63,7 @@ Title.Parent = MainFrame
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 Title.Size = UDim2.new(0, 320, 0, 40)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "⚽ SAFE AUTO PICK UP ⚽"
+Title.Text = "⚽ AUTO PICK UP HUB ⚽"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 16
 
@@ -76,11 +76,12 @@ TitleStroke.Color = Color3.fromRGB(0, 162, 255)
 TitleStroke.Thickness = 1.5
 TitleStroke.Parent = Title
 
+-- Tombol SC Berfungsi sebagai Buka / Tutup Menu Sekaligus
 OpenBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Daftar Lucky Block
+-- Daftar Lucky Block (Lengkap)
 local blockTypes = {
     "Common Lucky Block",
     "Rare Lucky Block",
@@ -99,6 +100,7 @@ local blockTypes = {
 
 local selectedPickBlock = blockTypes[1]
 local maxCarryLimit = 1
+local isAutoPickActive = false -- Status ON / OFF
 
 local function createLabel(text, posY)
     local lbl = Instance.new("TextLabel")
@@ -164,69 +166,82 @@ LimitBtn.MouseButton1Click:Connect(function()
     LimitBtn.Text = "Max Carry: " .. maxCarryLimit .. " Block"
 end)
 
--- 3. Tombol Utama: Eksekusi Pick Up Aman (Filter Area Base)
-createLabel("Tombol Aksi Otomatis:", 205)
+-- 3. Tombol ON / OFF Auto Pick Up
+createLabel("Fitur ON / OFF Auto Pick Up:", 205)
 
-local ExecPickBtn = Instance.new("TextButton")
-ExecPickBtn.Parent = MainFrame
-ExecPickBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
-ExecPickBtn.Position = UDim2.new(0.05, 0, 0, 230)
-ExecPickBtn.Size = UDim2.new(0, 285, 0, 40)
-ExecPickBtn.Font = Enum.Font.SourceSansBold
-ExecPickBtn.Text = "🚀 Mulai Pick Up Aman (Anti-Base)"
-ExecPickBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ExecPickBtn.TextSize = 14
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Parent = MainFrame
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40) -- Merah (OFF)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0, 230)
+ToggleBtn.Size = UDim2.new(0, 285, 0, 40)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Text = "Status: OFF 🔴"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 14
 
-local ECorner = Instance.new("UICorner")
-ECorner.CornerRadius = UDim.new(0, 6)
-ECorner.Parent = ExecPickBtn
+local TCorner = Instance.new("UICorner")
+TCorner.CornerRadius = UDim.new(0, 6)
+TCorner.Parent = ToggleBtn
 
-ExecPickBtn.MouseButton1Click:Connect(function()
-    task.spawn(function()
-        local char = Player.Character
-        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-        local rootPart = char.HumanoidRootPart
+ToggleBtn.MouseButton1Click:Connect(function()
+    isAutoPickActive = not isAutoPickActive
+    if isAutoPickActive then
+        ToggleBtn.Text = "Status: ON 🟢"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80) -- Hijau (ON)
+    else
+        ToggleBtn.Text = "Status: OFF 🔴"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+    end
+end)
 
-        local blocksToTake = {}
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj.Name == selectedPickBlock then
-                local targetPart = nil
-                if obj:IsA("Model") then
-                    targetPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                elseif obj:IsA("BasePart") then
-                    targetPart = obj
-                end
+-- LOGIC UTAMA: Jalan otomatis nge-pick up kalau di-ON-kan
+task.spawn(function()
+    while true do
+        task.Wait(1)
+        if isAutoPickActive then
+            pcall(function()
+                local char = Player.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                local rootPart = char.HumanoidRootPart
 
-                if targetPart then
-                    -- FILTER KEAMANAN: Hanya ambil block yang posisinya di atas (ketinggian Y > 10) 
-                    -- dan jauh dari area base bawah, sehingga block yang sudah di base aman tidak tersedot!
-                    if targetPart.Position.Y > 10 then
-                        table.insert(blocksToTake, targetPart)
+                local blocksToTake = {}
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj.Name == selectedPickBlock then
+                        local targetPart = nil
+                        if obj:IsA("Model") then
+                            targetPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                        elseif obj:IsA("BasePart") then
+                            targetPart = obj
+                        end
+
+                        -- Filter keamanan: ambil yang di atas menara (Y > 10)
+                        if targetPart and targetPart.Position.Y > 10 then
+                            table.insert(blocksToTake, targetPart)
+                        end
                     end
                 end
-            end
-        end
 
-        if #blocksToTake > 0 then
-            local carried = 0
-            for _, blockPart in ipairs(blocksToTake) do
-                if carried >= maxCarryLimit then break end
-                
-                -- Teleport block ke posisi player
-                blockPart.CFrame = rootPart.CFrame + Vector3.new(0, 3, 0)
-                task.Wait(0.2)
-                
-                -- Teleport bawa pulang melewati garis putih ke base sendiri
-                local basePos = rootPart.CFrame + Vector3.new(0, 3, -6)
-                blockPart.CFrame = basePos
-                
-                carried = carried + 1
-                task.Wait(0.3)
-            end
-        else
-            print("Lucky Block " .. selectedPickBlock .. " yang valid di atas menara tidak ditemukan!")
+                if #blocksToTake > 0 and isAutoPickActive then
+                    local carried = 0
+                    for _, blockPart in ipairs(blocksToTake) do
+                        if carried >= maxCarryLimit or not isAutoPickActive then break end
+                        
+                        -- Karakter nyamperin ke posisi lucky block
+                        rootPart.CFrame = blockPart.CFrame + Vector3.new(0, 3, 0)
+                        task.Wait(0.3)
+                        
+                        blockPart.CFrame = rootPart.CFrame + Vector3.new(0, 0, -3)
+                        task.Wait(0.2)
+                        
+                        carried = carried + 1
+                        task.Wait(0.4)
+                    end
+                else
+                    task.Wait(2)
+                end
+            end)
         end
-    end)
+    end
 end)
 
 -- Auto Save background (silent)
@@ -241,23 +256,4 @@ spawn(function()
         end)
         task.Wait(30)
     end
-end)
-
--- Tombol Tutup Menu
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Parent = MainFrame
-CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-CloseBtn.Position = UDim2.new(0.05, 0, 0, 290)
-CloseBtn.Size = UDim2.new(0, 285, 0, 32)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.Text = "Tutup Menu"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.TextSize = 13
-
-local CCorner = Instance.new("UICorner")
-CCorner.CornerRadius = UDim.new(0, 6)
-CCorner.Parent = CloseBtn
-
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
 end)
