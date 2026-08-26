@@ -1,5 +1,5 @@
 --[[
-    Script Hub: Jump To Steal Soccer Players (Toggle SC Button & Clean UI)
+    Script Hub: Jump To Steal Soccer Players (Ultimate Final Version)
 ]]
 
 local Players = game:GetService("Players")
@@ -63,7 +63,7 @@ Title.Parent = MainFrame
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 Title.Size = UDim2.new(0, 320, 0, 40)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "⚽ AUTO PICK UP HUB ⚽"
+Title.Text = "⚽ ULTIMATE AUTO PICK UP ⚽"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 16
 
@@ -81,7 +81,7 @@ OpenBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Daftar Lucky Block (Lengkap)
+-- Daftar Lucky Block Sesuai Hirarki Asli Game
 local blockTypes = {
     "Common Lucky Block",
     "Rare Lucky Block",
@@ -93,14 +93,13 @@ local blockTypes = {
     "Champions Lucky Block",
     "Spain Lucky Block",
     "Soccer God Lucky Block",
-    "Ghost Lucky Block",
-    "Rainbow Lucky Block",
+    "Icons Lucky Block",
     "Japan Lucky Block"
 }
 
 local selectedPickBlock = blockTypes[1]
 local maxCarryLimit = 1
-local isAutoPickActive = false -- Status ON / OFF
+local isAutoPickActive = false
 
 local function createLabel(text, posY)
     local lbl = Instance.new("TextLabel")
@@ -171,7 +170,7 @@ createLabel("Fitur ON / OFF Auto Pick Up:", 205)
 
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Parent = MainFrame
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40) -- Merah (OFF)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
 ToggleBtn.Position = UDim2.new(0.05, 0, 0, 230)
 ToggleBtn.Size = UDim2.new(0, 285, 0, 40)
 ToggleBtn.Font = Enum.Font.SourceSansBold
@@ -187,14 +186,14 @@ ToggleBtn.MouseButton1Click:Connect(function()
     isAutoPickActive = not isAutoPickActive
     if isAutoPickActive then
         ToggleBtn.Text = "Status: ON 🟢"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80) -- Hijau (ON)
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
     else
         ToggleBtn.Text = "Status: OFF 🔴"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
     end
 end)
 
--- LOGIC UTAMA: Jalan otomatis nge-pick up kalau di-ON-kan
+-- LOGIC UTAMA: Target langsung ke Folder Live -> Slimes -> Lucky Block -> RootPart
 task.spawn(function()
     while true do
         task.Wait(1)
@@ -204,40 +203,39 @@ task.spawn(function()
                 if not char or not char:FindFirstChild("HumanoidRootPart") then return end
                 local rootPart = char.HumanoidRootPart
 
-                local blocksToTake = {}
-                for _, obj in pairs(Workspace:GetDescendants()) do
-                    if obj.Name == selectedPickBlock then
-                        local targetPart = nil
-                        if obj:IsA("Model") then
-                            targetPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                        elseif obj:IsA("BasePart") then
-                            targetPart = obj
-                        end
-
-                        -- Filter keamanan: ambil yang di atas menara (Y > 10)
-                        if targetPart and targetPart.Position.Y > 10 then
-                            table.insert(blocksToTake, targetPart)
+                local liveFolder = Workspace:FindFirstChild("Live")
+                local slimesFolder = liveFolder and liveFolder:FindFirstChild("Slimes")
+                
+                if slimesFolder then
+                    local blocksToTake = {}
+                    for _, obj in pairs(slimesFolder:GetChildren()) do
+                        if obj.Name == selectedPickBlock then
+                            local rootBlockPart = obj:FindFirstChild("RootPart")
+                            if rootBlockPart and rootBlockPart:IsA("BasePart") then
+                                -- Filter keamanan: pastikan posisinya di atas menara (Y > 10)
+                                if rootBlockPart.Position.Y > 10 then
+                                    table.insert(blocksToTake, rootBlockPart)
+                                end
+                            end
                         end
                     end
-                end
 
-                if #blocksToTake > 0 and isAutoPickActive then
-                    local carried = 0
-                    for _, blockPart in ipairs(blocksToTake) do
-                        if carried >= maxCarryLimit or not isAutoPickActive then break end
-                        
-                        -- Karakter nyamperin ke posisi lucky block
-                        rootPart.CFrame = blockPart.CFrame + Vector3.new(0, 3, 0)
-                        task.Wait(0.3)
-                        
-                        blockPart.CFrame = rootPart.CFrame + Vector3.new(0, 0, -3)
-                        task.Wait(0.2)
-                        
-                        carried = carried + 1
-                        task.Wait(0.4)
+                    if #blocksToTake > 0 and isAutoPickActive then
+                        local carried = 0
+                        for _, blockPart in ipairs(blocksToTake) do
+                            if carried >= maxCarryLimit or not isAutoPickActive then break end
+                            
+                            -- Karakter teleport langsung mendekati RootPart lucky block di atas menara
+                            rootPart.CFrame = blockPart.CFrame + Vector3.new(0, 3, 0)
+                            task.Wait(0.3)
+                            
+                            blockPart.CFrame = rootPart.CFrame + Vector3.new(0, 0, -3)
+                            task.Wait(0.2)
+                            
+                            carried = carried + 1
+                            task.Wait(0.4)
+                        end
                     end
-                else
-                    task.Wait(2)
                 end
             end)
         end
