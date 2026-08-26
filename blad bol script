@@ -1,11 +1,10 @@
 --[[
-    Script Hub: Jump To Steal Soccer Players (Auto Farm Loop + Max Carry)
+    Script Hub: Jump To Steal Soccer Players (Safe Auto Pick Up with Base Filter)
 ]]
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
-local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 -- Hapus UI lama jika ada
@@ -18,7 +17,7 @@ ScreenGui.Name = "SoccerStealHub"
 ScreenGui.Parent = CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Tombol Open (SC)
+-- Tombol Open (SC) dengan pinggiran biru terang
 local OpenBtn = Instance.new("TextButton")
 OpenBtn.Name = "OpenButton"
 OpenBtn.Parent = ScreenGui
@@ -39,13 +38,13 @@ OpenBtnStroke.Color = Color3.fromRGB(0, 162, 255)
 OpenBtnStroke.Thickness = 2
 OpenBtnStroke.Parent = OpenBtn
 
--- Menu Utama
+-- Menu Utama (Medium, Pinggiran Biru Terang)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 320, 0, 440)
+MainFrame.Size = UDim2.new(0, 320, 0, 380)
 MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -64,7 +63,7 @@ Title.Parent = MainFrame
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 Title.Size = UDim2.new(0, 320, 0, 40)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "⚽ AUTO FARM LUCKY BLOCK ⚽"
+Title.Text = "⚽ SAFE AUTO PICK UP ⚽"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 16
 
@@ -81,7 +80,7 @@ OpenBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Daftar Lucky Block (Sudah ditambah Japan Lucky Block)
+-- Daftar Lucky Block
 local blockTypes = {
     "Common Lucky Block",
     "Rare Lucky Block",
@@ -98,9 +97,8 @@ local blockTypes = {
     "Japan Lucky Block"
 }
 
-local selectedFarmBlock = blockTypes[1]
-local maxCarryLimit = 1 -- Default limit bawa 1 block
-local isAutoFarmActive = false
+local selectedPickBlock = blockTypes[1]
+local maxCarryLimit = 1
 
 local function createLabel(text, posY)
     local lbl = Instance.new("TextLabel")
@@ -116,85 +114,122 @@ local function createLabel(text, posY)
     return lbl
 end
 
--- 1. Pilihan Jenis Block untuk Auto Farm
-createLabel("Pilih Lucky Block yang mau di-Farm:", 50)
+-- 1. Pilihan Jenis Block
+createLabel("Pilih Lucky Block yang mau di-Pick Up:", 55)
 
-local BlockSelectBtn = Instance.new("TextButton")
-BlockSelectBtn.Parent = MainFrame
-BlockSelectBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-BlockSelectBtn.Position = UDim2.new(0.05, 0, 0, 75)
-BlockSelectBtn.Size = UDim2.new(0, 285, 0, 30)
-BlockSelectBtn.Font = Enum.Font.SourceSansBold
-BlockSelectBtn.Text = "Target: " .. selectedFarmBlock
-BlockSelectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-BlockSelectBtn.TextSize = 13
+local BlockBtn = Instance.new("TextButton")
+BlockBtn.Parent = MainFrame
+BlockBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+BlockBtn.Position = UDim2.new(0.05, 0, 0, 80)
+BlockBtn.Size = UDim2.new(0, 285, 0, 32)
+BlockBtn.Font = Enum.Font.SourceSansBold
+BlockBtn.Text = "Target: " .. selectedPickBlock
+BlockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+BlockBtn.TextSize = 13
 
-local BBtnCorner = Instance.new("UICorner")
-BBtnCorner.CornerRadius = UDim.new(0, 6)
-BBtnCorner.Parent = BlockSelectBtn
+local BCorner = Instance.new("UICorner")
+BCorner.CornerRadius = UDim.new(0, 6)
+BCorner.Parent = BlockBtn
 
-BlockSelectBtn.MouseButton1Click:Connect(function()
-    local idx = table.find(blockTypes, selectedFarmBlock)
+BlockBtn.MouseButton1Click:Connect(function()
+    local idx = table.find(blockTypes, selectedPickBlock)
     if idx then
         idx = idx + 1
         if idx > #blockTypes then idx = 1 end
-        selectedFarmBlock = blockTypes[idx]
-        BlockSelectBtn.Text = "Target: " .. selectedFarmBlock
+        selectedPickBlock = blockTypes[idx]
+        BlockBtn.Text = "Target: " .. selectedPickBlock
     end
 end)
 
--- 2. Pilihan Max Carry Limit (1 sampai 6)
-createLabel("Maximal Bawa Block (Upgrade / Carry Limit):", 120)
+-- 2. Pilihan Max Carry Limit (1 - 6)
+createLabel("Maximal Bawa Pulang (Limit 1 - 6):", 130)
 
 local LimitBtn = Instance.new("TextButton")
 LimitBtn.Parent = MainFrame
 LimitBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-LimitBtn.Position = UDim2.new(0.05, 0, 0, 145)
-LimitBtn.Size = UDim2.new(0, 285, 0, 30)
+LimitBtn.Position = UDim2.new(0.05, 0, 0, 155)
+LimitBtn.Size = UDim2.new(0, 285, 0, 32)
 LimitBtn.Font = Enum.Font.SourceSansBold
 LimitBtn.Text = "Max Carry: " .. maxCarryLimit .. " Block"
 LimitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 LimitBtn.TextSize = 13
 
-local LBtnCorner = Instance.new("UICorner")
-LBtnCorner.CornerRadius = UDim.new(0, 6)
-LBtnCorner.Parent = LimitBtn
+local LCorner = Instance.new("UICorner")
+LCorner.CornerRadius = UDim.new(0, 6)
+LCorner.Parent = LimitBtn
 
 LimitBtn.MouseButton1Click:Connect(function()
     maxCarryLimit = maxCarryLimit + 1
-    if maxCarryLimit > 6 then
-        maxCarryLimit = 1
-    end
+    if maxCarryLimit > 6 then maxCarryLimit = 1 end
     LimitBtn.Text = "Max Carry: " .. maxCarryLimit .. " Block"
 end)
 
--- 3. Tombol Toggle ON/OFF Auto Farm Loop
-local ToggleFarmBtn = Instance.new("TextButton")
-ToggleFarmBtn.Parent = MainFrame
-ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
-ToggleFarmBtn.Position = UDim2.new(0.05, 0, 0, 195)
-ToggleFarmBtn.Size = UDim2.new(0, 285, 0, 35)
-ToggleFarmBtn.Font = Enum.Font.SourceSansBold
-ToggleFarmBtn.Text = "Status Auto Farm: OFF"
-ToggleFarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleFarmBtn.TextSize = 14
+-- 3. Tombol Utama: Eksekusi Pick Up Aman (Filter Area Base)
+createLabel("Tombol Aksi Otomatis:", 205)
 
-local TFBtnCorner = Instance.new("UICorner")
-TFBtnCorner.CornerRadius = UDim.new(0, 6)
-TFBtnCorner.Parent = ToggleFarmBtn
+local ExecPickBtn = Instance.new("TextButton")
+ExecPickBtn.Parent = MainFrame
+ExecPickBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+ExecPickBtn.Position = UDim2.new(0.05, 0, 0, 230)
+ExecPickBtn.Size = UDim2.new(0, 285, 0, 40)
+ExecPickBtn.Font = Enum.Font.SourceSansBold
+ExecPickBtn.Text = "🚀 Mulai Pick Up Aman (Anti-Base)"
+ExecPickBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ExecPickBtn.TextSize = 14
 
-ToggleFarmBtn.MouseButton1Click:Connect(function()
-    isAutoFarmActive = not isAutoFarmActive
-    if isAutoFarmActive then
-        ToggleFarmBtn.Text = "Status Auto Farm: ON 🟢"
-        ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 80)
-    else
-        ToggleFarmBtn.Text = "Status Auto Farm: OFF 🔴"
-        ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
-    end
+local ECorner = Instance.new("UICorner")
+ECorner.CornerRadius = UDim.new(0, 6)
+ECorner.Parent = ExecPickBtn
+
+ExecPickBtn.MouseButton1Click:Connect(function()
+    task.spawn(function()
+        local char = Player.Character
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+        local rootPart = char.HumanoidRootPart
+
+        local blocksToTake = {}
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj.Name == selectedPickBlock then
+                local targetPart = nil
+                if obj:IsA("Model") then
+                    targetPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                elseif obj:IsA("BasePart") then
+                    targetPart = obj
+                end
+
+                if targetPart then
+                    -- FILTER KEAMANAN: Hanya ambil block yang posisinya di atas (ketinggian Y > 10) 
+                    -- dan jauh dari area base bawah, sehingga block yang sudah di base aman tidak tersedot!
+                    if targetPart.Position.Y > 10 then
+                        table.insert(blocksToTake, targetPart)
+                    end
+                end
+            end
+        end
+
+        if #blocksToTake > 0 then
+            local carried = 0
+            for _, blockPart in ipairs(blocksToTake) do
+                if carried >= maxCarryLimit then break end
+                
+                -- Teleport block ke posisi player
+                blockPart.CFrame = rootPart.CFrame + Vector3.new(0, 3, 0)
+                task.Wait(0.2)
+                
+                -- Teleport bawa pulang melewati garis putih ke base sendiri
+                local basePos = rootPart.CFrame + Vector3.new(0, 3, -6)
+                blockPart.CFrame = basePos
+                
+                carried = carried + 1
+                task.Wait(0.3)
+            end
+        else
+            print("Lucky Block " .. selectedPickBlock .. " yang valid di atas menara tidak ditemukan!")
+        end
+    end)
 end)
 
--- 4. Fitur Auto Save (Background Silent Active)
+-- Auto Save background (silent)
 spawn(function()
     while true do
         pcall(function()
@@ -208,67 +243,20 @@ spawn(function()
     end
 end)
 
--- LOGIC UTAMA: Auto Loop Farm Teleport Block ke Base sesuai Max Limit
-task.spawn(function()
-    while true do
-        task.Wait(0.5)
-        if isAutoFarmActive then
-            pcall(function()
-                local char = Player.Character
-                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-                local rootPart = char.HumanoidRootPart
-                
-                local availableBlocks = {}
-                for _, obj in pairs(Workspace:GetChildren()) do
-                    if obj.Name == selectedFarmBlock then
-                        table.insert(availableBlocks, obj)
-                    end
-                end
-                
-                if #availableBlocks > 0 then
-                    local carriedCount = 0
-                    
-                    for _, block in ipairs(availableBlocks) do
-                        if carriedCount >= maxCarryLimit or not isAutoFarmActive then break end
-                        
-                        if block:IsA("Model") and block.PrimaryPart then
-                            block:SetPrimaryPartCFrame(rootPart.CFrame + Vector3.new(0, 3, 0))
-                        elseif block:IsA("BasePart") then
-                            block.CFrame = rootPart.CFrame + Vector3.new(0, 3, 0)
-                        end
-                        
-                        task.Wait(0.2)
-                        
-                        local baseDropPos = rootPart.Position + Vector3.new(0, 3, -5)
-                        if block:IsA("Model") and block.PrimaryPart then
-                            block:SetPrimaryPartCFrame(CFrame.new(baseDropPos))
-                        elseif block:IsA("BasePart") then
-                            block.CFrame = CFrame.new(baseDropPos)
-                        end
-                        
-                        carriedCount = carriedCount + 1
-                        task.Wait(0.3)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- Tombol Close
+-- Tombol Tutup Menu
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Parent = MainFrame
 CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-CloseBtn.Position = UDim2.new(0.05, 0, 0, 390)
-CloseBtn.Size = UDim2.new(0, 285, 0, 30)
+CloseBtn.Position = UDim2.new(0.05, 0, 0, 290)
+CloseBtn.Size = UDim2.new(0, 285, 0, 32)
 CloseBtn.Font = Enum.Font.SourceSansBold
 CloseBtn.Text = "Tutup Menu"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.TextSize = 13
 
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
-CloseCorner.Parent = CloseBtn
+local CCorner = Instance.new("UICorner")
+CCorner.CornerRadius = UDim.new(0, 6)
+CCorner.Parent = CloseBtn
 
 CloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
