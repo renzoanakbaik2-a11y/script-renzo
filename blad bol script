@@ -1,5 +1,5 @@
 --[[
-    Script Hub: Jump To Steal Soccer Players (Ultimate Final Version)
+    Script Hub: Jump To Safe Final Version (Anti-Error / Nil Value Fix)
 ]]
 
 local Players = game:GetService("Players")
@@ -63,7 +63,7 @@ Title.Parent = MainFrame
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 Title.Size = UDim2.new(0, 320, 0, 40)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "⚽ ULTIMATE AUTO PICK UP ⚽"
+Title.Text = "⚽ SAFE AUTO PULL HUB ⚽"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 16
 
@@ -81,7 +81,7 @@ OpenBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Daftar Lucky Block Sesuai Hirarki Asli Game
+-- Daftar Lucky Block Sesuai Hirarki Game
 local blockTypes = {
     "Common Lucky Block",
     "Rare Lucky Block",
@@ -116,7 +116,7 @@ local function createLabel(text, posY)
 end
 
 -- 1. Pilihan Jenis Block
-createLabel("Pilih Lucky Block yang mau di-Pick Up:", 55)
+createLabel("Pilih Lucky Block yang mau ditarik:", 55)
 
 local BlockBtn = Instance.new("TextButton")
 BlockBtn.Parent = MainFrame
@@ -143,7 +143,7 @@ BlockBtn.MouseButton1Click:Connect(function()
 end)
 
 -- 2. Pilihan Max Carry Limit (1 - 6)
-createLabel("Maximal Bawa Pulang (Limit 1 - 6):", 130)
+createLabel("Maximal Tarik (Limit 1 - 6):", 130)
 
 local LimitBtn = Instance.new("TextButton")
 LimitBtn.Parent = MainFrame
@@ -165,8 +165,8 @@ LimitBtn.MouseButton1Click:Connect(function()
     LimitBtn.Text = "Max Carry: " .. maxCarryLimit .. " Block"
 end)
 
--- 3. Tombol ON / OFF Auto Pick Up
-createLabel("Fitur ON / OFF Auto Pick Up:", 205)
+-- 3. Tombol ON / OFF Tarik Block Otomatis
+createLabel("Fitur ON / OFF Tarik Block:", 205)
 
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Parent = MainFrame
@@ -193,48 +193,46 @@ ToggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- LOGIC UTAMA: Target langsung ke Folder Live -> Slimes -> Lucky Block -> RootPart
+-- LOGIC UTAMA DENGAN SAFETY CHECK (Anti Nil Value Error)
 task.spawn(function()
     while true do
         task.Wait(1)
         if isAutoPickActive then
             pcall(function()
                 local char = Player.Character
-                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-                local rootPart = char.HumanoidRootPart
+                if not char then return end
+                local rootPart = char:FindFirstChild("HumanoidRootPart")
+                if not rootPart then return end
 
                 local liveFolder = Workspace:FindFirstChild("Live")
-                local slimesFolder = liveFolder and liveFolder:FindFirstChild("Slimes")
+                if not liveFolder then return end
                 
-                if slimesFolder then
-                    local blocksToTake = {}
-                    for _, obj in pairs(slimesFolder:GetChildren()) do
-                        if obj.Name == selectedPickBlock then
-                            local rootBlockPart = obj:FindFirstChild("RootPart")
-                            if rootBlockPart and rootBlockPart:IsA("BasePart") then
-                                -- Filter keamanan: pastikan posisinya di atas menara (Y > 10)
-                                if rootBlockPart.Position.Y > 10 then
-                                    table.insert(blocksToTake, rootBlockPart)
-                                end
+                local slimesFolder = liveFolder:FindFirstChild("Slimes")
+                if not slimesFolder then return end
+                
+                local blocksToPull = {}
+                for _, obj in pairs(slimesFolder:GetChildren()) do
+                    if obj.Name == selectedPickBlock then
+                        local rootBlockPart = obj:FindFirstChild("RootPart")
+                        if rootBlockPart and rootBlockPart:IsA("BasePart") then
+                            -- Pastikan posisinya di atas menara (Y > 10)
+                            if rootBlockPart.Position.Y > 10 then
+                                table.insert(blocksToPull, rootBlockPart)
                             end
                         end
                     end
+                end
 
-                    if #blocksToTake > 0 and isAutoPickActive then
-                        local carried = 0
-                        for _, blockPart in ipairs(blocksToTake) do
-                            if carried >= maxCarryLimit or not isAutoPickActive then break end
-                            
-                            -- Karakter teleport langsung mendekati RootPart lucky block di atas menara
-                            rootPart.CFrame = blockPart.CFrame + Vector3.new(0, 3, 0)
-                            task.Wait(0.3)
-                            
-                            blockPart.CFrame = rootPart.CFrame + Vector3.new(0, 0, -3)
-                            task.Wait(0.2)
-                            
-                            carried = carried + 1
-                            task.Wait(0.4)
-                        end
+                if #blocksToPull > 0 and isAutoPickActive then
+                    local pulled = 0
+                    for _, blockPart in ipairs(blocksToPull) do
+                        if pulled >= maxCarryLimit or not isAutoPickActive then break end
+                        
+                        -- Tarik block langsung ke depan karakter (area base / garis putih)
+                        blockPart.CFrame = rootPart.CFrame + Vector3.new(0, 3, -5)
+                        
+                        pulled = pulled + 1
+                        task.Wait(0.5)
                     end
                 end
             end)
