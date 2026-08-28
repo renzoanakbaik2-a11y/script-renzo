@@ -1,255 +1,194 @@
---[[
-    Script Hub: Jump To Safe Final Version (Anti-Error / Nil Value Fix)
-]]
+-- =================================================================
+-- ADVANCED AI COMMAND CENTER (BLUE THEME + TOGGLE + AUTO LOOP)
+-- =================================================================
 
 local Players = game:GetService("Players")
+local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
-local CoreGui = game:GetService("CoreGui")
-local Player = Players.LocalPlayer
 
--- Hapus UI lama jika ada biar gak numpuk
-if CoreGui:FindFirstChild("SoccerStealHub") then
-    CoreGui.SoccerStealHub:Destroy()
-end
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
+local isLooping = false
+local currentCommand = ""
+
+-- 1. MEMBUAT GUI UTAMA
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SoccerStealHub"
-ScreenGui.Parent = CoreGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
 
--- Tombol Open/Close (SC) dengan pinggiran biru terang
-local OpenBtn = Instance.new("TextButton")
-OpenBtn.Name = "OpenButton"
-OpenBtn.Parent = ScreenGui
-OpenBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-OpenBtn.Position = UDim2.new(0.02, 0, 0.15, 0)
-OpenBtn.Size = UDim2.new(0, 50, 0, 50)
-OpenBtn.Font = Enum.Font.SourceSansBold
-OpenBtn.Text = "SC"
-OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenBtn.TextSize = 20
+-- Tombol Open/Close Menu (Toggle Button)
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.Size = UDim2.new(0, 80, 0, 30)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 10)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Text = "MENU AI"
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.TextSize = 14
 
-local OpenBtnCorner = Instance.new("UICorner")
-OpenBtnCorner.CornerRadius = UDim.new(0, 8)
-OpenBtnCorner.Parent = OpenBtn
-
-local OpenBtnStroke = Instance.new("UIStroke")
-OpenBtnStroke.Color = Color3.fromRGB(0, 162, 255)
-OpenBtnStroke.Thickness = 2
-OpenBtnStroke.Parent = OpenBtn
-
--- Menu Utama (Medium, Pinggiran Biru Terang)
+-- Frame Menu Utama
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 320, 0, 340)
-MainFrame.Visible = false
+MainFrame.Size = UDim2.new(0, 280, 0, 210)
+MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
+-- Pinggiran Warna Biru (UI Stroke)
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Parent = MainFrame
+UIStroke.Color = Color3.fromRGB(0, 150, 255) -- Warna Biru
+UIStroke.Thickness = 2
 
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(0, 162, 255)
-MainStroke.Thickness = 2
-MainStroke.Parent = MainFrame
-
+-- Title Label
 local Title = Instance.new("TextLabel")
 Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-Title.Size = UDim2.new(0, 320, 0, 40)
-Title.Font = Enum.Font.SourceSansBold
-Title.Text = "⚽ SAFE AUTO PULL HUB ⚽"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+Title.Text = "ROBLOX AI CONTROLLER"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 14
 
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 10)
-TitleCorner.Parent = Title
+-- Input Box Perintah
+local TextBox = Instance.new("TextBox")
+TextBox.Parent = MainFrame
+TextBox.PlaceholderText = "Ketik perintah AI (misal: ambil Coin)..."
+TextBox.Size = UDim2.new(0, 260, 0, 35)
+TextBox.Position = UDim2.new(0, 10, 0, 40)
+TextBox.Text = ""
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 
-local TitleStroke = Instance.new("UIStroke")
-TitleStroke.Color = Color3.fromRGB(0, 162, 255)
-TitleStroke.Thickness = 1.5
-TitleStroke.Parent = Title
+-- Tombol Eksekusi
+local SubmitBtn = Instance.new("TextButton")
+SubmitBtn.Parent = MainFrame
+SubmitBtn.Text = "JALANKAN PERINTAH"
+SubmitBtn.Size = UDim2.new(0, 260, 0, 30)
+SubmitBtn.Position = UDim2.new(0, 10, 0, 85)
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitBtn.Font = Enum.Font.SourceSansBold
 
--- Tombol SC Berfungsi sebagai Buka / Tutup Menu Sekaligus
-OpenBtn.MouseButton1Click:Connect(function()
+-- Tombol Auto Loop
+local LoopBtn = Instance.new("TextButton")
+LoopBtn.Parent = MainFrame
+LoopBtn.Text = "AUTO LOOP: OFF"
+LoopBtn.Size = UDim2.new(0, 260, 0, 30)
+LoopBtn.Position = UDim2.new(0, 10, 0, 125)
+LoopBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+LoopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoopBtn.Font = Enum.Font.SourceSansBold
+
+-- Status AI Label
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Parent = MainFrame
+StatusLabel.Text = "Status: AI Ready"
+StatusLabel.Size = UDim2.new(0, 260, 0, 20)
+StatusLabel.Position = UDim2.new(0, 10, 0, 165)
+StatusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.TextSize = 12
+
+-- 2. TOGGLE OPEN/CLOSE MENU
+ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Daftar Lucky Block Sesuai Hirarki Game
-local blockTypes = {
-    "Common Lucky Block",
-    "Rare Lucky Block",
-    "Epic Lucky Block",
-    "Legendary Lucky Block",
-    "Mythic Lucky Block",
-    "Secret Lucky Block",
-    "OG Lucky Block",
-    "Champions Lucky Block",
-    "Spain Lucky Block",
-    "Soccer God Lucky Block",
-    "Icons Lucky Block",
-    "Japan Lucky Block"
-}
+-- 3. FUNGSI LOGIKA PERGERAKAN & PATHFINDING
+local function jalanKeTarget(targetPos)
+    local path = PathfindingService:CreatePath({
+        AgentRadius = 2,
+        AgentHeight = 5,
+        AgentCanJump = true
+    })
 
-local selectedPickBlock = blockTypes[1]
-local maxCarryLimit = 1
-local isAutoPickActive = false
+    local success, _ = pcall(function()
+        path:ComputeAsync(HumanoidRootPart.Position, targetPos)
+    end)
 
-local function createLabel(text, posY)
-    local lbl = Instance.new("TextLabel")
-    lbl.Parent = MainFrame
-    lbl.BackgroundTransparency = 1
-    lbl.Position = UDim2.new(0.05, 0, 0, posY)
-    lbl.Size = UDim2.new(0, 285, 0, 20)
-    lbl.Font = Enum.Font.SourceSansBold
-    lbl.Text = text
-    lbl.TextColor3 = Color3.fromRGB(0, 162, 255)
-    lbl.TextSize = 13
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    return lbl
+    if success and path.Status == Enum.PathStatus.Success then
+        for _, waypoint in ipairs(path:GetWaypoints()) do
+            if not isLooping and currentCommand == "" then break end
+            if waypoint.Action == Enum.PathWaypointAction.Jump then
+                Humanoid.Jump = true
+            end
+            Humanoid:MoveTo(waypoint.Position)
+            Humanoid.MoveToFinished:Wait()
+        end
+    else
+        Humanoid:MoveTo(targetPos)
+    end
 end
 
--- 1. Pilihan Jenis Block
-createLabel("Pilih Lucky Block yang mau ditarik:", 55)
-
-local BlockBtn = Instance.new("TextButton")
-BlockBtn.Parent = MainFrame
-BlockBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-BlockBtn.Position = UDim2.new(0.05, 0, 0, 80)
-BlockBtn.Size = UDim2.new(0, 285, 0, 32)
-BlockBtn.Font = Enum.Font.SourceSansBold
-BlockBtn.Text = "Target: " .. selectedPickBlock
-BlockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-BlockBtn.TextSize = 13
-
-local BCorner = Instance.new("UICorner")
-BCorner.CornerRadius = UDim.new(0, 6)
-BCorner.Parent = BlockBtn
-
-BlockBtn.MouseButton1Click:Connect(function()
-    local idx = table.find(blockTypes, selectedPickBlock)
-    if idx then
-        idx = idx + 1
-        if idx > #blockTypes then idx = 1 end
-        selectedPickBlock = blockTypes[idx]
-        BlockBtn.Text = "Target: " .. selectedPickBlock
-    end
-end)
-
--- 2. Pilihan Max Carry Limit (1 - 6)
-createLabel("Maximal Tarik (Limit 1 - 6):", 130)
-
-local LimitBtn = Instance.new("TextButton")
-LimitBtn.Parent = MainFrame
-LimitBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-LimitBtn.Position = UDim2.new(0.05, 0, 0, 155)
-LimitBtn.Size = UDim2.new(0, 285, 0, 32)
-LimitBtn.Font = Enum.Font.SourceSansBold
-LimitBtn.Text = "Max Carry: " .. maxCarryLimit .. " Block"
-LimitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-LimitBtn.TextSize = 13
-
-local LCorner = Instance.new("UICorner")
-LCorner.CornerRadius = UDim.new(0, 6)
-LCorner.Parent = LimitBtn
-
-LimitBtn.MouseButton1Click:Connect(function()
-    maxCarryLimit = maxCarryLimit + 1
-    if maxCarryLimit > 6 then maxCarryLimit = 1 end
-    LimitBtn.Text = "Max Carry: " .. maxCarryLimit .. " Block"
-end)
-
--- 3. Tombol ON / OFF Tarik Block Otomatis
-createLabel("Fitur ON / OFF Tarik Block:", 205)
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Parent = MainFrame
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-ToggleBtn.Position = UDim2.new(0.05, 0, 0, 230)
-ToggleBtn.Size = UDim2.new(0, 285, 0, 40)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Text = "Status: OFF 🔴"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 14
-
-local TCorner = Instance.new("UICorner")
-TCorner.CornerRadius = UDim.new(0, 6)
-TCorner.Parent = ToggleBtn
-
-ToggleBtn.MouseButton1Click:Connect(function()
-    isAutoPickActive = not isAutoPickActive
-    if isAutoPickActive then
-        ToggleBtn.Text = "Status: ON 🟢"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
-    else
-        ToggleBtn.Text = "Status: OFF 🔴"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-    end
-end)
-
--- LOGIC UTAMA DENGAN SAFETY CHECK (Anti Nil Value Error)
-task.spawn(function()
-    while true do
-        task.Wait(1)
-        if isAutoPickActive then
-            pcall(function()
-                local char = Player.Character
-                if not char then return end
-                local rootPart = char:FindFirstChild("HumanoidRootPart")
-                if not rootPart then return end
-
-                local liveFolder = Workspace:FindFirstChild("Live")
-                if not liveFolder then return end
-                
-                local slimesFolder = liveFolder:FindFirstChild("Slimes")
-                if not slimesFolder then return end
-                
-                local blocksToPull = {}
-                for _, obj in pairs(slimesFolder:GetChildren()) do
-                    if obj.Name == selectedPickBlock then
-                        local rootBlockPart = obj:FindFirstChild("RootPart")
-                        if rootBlockPart and rootBlockPart:IsA("BasePart") then
-                            -- Pastikan posisinya di atas menara (Y > 10)
-                            if rootBlockPart.Position.Y > 10 then
-                                table.insert(blocksToPull, rootBlockPart)
-                            end
-                        end
-                    end
-                end
-
-                if #blocksToPull > 0 and isAutoPickActive then
-                    local pulled = 0
-                    for _, blockPart in ipairs(blocksToPull) do
-                        if pulled >= maxCarryLimit or not isAutoPickActive then break end
-                        
-                        -- Tarik block langsung ke depan karakter (area base / garis putih)
-                        blockPart.CFrame = rootPart.CFrame + Vector3.new(0, 3, -5)
-                        
-                        pulled = pulled + 1
-                        task.Wait(0.5)
-                    end
-                end
-            end)
+-- 4. PROCESS PERINTAH AI
+local function eksekusiAI(cmd)
+    local perintah = string.lower(cmd)
+    
+    if string.find(perintah, "ambil") or string.find(perintah, "cari") then
+        local targetName = string.gsub(perintah, "ambil ", "")
+        targetName = string.gsub(targetName, "cari ", "")
+        
+        local ditemuin = false
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if (obj:IsA("BasePart") or obj:IsA("Model") or obj:IsA("Tool")) and string.find(string.lower(obj.Name), targetName) then
+                ditemuin = true
+                StatusLabel.Text = "AI: Bergerak ke " .. obj.Name
+                local pos = obj:IsA("Model") and obj:GetPivot().Position or obj.Position
+                jalanKeTarget(pos)
+                break
+            end
         end
+        if not ditemuin then
+            StatusLabel.Text = "AI: Item '" .. targetName .. "' tidak ada!"
+        end
+    elseif string.find(perintah, "ikuti") or string.find(perintah, "follow") then
+        local targetPlayer = string.gsub(perintah, "ikuti ", "")
+        targetPlayer = string.gsub(targetPlayer, "follow ", "")
+        
+        for _, p in ipairs(Players:GetPlayers()) do
+            if string.find(string.lower(p.Name), targetPlayer) and p.Character then
+                StatusLabel.Text = "AI: Mengikuti " .. p.Name
+                jalanKeTarget(p.Character.HumanoidRootPart.Position)
+                break
+            end
+        end
+    else
+        StatusLabel.Text = "AI: Perintah tidak dikenali!"
+    end
+end
+
+-- 5. TRIGGER & AUTO-LOOPING THREAD
+SubmitBtn.MouseButton1Click:Connect(function()
+    currentCommand = TextBox.Text
+    if currentCommand ~= "" then
+        task.spawn(function()
+            eksekusiAI(currentCommand)
+        end)
     end
 end)
 
--- Auto Save background (silent)
-spawn(function()
-    while true do
-        pcall(function()
-            for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
-                if v:IsA("RemoteEvent") and (string.lower(v.Name):find("save") or string.lower(v.Name):find("autosave")) then
-                    v:FireServer()
+LoopBtn.MouseButton1Click:Connect(function()
+    isLooping = not isLooping
+    if isLooping then
+        LoopBtn.Text = "AUTO LOOP: ON"
+        LoopBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 80)
+        
+        task.spawn(function()
+            while isLooping do
+                if currentCommand ~= "" then
+                    eksekusiAI(currentCommand)
                 end
+                task.wait(1) -- Jeda loop agar game tidak lag/crash
             end
         end)
-        task.Wait(30)
+    else
+        LoopBtn.Text = "AUTO LOOP: OFF"
+        LoopBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
     end
 end)
