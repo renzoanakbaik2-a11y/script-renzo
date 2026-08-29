@@ -6,7 +6,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- 1. Buat ScreenGui Utama di Layar Delta
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AutoHopGrowAGardenFixed"
+screenGui.Name = "AutoHopGrowAGardenAccurate"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
@@ -48,20 +48,20 @@ frameStroke.Parent = mainFrame
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 35)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Grow a Garden (Anti-Fake)"
+titleLabel.Text = "Grow a Garden (Accurate Path)"
 titleLabel.TextColor3 = Color3.fromRGB(80, 255, 80)
-titleLabel.TextSize = 14
+titleLabel.TextSize = 13
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = mainFrame
 
--- 4. Kotak Input Teks Target Bunga
+-- 4. Kotak Input Teks Target Bunga/Seed
 local textBox = Instance.new("TextBox")
 textBox.Name = "TextBox"
 textBox.Size = UDim2.new(1, -30, 0, 45)
 textBox.Position = UDim2.new(0, 15, 0, 45)
 textBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-textBox.PlaceholderText = "Ketik bunga (cth: Mawar, Melati)"
+textBox.PlaceholderText = "Ketik seed/bunga (cth: Tomato, Rose)"
 textBox.Text = ""
 textBox.TextSize = 13
 textBox.Font = Enum.Font.Gotham
@@ -126,7 +126,7 @@ local notifDesc = Instance.new("TextLabel")
 notifDesc.Size = UDim2.new(1, -20, 0, 50)
 notifDesc.Position = UDim2.new(0, 10, 0, 50)
 notifDesc.BackgroundTransparency = 1
-notifDesc.Text = "Cek ESP warna hijau di sekitar map!"
+notifDesc.Text = "Cek ESP warna hijau di area farm!"
 notifDesc.TextColor3 = Color3.fromRGB(255, 255, 255)
 notifDesc.TextSize = 13
 notifDesc.Font = Enum.Font.Gotham
@@ -135,7 +135,7 @@ notifDesc.Parent = notifBanner
 
 local isSearching = false
 
--- Fungsi ESP
+-- Fungsi ESP Khusus Objek Tepat di Folder Target
 local function applyESP(targetObj, displayName)
     pcall(function()
         if targetObj:FindFirstChild("TargetESP") then
@@ -166,7 +166,7 @@ local function applyESP(targetObj, displayName)
         local textLabel = Instance.new("TextLabel")
         textLabel.Size = UDim2.new(1, 0, 1, 0)
         textLabel.BackgroundTransparency = 1
-        textLabel.Text = "[ TARGET: " .. displayName .. " ]"
+        textLabel.Text = "[ " .. displayName .. " ]"
         textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
         textLabel.TextStrokeTransparency = 0
         textLabel.TextSize = 14
@@ -176,7 +176,7 @@ local function applyESP(targetObj, displayName)
 end
 
 local function showNotification(targetName)
-    notifDesc.Text = "Bunga '" .. targetName .. "' berhasil ditemukan! ESP diaktifkan."
+    notifDesc.Text = "Seed/Bunga '" .. targetName .. "' ada di folder farm! Auto hop berhenti."
     notifBanner.Visible = true
     
     pcall(function()
@@ -188,29 +188,27 @@ local function showNotification(targetName)
     end)
 end
 
--- Fungsi Pengecekan Target yang Difilter (Anti-Fake Part)
+-- Fungsi Pengecekan Khusus Berdasarkan Jalur Folder di Gambar
 local function checkTargetFound(targets)
-    -- Daftar nama umum/sistem yang WAJIB diabaikan agar tidak salah deteksi
-    local blacklist = {"basepart", "model", "part", "workspace", "camera", "terrain", "spawnlocation", "meshpart"}
+    -- Ambil jalur spesifik sesuai hirarki folder di gambar: Workspace -> Farm -> Farm -> Important
+    local targetFolder = workspace:FindFirstChild("Farm") 
+    and workspace.Farm:FindFirstChild("Farm") 
+    and workspace.Farm.Farm:FindFirstChild("Important")
+
+    if not targetFolder then
+        -- Fallback kalau struktur foldernya sedikit berbeda, cari manual di Workspace
+        targetFolder = workspace
+    end
 
     for _, targetName in ipairs(targets) do
         targetName = targetName:gsub("^%s*(.-)%s*$", ""):lower()
         
-        for _, obj in ipairs(workspace:GetDescendants()) do
+        -- Hanya scan objek yang ada di dalam jalur folder penting tersebut
+        for _, obj in ipairs(targetFolder:GetDescendants()) do
             local objNameLower = string.lower(obj.Name)
             
-            -- Pastikan objek bukan bagian dari blacklist sistem game
-            local isBlacklisted = false
-            for _, blackWord in ipairs(blacklist) do
-                if objNameLower == blackWord then
-                    isBlacklisted = true
-                    break
-                end
-            end
-            
-            -- Cek hanya jika nama objek mengandung target dan lolos filter blacklist
-            if not isBlacklisted and objNameLower:find(targetName) then
-                -- Pastikan objek tersebut berupa model atau part fisik yang valid (bukan folder kosong)
+            if objNameLower:find(targetName) then
+                -- Pastikan objek tersebut berupa model atau part tanaman/seed yang valid
                 if obj:IsA("BasePart") or obj:IsA("Model") then
                     applyESP(obj, obj.Name)
                     return true, obj.Name
@@ -280,7 +278,7 @@ toggleButton.MouseButton1Click:Connect(function()
         end
         
         task.spawn(function()
-            task.wait(3) -- Jeda loading server
+            task.wait(4) -- Jeda loading server baru
             
             while isSearching do
                 local found, name = checkTargetFound(targets)
@@ -294,7 +292,7 @@ toggleButton.MouseButton1Click:Connect(function()
                     showNotification(name)
                     break
                 else
-                    print("Target tidak ditemukan, pindah server...")
+                    print("Target tidak ada di folder farm, pindah server...")
                     safeServerHop()
                     task.wait(15)
                 end
