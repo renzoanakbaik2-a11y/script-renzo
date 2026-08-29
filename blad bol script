@@ -17,11 +17,11 @@ if openCloseButton and openCloseButton:IsA("TextButton") then
     end)
 end
 
--- Bikin elemen Pop-up Banner Notifikasi ala WA secara otomatis di dalam ScreenGui
+-- Bikin elemen Pop-up Banner Notifikasi ala WA
 local notifBanner = Instance.new("Frame")
 notifBanner.Name = "WhatsAppStyleNotif"
 notifBanner.Size = UDim2.new(0, 350, 0, 120)
-notifBanner.Position = UDim2.new(0.5, -175, 0.2, -60) -- Posisi di tengah atas layar
+notifBanner.Position = UDim2.new(0.5, -175, 0.2, -60)
 notifBanner.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 notifBanner.BorderSizePixel = 0
 notifBanner.Visible = false
@@ -60,14 +60,7 @@ notifDesc.Parent = notifBanner
 
 local isSearching = false
 
--- Cek apakah kita baru saja pindah server dan membawa data sebelumnya (TeleportData)
-local teleportData = TeleportService:GetLocalPlayerTeleportData()
-if teleportData and teleportData.savedTargets then
-    textBox.Text = teleportData.savedTargets
-    isSearching = true
-end
-
--- Fungsi buat nampilin Banner Pop-up ala WA di layar
+-- Fungsi Notifikasi Pop-up & Suara
 local function showWhatsAppNotification(targetName)
     notifDesc.Text = "Seed/Bunga '" .. targetName .. "' ada di server ini. Auto hop dihentikan!"
     notifBanner.Visible = true
@@ -81,7 +74,7 @@ local function showWhatsAppNotification(targetName)
     end)
 end
 
--- Fungsi buat ngecek target bunga
+-- Fungsi Pengecekan Target di Server
 local function checkTargetFound(targets)
     for _, targetName in ipairs(targets) do
         targetName = targetName:gsub("^%s*(.-)%s*$", ""):lower()
@@ -97,91 +90,43 @@ local function checkTargetFound(targets)
     return false
 end
 
--- Fungsi server hop dengan membawa data teks target
-local function serverHop(currentTargetsText)
-    local success, err = pcall(function()
+-- Fungsi Server Hop Aman untuk Executor Delta (Tanpa HttpService yang sering diblock)
+local function safeServerHop()
+    pcall(function()
+        -- Menggunakan metode server hop alternatif yang aman di mobile executor
         local servers = {}
-        local cursor = ""
+        local req = request or syn and syn.request or http and http.request
         
-        repeat
-            local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-            if cursor ~= "" then
-                url = url .. "&cursor=" .. cursor
-            end
+        if req then
+            local success, res = pcall(function()
+                return req({
+                    Url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100",
+                    Method = "GET"
+                })
+            end)
             
-            local response = HttpService:JSONDecode(game:HttpGet(url))
-            cursor = response.nextPageCursor
-            
-            for _, s in ipairs(response.data) do
-                if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                    table.insert(servers, s.id)
+            if success and res and res.Body then
+                local data = HttpService:JSONDecode(res.Body)
+                if data and data.data then
+                    for _, s in ipairs(data.data) do
+                        if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                            table.insert(servers, s.id)
+                        end
+                    end
                 end
             end
-        until cursor == nil or #servers > 0
-        
-        -- Siapkan data untuk dikirim ke server tujuan
-        local teleportOptions = Instance.new("TeleportOptions")
-        teleportOptions:SetTeleportData({savedTargets = currentTargetsText})
+        end
         
         if #servers > 0 then
-            local randomServerId = servers[math.random(1, #servers)]
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, player, teleportOptions)
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], player)
         else
-            TeleportService:TeleportAsync(game.PlaceId, {player}, teleportOptions)
-        end
-    end)
-    
-    if not success then
-        warn("Gagal server hop, mencoba lagi...", err)
-        task.wait(2)
-        serverHop(currentTargetsText)
-    end
-end
-
--- Eksekusi otomatis jika data teleport ada (artinya lanjut AFK dari server sebelumnya)
-if isSearching then
-    toggleButton.Text = "Status: AFK Mencari... (Klik Stop)"
-    toggleButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-    
-    task.spawn(function()
-        -- Jeda sedikit untuk menunggu game selesai loading sempurna di server baru
-        task.wait(5)
-        
-        while isSearching do
-            local rawText = textBox.Text
-            local targets = {}
-            for match in string.gmatch(rawText, "[^,%s]+") do
-                table.insert(targets, match)
-            end
-            
-            if #targets == 0 then
-                isSearching = false
-                toggleButton.Text = "Start Auto Hop"
-                toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
-                break
-            end
-            
-            local found, name = checkTargetFound(targets)
-            
-            if found then
-                print("TARGET KETEMU: " .. name .. "! Auto hop dihentikan.")
-                isSearching = false
-                toggleButton.Text = "Target Ketemu! (" .. name .. ")"
-                toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
-                showWhatsAppNotification(name)
-                break
-            else
-                print("Target tidak ada, pindah server...")
-                serverHop(rawText)
-                task.wait(15) -- Jeda waktu pindah
-            end
-            
-            task.wait(3)
+            -- Fallback teleport biasa kalau list kosong
+            TeleportService:Teleport(game.PlaceId, player)
         end
     end)
 end
 
--- Tombol Start / Stop manual
+-- Tombol Start / Stop Manual & Loop AFK
 toggleButton.MouseButton1Click:Connect(function()
     isSearching = not isSearching
     
@@ -204,6 +149,9 @@ toggleButton.MouseButton1Click:Connect(function()
         end
         
         task.spawn(function()
+            -- Jeda loading awal di server
+            task.wait(3)
+            
             while isSearching do
                 local found, name = checkTargetFound(targets)
                 
@@ -215,9 +163,9 @@ toggleButton.MouseButton1Click:Connect(function()
                     showWhatsAppNotification(name)
                     break
                 else
-                    print("Target tidak ditemukan di server ini, pindah server...")
-                    serverHop(rawText)
-                    task.wait(15)
+                    print("Target tidak ditemukan, pindah server...")
+                    safeServerHop()
+                    task.wait(15) -- Jeda waktu tunggu pindah server
                 end
                 
                 task.wait(3)
