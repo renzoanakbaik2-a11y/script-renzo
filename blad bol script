@@ -4,13 +4,13 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 1. Buat ScreenGui Utama secara otomatis di layar
+-- 1. Buat ScreenGui Utama di Layar Delta
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AutoHopGrowAGarden"
+screenGui.Name = "AutoHopGrowAGardenESP"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- 2. Buat Tombol Menu Utama (Buat buka/tutup panel di layar)
+-- 2. Tombol Menu (Buka/Tutup Panel)
 local openButton = Instance.new("TextButton")
 openButton.Name = "OpenButton"
 openButton.Size = UDim2.new(0, 110, 0, 40)
@@ -26,14 +26,14 @@ local btnCorner = Instance.new("UICorner")
 btnCorner.CornerRadius = UDim.new(0, 8)
 btnCorner.Parent = openButton
 
--- 3. Buat Frame Utama (Panel Menu)
+-- 3. Panel Menu Utama
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 280, 0, 180)
 mainFrame.Position = UDim2.new(0, 20, 0, 150)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderSizePixel = 0
-mainFrame.Visible = true -- Langsung muncul pas dieksekusi
+mainFrame.Visible = true
 mainFrame.Parent = screenGui
 
 local frameCorner = Instance.new("UICorner")
@@ -45,17 +45,16 @@ frameStroke.Color = Color3.fromRGB(80, 255, 80)
 frameStroke.Thickness = 2
 frameStroke.Parent = mainFrame
 
--- Judul Menu di dalam Frame
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 35)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Grow a Garden Auto Hop"
+titleLabel.Text = "Grow a Garden + ESP"
 titleLabel.TextColor3 = Color3.fromRGB(80, 255, 80)
 titleLabel.TextSize = 14
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = mainFrame
 
--- 4. Buat Kotak Teks (TextBox) buat ngetik nama bunga
+-- 4. Kotak Input Teks Target Bunga
 local textBox = Instance.new("TextBox")
 textBox.Name = "TextBox"
 textBox.Size = UDim2.new(1, -30, 0, 45)
@@ -73,7 +72,7 @@ local boxCorner = Instance.new("UICorner")
 boxCorner.CornerRadius = UDim.new(0, 8)
 boxCorner.Parent = textBox
 
--- 5. Buat Tombol Start / Stop (Toggle)
+-- 5. Tombol Start / Stop
 local toggleButton = Instance.new("TextButton")
 toggleButton.Name = "TextButton"
 toggleButton.Size = UDim2.new(1, -30, 0, 45)
@@ -89,20 +88,19 @@ local togCorner = Instance.new("UICorner")
 togCorner.CornerRadius = UDim.new(0, 8)
 togCorner.Parent = toggleButton
 
--- Logika Tombol Buka/Tutup Panel Menu
 openButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = not mainFrame.Visible
 end)
 
--- 6. Buat Pop-up Banner Notifikasi ala WA di Tengah Layar
+-- 6. Pop-up Banner Notifikasi
 local notifBanner = Instance.new("Frame")
 notifBanner.Name = "WhatsAppStyleNotif"
 notifBanner.Size = UDim2.new(0, 350, 0, 120)
-notifBanner.Position = UDim2.new(0.5, -175, 0.2, -60)
+notifBanner.Position = UDim2.new(0.5, -175, 0.15, 0)
 notifBanner.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 notifBanner.BorderSizePixel = 0
 notifBanner.Visible = false
-notifBanner.ZIndex = 10
+notifBanner.ZIndex = 20
 notifBanner.Parent = screenGui
 
 local notifCorner = Instance.new("UICorner")
@@ -118,7 +116,7 @@ local notifTitle = Instance.new("TextLabel")
 notifTitle.Size = UDim2.new(1, 0, 0, 40)
 notifTitle.Position = UDim2.new(0, 0, 0, 10)
 notifTitle.BackgroundTransparency = 1
-notifTitle.Text = "📩 PESAN MASUK: TARGET KETEMU!"
+notifTitle.Text = "🌸 TARGET KETEMU DI SERVER INI!"
 notifTitle.TextColor3 = Color3.fromRGB(37, 211, 102)
 notifTitle.TextSize = 16
 notifTitle.Font = Enum.Font.GothamBold
@@ -128,18 +126,62 @@ local notifDesc = Instance.new("TextLabel")
 notifDesc.Size = UDim2.new(1, -20, 0, 50)
 notifDesc.Position = UDim2.new(0, 10, 0, 50)
 notifDesc.BackgroundTransparency = 1
-notifDesc.Text = "Bunga incaranmu berhasil ditemukan di server ini!"
+notifDesc.Text = "Cek ESP warna hijau di sekitar map!"
 notifDesc.TextColor3 = Color3.fromRGB(255, 255, 255)
-notifDesc.TextSize = 14
+notifDesc.TextSize = 13
 notifDesc.Font = Enum.Font.Gotham
 notifDesc.TextWrapped = true
 notifDesc.Parent = notifBanner
 
 local isSearching = false
 
--- Fungsi Tampilkan Notifikasi
-local function showWhatsAppNotification(targetName)
-    notifDesc.Text = "Seed/Bunga '" .. targetName .. "' ada di server ini. Auto hop dihentikan!"
+-- Fungsi Mengaktifkan ESP (Highlight & BillboardGui di Objek Target)
+local function applyESP(targetObj, displayName)
+    pcall(function()
+        -- Hapus ESP lama kalau ada biar gak numpuk
+        if targetObj:FindFirstChild("TargetESP") then
+            targetObj.TargetESP:Destroy()
+        end
+        
+        -- Buat wadah ESP di objek bunga
+        local espFolder = Instance.new("Folder")
+        espFolder.Name = "TargetESP"
+        espFolder.Parent = targetObj
+        
+        -- 1. Kotak Highlight (Menyinari objek bunga jadi warna hijau)
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESPHighlight"
+        highlight.Adornee = targetObj
+        highlight.FillColor = Color3.fromRGB(0, 255, 100)
+        highlight.FillTransparency = 0.4
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.OutlineTransparency = 0
+        highlight.Parent = espFolder
+        
+        -- 2. Teks Nama Mengambang di atas Bunga (BillboardGui)
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "ESPText"
+        billboard.Adornee = targetObj:IsA("Model") and targetObj.PrimaryPart or (targetObj:IsA("BasePart") and targetObj or targetObj:FindFirstChildWhichIsA("BasePart"))
+        billboard.Size = UDim2.new(0, 150, 0, 50)
+        billboard.StudsOffset = Vector3.new(0, 3, 0)
+        billboard.AlwaysOnTop = true
+        billboard.Parent = espFolder
+        
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Text = "[ TARGET: " .. displayName .. " ]"
+        textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+        textLabel.TextStrokeTransparency = 0
+        textLabel.TextSize = 14
+        textLabel.Font = Enum.Font.GothamBold
+        textLabel.Parent = billboard
+    end)
+end
+
+-- Fungsi Notifikasi Pop-up & Suara
+local function showNotification(targetName)
+    notifDesc.Text = "Bunga '" .. targetName + "' berhasil ditemukan! ESP diaktifkan di map."
     notifBanner.Visible = true
     
     pcall(function()
@@ -151,7 +193,7 @@ local function showWhatsAppNotification(targetName)
     end)
 end
 
--- Fungsi Cek Target Bunga
+-- Fungsi Pengecekan Target & Pemasangan ESP
 local function checkTargetFound(targets)
     for _, targetName in ipairs(targets) do
         targetName = targetName:gsub("^%s*(.-)%s*$", ""):lower()
@@ -159,6 +201,8 @@ local function checkTargetFound(targets)
         for _, obj in ipairs(workspace:GetDescendants()) do
             if obj:IsA("BasePart") or obj:IsA("Model") then
                 if string.lower(obj.Name):find(targetName) then
+                    -- Pasang ESP langsung ke objek yang ketemu
+                    applyESP(obj, obj.Name)
                     return true, obj.Name
                 end
             end
@@ -167,7 +211,7 @@ local function checkTargetFound(targets)
     return false
 end
 
--- Fungsi Server Hop Aman untuk Executor Delta
+-- Fungsi Server Hop Aman untuk Delta
 local function safeServerHop()
     pcall(function()
         local servers = {}
@@ -201,7 +245,7 @@ local function safeServerHop()
     end)
 end
 
--- Tombol Start / Stop Diklik
+-- Tombol Start / Stop & Looping AFK
 toggleButton.MouseButton1Click:Connect(function()
     isSearching = not isSearching
     
@@ -226,7 +270,7 @@ toggleButton.MouseButton1Click:Connect(function()
         end
         
         task.spawn(function()
-            task.wait(3)
+            task.wait(3) -- Jeda loading server
             
             while isSearching do
                 local found, name = checkTargetFound(targets)
@@ -237,7 +281,9 @@ toggleButton.MouseButton1Click:Connect(function()
                     toggleButton.Text = "Target Ketemu! (" .. name .. ")"
                     toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
                     toggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-                    showWhatsAppNotification(name)
+                    
+                    -- Munculkan Notifikasi & Aktifkan ESP
+                    showNotification(name)
                     break
                 else
                     print("Target tidak ditemukan, pindah server...")
