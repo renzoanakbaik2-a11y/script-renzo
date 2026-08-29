@@ -1,194 +1,173 @@
--- =================================================================
--- ADVANCED AI COMMAND CENTER (BLUE THEME + TOGGLE + AUTO LOOP)
--- =================================================================
-
 local Players = game:GetService("Players")
-local PathfindingService = game:GetService("PathfindingService")
-local Workspace = game:GetService("Workspace")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local player = Players.LocalPlayer
 
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local frame = script.Parent
+local textBox = frame:WaitForChild("TextBox")
+local toggleButton = frame:WaitForChild("TextButton")
 
-local isLooping = false
-local currentCommand = ""
+local screenGui = frame.Parent
+local openCloseButton = screenGui:FindFirstChild("OpenButton")
 
--- 1. MEMBUAT GUI UTAMA
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.ResetOnSpawn = false
-
--- Tombol Open/Close Menu (Toggle Button)
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Parent = ScreenGui
-ToggleBtn.Size = UDim2.new(0, 80, 0, 30)
-ToggleBtn.Position = UDim2.new(0, 10, 0, 10)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Text = "MENU AI"
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.TextSize = 14
-
--- Frame Menu Utama
-local MainFrame = Instance.new("Frame")
-MainFrame.Parent = ScreenGui
-MainFrame.Size = UDim2.new(0, 280, 0, 210)
-MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Active = true
-MainFrame.Draggable = true
-
--- Pinggiran Warna Biru (UI Stroke)
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Parent = MainFrame
-UIStroke.Color = Color3.fromRGB(0, 150, 255) -- Warna Biru
-UIStroke.Thickness = 2
-
--- Title Label
-local Title = Instance.new("TextLabel")
-Title.Parent = MainFrame
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-Title.Text = "ROBLOX AI CONTROLLER"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 14
-
--- Input Box Perintah
-local TextBox = Instance.new("TextBox")
-TextBox.Parent = MainFrame
-TextBox.PlaceholderText = "Ketik perintah AI (misal: ambil Coin)..."
-TextBox.Size = UDim2.new(0, 260, 0, 35)
-TextBox.Position = UDim2.new(0, 10, 0, 40)
-TextBox.Text = ""
-TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-TextBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-
--- Tombol Eksekusi
-local SubmitBtn = Instance.new("TextButton")
-SubmitBtn.Parent = MainFrame
-SubmitBtn.Text = "JALANKAN PERINTAH"
-SubmitBtn.Size = UDim2.new(0, 260, 0, 30)
-SubmitBtn.Position = UDim2.new(0, 10, 0, 85)
-SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitBtn.Font = Enum.Font.SourceSansBold
-
--- Tombol Auto Loop
-local LoopBtn = Instance.new("TextButton")
-LoopBtn.Parent = MainFrame
-LoopBtn.Text = "AUTO LOOP: OFF"
-LoopBtn.Size = UDim2.new(0, 260, 0, 30)
-LoopBtn.Position = UDim2.new(0, 10, 0, 125)
-LoopBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-LoopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-LoopBtn.Font = Enum.Font.SourceSansBold
-
--- Status AI Label
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Parent = MainFrame
-StatusLabel.Text = "Status: AI Ready"
-StatusLabel.Size = UDim2.new(0, 260, 0, 20)
-StatusLabel.Position = UDim2.new(0, 10, 0, 165)
-StatusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.TextSize = 12
-
--- 2. TOGGLE OPEN/CLOSE MENU
-ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
--- 3. FUNGSI LOGIKA PERGERAKAN & PATHFINDING
-local function jalanKeTarget(targetPos)
-    local path = PathfindingService:CreatePath({
-        AgentRadius = 2,
-        AgentHeight = 5,
-        AgentCanJump = true
-    })
-
-    local success, _ = pcall(function()
-        path:ComputeAsync(HumanoidRootPart.Position, targetPos)
+if openCloseButton and openCloseButton:IsA("TextButton") then
+    openCloseButton.MouseButton1Click:Connect(function()
+        frame.Visible = not frame.Visible
     end)
-
-    if success and path.Status == Enum.PathStatus.Success then
-        for _, waypoint in ipairs(path:GetWaypoints()) do
-            if not isLooping and currentCommand == "" then break end
-            if waypoint.Action == Enum.PathWaypointAction.Jump then
-                Humanoid.Jump = true
-            end
-            Humanoid:MoveTo(waypoint.Position)
-            Humanoid.MoveToFinished:Wait()
-        end
-    else
-        Humanoid:MoveTo(targetPos)
-    end
 end
 
--- 4. PROCESS PERINTAH AI
-local function eksekusiAI(cmd)
-    local perintah = string.lower(cmd)
-    
-    if string.find(perintah, "ambil") or string.find(perintah, "cari") then
-        local targetName = string.gsub(perintah, "ambil ", "")
-        targetName = string.gsub(targetName, "cari ", "")
-        
-        local ditemuin = false
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if (obj:IsA("BasePart") or obj:IsA("Model") or obj:IsA("Tool")) and string.find(string.lower(obj.Name), targetName) then
-                ditemuin = true
-                StatusLabel.Text = "AI: Bergerak ke " .. obj.Name
-                local pos = obj:IsA("Model") and obj:GetPivot().Position or obj.Position
-                jalanKeTarget(pos)
-                break
-            end
-        end
-        if not ditemuin then
-            StatusLabel.Text = "AI: Item '" .. targetName .. "' tidak ada!"
-        end
-    elseif string.find(perintah, "ikuti") or string.find(perintah, "follow") then
-        local targetPlayer = string.gsub(perintah, "ikuti ", "")
-        targetPlayer = string.gsub(targetPlayer, "follow ", "")
-        
-        for _, p in ipairs(Players:GetPlayers()) do
-            if string.find(string.lower(p.Name), targetPlayer) and p.Character then
-                StatusLabel.Text = "AI: Mengikuti " .. p.Name
-                jalanKeTarget(p.Character.HumanoidRootPart.Position)
-                break
-            end
-        end
-    else
-        StatusLabel.Text = "AI: Perintah tidak dikenali!"
-    end
+local isSearching = false
+
+-- Cek apakah kita baru saja pindah server dan membawa data sebelumnya (TeleportData)
+local teleportData = TeleportService:GetLocalPlayerTeleportData()
+if teleportData and teleportData.savedTargets then
+    textBox.Text = teleportData.savedTargets
+    isSearching = true
 end
 
--- 5. TRIGGER & AUTO-LOOPING THREAD
-SubmitBtn.MouseButton1Click:Connect(function()
-    currentCommand = TextBox.Text
-    if currentCommand ~= "" then
-        task.spawn(function()
-            eksekusiAI(currentCommand)
-        end)
-    end
-end)
-
-LoopBtn.MouseButton1Click:Connect(function()
-    isLooping = not isLooping
-    if isLooping then
-        LoopBtn.Text = "AUTO LOOP: ON"
-        LoopBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 80)
+-- Fungsi buat ngecek target bunga
+local function checkTargetFound(targets)
+    for _, targetName in ipairs(targets) do
+        targetName = targetName:gsub("^%s*(.-)%s*$", ""):lower()
         
-        task.spawn(function()
-            while isLooping do
-                if currentCommand ~= "" then
-                    eksekusiAI(currentCommand)
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") or obj:IsA("Model") then
+                if string.lower(obj.Name):find(targetName) then
+                    return true, obj.Name
                 end
-                task.wait(1) -- Jeda loop agar game tidak lag/crash
+            end
+        end
+    end
+    return false
+end
+
+-- Fungsi server hop dengan membawa data teks target
+local function serverHop(currentTargetsText)
+    local success, err = pcall(function()
+        local servers = {}
+        local cursor = ""
+        
+        repeat
+            local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+            if cursor ~= "" then
+                url = url .. "&cursor=" .. cursor
+            end
+            
+            local response = HttpService:JSONDecode(game:HttpGet(url))
+            cursor = response.nextPageCursor
+            
+            for _, s in ipairs(response.data) do
+                if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                    table.insert(servers, s.id)
+                end
+            end
+        until cursor == nil or #servers > 0
+        
+        -- Siapkan data untuk dikirim ke server tujuan
+        local teleportOptions = Instance.new("TeleportOptions")
+        teleportOptions:SetTeleportData({savedTargets = currentTargetsText})
+        
+        if #servers > 0 then
+            local randomServerId = servers[math.random(1, #servers)]
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, player, teleportOptions)
+        else
+            TeleportService:TeleportAsync(game.PlaceId, {player}, teleportOptions)
+        end
+    end)
+    
+    if not success then
+        warn("Gagal server hop, mencoba lagi...", err)
+        task.wait(2)
+        serverHop(currentTargetsText)
+    end
+end
+
+-- Eksekusi otomatis jika data teleport ada (artinya lanjut AFK dari server sebelumnya)
+if isSearching then
+    toggleButton.Text = "Status: AFK Mencari... (Klik Stop)"
+    toggleButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    
+    task.spawn(function()
+        -- Jeda sedikit untuk menunggu game selesai loading sempurna di server baru
+        task.wait(5)
+        
+        while isSearching do
+            local rawText = textBox.Text
+            local targets = {}
+            for match in string.gmatch(rawText, "[^,%s]+") do
+                table.insert(targets, match)
+            end
+            
+            if #targets == 0 then
+                isSearching = false
+                toggleButton.Text = "Start Auto Hop"
+                toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+                break
+            end
+            
+            local found, name = checkTargetFound(targets)
+            
+            if found then
+                print("TARGET KETEMU: " .. name .. "! Auto hop dihentikan.")
+                isSearching = false
+                toggleButton.Text = "Target Ketemu! (" .. name .. ")"
+                toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+                break
+            else
+                print("Target tidak ada, pindah server...")
+                serverHop(rawText)
+                task.wait(15) -- Jeda waktu pindah
+            end
+            
+            task.wait(3)
+        end
+    end)
+end
+
+-- Tombol Start / Stop manual
+toggleButton.MouseButton1Click:Connect(function()
+    isSearching = not isSearching
+    
+    if isSearching then
+        toggleButton.Text = "Status: AFK Mencari... (Klik Stop)"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        
+        local rawText = textBox.Text
+        local targets = {}
+        for match in string.gmatch(rawText, "[^,%s]+") do
+            table.insert(targets, match)
+        end
+        
+        if #targets == 0 then
+            print("Masukkan minimal satu nama seed/bunga!")
+            isSearching = false
+            toggleButton.Text = "Start Auto Hop"
+            toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+            return
+        end
+        
+        task.spawn(function()
+            while isSearching do
+                local found, name = checkTargetFound(targets)
+                
+                if found then
+                    print("TARGET KETEMU: " .. name .. "! Auto hop dihentikan.")
+                    isSearching = false
+                    toggleButton.Text = "Target Ketemu! (" .. name .. ")"
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+                    break
+                else
+                    print("Target tidak ditemukan di server ini, pindah server...")
+                    serverHop(rawText)
+                    task.wait(15)
+                end
+                
+                task.wait(3)
             end
         end)
     else
-        LoopBtn.Text = "AUTO LOOP: OFF"
-        LoopBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+        toggleButton.Text = "Start Auto Hop"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+        print("Auto hop dihentikan manual.")
     end
 end)
