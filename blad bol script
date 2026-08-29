@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
 local frame = script.Parent
 local textBox = frame:WaitForChild("TextBox")
@@ -16,6 +17,47 @@ if openCloseButton and openCloseButton:IsA("TextButton") then
     end)
 end
 
+-- Bikin elemen Pop-up Banner Notifikasi ala WA secara otomatis di dalam ScreenGui
+local notifBanner = Instance.new("Frame")
+notifBanner.Name = "WhatsAppStyleNotif"
+notifBanner.Size = UDim2.new(0, 350, 0, 120)
+notifBanner.Position = UDim2.new(0.5, -175, 0.2, -60) -- Posisi di tengah atas layar
+notifBanner.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+notifBanner.BorderSizePixel = 0
+notifBanner.Visible = false
+notifBanner.ZIndex = 10
+notifBanner.Parent = screenGui
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 12)
+uiCorner.Parent = notifBanner
+
+local uiStroke = Instance.new("UIStroke")
+uiStroke.Color = Color3.fromRGB(37, 211, 102)
+uiStroke.Thickness = 3
+uiStroke.Parent = notifBanner
+
+local notifTitle = Instance.new("TextLabel")
+notifTitle.Size = UDim2.new(1, 0, 0, 40)
+notifTitle.Position = UDim2.new(0, 0, 0, 10)
+notifTitle.BackgroundTransparency = 1
+notifTitle.Text = "📩 PESAN MASUK: TARGET KETEMU!"
+notifTitle.TextColor3 = Color3.fromRGB(37, 211, 102)
+notifTitle.TextSize = 16
+notifTitle.Font = Enum.Font.GothamBold
+notifTitle.Parent = notifBanner
+
+local notifDesc = Instance.new("TextLabel")
+notifDesc.Size = UDim2.new(1, -20, 0, 50)
+notifDesc.Position = UDim2.new(0, 10, 0, 50)
+notifDesc.BackgroundTransparency = 1
+notifDesc.Text = "Bunga incaranmu berhasil ditemukan di server ini!"
+notifDesc.TextColor3 = Color3.fromRGB(255, 255, 255)
+notifDesc.TextSize = 14
+notifDesc.Font = Enum.Font.Gotham
+notifDesc.TextWrapped = true
+notifDesc.Parent = notifBanner
+
 local isSearching = false
 
 -- Cek apakah kita baru saja pindah server dan membawa data sebelumnya (TeleportData)
@@ -23,6 +65,20 @@ local teleportData = TeleportService:GetLocalPlayerTeleportData()
 if teleportData and teleportData.savedTargets then
     textBox.Text = teleportData.savedTargets
     isSearching = true
+end
+
+-- Fungsi buat nampilin Banner Pop-up ala WA di layar
+local function showWhatsAppNotification(targetName)
+    notifDesc.Text = "Seed/Bunga '" .. targetName .. "' ada di server ini. Auto hop dihentikan!"
+    notifBanner.Visible = true
+    
+    pcall(function()
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://4590657391" 
+        sound.Volume = 2
+        sound.Parent = playerGui
+        sound:Play()
+    end)
 end
 
 -- Fungsi buat ngecek target bunga
@@ -112,6 +168,7 @@ if isSearching then
                 isSearching = false
                 toggleButton.Text = "Target Ketemu! (" .. name .. ")"
                 toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+                showWhatsAppNotification(name)
                 break
             else
                 print("Target tidak ada, pindah server...")
@@ -155,6 +212,7 @@ toggleButton.MouseButton1Click:Connect(function()
                     isSearching = false
                     toggleButton.Text = "Target Ketemu! (" .. name .. ")"
                     toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+                    showWhatsAppNotification(name)
                     break
                 else
                     print("Target tidak ditemukan di server ini, pindah server...")
@@ -166,8 +224,10 @@ toggleButton.MouseButton1Click:Connect(function()
             end
         end)
     else
+        isSearching = false
         toggleButton.Text = "Start Auto Hop"
         toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+        notifBanner.Visible = false
         print("Auto hop dihentikan manual.")
     end
 end)
