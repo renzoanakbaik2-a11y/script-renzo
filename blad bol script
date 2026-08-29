@@ -4,20 +4,97 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-local frame = script.Parent
-local textBox = frame:WaitForChild("TextBox")
-local toggleButton = frame:WaitForChild("TextButton")
+-- 1. Buat ScreenGui Utama secara otomatis di layar
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoHopGrowAGarden"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
 
-local screenGui = frame.Parent
-local openCloseButton = screenGui:FindFirstChild("OpenButton")
+-- 2. Buat Tombol Menu Utama (Buat buka/tutup panel di layar)
+local openButton = Instance.new("TextButton")
+openButton.Name = "OpenButton"
+openButton.Size = UDim2.new(0, 110, 0, 40)
+openButton.Position = UDim2.new(0, 20, 0, 100)
+openButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+openButton.TextSize = 14
+openButton.Font = Enum.Font.GothamBold
+openButton.Text = "🌸 Menu Auto Hop"
+openButton.Parent = screenGui
 
-if openCloseButton and openCloseButton:IsA("TextButton") then
-    openCloseButton.MouseButton1Click:Connect(function()
-        frame.Visible = not frame.Visible
-    end)
-end
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 8)
+btnCorner.Parent = openButton
 
--- Bikin elemen Pop-up Banner Notifikasi ala WA
+-- 3. Buat Frame Utama (Panel Menu)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 280, 0, 180)
+mainFrame.Position = UDim2.new(0, 20, 0, 150)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = true -- Langsung muncul pas dieksekusi
+mainFrame.Parent = screenGui
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 12)
+frameCorner.Parent = mainFrame
+
+local frameStroke = Instance.new("UIStroke")
+frameStroke.Color = Color3.fromRGB(80, 255, 80)
+frameStroke.Thickness = 2
+frameStroke.Parent = mainFrame
+
+-- Judul Menu di dalam Frame
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 35)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Grow a Garden Auto Hop"
+titleLabel.TextColor3 = Color3.fromRGB(80, 255, 80)
+titleLabel.TextSize = 14
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Parent = mainFrame
+
+-- 4. Buat Kotak Teks (TextBox) buat ngetik nama bunga
+local textBox = Instance.new("TextBox")
+textBox.Name = "TextBox"
+textBox.Size = UDim2.new(1, -30, 0, 45)
+textBox.Position = UDim2.new(0, 15, 0, 45)
+textBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+textBox.PlaceholderText = "Ketik bunga (cth: Mawar, Melati)"
+textBox.Text = ""
+textBox.TextSize = 13
+textBox.Font = Enum.Font.Gotham
+textBox.ClearTextOnFocus = false
+textBox.Parent = mainFrame
+
+local boxCorner = Instance.new("UICorner")
+boxCorner.CornerRadius = UDim.new(0, 8)
+boxCorner.Parent = textBox
+
+-- 5. Buat Tombol Start / Stop (Toggle)
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "TextButton"
+toggleButton.Size = UDim2.new(1, -30, 0, 45)
+toggleButton.Position = UDim2.new(0, 15, 0, 105)
+toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+toggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+toggleButton.Text = "Start Auto Hop"
+toggleButton.TextSize = 14
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.Parent = mainFrame
+
+local togCorner = Instance.new("UICorner")
+togCorner.CornerRadius = UDim.new(0, 8)
+togCorner.Parent = toggleButton
+
+-- Logika Tombol Buka/Tutup Panel Menu
+openButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = not mainFrame.Visible
+end)
+
+-- 6. Buat Pop-up Banner Notifikasi ala WA di Tengah Layar
 local notifBanner = Instance.new("Frame")
 notifBanner.Name = "WhatsAppStyleNotif"
 notifBanner.Size = UDim2.new(0, 350, 0, 120)
@@ -28,14 +105,14 @@ notifBanner.Visible = false
 notifBanner.ZIndex = 10
 notifBanner.Parent = screenGui
 
-local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 12)
-uiCorner.Parent = notifBanner
+local notifCorner = Instance.new("UICorner")
+notifCorner.CornerRadius = UDim.new(0, 12)
+notifCorner.Parent = notifBanner
 
-local uiStroke = Instance.new("UIStroke")
-uiStroke.Color = Color3.fromRGB(37, 211, 102)
-uiStroke.Thickness = 3
-uiStroke.Parent = notifBanner
+local notifStroke = Instance.new("UIStroke")
+notifStroke.Color = Color3.fromRGB(37, 211, 102)
+notifStroke.Thickness = 3
+notifStroke.Parent = notifBanner
 
 local notifTitle = Instance.new("TextLabel")
 notifTitle.Size = UDim2.new(1, 0, 0, 40)
@@ -60,7 +137,7 @@ notifDesc.Parent = notifBanner
 
 local isSearching = false
 
--- Fungsi Notifikasi Pop-up & Suara
+-- Fungsi Tampilkan Notifikasi
 local function showWhatsAppNotification(targetName)
     notifDesc.Text = "Seed/Bunga '" .. targetName .. "' ada di server ini. Auto hop dihentikan!"
     notifBanner.Visible = true
@@ -74,7 +151,7 @@ local function showWhatsAppNotification(targetName)
     end)
 end
 
--- Fungsi Pengecekan Target di Server
+-- Fungsi Cek Target Bunga
 local function checkTargetFound(targets)
     for _, targetName in ipairs(targets) do
         targetName = targetName:gsub("^%s*(.-)%s*$", ""):lower()
@@ -90,10 +167,9 @@ local function checkTargetFound(targets)
     return false
 end
 
--- Fungsi Server Hop Aman untuk Executor Delta (Tanpa HttpService yang sering diblock)
+-- Fungsi Server Hop Aman untuk Executor Delta
 local function safeServerHop()
     pcall(function()
-        -- Menggunakan metode server hop alternatif yang aman di mobile executor
         local servers = {}
         local req = request or syn and syn.request or http and http.request
         
@@ -120,19 +196,19 @@ local function safeServerHop()
         if #servers > 0 then
             TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], player)
         else
-            -- Fallback teleport biasa kalau list kosong
             TeleportService:Teleport(game.PlaceId, player)
         end
     end)
 end
 
--- Tombol Start / Stop Manual & Loop AFK
+-- Tombol Start / Stop Diklik
 toggleButton.MouseButton1Click:Connect(function()
     isSearching = not isSearching
     
     if isSearching then
-        toggleButton.Text = "Status: AFK Mencari... (Klik Stop)"
+        toggleButton.Text = "Status: Mencari... (Klik Stop)"
         toggleButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         
         local rawText = textBox.Text
         local targets = {}
@@ -145,11 +221,11 @@ toggleButton.MouseButton1Click:Connect(function()
             isSearching = false
             toggleButton.Text = "Start Auto Hop"
             toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+            toggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
             return
         end
         
         task.spawn(function()
-            -- Jeda loading awal di server
             task.wait(3)
             
             while isSearching do
@@ -160,12 +236,13 @@ toggleButton.MouseButton1Click:Connect(function()
                     isSearching = false
                     toggleButton.Text = "Target Ketemu! (" .. name .. ")"
                     toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+                    toggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
                     showWhatsAppNotification(name)
                     break
                 else
                     print("Target tidak ditemukan, pindah server...")
                     safeServerHop()
-                    task.wait(15) -- Jeda waktu tunggu pindah server
+                    task.wait(15)
                 end
                 
                 task.wait(3)
@@ -175,6 +252,7 @@ toggleButton.MouseButton1Click:Connect(function()
         isSearching = false
         toggleButton.Text = "Start Auto Hop"
         toggleButton.BackgroundColor3 = Color3.fromRGB(80, 255, 80)
+        toggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
         notifBanner.Visible = false
         print("Auto hop dihentikan manual.")
     end
