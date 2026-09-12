@@ -1,4 +1,263 @@
 -- ========================================================
+-- BLOX FRUITS - AUTO FARM + HITBOX EXTENDER (FINAL VERIFIED)
+-- ========================================================
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+local ConfigFile = "BloxFruits_AutoFarm_Settings.json"
+
+-- PREVENT DUPLICATE EXECUTION
+if CoreGui:FindFirstChild("BloxFruitsFixedHub") then
+    CoreGui.BloxFruitsFixedHub:Destroy()
+end
+
+-- CONFIGURATION & SETTINGS
+local Settings = {
+    AutoFarm = false,
+    MobMagnet = true,
+    FarmDistance = 8,
+    MagnetRadius = 300,
+    HitboxSize = Vector3.new(20, 20, 20)
+}
+
+local OriginalHandleSizes = {}
+
+-- 1. SAVE & LOAD SYSTEM
+local function SaveSettings()
+    if writefile then
+        pcall(function()
+            writefile(ConfigFile, HttpService:JSONEncode(Settings))
+        end)
+    end
+end
+
+local function LoadSettings()
+    if readfile and isfile and isfile(ConfigFile) then
+        pcall(function()
+            local data = HttpService:JSONDecode(readfile(ConfigFile))
+            if type(data) == "table" then
+                for k, v in pairs(data) do Settings[k] = v end
+            end
+        end)
+    end
+end
+LoadSettings()
+
+-- 2. GUI MENU CREATION
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BloxFruitsFixedHub"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 230, 0, 170)
+MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+Title.Text = "Blox Fruits Auto-Farm [RCtrl]"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 13
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = MainFrame
+
+local ToggleFarmBtn = Instance.new("TextButton")
+ToggleFarmBtn.Size = UDim2.new(0.9, 0, 0, 40)
+ToggleFarmBtn.Position = UDim2.new(0.05, 0, 0.28, 0)
+ToggleFarmBtn.Font = Enum.Font.SourceSansBold
+ToggleFarmBtn.TextSize = 14
+ToggleFarmBtn.Parent = MainFrame
+
+local ToggleMagnetBtn = Instance.new("TextButton")
+ToggleMagnetBtn.Size = UDim2.new(0.9, 0, 0, 40)
+ToggleMagnetBtn.Position = UDim2.new(0.05, 0, 0.58, 0)
+ToggleMagnetBtn.Font = Enum.Font.SourceSansBold
+ToggleMagnetBtn.TextSize = 14
+ToggleMagnetBtn.Parent = MainFrame
+
+local function UpdateUI()
+    ToggleFarmBtn.Text = Settings.AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
+    ToggleFarmBtn.BackgroundColor3 = Settings.AutoFarm and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+
+    ToggleMagnetBtn.Text = Settings.MobMagnet and "Mob Magnet: ON" or "Mob Magnet: OFF"
+    ToggleMagnetBtn.BackgroundColor3 = Settings.MobMagnet and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+end
+UpdateUI()
+
+ToggleFarmBtn.MouseButton1Click:Connect(function()
+    Settings.AutoFarm = not Settings.AutoFarm
+    UpdateUI()
+    SaveSettings()
+end)
+
+ToggleMagnetBtn.MouseButton1Click:Connect(function()
+    Settings.MobMagnet = not Settings.MobMagnet
+    UpdateUI()
+    SaveSettings()
+end)
+
+-- Keybind Open/Close UI (Right Control)
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.RightControl then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+-- Anti AFK
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    task.wait(1)
+    VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+end)
+
+-- 3. HELPER FUNCTIONS
+local function DisableGravity(root)
+    if not root:FindFirstChild("FarmBV") then
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Name = "FarmBV"
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyVelocity.Parent = root
+    end
+end
+
+local function EnableGravity(root)
+    if root and root:FindFirstChild("FarmBV") then
+        root.FarmBV:Destroy()
+    end
+end
+
+-- NOCLIP LOOP
+task.spawn(function()
+    while true do
+        task.wait()
+        if Settings.AutoFarm then
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- 4. MAIN FARMING + HITBOX EXTENDER LOOP
+task.spawn(function()
+    while true do
+        task.wait(0.03)
+        if Settings.AutoFarm then
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+            if root and hum and hum.Health > 0 then
+                DisableGravity(root)
+
+                -- Auto Equip Weapon
+                if not char:FindFirstChildOfClass("Tool") then
+                    for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            hum:EquipTool(tool)
+                            break
+                        end
+                    end
+                end
+
+                -- Safe Hitbox Extender Logic
+                local activeTool = char:FindFirstChildOfClass("Tool")
+                if activeTool then
+                    local handle = activeTool:FindFirstChild("Handle")
+                    if handle and handle:IsA("BasePart") then
+                        if not OriginalHandleSizes[activeTool] then
+                            OriginalHandleSizes[activeTool] = handle.Size
+                        end
+                        handle.Size = Settings.HitboxSize
+                        handle.Transparency = 0.7
+                        handle.CanCollide = false
+                    end
+                end
+
+                local enemies = workspace:FindFirstChild("Enemies")
+                if enemies then
+                    local targetMob = nil
+
+                    for _, mob in pairs(enemies:GetChildren()) do
+                        local mHum = mob:FindFirstChildOfClass("Humanoid")
+                        local mRoot = mob:FindFirstChild("HumanoidRootPart")
+                        if mHum and mHum.Health > 0 and mRoot then
+                            targetMob = mob
+                            break
+                        end
+                    end
+
+                    if targetMob then
+                        local targetRoot = targetMob.HumanoidRootPart
+                        local targetPos = targetRoot.Position
+                        local hoverPos = targetPos + Vector3.new(0, Settings.FarmDistance, 0)
+
+                        -- Hovering Above Mob Target & Facing Down
+                        root.CFrame = CFrame.lookAt(hoverPos, targetPos)
+
+                        -- Mob Magnet Logic
+                        if Settings.MobMagnet then
+                            local magnetPoint = root.Position - Vector3.new(0, Settings.FarmDistance - 1, 0)
+                            for _, mob in pairs(enemies:GetChildren()) do
+                                local mHum = mob:FindFirstChildOfClass("Humanoid")
+                                local mRoot = mob:FindFirstChild("HumanoidRootPart")
+
+                                if mHum and mHum.Health > 0 and mRoot then
+                                    if (mRoot.Position - root.Position).Magnitude <= Settings.MagnetRadius then
+                                        for _, mPart in pairs(mob:GetChildren()) do
+                                            if mPart:IsA("BasePart") then
+                                                mPart.CanCollide = false
+                                            end
+                                        end
+
+                                        mRoot.CFrame = CFrame.new(magnetPoint) * (mRoot.CFrame - mRoot.CFrame.Position)
+                                        mRoot.Velocity = Vector3.new(0, 0, 0)
+                                        mHum.WalkSpeed = 0
+                                    end
+                                end
+                            end
+                        end
+
+                        -- Trigger Attack
+                        if activeTool then activeTool:Activate() end
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    end
+                end
+            end
+        else
+            -- Clean Up Gravity & Reset Weapon Sizes when OFF
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then EnableGravity(root) end
+
+            for tool, originalSize in pairs(OriginalHandleSizes) do
+                if tool and tool:FindFirstChild("Handle") then
+                    tool.Handle.Size = originalSize
+                    tool.Handle.Transparency = 0
+                end
+            end
+        end
+    end
+end)-- ========================================================
 -- BLOX FRUITS - AUTO FARM ADVANCED (VERIFIED & CLEAN)
 -- ========================================================
 
