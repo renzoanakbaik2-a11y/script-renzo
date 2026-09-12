@@ -1,5 +1,5 @@
 -- ========================================================
--- BLOX FRUITS - AUTO FARM (NO RESPAWN LOOP & NO BUG UI)
+-- BLOX FRUITS - AUTO FARM (REAL MAGNET + FIX ALL BUGS)
 -- ========================================================
 
 local Players = game:GetService("Players")
@@ -12,6 +12,7 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local ConfigFile = "BloxFruits_AutoFarm_Settings.json"
 
+-- PREVENT DUPLICATE EXECUTION
 if CoreGui:FindFirstChild("BloxFruitsFixedHub") then
     CoreGui.BloxFruitsFixedHub:Destroy()
 end
@@ -19,10 +20,11 @@ end
 local Settings = {
     AutoFarm = false,
     MobMagnet = true,
-    FarmDistance = 7, -- Jarak 7 stud (Safe Distance Anti-Anticheat Kick/Reset)
+    FarmDistance = 7, -- Jarak melayang aman (Anti-Anticheat Kick)
     MagnetRadius = 250
 }
 
+-- 1. SAVE & LOAD SYSTEM
 local function SaveSettings()
     if writefile then
         pcall(function() writefile(ConfigFile, HttpService:JSONEncode(Settings)) end)
@@ -41,7 +43,7 @@ local function LoadSettings()
 end
 LoadSettings()
 
--- GUI MENU
+-- 2. GUI MENU
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsFixedHub"
 ScreenGui.Parent = CoreGui
@@ -113,6 +115,7 @@ LocalPlayer.Idled:Connect(function()
     VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
+-- 3. HELPER FUNCTIONS
 local function DisableGravity(root)
     if not root:FindFirstChild("FarmBV") then
         local bodyVelocity = Instance.new("BodyVelocity")
@@ -129,7 +132,7 @@ local function EnableGravity(root)
     end
 end
 
--- NOCLIP SAFE LOOP (HANYA ROOT PART DENGAN SAFE WAIT BARU)
+-- NOCLIP SAFE LOOP
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -143,7 +146,7 @@ task.spawn(function()
     end
 end)
 
--- MAIN FARMING LOOP (NO RESPAWN LOOP)
+-- 4. MAIN FARMING LOOP (REAL PHYSICAL MAGNET & ZERO BUG)
 task.spawn(function()
     while true do
         task.wait(0.04)
@@ -152,7 +155,7 @@ task.spawn(function()
             local root = char and char:FindFirstChild("HumanoidRootPart")
             local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-            -- Cek kesehatan karakter agar tidak memicu CFrame saat mati
+            -- Proteksi Anti Death Loop / Respawn Bug
             if root and hum and hum.Health > 10 then
                 DisableGravity(root)
 
@@ -160,6 +163,7 @@ task.spawn(function()
                 if enemies then
                     local targetMob = nil
 
+                    -- Cari 1 Mob Utama
                     for _, mob in pairs(enemies:GetChildren()) do
                         local mHum = mob:FindFirstChildOfClass("Humanoid")
                         local mRoot = mob:FindFirstChild("HumanoidRootPart")
@@ -174,28 +178,32 @@ task.spawn(function()
                         local mobPosition = targetRoot.Position
                         local hoverPos = mobPosition + Vector3.new(0, Settings.FarmDistance, 0)
                         
-                        -- Smooth CFrame Positioning
+                        -- Hover melayang di atas Mob utama
                         root.CFrame = CFrame.lookAt(hoverPos, mobPosition)
 
-                        -- MOB MAGNET LOGIC
+                        -- LOGIKA REAL MOB MAGNET (Fisik Server-side Registration)
                         if Settings.MobMagnet then
-                            local magnetPoint = root.Position - Vector3.new(0, Settings.FarmDistance, 0)
                             for _, mob in pairs(enemies:GetChildren()) do
                                 local mHum = mob:FindFirstChildOfClass("Humanoid")
                                 local mRoot = mob:FindFirstChild("HumanoidRootPart")
 
                                 if mHum and mHum.Health > 0 and mRoot then
-                                    if (mRoot.Position - root.Position).Magnitude <= Settings.MagnetRadius then
-                                        mRoot.CanCollide = false
-                                        mRoot.CFrame = CFrame.new(magnetPoint)
-                                        mRoot.Velocity = Vector3.new(0, 0, 0)
-                                        mHum.WalkSpeed = 0
+                                    if (mRoot.Position - mobPosition).Magnitude <= Settings.MagnetRadius then
+                                        for _, mPart in pairs(mob:GetChildren()) do
+                                            if mPart:IsA("BasePart") then
+                                                mPart.CanCollide = false
+                                            end
+                                        end
+
+                                        -- Seret fisik mob ke titik target agar damage server mendarat
+                                        mRoot.Velocity = (mobPosition - mRoot.Position) * 10
+                                        mRoot.CFrame = CFrame.new(mRoot.Position:Lerp(mobPosition, 0.2))
                                     end
                                 end
                             end
                         end
 
-                        -- ATTACK EXECUTION
+                        -- Attack Trigger
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                     end
