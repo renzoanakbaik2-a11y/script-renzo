@@ -1,5 +1,5 @@
 -- ========================================================
--- BLOX FRUITS - BRING MOB AUTO-FARM (BULLETPROOF LOGIC)
+-- BLOX FRUITS - FAST TARGET AUTO-FARM (100% REAL DAMAGE)
 -- ========================================================
 
 local Players = game:GetService("Players")
@@ -10,16 +10,15 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
-local ConfigFile = "BloxFruits_BringMob_Settings.json"
+local ConfigFile = "BloxFruits_FastFarm_Settings.json"
 
-if CoreGui:FindFirstChild("BloxFruitsBringHub") then
-    CoreGui.BloxFruitsBringHub:Destroy()
+if CoreGui:FindFirstChild("BloxFruitsFastHub") then
+    CoreGui.BloxFruitsFastHub:Destroy()
 end
 
 local Settings = {
     AutoFarm = false,
-    FarmDistance = 5.5,
-    MagnetRadius = 250
+    FarmDistance = 7, -- Jarak 7 stud (Aman dari benturan hitbox monster besar)
 }
 
 local function SaveSettings()
@@ -44,7 +43,7 @@ LoadSettings()
 
 -- GUI MENU
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsBringHub"
+ScreenGui.Name = "BloxFruitsFastHub"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
@@ -60,7 +59,7 @@ MainFrame.Parent = ScreenGui
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-Title.Text = "Bring Mob Auto-Farm [RCtrl]"
+Title.Text = "Blox Fruits Fast Farm [RCtrl]"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 13
 Title.Font = Enum.Font.SourceSansBold
@@ -74,7 +73,7 @@ ToggleFarmBtn.TextSize = 14
 ToggleFarmBtn.Parent = MainFrame
 
 local function UpdateUI()
-    ToggleFarmBtn.Text = Settings.AutoFarm and "Bring Mob Farm: ON" or "Bring Mob Farm: OFF"
+    ToggleFarmBtn.Text = Settings.AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
     ToggleFarmBtn.BackgroundColor3 = Settings.AutoFarm and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 end
 UpdateUI()
@@ -114,7 +113,7 @@ local function EnableGravity(root)
     end
 end
 
--- NOCLIP SAFE LOOP
+-- NOCLIP SAFE
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -126,7 +125,7 @@ task.spawn(function()
     end
 end)
 
--- MAIN FARMING LOOP (FULL STABILITY & ZERO STUCK)
+-- MAIN FARMING LOOP (FAST SWAP REAL DAMAGE)
 task.spawn(function()
     while true do
         task.wait(0.03)
@@ -142,58 +141,24 @@ task.spawn(function()
                 if enemies then
                     local targetMob = nil
 
-                    -- Tahap 1: Cari mob di sekitar radius player
+                    -- Cari 1 Mob Hidup Terdekat
                     for _, mob in pairs(enemies:GetChildren()) do
                         local mHum = mob:FindFirstChildOfClass("Humanoid")
                         local mRoot = mob:FindFirstChild("HumanoidRootPart")
                         if mHum and mHum.Health > 0 and mRoot then
-                            if (mRoot.Position - root.Position).Magnitude <= Settings.MagnetRadius then
-                                targetMob = mob
-                                break
-                            end
-                        end
-                    end
-
-                    -- Tahap 2: Fallback ke mob mana saja jika di area sekitar kosong
-                    if not targetMob then
-                        for _, mob in pairs(enemies:GetChildren()) do
-                            local mHum = mob:FindFirstChildOfClass("Humanoid")
-                            local mRoot = mob:FindFirstChild("HumanoidRootPart")
-                            if mHum and mHum.Health > 0 and mRoot then
-                                targetMob = mob
-                                break
-                            end
+                            targetMob = mob
+                            break
                         end
                     end
 
                     if targetMob then
                         local targetRoot = targetMob.HumanoidRootPart
-                        local centerPos = targetRoot.Position
+                        local mobPos = targetRoot.Position
                         
-                        root.CFrame = CFrame.lookAt(centerPos + Vector3.new(0, Settings.FarmDistance, 0), centerPos)
+                        -- Pindah melayang 7 stud tepat di atas koordinat asli server mob
+                        root.CFrame = CFrame.lookAt(mobPos + Vector3.new(0, Settings.FarmDistance, 0), mobPos)
 
-                        -- LOGIKA BRING MOB REAL
-                        for _, mob in pairs(enemies:GetChildren()) do
-                            local mHum = mob:FindFirstChildOfClass("Humanoid")
-                            local mRoot = mob:FindFirstChild("HumanoidRootPart")
-
-                            if mHum and mHum.Health > 0 and mRoot then
-                                if (mRoot.Position - centerPos).Magnitude <= Settings.MagnetRadius then
-                                    for _, mPart in pairs(mob:GetChildren()) do
-                                        if mPart:IsA("BasePart") then
-                                            mPart.CanCollide = false
-                                        end
-                                    end
-                                    
-                                    mRoot.CFrame = CFrame.new(centerPos)
-                                    mRoot.Velocity = Vector3.new(0, 0, 0)
-                                    mRoot.RotVelocity = Vector3.new(0, 0, 0)
-                                    mHum.WalkSpeed = 0
-                                end
-                            end
-                        end
-
-                        -- Trigger Attack
+                        -- Pukul (Damage 100% Masuk ke Server)
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                     end
