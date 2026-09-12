@@ -1,5 +1,5 @@
 -- ========================================================
--- BLOX FRUITS - AUTO FARM (REAL MAGNET + FIX ALL BUGS)
+-- BLOX FRUITS - BRING MOB AUTO-FARM (BULLETPROOF LOGIC)
 -- ========================================================
 
 local Players = game:GetService("Players")
@@ -10,21 +10,18 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
-local ConfigFile = "BloxFruits_AutoFarm_Settings.json"
+local ConfigFile = "BloxFruits_BringMob_Settings.json"
 
--- PREVENT DUPLICATE EXECUTION
-if CoreGui:FindFirstChild("BloxFruitsFixedHub") then
-    CoreGui.BloxFruitsFixedHub:Destroy()
+if CoreGui:FindFirstChild("BloxFruitsBringHub") then
+    CoreGui.BloxFruitsBringHub:Destroy()
 end
 
 local Settings = {
     AutoFarm = false,
-    MobMagnet = true,
-    FarmDistance = 7, -- Jarak melayang aman (Anti-Anticheat Kick)
+    FarmDistance = 5.5,
     MagnetRadius = 250
 }
 
--- 1. SAVE & LOAD SYSTEM
 local function SaveSettings()
     if writefile then
         pcall(function() writefile(ConfigFile, HttpService:JSONEncode(Settings)) end)
@@ -34,23 +31,25 @@ end
 local function LoadSettings()
     if readfile and isfile and isfile(ConfigFile) then
         pcall(function()
-            local data = HttpService:JSONDecode(readfile(ConfigFile))
-            if type(data) == "table" then
-                for k, v in pairs(data) do Settings[k] = v end
+            local decoded = HttpService:JSONDecode(readfile(ConfigFile))
+            if type(decoded) == "table" then
+                for k, v in pairs(decoded) do
+                    if Settings[k] ~= nil then Settings[k] = v end
+                end
             end
         end)
     end
 end
 LoadSettings()
 
--- 2. GUI MENU
+-- GUI MENU
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsFixedHub"
+ScreenGui.Name = "BloxFruitsBringHub"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 230, 0, 170)
+MainFrame.Size = UDim2.new(0, 230, 0, 130)
 MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.BorderSizePixel = 0
@@ -61,43 +60,27 @@ MainFrame.Parent = ScreenGui
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-Title.Text = "Blox Fruits Auto-Farm [RCtrl]"
+Title.Text = "Bring Mob Auto-Farm [RCtrl]"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 13
 Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
 local ToggleFarmBtn = Instance.new("TextButton")
-ToggleFarmBtn.Size = UDim2.new(0.9, 0, 0, 40)
-ToggleFarmBtn.Position = UDim2.new(0.05, 0, 0.28, 0)
+ToggleFarmBtn.Size = UDim2.new(0.9, 0, 0, 50)
+ToggleFarmBtn.Position = UDim2.new(0.05, 0, 0.38, 0)
 ToggleFarmBtn.Font = Enum.Font.SourceSansBold
 ToggleFarmBtn.TextSize = 14
 ToggleFarmBtn.Parent = MainFrame
 
-local ToggleMagnetBtn = Instance.new("TextButton")
-ToggleMagnetBtn.Size = UDim2.new(0.9, 0, 0, 40)
-ToggleMagnetBtn.Position = UDim2.new(0.05, 0, 0.58, 0)
-ToggleMagnetBtn.Font = Enum.Font.SourceSansBold
-ToggleMagnetBtn.TextSize = 14
-ToggleMagnetBtn.Parent = MainFrame
-
 local function UpdateUI()
-    ToggleFarmBtn.Text = Settings.AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
+    ToggleFarmBtn.Text = Settings.AutoFarm and "Bring Mob Farm: ON" or "Bring Mob Farm: OFF"
     ToggleFarmBtn.BackgroundColor3 = Settings.AutoFarm and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-
-    ToggleMagnetBtn.Text = Settings.MobMagnet and "Mob Magnet: ON" or "Mob Magnet: OFF"
-    ToggleMagnetBtn.BackgroundColor3 = Settings.MobMagnet and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 end
 UpdateUI()
 
 ToggleFarmBtn.MouseButton1Click:Connect(function()
     Settings.AutoFarm = not Settings.AutoFarm
-    UpdateUI()
-    SaveSettings()
-end)
-
-ToggleMagnetBtn.MouseButton1Click:Connect(function()
-    Settings.MobMagnet = not Settings.MobMagnet
     UpdateUI()
     SaveSettings()
 end)
@@ -115,7 +98,6 @@ LocalPlayer.Idled:Connect(function()
     VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
--- 3. HELPER FUNCTIONS
 local function DisableGravity(root)
     if not root:FindFirstChild("FarmBV") then
         local bodyVelocity = Instance.new("BodyVelocity")
@@ -139,23 +121,20 @@ task.spawn(function()
         if Settings.AutoFarm then
             local char = LocalPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
-            if root then
-                root.CanCollide = false
-            end
+            if root then root.CanCollide = false end
         end
     end
 end)
 
--- 4. MAIN FARMING LOOP (REAL PHYSICAL MAGNET & ZERO BUG)
+-- MAIN FARMING LOOP (FULL STABILITY & ZERO STUCK)
 task.spawn(function()
     while true do
-        task.wait(0.04)
+        task.wait(0.03)
         if Settings.AutoFarm then
             local char = LocalPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
             local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-            -- Proteksi Anti Death Loop / Respawn Bug
             if root and hum and hum.Health > 10 then
                 DisableGravity(root)
 
@@ -163,47 +142,58 @@ task.spawn(function()
                 if enemies then
                     local targetMob = nil
 
-                    -- Cari 1 Mob Utama
+                    -- Tahap 1: Cari mob di sekitar radius player
                     for _, mob in pairs(enemies:GetChildren()) do
                         local mHum = mob:FindFirstChildOfClass("Humanoid")
                         local mRoot = mob:FindFirstChild("HumanoidRootPart")
                         if mHum and mHum.Health > 0 and mRoot then
-                            targetMob = mob
-                            break
+                            if (mRoot.Position - root.Position).Magnitude <= Settings.MagnetRadius then
+                                targetMob = mob
+                                break
+                            end
+                        end
+                    end
+
+                    -- Tahap 2: Fallback ke mob mana saja jika di area sekitar kosong
+                    if not targetMob then
+                        for _, mob in pairs(enemies:GetChildren()) do
+                            local mHum = mob:FindFirstChildOfClass("Humanoid")
+                            local mRoot = mob:FindFirstChild("HumanoidRootPart")
+                            if mHum and mHum.Health > 0 and mRoot then
+                                targetMob = mob
+                                break
+                            end
                         end
                     end
 
                     if targetMob then
                         local targetRoot = targetMob.HumanoidRootPart
-                        local mobPosition = targetRoot.Position
-                        local hoverPos = mobPosition + Vector3.new(0, Settings.FarmDistance, 0)
+                        local centerPos = targetRoot.Position
                         
-                        -- Hover melayang di atas Mob utama
-                        root.CFrame = CFrame.lookAt(hoverPos, mobPosition)
+                        root.CFrame = CFrame.lookAt(centerPos + Vector3.new(0, Settings.FarmDistance, 0), centerPos)
 
-                        -- LOGIKA REAL MOB MAGNET (Fisik Server-side Registration)
-                        if Settings.MobMagnet then
-                            for _, mob in pairs(enemies:GetChildren()) do
-                                local mHum = mob:FindFirstChildOfClass("Humanoid")
-                                local mRoot = mob:FindFirstChild("HumanoidRootPart")
+                        -- LOGIKA BRING MOB REAL
+                        for _, mob in pairs(enemies:GetChildren()) do
+                            local mHum = mob:FindFirstChildOfClass("Humanoid")
+                            local mRoot = mob:FindFirstChild("HumanoidRootPart")
 
-                                if mHum and mHum.Health > 0 and mRoot then
-                                    if (mRoot.Position - mobPosition).Magnitude <= Settings.MagnetRadius then
-                                        for _, mPart in pairs(mob:GetChildren()) do
-                                            if mPart:IsA("BasePart") then
-                                                mPart.CanCollide = false
-                                            end
+                            if mHum and mHum.Health > 0 and mRoot then
+                                if (mRoot.Position - centerPos).Magnitude <= Settings.MagnetRadius then
+                                    for _, mPart in pairs(mob:GetChildren()) do
+                                        if mPart:IsA("BasePart") then
+                                            mPart.CanCollide = false
                                         end
-
-                                        -- Seret fisik mob ke titik target agar damage server mendarat
-                                        mRoot.Velocity = (mobPosition - mRoot.Position) * 10
-                                        mRoot.CFrame = CFrame.new(mRoot.Position:Lerp(mobPosition, 0.2))
                                     end
+                                    
+                                    mRoot.CFrame = CFrame.new(centerPos)
+                                    mRoot.Velocity = Vector3.new(0, 0, 0)
+                                    mRoot.RotVelocity = Vector3.new(0, 0, 0)
+                                    mHum.WalkSpeed = 0
                                 end
                             end
                         end
 
-                        -- Attack Trigger
+                        -- Trigger Attack
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                     end
