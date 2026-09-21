@@ -1,87 +1,89 @@
 -- ========================================================
--- BLOX FRUITS - FAST TARGET AUTO-FARM (100% REAL DAMAGE)
+-- ROBLOX PIGGY - AUTO ESCAPE & GODMODE HUB
 -- ========================================================
 
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local VirtualUser = game:GetService("VirtualUser")
-local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
-local ConfigFile = "BloxFruits_FastFarm_Settings.json"
 
-if CoreGui:FindFirstChild("BloxFruitsFastHub") then
-    CoreGui.BloxFruitsFastHub:Destroy()
+if CoreGui:FindFirstChild("PiggyGodHub") then
+    CoreGui.PiggyGodHub:Destroy()
 end
 
+-- CONFIGURATION
 local Settings = {
-    AutoFarm = false,
-    FarmDistance = 7, -- Jarak 7 stud (Aman dari benturan hitbox monster besar)
+    GodMode = true,
+    Speed = false,
+    Noclip = false,
+    ESP = true,
+    AutoCollect = false
 }
 
-local function SaveSettings()
-    if writefile then
-        pcall(function() writefile(ConfigFile, HttpService:JSONEncode(Settings)) end)
-    end
-end
-
-local function LoadSettings()
-    if readfile and isfile and isfile(ConfigFile) then
-        pcall(function()
-            local decoded = HttpService:JSONDecode(readfile(ConfigFile))
-            if type(decoded) == "table" then
-                for k, v in pairs(decoded) do
-                    if Settings[k] ~= nil then Settings[k] = v end
-                end
-            end
-        end)
-    end
-end
-LoadSettings()
-
--- GUI MENU
+-- 1. GUI MENU CREATION
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsFastHub"
+ScreenGui.Name = "PiggyGodHub"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
+-- Open/Close Toggle Button (Floating)
+local OpenBtn = Instance.new("TextButton")
+OpenBtn.Name = "OpenMenuButton"
+OpenBtn.Size = UDim2.new(0, 80, 0, 30)
+OpenBtn.Position = UDim2.new(0, 10, 0.4, 0)
+OpenBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+OpenBtn.Text = "PIGGY MENU"
+OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenBtn.Font = Enum.Font.SourceSansBold
+OpenBtn.TextSize = 12
+OpenBtn.Active = true
+OpenBtn.Draggable = true
+OpenBtn.Parent = ScreenGui
+
+-- Main Frame UI
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 230, 0, 130)
-MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
+MainFrame.Size = UDim2.new(0, 240, 0, 290)
+MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-Title.Text = "Blox Fruits Fast Farm [RCtrl]"
+Title.Text = "Piggy Escape God Hub [RCtrl]"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 13
 Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
-local ToggleFarmBtn = Instance.new("TextButton")
-ToggleFarmBtn.Size = UDim2.new(0.9, 0, 0, 50)
-ToggleFarmBtn.Position = UDim2.new(0.05, 0, 0.38, 0)
-ToggleFarmBtn.Font = Enum.Font.SourceSansBold
-ToggleFarmBtn.TextSize = 14
-ToggleFarmBtn.Parent = MainFrame
+-- Helper UI Button Creator
+local function CreateButton(text, pos, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.Position = pos
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 12
+    btn.Parent = MainFrame
 
-local function UpdateUI()
-    ToggleFarmBtn.Text = Settings.AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
-    ToggleFarmBtn.BackgroundColor3 = Settings.AutoFarm and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    btn.MouseButton1Click:Connect(function()
+        callback(btn)
+    end)
+    return btn
 end
-UpdateUI()
 
-ToggleFarmBtn.MouseButton1Click:Connect(function()
-    Settings.AutoFarm = not Settings.AutoFarm
-    UpdateUI()
-    SaveSettings()
+-- Toggling Menu Display
+OpenBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
 end)
 
 UserInputService.InputBegan:Connect(function(input, gpe)
@@ -90,84 +92,137 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- Anti AFK
-LocalPlayer.Idled:Connect(function()
-    VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-    task.wait(1)
-    VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+-- 2. BUTTON CONTROLS
+local ToggleGod = CreateButton("Godmode / Anti-Catch: ON", UDim2.new(0.05, 0, 0.15, 0), function(btn)
+    Settings.GodMode = not Settings.GodMode
+    btn.Text = Settings.GodMode and "Godmode / Anti-Catch: ON" or "Godmode / Anti-Catch: OFF"
+    btn.BackgroundColor3 = Settings.GodMode and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
 end)
 
-local function DisableGravity(root)
-    if not root:FindFirstChild("FarmBV") then
-        local bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.Name = "FarmBV"
-        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bodyVelocity.Parent = root
-    end
-end
+local ToggleESP = CreateButton("X-Ray / Item ESP: ON", UDim2.new(0.05, 0, 0.29, 0), function(btn)
+    Settings.ESP = not Settings.ESP
+    btn.Text = Settings.ESP and "X-Ray / Item ESP: ON" or "X-Ray / Item ESP: OFF"
+    btn.BackgroundColor3 = Settings.ESP and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+end)
 
-local function EnableGravity(root)
-    if root and root:FindFirstChild("FarmBV") then
-        root.FarmBV:Destroy()
-    end
-end
-
--- NOCLIP SAFE
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if Settings.AutoFarm then
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            if root then root.CanCollide = false end
+local ToggleCollect = CreateButton("Auto Collect All Items", UDim2.new(0.05, 0, 0.43, 0), function(btn)
+    -- Teleport & Sweep Item ke Karakter
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if root then
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
+                local parentPart = obj.Parent
+                if parentPart and parentPart:IsA("BasePart") then
+                    root.CFrame = parentPart.CFrame
+                    task.wait(0.1)
+                    if obj:IsA("ClickDetector") then fireclickdetector(obj) end
+                    if obj:IsA("ProximityPrompt") then fireproximityprompt(obj) end
+                end
+            end
         end
     end
 end)
 
--- MAIN FARMING LOOP (FAST SWAP REAL DAMAGE)
-task.spawn(function()
-    while true do
-        task.wait(0.03)
-        if Settings.AutoFarm then
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
+local ToggleSpeed = CreateButton("Speedboost (Fast Run)", UDim2.new(0.05, 0, 0.57, 0), function(btn)
+    Settings.Speed = not Settings.Speed
+    btn.Text = Settings.Speed and "Speedboost: ON" or "Speedboost: OFF"
+    btn.BackgroundColor3 = Settings.Speed and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(45, 45, 55)
+end)
 
-            if root and hum and hum.Health > 10 then
-                DisableGravity(root)
+local ToggleNoclip = CreateButton("Noclip (Tembus Tembok)", UDim2.new(0.05, 0, 0.71, 0), function(btn)
+    Settings.Noclip = not Settings.Noclip
+    btn.Text = Settings.Noclip and "Noclip: ON" or "Noclip: OFF"
+    btn.BackgroundColor3 = Settings.Noclip and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(45, 45, 55)
+end)
 
-                local enemies = workspace:FindFirstChild("Enemies")
-                if enemies then
-                    local targetMob = nil
+local TeleportEscapeBtn = CreateButton("Teleport Door / Escape", UDim2.new(0.05, 0, 0.85, 0), function(btn)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if root then
+        -- Cari Pintu Escape Utama di Map Piggy
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj.Name == "EscapeDoor" or obj.Name == "Door" or obj.Name == "Exit" then
+                if obj:IsA("BasePart") then
+                    root.CFrame = obj.CFrame * CFrame.new(0, 0, -3)
+                    break
+                elseif obj:FindFirstChildOfClass("BasePart") then
+                    root.CFrame = obj:FindFirstChildOfClass("BasePart").CFrame * CFrame.new(0, 0, -3)
+                    break
+                end
+            end
+        end
+    end
+end)
 
-                    -- Cari 1 Mob Hidup Terdekat
-                    for _, mob in pairs(enemies:GetChildren()) do
-                        local mHum = mob:FindFirstChildOfClass("Humanoid")
-                        local mRoot = mob:FindFirstChild("HumanoidRootPart")
-                        if mHum and mHum.Health > 0 and mRoot then
-                            targetMob = mob
-                            break
+-- Initial Toggle Color Setup
+ToggleGod.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+ToggleESP.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+
+-- 3. BACKGROUND ENGINE & GODMODE PROTECTION
+RunService.Stepped:Connect(function()
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local root = char:FindFirstChild("HumanoidRootPart")
+
+        -- Speedboost
+        if hum and Settings.Speed then
+            hum.WalkSpeed = 28
+        end
+
+        -- Noclip
+        if Settings.Noclip then
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+
+        -- GODMODE & ANTI-PIGGY CATCH
+        if Settings.GodMode then
+            -- Netralkan Trap Piggy & Hitbox Monster
+            for _, obj in pairs(Workspace:GetDescendants()) do
+                if obj.Name == "Trap" or obj.Name == "Piggy" or obj.Name == "BearTrap" then
+                    if obj:IsA("BasePart") then
+                        obj.CanTouch = false
+                    elseif obj:IsA("Model") then
+                        for _, p in pairs(obj:GetChildren()) do
+                            if p:IsA("BasePart") then p.CanTouch = false end
                         end
-                    end
-
-                    if targetMob then
-                        local targetRoot = targetMob.HumanoidRootPart
-                        local mobPos = targetRoot.Position
-                        
-                        -- Pindah melayang 7 stud tepat di atas koordinat asli server mob
-                        root.CFrame = CFrame.lookAt(mobPos + Vector3.new(0, Settings.FarmDistance, 0), mobPos)
-
-                        -- Pukul (Damage 100% Masuk ke Server)
-                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                     end
                 end
             end
-        else
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            if root then EnableGravity(root) end
+        end
+    end
+end)
+
+-- 4. X-RAY / ESP HIGHLIGHTER
+task.spawn(function()
+    while task.wait(1) do
+        if Settings.ESP then
+            for _, obj in pairs(Workspace:GetDescendants()) do
+                if obj:IsA("Model") or obj:IsA("BasePart") then
+                    -- Highlight Item / Kunci / Pintu
+                    local name = string.lower(obj.Name)
+                    if name:find("key") or name:find("plank") or name:find("wrench") or name:find("hammer") or name:find("door") or name:find("piggy") then
+                        if not obj:FindFirstChild("PiggyESP") then
+                            local highlight = Instance.new("Highlight")
+                            highlight.Name = "PiggyESP"
+                            highlight.FillTransparency = 0.5
+                            highlight.OutlineTransparency = 0
+                            
+                            if name:find("piggy") then
+                                highlight.FillColor = Color3.fromRGB(255, 0, 0) -- Merah buat Piggy
+                            else
+                                highlight.FillColor = Color3.fromRGB(0, 255, 128) -- Hijau buat Item/Kunci
+                            end
+                            highlight.Parent = obj
+                        end
+                    end
+                end
+            end
         end
     end
 end)
