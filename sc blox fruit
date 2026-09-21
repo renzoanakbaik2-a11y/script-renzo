@@ -1,10 +1,9 @@
 -- =================================================================
--- DRESS TO IMPRESS (DTI) - AUTO STYLIST & TOP 3 HELPER HUB
+-- DRESS TO IMPRESS (DTI) - STABLE HELPER & TELEPORT ROUTE
 -- =================================================================
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
 
@@ -13,36 +12,39 @@ local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local Humanoid = Character:WaitForChild("Humanoid")
 
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    Character = newChar
+    HumanoidRootPart = newChar:WaitForChild("HumanoidRootPart", 5)
+    Humanoid = newChar:WaitForChild("Humanoid", 5)
+end)
+
 local Settings = {
     AutoFarmCash = false,
     WalkSpeed = 16,
     AntiAFK = true
 }
 
-LocalPlayer.CharacterAdded:Connect(function(newChar)
-    Character = newChar
-    HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-    Humanoid = Character:WaitForChild("Humanoid")
-end)
-
 -- Anti-AFK
 LocalPlayer.Idled:Connect(function()
     if Settings.AntiAFK then
-        VirtualUser:Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
-        task.wait(1)
-        VirtualUser:Button2Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+        pcall(function()
+            VirtualUser:Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+            task.wait(1)
+            VirtualUser:Button2Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+        end)
     end
 end)
 
--- 1. SCREEN GUI (MENU AUTO STYLIST)
+-- UI Injection
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DTIAutoStylistUI"
+ScreenGui.Name = "DTI_StableHelperUI"
 ScreenGui.ResetOnSpawn = false
 
-pcall(function() ScreenGui.Parent = CoreGui end)
-if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+local uiParent = nil
+pcall(function() uiParent = CoreGui end)
+if not uiParent then uiParent = LocalPlayer:WaitForChild("PlayerGui", 5) end
+ScreenGui.Parent = uiParent
 
--- Tombol Open/Close Menu
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleMenuBtn"
 ToggleBtn.Parent = ScreenGui
@@ -50,7 +52,7 @@ ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
 ToggleBtn.Position = UDim2.new(0, 15, 0.5, -20)
 ToggleBtn.Size = UDim2.new(0, 120, 0, 40)
 ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Text = "AUTO STYLIST"
+ToggleBtn.Text = "DTI HELPER"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleBtn.TextSize = 14
 ToggleBtn.Active = true
@@ -61,7 +63,7 @@ MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(35, 25, 35)
 MainFrame.Position = UDim2.new(0.5, -130, 0.5, -170)
-MainFrame.Size = UDim2.new(0, 260, 0, 320)
+MainFrame.Size = UDim2.new(0, 260, 0, 300)
 MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -71,44 +73,35 @@ Title.Parent = MainFrame
 Title.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "DTI AUTO-STYLIST HUB"
+Title.Text = "DTI HELPER & SPEED ROUTE"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 15
+Title.TextSize = 14
 
 ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Helper Fungsi Teleport Baju/Aksesori
-local function EquipItemByKeywords(keywords)
+-- Teleport Rute ke Area Baju Spesifik
+local function TeleportToArea(keywords)
     if not HumanoidRootPart then return end
-    local startCFrame = HumanoidRootPart.CFrame
-    
-    for _, item in ipairs(Workspace:GetDescendants()) do
-        if item:IsA("BasePart") or item:IsA("Model") then
-            local itemName = item.Name:lower()
-            for _, kw in ipairs(keywords) do
-                if itemName:find(kw) then
-                    local part = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
-                    if part then
-                        HumanoidRootPart.CFrame = part.CFrame
-                        if firetouchinterest then
-                            firetouchinterest(HumanoidRootPart, part, 0)
-                            task.wait(0.05)
-                            firetouchinterest(HumanoidRootPart, part, 1)
+    pcall(function()
+        for _, item in ipairs(Workspace:GetDescendants()) do
+            if item:IsA("BasePart") or item:IsA("Model") then
+                local name = item.Name:lower()
+                for _, kw in ipairs(keywords) do
+                    if name:find(kw) then
+                        local part = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
+                        if part then
+                            HumanoidRootPart.CFrame = part.CFrame + Vector3.new(0, 2, 2)
+                            return
                         end
-                        task.wait(0.1)
                     end
                 end
             end
         end
-    end
-    
-    -- Kembalikan posisi pemain ke area tengah
-    HumanoidRootPart.CFrame = startCFrame
+    end)
 end
 
--- Helper Button Creator
 local function CreateButton(text, posY, color, callback)
     local btn = Instance.new("TextButton")
     btn.Parent = MainFrame
@@ -118,31 +111,28 @@ local function CreateButton(text, posY, color, callback)
     btn.Font = Enum.Font.SourceSansSemibold
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 14
+    btn.TextSize = 13
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
--- 2. TOMBOL PRESET DEKORASI BUI/OUTFIT
-CreateButton("Auto Dress: Tema 2020 / Casual", 45, Color3.fromRGB(180, 80, 150), function()
-    -- Mengambil Hoodie, Sweatpants, Masker, dan Headphone
-    EquipItemByKeywords({"hoodie", "sweatpants", "mask", "headphone", "casual", "jacket"})
+-- Rute Teleportasi Rak
+CreateButton("TP Ke Area Casual / Hoodie (2020)", 45, Color3.fromRGB(180, 80, 150), function()
+    TeleportToArea({"hoodie", "jacket", "casual", "sweatpants"})
 end)
 
-CreateButton("Auto Dress: Tema Harajuku / Cute", 85, Color3.fromRGB(220, 100, 170), function()
-    -- Mengambil Skirt, Bunny/Cat Ears, Ribbon, Pastel Tops
-    EquipItemByKeywords({"skirt", "bunny", "ear", "ribbon", "cute", "harajuku", "socks"})
+CreateButton("TP Ke Area Gaun / Dress Elegant", 85, Color3.fromRGB(150, 60, 130), function()
+    TeleportToArea({"dress", "gown", "skirt"})
 end)
 
-CreateButton("Auto Dress: Tema Elegant / Dress", 125, Color3.fromRGB(150, 60, 130), function()
-    -- Mengambil Dress Panjang, Heels, Necklace, Crown
-    EquipItemByKeywords({"dress", "gown", "heels", "necklace", "crown", "jewel"})
+CreateButton("TP Ke Area Makeup / Wajah", 125, Color3.fromRGB(100, 50, 120), function()
+    TeleportToArea({"makeup", "face", "hair"})
 end)
 
--- Tombol Toggle Speed Hack
+-- Speed
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Parent = MainFrame
-SpeedBtn.Position = UDim2.new(0, 15, 0, 175)
+SpeedBtn.Position = UDim2.new(0, 15, 0, 170)
 SpeedBtn.Size = UDim2.new(0, 230, 0, 35)
 SpeedBtn.BackgroundColor3 = Color3.fromRGB(50, 40, 50)
 SpeedBtn.Font = Enum.Font.SourceSansSemibold
@@ -165,11 +155,11 @@ SpeedBtn.MouseButton1Click:Connect(function()
     if Humanoid then Humanoid.WalkSpeed = Settings.WalkSpeed end
 end)
 
--- Tombol Toggle Auto Collect Cash
+-- Auto Collect Cash
 local toggleCash = false
 local CashBtn = Instance.new("TextButton")
 CashBtn.Parent = MainFrame
-CashBtn.Position = UDim2.new(0, 15, 0, 215)
+CashBtn.Position = UDim2.new(0, 15, 0, 210)
 CashBtn.Size = UDim2.new(0, 230, 0, 35)
 CashBtn.BackgroundColor3 = Color3.fromRGB(50, 40, 50)
 CashBtn.Font = Enum.Font.SourceSansSemibold
@@ -191,45 +181,28 @@ CashBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Tombol Teleport ke Meja Makeup
-CreateButton("Teleport ke Meja Makeup / Wajah", 255, Color3.fromRGB(80, 50, 80), function()
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and (obj.Name:lower():find("makeup") or obj.Name:lower():find("face")) then
-            if HumanoidRootPart then
-                HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 2, 0)
-                break
-            end
-        end
-    end
-end)
-
--- 3. LOGIKA AUTO COLLECT CASH IN-GAME
+-- Loop Farming Koin
 task.spawn(function()
     while true do
         task.wait(0.3)
         if Settings.AutoFarmCash and HumanoidRootPart then
-            local cashFound = nil
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj:IsA("BasePart") or obj:IsA("Model") then
-                    local name = obj.Name:lower()
-                    if name:find("cash") or name:find("money") or name:find("pink") or name:find("star") then
-                        cashFound = obj
-                        break
+            pcall(function()
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") then
+                        local name = obj.Name:lower()
+                        if name:find("cash") or name:find("money") or name:find("pink") or name:find("star") then
+                            HumanoidRootPart.CFrame = obj.CFrame
+                            if firetouchinterest then
+                                firetouchinterest(HumanoidRootPart, obj, 0)
+                                task.wait()
+                                firetouchinterest(HumanoidRootPart, obj, 1)
+                            end
+                            task.wait(0.1)
+                            break
+                        end
                     end
                 end
-            end
-            if cashFound then
-                local targetPart = cashFound:IsA("BasePart") and cashFound or cashFound:FindFirstChildOfClass("BasePart")
-                if targetPart then
-                    HumanoidRootPart.CFrame = targetPart.CFrame
-                    if firetouchinterest then
-                        firetouchinterest(HumanoidRootPart, targetPart, 0)
-                        task.wait()
-                        firetouchinterest(HumanoidRootPart, targetPart, 1)
-                    end
-                    task.wait(0.1)
-                end
-            end
+            end)
         end
     end
 end)
