@@ -1,5 +1,5 @@
 -- ========================================================
--- ROBLOX PIGGY - RECURSIVE WORKSPACE SCANNER (FIXED)
+-- ROBLOX PIGGY - FULLY AUTOMATED ITEM COLLECT & USE
 -- ========================================================
 
 local Players = game:GetService("Players")
@@ -8,7 +8,6 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -17,20 +16,22 @@ if CoreGui:FindFirstChild("PiggyGodHub") then
 end
 
 local Settings = {
-    ESP = true
+    GodMode = true,
+    Speed = false,
+    Noclip = false,
+    ESP = true,
+    SmartCollect = false
 }
 
 local UsedItems = {}
-local CodeSubmitted = false
 
 Workspace.ChildAdded:Connect(function(child)
     if child.Name == "Map" or child.Name == "Chapter" then
         UsedItems = {}
-        CodeSubmitted = false
     end
 end)
 
--- 1. GUI MENU
+-- GUI MENU CREATION
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "PiggyGodHub"
 ScreenGui.Parent = CoreGui
@@ -50,7 +51,7 @@ OpenBtn.Draggable = true
 OpenBtn.Parent = ScreenGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 240, 0, 210)
+MainFrame.Size = UDim2.new(0, 240, 0, 290)
 MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.BorderSizePixel = 0
@@ -62,30 +63,25 @@ MainFrame.Parent = ScreenGui
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-Title.Text = "Piggy Recursive Helper [RCtrl]"
+Title.Text = "Piggy Auto Escape Hub [RCtrl]"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 12
+Title.TextSize = 13
 Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
-local function CreateActionButton(text, pos, callback)
+local function CreateButton(text, pos, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 36)
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
     btn.Position = pos
-    btn.BackgroundColor3 = Color3.fromRGB(45, 85, 155)
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 11
+    btn.TextSize = 12
     btn.Parent = MainFrame
 
     btn.MouseButton1Click:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
         callback(btn)
-        task.wait(0.4)
-        if not text:find("ESP") then
-            btn.BackgroundColor3 = Color3.fromRGB(45, 85, 155)
-        end
     end)
     return btn
 end
@@ -100,7 +96,60 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     end
 end)
 
-local function EquipToolFromBackpack()
+-- BUTTON CONTROLS
+local ToggleGod = CreateButton("Godmode / Anti-Catch: ON", UDim2.new(0.05, 0, 0.15, 0), function(btn)
+    Settings.GodMode = not Settings.GodMode
+    btn.Text = Settings.GodMode and "Godmode / Anti-Catch: ON" or "Godmode / Anti-Catch: OFF"
+    btn.BackgroundColor3 = Settings.GodMode and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+end)
+
+local ToggleESP = CreateButton("X-Ray / Item ESP: ON", UDim2.new(0.05, 0, 0.29, 0), function(btn)
+    Settings.ESP = not Settings.ESP
+    btn.Text = Settings.ESP and "X-Ray / Item ESP: ON" or "X-Ray / Item ESP: OFF"
+    btn.BackgroundColor3 = Settings.ESP and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+end)
+
+local ToggleSmartCollect = CreateButton("Smart Auto Collect: OFF", UDim2.new(0.05, 0, 0.43, 0), function(btn)
+    Settings.SmartCollect = not Settings.SmartCollect
+    btn.Text = Settings.SmartCollect and "Smart Auto Collect: ON" or "Smart Auto Collect: OFF"
+    btn.BackgroundColor3 = Settings.SmartCollect and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+end)
+
+local ToggleSpeed = CreateButton("Speedboost: OFF", UDim2.new(0.05, 0, 0.57, 0), function(btn)
+    Settings.Speed = not Settings.Speed
+    btn.Text = Settings.Speed and "Speedboost: ON" or "Speedboost: OFF"
+    btn.BackgroundColor3 = Settings.Speed and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(45, 45, 55)
+end)
+
+local ToggleNoclip = CreateButton("Noclip: OFF", UDim2.new(0.05, 0, 0.71, 0), function(btn)
+    Settings.Noclip = not Settings.Noclip
+    btn.Text = Settings.Noclip and "Noclip: ON" or "Noclip: OFF"
+    btn.BackgroundColor3 = Settings.Noclip and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(45, 45, 55)
+end)
+
+local TeleportEscapeBtn = CreateButton("Teleport Door / Escape", UDim2.new(0.05, 0, 0.85, 0), function(btn)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if root then
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj.Name == "EscapeDoor" or obj.Name == "Door" or obj.Name == "Exit" then
+                if obj:IsA("BasePart") then
+                    root.CFrame = obj.CFrame * CFrame.new(0, 0, -3)
+                    break
+                elseif obj:FindFirstChildOfClass("BasePart") then
+                    root.CFrame = obj:FindFirstChildOfClass("BasePart").CFrame * CFrame.new(0, 0, -3)
+                    break
+                end
+            end
+        end
+    end
+end)
+
+ToggleGod.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+ToggleESP.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+
+-- FUNGSI REVISI: DITINGKATKAN AGAR BISA CEK TANGAN MAUPUN BACKPACK DAN OTOMATIS EQUIP
+local function EnsureEquipItem()
     local char = LocalPlayer.Character
     if not char then return nil end
     
@@ -122,215 +171,152 @@ local function EquipToolFromBackpack()
     return nil
 end
 
-local function GetDoorCode()
+local function GetPiggyTarget()
     for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("TextLabel") and obj.Text then
-            local txt = string.gsub(obj.Text, "%s+", "")
-            if #txt == 4 and tonumber(txt) then
-                return txt
+        if obj.Name == "Piggy" or obj:FindFirstChild("Piggy") then
+            if obj:IsA("Model") and obj:FindFirstChild("HumanoidRootPart") then
+                return obj.HumanoidRootPart
+            elseif obj:IsA("BasePart") then
+                return obj
             end
         end
     end
     return nil
 end
 
--- DETEKSI NAMA ITEM HINGGA MODEL PARENT
-local function IsItemMatch(obj, keyword)
-    if not obj then return false end
-    local name = string.lower(obj.Name)
-    if name:find(keyword) then return true end
-    if obj.Parent and string.lower(obj.Parent.Name):find(keyword) then return true end
-    if obj.Parent and obj.Parent.Parent and string.lower(obj.Parent.Parent.Name):find(keyword) then return true end
-    return false
-end
+-- SMART AUTOMATED LOOP (AMBIL -> EQUIP -> TELEPORT PAKAI -> SKIP JIKA SUDAH HILANG)
+task.spawn(function()
+    while true do
+        task.wait(0.4)
+        if Settings.SmartCollect then
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
 
--- URUTAN ITEM STRICT
-local SequenceKeywords = {
-    {item = "hammer", target = "plank"},
-    {item = "wrench", target = "generator"},
-    {item = "keycard", target = "reader"},
-    {item = "key", target = "door"},
-    {item = "gear", target = "machine"},
-    {item = "gun", target = "piggy"},
-    {item = "crossbow", target = "piggy"}
-}
+            if root then
+                -- 1. Paksa pasang item jika ada di backpack
+                local activeTool = EnsureEquipItem()
 
-local function ExecuteCollectAndUseSequence()
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    for _, seq in ipairs(SequenceKeywords) do
-        local itemKeyword = seq.item
-        local targetKeyword = seq.target
-
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
-                local parentPart = obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildOfClass("BasePart")
-                
-                if parentPart and IsItemMatch(obj.Parent, itemKeyword) and not UsedItems[obj.Parent] then
-                    -- 1. Teleport ke Item
-                    root.CFrame = parentPart.CFrame
-                    task.wait(0.2)
-                    
-                    if obj:IsA("ClickDetector") then 
-                        fireclickdetector(obj) 
-                    elseif obj:IsA("ProximityPrompt") then 
-                        fireproximityprompt(obj) 
-                    end
-                    
-                    task.wait(0.4)
-                    
-                    -- 2. Equip Ke Tangan
-                    local tool = EquipToolFromBackpack()
-                    
-                    -- 3. Teleport Ke Pintu Target
-                    if tool then
-                        if itemKeyword == "gun" or itemKeyword == "crossbow" then
-                            for _, piggyObj in pairs(Workspace:GetDescendants()) do
-                                if (piggyObj.Name == "Piggy" or piggyObj:FindFirstChild("Piggy")) and piggyObj:FindFirstChild("HumanoidRootPart") then
-                                    root.CFrame = CFrame.lookAt(piggyObj.HumanoidRootPart.Position + Vector3.new(0, 0, 6), piggyObj.HumanoidRootPart.Position)
-                                    task.wait(0.3)
-                                    tool:Activate()
-                                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-                                    break
-                                end
-                            end
-                        else
-                            local doorUsed = false
-                            for _, targetObj in pairs(Workspace:GetDescendants()) do
-                                if doorUsed then break end
+                if not activeTool then
+                    -- TAHAP 1: Cari & Teleport Ambil Item Puzzle yang Belum Diambil
+                    for _, obj in pairs(Workspace:GetDescendants()) do
+                        if obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
+                            local parentPart = obj.Parent
+                            local itemBase = parentPart:IsA("BasePart") and parentPart or parentPart:FindFirstChildOfClass("BasePart")
+                            
+                            if itemBase and itemBase:IsDescendantOf(Workspace) then
+                                local itemName = string.lower(parentPart.Name)
                                 
-                                if targetObj:IsA("ClickDetector") or targetObj:IsA("ProximityPrompt") then
-                                    if IsItemMatch(targetObj.Parent, targetKeyword) or IsItemMatch(targetObj.Parent, "door") or IsItemMatch(targetObj.Parent, "lock") or IsItemMatch(targetObj.Parent, "escape") then
-                                        local targetPart = targetObj.Parent:IsA("BasePart") and targetObj.Parent or targetObj.Parent:FindFirstChildOfClass("BasePart")
-                                        if targetPart then
-                                            root.CFrame = targetPart.CFrame
-                                            task.wait(0.2)
-                                            
-                                            if targetObj:IsA("ClickDetector") then fireclickdetector(targetObj) end
-                                            if targetObj:IsA("ProximityPrompt") then fireproximityprompt(targetObj) end
-                                            
-                                            task.wait(0.3)
-                                            doorUsed = true
-                                            break
-                                        end
+                                if not UsedItems[parentPart] and not UsedItems[itemName] then
+                                    if itemName:find("key") or itemName:find("plank") or itemName:find("wrench") or itemName:find("hammer") or itemName:find("gear") or itemName:find("gun") or itemName:find("crossbow") then
+                                        -- Teleport Langsung ke Item
+                                        root.CFrame = itemBase.CFrame
+                                        task.wait(0.2)
+                                        
+                                        if obj:IsA("ClickDetector") then fireclickdetector(obj) end
+                                        if obj:IsA("ProximityPrompt") then fireproximityprompt(obj) end
+                                        
+                                        task.wait(0.4)
+                                        
+                                        -- Cek apakah berhasil ter-equip
+                                        activeTool = EnsureEquipItem()
+                                        if activeTool then break end
                                     end
                                 end
                             end
                         end
                     end
-                    
-                    UsedItems[obj.Parent] = true
-                    root.CFrame = root.CFrame * CFrame.new(0, 14, 0)
-                    task.wait(0.2)
-                    break
                 end
-            end
-        end
-    end
 
-    -- SUBMIT KODE PINTU KEYPAD
-    if not CodeSubmitted then
-        local doorCode = GetDoorCode()
-        if doorCode then
-            for _, obj in pairs(Workspace:GetDescendants()) do
-                if IsItemMatch(obj, "keypad") or IsItemMatch(obj, "code") then
-                    local prompt = obj:FindFirstChildOfClass("ProximityPrompt") or obj:FindFirstChildOfClass("ClickDetector") or obj
-                    local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart")
-                    if prompt and targetPart then
-                        root.CFrame = targetPart.CFrame
-                        task.wait(0.3)
-                        if prompt:IsA("ClickDetector") then fireclickdetector(prompt) end
-                        if prompt:IsA("ProximityPrompt") then fireproximityprompt(prompt) end
-                        
-                        for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-                            if remote:IsA("RemoteEvent") then
-                                local rName = string.lower(remote.Name)
-                                if rName:find("code") or rName:find("keypad") or rName:find("pad") then
-                                    remote:FireServer(doorCode)
+                -- TAHAP 2: Jika Item Sudah di Tangan, Langsung Bawa dan Gunakan ke Pintunya
+                if activeTool then
+                    local toolName = string.lower(activeTool.Name)
+
+                    if toolName:find("gun") or toolName:find("crossbow") then
+                        local piggyRoot = GetPiggyTarget()
+                        if piggyRoot then
+                            root.CFrame = CFrame.lookAt((piggyRoot.CFrame * CFrame.new(0, 0, -8)).Position, piggyRoot.Position)
+                            task.wait(0.2)
+
+                            activeTool:Activate()
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+
+                            UsedItems[toolName] = true
+                            task.wait(0.5)
+                        end
+                    else
+                        for _, obj in pairs(Workspace:GetDescendants()) do
+                            if obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
+                                local targetPart = obj.Parent
+                                local targetBase = targetPart:IsA("BasePart") and targetPart or targetPart:FindFirstChildOfClass("BasePart")
+                                
+                                if targetBase and targetBase:IsDescendantOf(Workspace) then
+                                    local targetName = string.lower(targetPart.Name)
+                                    
+                                    -- Pemetaan Item ke Pintu / Target yang Cocok
+                                    local isMatch = false
+                                    if toolName:find("key") and (targetName:find("door") or targetName:find("lock") or targetName:find("padlock") or targetName:find("gate") or targetName:find("escape")) then
+                                        isMatch = true
+                                    elseif toolName:find("hammer") and targetName:find("plank") then
+                                        isMatch = true
+                                    elseif toolName:find("wrench") and targetName:find("generator") then
+                                        isMatch = true
+                                    elseif toolName:find("gear") and targetName:find("machine") then
+                                        isMatch = true
+                                    elseif toolName:find("keycard") and targetName:find("reader") then
+                                        isMatch = true
+                                    end
+
+                                    if isMatch then
+                                        -- Teleport ke Pintu Target & Pakai
+                                        root.CFrame = targetBase.CFrame
+                                        task.wait(0.2)
+                                        
+                                        if obj:IsA("ClickDetector") then fireclickdetector(obj) end
+                                        if obj:IsA("ProximityPrompt") then fireproximityprompt(obj) end
+                                        
+                                        UsedItems[toolName] = true
+                                        task.wait(0.5)
+                                        break
+                                    end
                                 end
                             end
                         end
-                        CodeSubmitted = true
-                        root.CFrame = root.CFrame * CFrame.new(0, 14, 0)
-                        break
                     end
                 end
-            end
-        end
-    end
-end
 
--- 2. TOMBOL GUI
-CreateActionButton("1-KLIK: COLLECT ALL & USE ITEMS", UDim2.new(0.05, 0, 0.20, 0), function()
-    ExecuteCollectAndUseSequence()
-end)
-
-CreateActionButton("1-KLIK: TELEPORT PINTU KELUAR", UDim2.new(0.05, 0, 0.44, 0), function()
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if root then
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            local name = string.lower(obj.Name)
-            if name:find("escapedoor") or name:find("exit") or (name:find("door") and not name:find("key")) then
-                if obj:IsA("BasePart") then
-                    root.CFrame = obj.CFrame * CFrame.new(0, 0, -3)
-                    break
-                elseif obj:FindFirstChildOfClass("BasePart") then
-                    root.CFrame = obj:FindFirstChildOfClass("BasePart").CFrame * CFrame.new(0, 0, -3)
-                    break
-                end
             end
         end
     end
 end)
 
-local ToggleESPBtn = CreateActionButton("X-Ray / Item ESP: ON", UDim2.new(0.05, 0, 0.68, 0), function(btn)
-    Settings.ESP = not Settings.ESP
-    btn.Text = Settings.ESP and "X-Ray / Item ESP: ON" or "X-Ray / Item ESP: OFF"
-    btn.BackgroundColor3 = Settings.ESP and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    
-    if not Settings.ESP then
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            local hl = obj:FindFirstChild("PiggyESP")
-            if hl then hl:Destroy() end
-        end
-    end
-end)
-
-ToggleESPBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-
--- 3. NOCLIP & ANTI TRAP
+-- ENGINE & GODMODE PROTECTION
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     if char then
-        local root = char:FindFirstChild("HumanoidRootPart")
-        local onGround = false
-        if root then
-            local ray = Ray.new(root.Position, Vector3.new(0, -3.5, 0))
-            local hitPart = Workspace:FindPartOnRayWithIgnoreList(ray, {char})
-            if hitPart then onGround = true end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+
+        if hum and Settings.Speed then
+            hum.WalkSpeed = 28
         end
 
-        for _, part in pairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                if part.Name == "HumanoidRootPart" and onGround then
-                    part.CanCollide = true
-                else
+        if Settings.Noclip then
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
                     part.CanCollide = false
                 end
             end
         end
 
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj.Name == "Trap" or obj.Name == "BearTrap" then
-                if obj:IsA("BasePart") then
-                    obj.CanTouch = false
-                elseif obj:IsA("Model") then
-                    for _, p in pairs(obj:GetChildren()) do
-                        if p:IsA("BasePart") then p.CanTouch = false end
+        if Settings.GodMode then
+            for _, obj in pairs(Workspace:GetDescendants()) do
+                if obj.Name == "Trap" or obj.Name == "Piggy" or obj.Name == "BearTrap" then
+                    if obj:IsA("BasePart") then
+                        obj.CanTouch = false
+                    elseif obj:IsA("Model") then
+                        for _, p in pairs(obj:GetChildren()) do
+                            if p:IsA("BasePart") then p.CanTouch = false end
+                        end
                     end
                 end
             end
@@ -338,19 +324,20 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 4. ESP ENGINE
+-- ESP HIGHLIGHTER
 task.spawn(function()
     while task.wait(1) do
         if Settings.ESP then
             for _, obj in pairs(Workspace:GetDescendants()) do
                 if obj:IsA("Model") or obj:IsA("BasePart") then
                     local name = string.lower(obj.Name)
-                    if name:find("key") or name:find("plank") or name:find("wrench") or name:find("hammer") or name:find("door") or name:find("piggy") or name:find("gun") or name:find("code") then
+                    if name:find("key") or name:find("plank") or name:find("wrench") or name:find("hammer") or name:find("door") or name:find("piggy") or name:find("gun") then
                         if not obj:FindFirstChild("PiggyESP") then
                             local highlight = Instance.new("Highlight")
                             highlight.Name = "PiggyESP"
                             highlight.FillTransparency = 0.5
                             highlight.OutlineTransparency = 0
+                            
                             if name:find("piggy") then
                                 highlight.FillColor = Color3.fromRGB(255, 0, 0)
                             else
