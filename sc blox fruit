@@ -1,12 +1,12 @@
 -- =================================================================
--- PIGGY COLLECT V3 - VISIBILITY GUARD / MANUAL ITEM USE
+-- DRESS TO IMPRESS (DTI) - AUTO STYLIST & TOP 3 HELPER HUB
 -- =================================================================
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
+local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -14,14 +14,10 @@ local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local Humanoid = Character:WaitForChild("Humanoid")
 
 local Settings = {
-    AutoEscape = false,
-    AntiPiggy = false,
-    SmartNoclip = false,
-    WalkSpeed = 16
+    AutoFarmCash = false,
+    WalkSpeed = 16,
+    AntiAFK = true
 }
-
-local BlacklistedItems = {}
-local UsedTargets = {}
 
 LocalPlayer.CharacterAdded:Connect(function(newChar)
     Character = newChar
@@ -29,87 +25,126 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     Humanoid = Character:WaitForChild("Humanoid")
 end)
 
--- 1. SCREEN GUI / MENU IN-GAME
+-- Anti-AFK
+LocalPlayer.Idled:Connect(function()
+    if Settings.AntiAFK then
+        VirtualUser:Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+    end
+end)
+
+-- 1. SCREEN GUI (MENU AUTO STYLIST)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PiggyHubUI"
+ScreenGui.Name = "DTIAutoStylistUI"
 ScreenGui.ResetOnSpawn = false
 
 pcall(function() ScreenGui.Parent = CoreGui end)
 if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
+-- Tombol Open/Close Menu
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleMenuBtn"
 ToggleBtn.Parent = ScreenGui
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
 ToggleBtn.Position = UDim2.new(0, 15, 0.5, -20)
-ToggleBtn.Size = UDim2.new(0, 110, 0, 40)
+ToggleBtn.Size = UDim2.new(0, 120, 0, 40)
 ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Text = "PIGGY HUB"
+ToggleBtn.Text = "AUTO STYLIST"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 16
+ToggleBtn.TextSize = 14
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 28, 36)
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -150)
-MainFrame.Size = UDim2.new(0, 260, 0, 260)
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 25, 35)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -170)
+MainFrame.Size = UDim2.new(0, 260, 0, 320)
 MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
 
 local Title = Instance.new("TextLabel")
 Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
+Title.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "PIGGY CORE DISMANTLER V6"
-Title.TextColor3 = Color3.fromRGB(0, 255, 170)
+Title.Text = "DTI AUTO-STYLIST HUB"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 15
 
 ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
-local function CreateToggleButton(text, positionY, callback)
+-- Helper Fungsi Teleport Baju/Aksesori
+local function EquipItemByKeywords(keywords)
+    if not HumanoidRootPart then return end
+    local startCFrame = HumanoidRootPart.CFrame
+    
+    for _, item in ipairs(Workspace:GetDescendants()) do
+        if item:IsA("BasePart") or item:IsA("Model") then
+            local itemName = item.Name:lower()
+            for _, kw in ipairs(keywords) do
+                if itemName:find(kw) then
+                    local part = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
+                    if part then
+                        HumanoidRootPart.CFrame = part.CFrame
+                        if firetouchinterest then
+                            firetouchinterest(HumanoidRootPart, part, 0)
+                            task.wait(0.05)
+                            firetouchinterest(HumanoidRootPart, part, 1)
+                        end
+                        task.wait(0.1)
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Kembalikan posisi pemain ke area tengah
+    HumanoidRootPart.CFrame = startCFrame
+end
+
+-- Helper Button Creator
+local function CreateButton(text, posY, color, callback)
     local btn = Instance.new("TextButton")
     btn.Parent = MainFrame
-    btn.Position = UDim2.new(0, 15, 0, positionY)
+    btn.Position = UDim2.new(0, 15, 0, posY)
     btn.Size = UDim2.new(0, 230, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+    btn.BackgroundColor3 = color
     btn.Font = Enum.Font.SourceSansSemibold
-    btn.Text = text .. ": OFF"
-    btn.TextColor3 = Color3.fromRGB(255, 85, 85)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.TextSize = 14
-    
-    local state = false
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        if state then
-            btn.Text = text .. ": ON"
-            btn.TextColor3 = Color3.fromRGB(85, 255, 127)
-            btn.BackgroundColor3 = Color3.fromRGB(50, 70, 60)
-        else
-            btn.Text = text .. ": OFF"
-            btn.TextColor3 = Color3.fromRGB(255, 85, 85)
-            btn.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
-        end
-        callback(state)
-    end)
+    btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
-CreateToggleButton("Auto Escape & Collect", 50, function(val) Settings.AutoEscape = val end)
-CreateToggleButton("Disable Piggy Hitbox", 95, function(val) Settings.AntiPiggy = val end)
-CreateToggleButton("Smart Noclip (Safe Floor)", 140, function(val) Settings.SmartNoclip = val end)
+-- 2. TOMBOL PRESET DEKORASI BUI/OUTFIT
+CreateButton("Auto Dress: Tema 2020 / Casual", 45, Color3.fromRGB(180, 80, 150), function()
+    -- Mengambil Hoodie, Sweatpants, Masker, dan Headphone
+    EquipItemByKeywords({"hoodie", "sweatpants", "mask", "headphone", "casual", "jacket"})
+end)
 
+CreateButton("Auto Dress: Tema Harajuku / Cute", 85, Color3.fromRGB(220, 100, 170), function()
+    -- Mengambil Skirt, Bunny/Cat Ears, Ribbon, Pastel Tops
+    EquipItemByKeywords({"skirt", "bunny", "ear", "ribbon", "cute", "harajuku", "socks"})
+end)
+
+CreateButton("Auto Dress: Tema Elegant / Dress", 125, Color3.fromRGB(150, 60, 130), function()
+    -- Mengambil Dress Panjang, Heels, Necklace, Crown
+    EquipItemByKeywords({"dress", "gown", "heels", "necklace", "crown", "jewel"})
+end)
+
+-- Tombol Toggle Speed Hack
 local SpeedBtn = Instance.new("TextButton")
 SpeedBtn.Parent = MainFrame
-SpeedBtn.Position = UDim2.new(0, 15, 0, 185)
+SpeedBtn.Position = UDim2.new(0, 15, 0, 175)
 SpeedBtn.Size = UDim2.new(0, 230, 0, 35)
-SpeedBtn.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+SpeedBtn.BackgroundColor3 = Color3.fromRGB(50, 40, 50)
 SpeedBtn.Font = Enum.Font.SourceSansSemibold
 SpeedBtn.Text = "WalkSpeed: Normal (16)"
 SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -121,7 +156,7 @@ SpeedBtn.MouseButton1Click:Connect(function()
     if speedState then
         Settings.WalkSpeed = 35
         SpeedBtn.Text = "WalkSpeed: Fast (35)"
-        SpeedBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+        SpeedBtn.TextColor3 = Color3.fromRGB(255, 105, 180)
     else
         Settings.WalkSpeed = 16
         SpeedBtn.Text = "WalkSpeed: Normal (16)"
@@ -130,233 +165,71 @@ SpeedBtn.MouseButton1Click:Connect(function()
     if Humanoid then Humanoid.WalkSpeed = Settings.WalkSpeed end
 end)
 
--- 2. SMART NOCLIP (LANTAI SAFE)
-RunService.Stepped:Connect(function()
-    if not Settings.SmartNoclip or not Character then return end
-    for _, part in ipairs(Character:GetDescendants()) do
-        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-            part.CanCollide = false
-        end
+-- Tombol Toggle Auto Collect Cash
+local toggleCash = false
+local CashBtn = Instance.new("TextButton")
+CashBtn.Parent = MainFrame
+CashBtn.Position = UDim2.new(0, 15, 0, 215)
+CashBtn.Size = UDim2.new(0, 230, 0, 35)
+CashBtn.BackgroundColor3 = Color3.fromRGB(50, 40, 50)
+CashBtn.Font = Enum.Font.SourceSansSemibold
+CashBtn.Text = "Auto Collect Cash: OFF"
+CashBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+CashBtn.TextSize = 14
+
+CashBtn.MouseButton1Click:Connect(function()
+    toggleCash = not toggleCash
+    Settings.AutoFarmCash = toggleCash
+    if toggleCash then
+        CashBtn.Text = "Auto Collect Cash: ON"
+        CashBtn.TextColor3 = Color3.fromRGB(100, 255, 150)
+        CashBtn.BackgroundColor3 = Color3.fromRGB(70, 50, 70)
+    else
+        CashBtn.Text = "Auto Collect Cash: OFF"
+        CashBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+        CashBtn.BackgroundColor3 = Color3.fromRGB(50, 40, 50)
     end
 end)
 
--- 3. DISABLE PIGGY HITBOX
-RunService.RenderStepped:Connect(function()
-    if not Settings.AntiPiggy then return end
-    for _, model in ipairs(Workspace:GetChildren()) do
-        if model:IsA("Model") and (model.Name:lower():find("piggy") or model:FindFirstChild("Piggy") or model:FindFirstChild("Enemy")) then
-            for _, part in ipairs(model:GetDescendants()) do
-                if part:IsA("TouchTransmitter") then
-                    part:Destroy()
-                elseif part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-    end
-end)
-
--- Diagnostic collection loop. Does not guess server remotes or door mappings.
-MainFrame.Size = UDim2.new(0, 260, 0, 390)
-Title.Text = "PIGGY COLLECT V3"
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Parent = MainFrame
-StatusLabel.Position = UDim2.new(0, 12, 0, 230)
-StatusLabel.Size = UDim2.new(1, -24, 0, 78)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.TextColor3 = Color3.fromRGB(230, 230, 230)
-StatusLabel.TextSize = 14
-StatusLabel.Font = Enum.Font.SourceSans
-StatusLabel.TextWrapped = true
-local LastResult = Instance.new("TextLabel")
-LastResult.Parent = MainFrame
-LastResult.Position = UDim2.new(0, 12, 0, 310)
-LastResult.Size = UDim2.new(1, -24, 0, 70)
-LastResult.BackgroundTransparency = 1
-LastResult.TextColor3 = Color3.fromRGB(255, 210, 130)
-LastResult.TextSize = 14
-LastResult.Font = Enum.Font.SourceSans
-LastResult.TextWrapped = true
-LastResult.Text = "Hasil terakhir: belum ada percobaan"
-local function result(message)
-    LastResult.Text = "Hasil terakhir: " .. message
-    print("[Collect result] " .. message)
-end
-local function status(message)
-    StatusLabel.Text = message
-end
-status("Siap. Aktifkan Auto Collect.")
-for _, child in ipairs(MainFrame:GetChildren()) do
-    if child:IsA("TextButton") and child.Text:find("Auto Escape") then
-        child.Text = "Auto Collect: OFF"
-        child:GetPropertyChangedSignal("Text"):Connect(function()
-            if child.Text:find("Auto Escape") then
-                child.Text = child.Text:gsub("Auto Escape & Collect", "Auto Collect")
-            end
-        end)
-    end
-end
-
-local keywords = {"key", "plank", "wrench", "gear", "card", "code", "candle", "bone", "gun", "bullet", "hammer"}
-local retryAfter = setmetatable({}, {__mode = "k"})
-local function getPart(obj)
-    if obj:IsA("BasePart") then return obj end
-    if obj:IsA("Model") and obj.PrimaryPart then return obj.PrimaryPart end
-    local handle = obj:FindFirstChild("Handle", true)
-    if handle and handle:IsA("BasePart") then return handle end
-    return obj:FindFirstChildWhichIsA("BasePart", true)
-end
-local function characterReady()
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not root or not hum or hum.Health <= 0 then return nil end
-    return char, root, hum
-end
-local function belongsToPlayer(obj)
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character and obj:IsDescendantOf(player.Character) then return true end
-    end
-    return false
-end
--- Conservative visibility guard, NOT a map progression solver.
--- CanQuery=false geometry and custom lock states need map-specific integration.
-local function clearSegment(origin, destination, target)
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {LocalPlayer.Character, target}
-    local delta = destination - origin
-    if delta.Magnitude < 0.01 then return true end
-    return Workspace:Raycast(origin, delta, params) == nil
-end
-local function accessible(root, target, part)
-    local destination = part.Position + Vector3.new(0, 3, 0)
-    -- Check both the item and proposed character position. Do not exclude
-    -- arbitrary surrounding models: they may contain the locked door.
-    return clearSegment(root.Position, part.Position, target)
-        and clearSegment(root.Position, destination, target)
-end
-
-local function findTarget(root)
-    local best, bestPart, bestDistance
+-- Tombol Teleport ke Meja Makeup
+CreateButton("Teleport ke Meja Makeup / Wajah", 255, Color3.fromRGB(80, 50, 80), function()
     for _, obj in ipairs(Workspace:GetDescendants()) do
-        if (obj:IsA("Model") or obj:IsA("BasePart") or obj:IsA("Tool"))
-            and (retryAfter[obj] or 0) <= os.clock() and not belongsToPlayer(obj) then
-            local name = obj.Name:lower()
-            local matched = false
-            for _, word in ipairs(keywords) do
-                if name:find(word, 1, true) then matched = true; break end
+        if obj:IsA("BasePart") and (obj.Name:lower():find("makeup") or obj.Name:lower():find("face")) then
+            if HumanoidRootPart then
+                HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 2, 0)
+                break
             end
-            if matched and not name:find("door") and not name:find("gate") and not name:find("lock") then
-                local part = getPart(obj)
-                if part and (retryAfter[part] or 0) <= os.clock() and accessible(root, obj, part) then
-                    local distance = (root.Position - part.Position).Magnitude
-                    if not name:find("key", 1, true) then distance = distance + 100000 end
-                    if not bestDistance or distance < bestDistance then
-                        best, bestPart, bestDistance = obj, part, distance
+        end
+    end
+end)
+
+-- 3. LOGIKA AUTO COLLECT CASH IN-GAME
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if Settings.AutoFarmCash and HumanoidRootPart then
+            local cashFound = nil
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") or obj:IsA("Model") then
+                    local name = obj.Name:lower()
+                    if name:find("cash") or name:find("money") or name:find("pink") or name:find("star") then
+                        cashFound = obj
+                        break
                     end
                 end
             end
-        end
-    end
-    return best, bestPart
-end
-local function toolSet(char)
-    local result = {}
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-    for _, container in ipairs({char, backpack}) do
-        for _, obj in ipairs(container:GetChildren()) do
-            if obj:IsA("Tool") then result[obj] = true end
-        end
-    end
-    return result
-end
-local function interact(target, part, root)
-    print("[Collect interaction]", target:GetFullName(), "click helper:", type(fireclickdetector), "touch helper:", type(firetouchinterest))
-    local detector = target:FindFirstChildWhichIsA("ClickDetector", true)
-        or part:FindFirstChildOfClass("ClickDetector")
-    if not detector and part.Parent then detector = part.Parent:FindFirstChildOfClass("ClickDetector") end
-    if detector then
-        if type(fireclickdetector) ~= "function" then
-            return false, "fireclickdetector tidak tersedia; klik item secara manual."
-        end
-        fireclickdetector(detector)
-        return true, "Klik dicoba"
-    end
-    local touch = target:FindFirstChildWhichIsA("TouchTransmitter", true)
-    local touchPart = touch and touch.Parent
-    if touchPart and touchPart:IsA("BasePart") then
-        if type(firetouchinterest) ~= "function" then
-            return false, "firetouchinterest tidak tersedia."
-        end
-        firetouchinterest(root, touchPart, 0)
-        task.wait()
-        firetouchinterest(root, touchPart, 1)
-        return true, "Sentuhan dicoba"
-    end
-    return false, "Interaksi item tidak dikenali; coba klik manual."
-end
-local function attempt()
-    local char, root = characterReady()
-    if not char then status("Menunggu karakter hidup..."); return end
-    -- Keep the current inventory item. Do not replace an unconsumed tool.
-    for tool in pairs(toolSet(char)) do
-        status("Masih membawa " .. tool.Name .. ". Pakai manual dulu; pencarian item ditahan.")
-        return
-    end
-    local target, part = findTarget(root)
-    if not target then status("Tidak ada kandidat dengan jalur langsung terbuka. Buka pintu atau dekati item; kandidat gagal menunggu 30 detik."); return end
-    retryAfter[target] = os.clock() + 30
-    retryAfter[part] = os.clock() + 30
-    status("Target: " .. target.Name)
-    print("[Collect] Target:", target:GetFullName(), "Part:", part:GetFullName())
-    local before = toolSet(char)
-    if not Settings.AutoEscape or not part:IsDescendantOf(Workspace) then return end
-    if not accessible(root, target, part) then status("Jalur terhalang; item dilewati."); return end
-    root.CFrame = part.CFrame + Vector3.new(0, 3, 0)
-    task.wait(0.25)
-    if not Settings.AutoEscape or LocalPlayer.Character ~= char or not root.Parent then return end
-    if not part:IsDescendantOf(Workspace) then status("Target sudah hilang sebelum interaksi."); return end
-    if (root.Position - part.Position).Magnitude > 12 then
-        status("Posisi tidak bertahan dekat item; teleport belum berhasil.")
-        task.wait(1)
-        return
-    end
-    local invoked, detail = interact(target, part, root)
-    if not invoked then result(target.Name .. ": " .. detail .. " | Lewati 30 detik."); status("Lanjut kandidat berikutnya"); return end
-    local deadline = os.clock() + 2
-    repeat
-        if not Settings.AutoEscape or LocalPlayer.Character ~= char then return end
-        for tool in pairs(toolSet(char)) do
-            if not before[tool] then
-                result("Tool baru terdeteksi: " .. tool.Name)
-                status("Item didapat. Pakai manual; pencarian ditahan selama Tool masih dibawa.")
-                retryAfter[target] = os.clock() + 30
-                task.wait(1)
-                return
+            if cashFound then
+                local targetPart = cashFound:IsA("BasePart") and cashFound or cashFound:FindFirstChildOfClass("BasePart")
+                if targetPart then
+                    HumanoidRootPart.CFrame = targetPart.CFrame
+                    if firetouchinterest then
+                        firetouchinterest(HumanoidRootPart, targetPart, 0)
+                        task.wait()
+                        firetouchinterest(HumanoidRootPart, targetPart, 1)
+                    end
+                    task.wait(0.1)
+                end
             end
-        end
-        task.wait(0.1)
-    until os.clock() >= deadline
-    result(target.Name .. ": " .. detail .. "; belum ada Tool baru. Lewati 30 detik.")
-    task.wait(1)
-end
-task.spawn(function()
-    while ScreenGui.Parent do
-        task.wait(0.3)
-        if Settings.AutoEscape then
-            local ok, err = xpcall(attempt, debug.traceback)
-            if not ok then
-                warn("[Collect] " .. tostring(err))
-                status("Error: " .. tostring(err):sub(1, 160) .. " | Detail di console")
-                task.wait(2)
-            end
-        else
-            status("Auto Collect OFF")
         end
     end
 end)
-
-
-
-
