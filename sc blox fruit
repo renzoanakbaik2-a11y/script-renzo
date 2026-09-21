@@ -1,4 +1,264 @@
 -- =================================================================
+-- SCRIPT AUTO COMPLETE PIGGY (ADVANCED DIRECT-TRIGGER ENGINE)
+-- =================================================================
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local Humanoid = Character:WaitForChild("Humanoid")
+
+local Settings = {
+    AutoEscape = false,
+    AntiPiggy = false,
+    SmartNoclip = false,
+    WalkSpeed = 16
+}
+
+local BlacklistedItems = {}
+local UsedTargets = {}
+
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    Character = newChar
+    HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+    Humanoid = Character:WaitForChild("Humanoid")
+end)
+
+-- 1. SCREEN GUI / MENU IN-GAME
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PiggyHubUI"
+ScreenGui.ResetOnSpawn = false
+
+pcall(function() ScreenGui.Parent = CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleMenuBtn"
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+ToggleBtn.Position = UDim2.new(0, 15, 0.5, -20)
+ToggleBtn.Size = UDim2.new(0, 110, 0, 40)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Text = "PIGGY HUB"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 16
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 28, 36)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -150)
+MainFrame.Size = UDim2.new(0, 260, 0, 260)
+MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "PIGGY AUTO ESCAPE V5"
+Title.TextColor3 = Color3.fromRGB(0, 255, 170)
+Title.TextSize = 16
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+local function CreateToggleButton(text, positionY, callback)
+    local btn = Instance.new("TextButton")
+    btn.Parent = MainFrame
+    btn.Position = UDim2.new(0, 15, 0, positionY)
+    btn.Size = UDim2.new(0, 230, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+    btn.Font = Enum.Font.SourceSansSemibold
+    btn.Text = text .. ": OFF"
+    btn.TextColor3 = Color3.fromRGB(255, 85, 85)
+    btn.TextSize = 14
+    
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        if state then
+            btn.Text = text .. ": ON"
+            btn.TextColor3 = Color3.fromRGB(85, 255, 127)
+            btn.BackgroundColor3 = Color3.fromRGB(50, 70, 60)
+        else
+            btn.Text = text .. ": OFF"
+            btn.TextColor3 = Color3.fromRGB(255, 85, 85)
+            btn.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+        end
+        callback(state)
+    end)
+    return btn
+end
+
+CreateToggleButton("Auto Escape & Collect", 50, function(val) Settings.AutoEscape = val end)
+CreateToggleButton("Disable Piggy Hitbox", 95, function(val) Settings.AntiPiggy = val end)
+CreateToggleButton("Smart Noclip (Safe Floor)", 140, function(val) Settings.SmartNoclip = val end)
+
+local SpeedBtn = Instance.new("TextButton")
+SpeedBtn.Parent = MainFrame
+SpeedBtn.Position = UDim2.new(0, 15, 0, 185)
+SpeedBtn.Size = UDim2.new(0, 230, 0, 35)
+SpeedBtn.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+SpeedBtn.Font = Enum.Font.SourceSansSemibold
+SpeedBtn.Text = "WalkSpeed: Normal (16)"
+SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedBtn.TextSize = 14
+
+local speedState = false
+SpeedBtn.MouseButton1Click:Connect(function()
+    speedState = not speedState
+    if speedState then
+        Settings.WalkSpeed = 35
+        SpeedBtn.Text = "WalkSpeed: Fast (35)"
+        SpeedBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+    else
+        Settings.WalkSpeed = 16
+        SpeedBtn.Text = "WalkSpeed: Normal (16)"
+        SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end
+    if Humanoid then Humanoid.WalkSpeed = Settings.WalkSpeed end
+end)
+
+-- 2. SMART NOCLIP
+RunService.Stepped:Connect(function()
+    if not Settings.SmartNoclip or not Character then return end
+    for _, part in ipairs(Character:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            part.CanCollide = false
+        end
+    end
+end)
+
+-- 3. DISABLE PIGGY HITBOX
+RunService.RenderStepped:Connect(function()
+    if not Settings.AntiPiggy then return end
+    for _, model in ipairs(Workspace:GetChildren()) do
+        if model:IsA("Model") and (model.Name:lower():find("piggy") or model:FindFirstChild("Piggy") or model:FindFirstChild("Enemy")) then
+            for _, part in ipairs(model:GetDescendants()) do
+                if part:IsA("TouchTransmitter") then
+                    part:Destroy()
+                elseif part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
+-- Helper: Force Interact Semua Trigger
+local function ForceTrigger(instance)
+    if not instance then return end
+    
+    -- ClickDetector
+    local cd = instance:FindFirstChildOfClass("ClickDetector") or instance.Parent:FindFirstChildOfClass("ClickDetector")
+    if cd and fireclickdetector then
+        fireclickdetector(cd)
+    end
+    
+    -- ProximityPrompt
+    local prompt = instance:FindFirstChildOfClass("ProximityPrompt") or instance.Parent:FindFirstChildOfClass("ProximityPrompt")
+    if prompt and fireproximityprompt then
+        fireproximityprompt(prompt)
+    end
+    
+    -- Touch Interest Direct
+    local part = instance:IsA("BasePart") and instance or instance:FindFirstChildOfClass("BasePart")
+    if HumanoidRootPart and part and firetouchinterest then
+        firetouchinterest(HumanoidRootPart, part, 0)
+        task.wait()
+        firetouchinterest(HumanoidRootPart, part, 1)
+    end
+end
+
+-- 4. LOGIKA BARU: AUTO COLLECT & USE (OFFSET TELEPORT + REALTIME INVENTORY CHECK)
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if Settings.AutoEscape and HumanoidRootPart and Humanoid then
+            local targetItem = nil
+            
+            -- Filter Item Piggy
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if not BlacklistedItems[v] and v ~= Character and not v:IsDescendantOf(Character) then
+                    local name = v.Name:lower()
+                    if v:IsA("Tool") or v:FindFirstChildOfClass("ClickDetector") or v:FindFirstChildOfClass("TouchTransmitter") or v:FindFirstChild("Handle") then
+                        if name:find("key") or name:find("plank") or name:find("wrench") or name:find("gear") or name:find("card") or name:find("code") or name:find("candle") or name:find("bone") then
+                            if not name:find("door") and not name:find("gate") and not name:find("lock") then
+                                targetItem = v
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if targetItem then
+                local itemPart = targetItem:IsA("BasePart") and targetItem or targetItem:FindFirstChildOfClass("BasePart") or targetItem:FindFirstChild("Handle")
+                
+                if itemPart then
+                    -- Step 1: Teleport 1.5 stud di atas item & paksa ambil
+                    HumanoidRootPart.CFrame = itemPart.CFrame + Vector3.new(0, 1.5, 0)
+                    task.wait(0.15)
+                    ForceTrigger(targetItem)
+                    BlacklistedItems[targetItem] = true
+                    task.wait(0.25)
+                    
+                    -- Step 2: Cek Inventory (Backpack & Character)
+                    local heldTool = Character:FindFirstChildOfClass("Tool")
+                    if not heldTool then
+                        local bpTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                        if bpTool then
+                            Humanoid:EquipTool(bpTool)
+                            task.wait(0.2)
+                            heldTool = bpTool
+                        end
+                    end
+                    
+                    -- Step 3: Cari Pintu Pasangan
+                    local activeName = heldTool and heldTool.Name:lower() or targetItem.Name:lower()
+                    local doorTarget = nil
+                    
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if not UsedTargets[obj] then
+                            local oName = obj.Name:lower()
+                            if (activeName:find("key") and (oName:find("door") or oName:find("lock") or oName:find("padlock"))) or
+                               (activeName:find("plank") and (oName:find("plank") or oName:find("bridge"))) or
+                               (activeName:find("wrench") and (oName:find("circuit") or oName:find("box") or oName:find("gate"))) or
+                               (activeName:find("gear") and (oName:find("machine") or oName:find("clock"))) or
+                               (activeName:find("card") and (oName:find("reader") or oName:find("swipe"))) then
+                                
+                                doorTarget = obj
+                                break
+                            end
+                        end
+                    end
+                    
+                    -- Step 4: Teleport & Pakai ke Pintu
+                    if doorTarget then
+                        local doorPart = doorTarget:IsA("BasePart") and doorTarget or doorTarget:FindFirstChildOfClass("BasePart")
+                        if doorPart then
+                            HumanoidRootPart.CFrame = doorPart.CFrame + Vector3.new(0, 1.5, 0)
+                            task.wait(0.15)
+                            ForceTrigger(doorTarget)
+                            UsedTargets[doorTarget] = true
+                            task.wait(0.3)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)-- =================================================================
 -- SCRIPT AUTO ESCAPE PIGGY + ANTI-PIGGY NEUTRALIZER (REVISED & TESTED)
 -- =================================================================
 
