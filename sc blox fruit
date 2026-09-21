@@ -157,7 +157,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- Diagnostic collection loop. Does not guess server remotes or door mappings.
-MainFrame.Size = UDim2.new(0, 260, 0, 320)
+MainFrame.Size = UDim2.new(0, 260, 0, 390)
 Title.Text = "PIGGY COLLECT - DIAGNOSTIC"
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Parent = MainFrame
@@ -168,6 +168,20 @@ StatusLabel.TextColor3 = Color3.fromRGB(230, 230, 230)
 StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.SourceSans
 StatusLabel.TextWrapped = true
+local LastResult = Instance.new("TextLabel")
+LastResult.Parent = MainFrame
+LastResult.Position = UDim2.new(0, 12, 0, 310)
+LastResult.Size = UDim2.new(1, -24, 0, 70)
+LastResult.BackgroundTransparency = 1
+LastResult.TextColor3 = Color3.fromRGB(255, 210, 130)
+LastResult.TextSize = 14
+LastResult.Font = Enum.Font.SourceSans
+LastResult.TextWrapped = true
+LastResult.Text = "Hasil terakhir: belum ada percobaan"
+local function result(message)
+    LastResult.Text = "Hasil terakhir: " .. message
+    print("[Collect result] " .. message)
+end
 local function status(message)
     StatusLabel.Text = message
 end
@@ -217,7 +231,7 @@ local function findTarget(root)
             end
             if matched and not name:find("door") and not name:find("gate") and not name:find("lock") then
                 local part = getPart(obj)
-                if part then
+                if part and (retryAfter[part] or 0) <= os.clock() then
                     local distance = (root.Position - part.Position).Magnitude
                     if not bestDistance or distance < bestDistance then
                         best, bestPart, bestDistance = obj, part, distance
@@ -239,6 +253,7 @@ local function toolSet(char)
     return result
 end
 local function interact(target, part, root)
+    print("[Collect interaction]", target:GetFullName(), "click helper:", type(fireclickdetector), "touch helper:", type(firetouchinterest))
     local detector = target:FindFirstChildWhichIsA("ClickDetector", true)
         or part:FindFirstChildOfClass("ClickDetector")
     if not detector and part.Parent then detector = part.Parent:FindFirstChildOfClass("ClickDetector") end
@@ -267,7 +282,8 @@ local function attempt()
     if not char then status("Menunggu karakter hidup..."); return end
     local target, part = findTarget(root)
     if not target then status("Tidak ada kandidat item. Nama/struktur item mungkin berbeda, atau masih cooldown."); return end
-    retryAfter[target] = os.clock() + 10
+    retryAfter[target] = os.clock() + 30
+    retryAfter[part] = os.clock() + 30
     status("Target: " .. target.Name)
     print("[Collect] Target:", target:GetFullName(), "Part:", part:GetFullName())
     local before = toolSet(char)
@@ -282,13 +298,14 @@ local function attempt()
         return
     end
     local invoked, detail = interact(target, part, root)
-    if not invoked then status(detail); task.wait(1.5); return end
+    if not invoked then result(target.Name .. ": " .. detail .. " | Lewati 30 detik."); status("Lanjut kandidat berikutnya"); return end
     local deadline = os.clock() + 2
     repeat
         if not Settings.AutoEscape or LocalPlayer.Character ~= char then return end
         for tool in pairs(toolSet(char)) do
             if not before[tool] then
-                status("Tool baru terdeteksi: " .. tool.Name)
+                result("Tool baru terdeteksi: " .. tool.Name)
+                status("Tool terdeteksi; auto pakai belum dikonfigurasi.")
                 retryAfter[target] = os.clock() + 30
                 task.wait(1)
                 return
@@ -296,7 +313,7 @@ local function attempt()
         end
         task.wait(0.1)
     until os.clock() >= deadline
-    status(detail .. "; belum ada Tool baru. Pengambilan belum terkonfirmasi.")
+    result(target.Name .. ": " .. detail .. "; belum ada Tool baru. Lewati 30 detik.")
     task.wait(1)
 end
 task.spawn(function()
@@ -314,4 +331,6 @@ task.spawn(function()
         end
     end
 end)
+
+
 
