@@ -1,5 +1,5 @@
 -- ========================================================
--- ROBLOX PIGGY - COMPLETE 1-CLICK HUB (NO STUCK / NO LOOP)
+-- ROBLOX PIGGY - STRICT ESCAPE SEQUENCE ENGINE
 -- ========================================================
 
 local Players = game:GetService("Players")
@@ -62,7 +62,7 @@ MainFrame.Parent = ScreenGui
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-Title.Text = "Piggy 1-Click Hub [RCtrl]"
+Title.Text = "Piggy Sequence Hub [RCtrl]"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 12
 Title.Font = Enum.Font.SourceSansBold
@@ -100,7 +100,6 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- AMBIL ALAT KE TANGAN DENGAN AMAN
 local function EquipToolFromBackpack()
     local char = LocalPlayer.Character
     if not char then return nil end
@@ -123,7 +122,6 @@ local function EquipToolFromBackpack()
     return nil
 end
 
--- BACA KODE PINTU KEYPAD
 local function GetDoorCode()
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("TextLabel") and obj.Text then
@@ -136,7 +134,7 @@ local function GetDoorCode()
     return nil
 end
 
--- URUTAN ITEM FIX
+-- URUTAN SISTEMATIS PINTU KELUAR & PUZZLE
 local SequenceKeywords = {
     {item = "hammer", target = "plank"},
     {item = "wrench", target = "generator"},
@@ -147,7 +145,6 @@ local SequenceKeywords = {
     {item = "crossbow", target = "piggy"}
 }
 
--- FUNGSI TUNGGAL (SATU KALI JALAN / TANPA LOOP MUTER-MUTER)
 local function ExecuteCollectAndUseSequence()
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -160,11 +157,12 @@ local function ExecuteCollectAndUseSequence()
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
                 local parentPart = obj.Parent
+                
                 if parentPart and parentPart:IsA("BasePart") and parentPart:IsDescendantOf(Workspace) then
-                    local name = string.lower(parentPart.Name)
+                    local itemName = string.lower(parentPart.Name)
                     
-                    if not UsedItems[parentPart] and name:find(itemKeyword) then
-                        -- 1. Teleport Ambil Item
+                    if not UsedItems[parentPart] and itemName:find(itemKeyword) then
+                        -- 1. Ambil Item
                         root.CFrame = parentPart.CFrame + Vector3.new(0, 1, 0)
                         task.wait(0.3)
                         
@@ -176,7 +174,7 @@ local function ExecuteCollectAndUseSequence()
                         -- 2. Equip Ke Tangan
                         local tool = EquipToolFromBackpack()
                         
-                        -- 3. Teleport Langsung Gunakan ke Target
+                        -- 3. Cek Penggunaan Ke Pintu Keluar / Target Terkait
                         if tool then
                             if itemKeyword == "gun" or itemKeyword == "crossbow" then
                                 for _, piggyObj in pairs(Workspace:GetDescendants()) do
@@ -190,12 +188,22 @@ local function ExecuteCollectAndUseSequence()
                                     end
                                 end
                             else
+                                local doorUsed = false
                                 for _, targetObj in pairs(Workspace:GetDescendants()) do
+                                    if doorUsed then break end
+                                    
                                     if targetObj:IsA("ClickDetector") or targetObj:IsA("ProximityPrompt") then
                                         local targetPart = targetObj.Parent
                                         if targetPart and targetPart:IsA("BasePart") and targetPart:IsDescendantOf(Workspace) then
                                             local targetName = string.lower(targetPart.Name)
-                                            if targetName:find(targetKeyword) or targetName:find("door") or targetName:find("lock") or targetName:find("padlock") then
+                                            
+                                            -- Deteksi target umum DAN pintu keluar (EscapeDoor/Exit)
+                                            local isTargetMatch = false
+                                            if targetName:find(targetKeyword) or targetName:find("door") or targetName:find("lock") or targetName:find("padlock") or targetName:find("escape") or targetName:find("exit") then
+                                                isTargetMatch = true
+                                            end
+
+                                            if isTargetMatch then
                                                 root.CFrame = targetPart.CFrame + (targetPart.CFrame.LookVector * 2)
                                                 task.wait(0.3)
                                                 
@@ -203,6 +211,7 @@ local function ExecuteCollectAndUseSequence()
                                                 if targetObj:IsA("ProximityPrompt") then fireproximityprompt(targetObj) end
                                                 
                                                 task.wait(0.3)
+                                                doorUsed = true
                                                 break
                                             end
                                         end
@@ -212,18 +221,16 @@ local function ExecuteCollectAndUseSequence()
                         end
                         
                         UsedItems[parentPart] = true
-                        
-                        -- Terbang Melayang Aman
                         root.CFrame = root.CFrame * CFrame.new(0, 14, 0)
                         task.wait(0.2)
-                        break -- Lanjut ke urutan item berikutnya
+                        break
                     end
                 end
             end
         end
     end
 
-    -- SUBMIT KODE PINTU KEYPAD OTOMATIS
+    -- SUBMIT KODE KEYPAD PINTU KELUAR
     if not CodeSubmitted then
         local doorCode = GetDoorCode()
         if doorCode then
@@ -294,7 +301,7 @@ end)
 
 ToggleESPBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 
--- 3. NOCLIP AMAN (GROUND CHECK) & ANTI TRAP
+-- 3. NOCLIP AMAN & ANTI-TRAP
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     if char then
