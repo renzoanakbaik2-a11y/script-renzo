@@ -1,5 +1,5 @@
 -- =================================================================
--- SCRIPT AUTO ESCAPE PIGGY V6 (CORE ENGINE DISMANTLER & REMOTE HOOK)
+-- PIGGY COLLECT V3 - VISIBILITY GUARD / MANUAL ITEM USE
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -158,7 +158,7 @@ end)
 
 -- Diagnostic collection loop. Does not guess server remotes or door mappings.
 MainFrame.Size = UDim2.new(0, 260, 0, 390)
-Title.Text = "PIGGY COLLECT - DIAGNOSTIC"
+Title.Text = "PIGGY COLLECT V3"
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Parent = MainFrame
 StatusLabel.Position = UDim2.new(0, 12, 0, 230)
@@ -197,7 +197,7 @@ for _, child in ipairs(MainFrame:GetChildren()) do
     end
 end
 
-local keywords = {"key", "plank", "wrench", "gear", "card", "code", "candle", "bone", "gun", "bullet"}
+local keywords = {"key", "plank", "wrench", "gear", "card", "code", "candle", "bone", "gun", "bullet", "hammer"}
 local retryAfter = setmetatable({}, {__mode = "k"})
 local function getPart(obj)
     if obj:IsA("BasePart") then return obj end
@@ -219,6 +219,24 @@ local function belongsToPlayer(obj)
     end
     return false
 end
+-- Conservative visibility guard, NOT a map progression solver.
+-- CanQuery=false geometry and custom lock states need map-specific integration.
+local function clearSegment(origin, destination, target)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {LocalPlayer.Character, target}
+    local delta = destination - origin
+    if delta.Magnitude < 0.01 then return true end
+    return Workspace:Raycast(origin, delta, params) == nil
+end
+local function accessible(root, target, part)
+    local destination = part.Position + Vector3.new(0, 3, 0)
+    -- Check both the item and proposed character position. Do not exclude
+    -- arbitrary surrounding models: they may contain the locked door.
+    return clearSegment(root.Position, part.Position, target)
+        and clearSegment(root.Position, destination, target)
+end
+
 local function findTarget(root)
     local best, bestPart, bestDistance
     for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -231,8 +249,9 @@ local function findTarget(root)
             end
             if matched and not name:find("door") and not name:find("gate") and not name:find("lock") then
                 local part = getPart(obj)
-                if part and (retryAfter[part] or 0) <= os.clock() then
+                if part and (retryAfter[part] or 0) <= os.clock() and accessible(root, obj, part) then
                     local distance = (root.Position - part.Position).Magnitude
+                    if not name:find("key", 1, true) then distance = distance + 100000 end
                     if not bestDistance or distance < bestDistance then
                         best, bestPart, bestDistance = obj, part, distance
                     end
@@ -280,14 +299,20 @@ end
 local function attempt()
     local char, root = characterReady()
     if not char then status("Menunggu karakter hidup..."); return end
+    -- Keep the current inventory item. Do not replace an unconsumed tool.
+    for tool in pairs(toolSet(char)) do
+        status("Masih membawa " .. tool.Name .. ". Pakai manual dulu; pencarian item ditahan.")
+        return
+    end
     local target, part = findTarget(root)
-    if not target then status("Tidak ada kandidat item. Nama/struktur item mungkin berbeda, atau masih cooldown."); return end
+    if not target then status("Tidak ada kandidat dengan jalur langsung terbuka. Buka pintu atau dekati item; kandidat gagal menunggu 30 detik."); return end
     retryAfter[target] = os.clock() + 30
     retryAfter[part] = os.clock() + 30
     status("Target: " .. target.Name)
     print("[Collect] Target:", target:GetFullName(), "Part:", part:GetFullName())
     local before = toolSet(char)
     if not Settings.AutoEscape or not part:IsDescendantOf(Workspace) then return end
+    if not accessible(root, target, part) then status("Jalur terhalang; item dilewati."); return end
     root.CFrame = part.CFrame + Vector3.new(0, 3, 0)
     task.wait(0.25)
     if not Settings.AutoEscape or LocalPlayer.Character ~= char or not root.Parent then return end
@@ -305,7 +330,7 @@ local function attempt()
         for tool in pairs(toolSet(char)) do
             if not before[tool] then
                 result("Tool baru terdeteksi: " .. tool.Name)
-                status("Tool terdeteksi; auto pakai belum dikonfigurasi.")
+                status("Item didapat. Pakai manual; pencarian ditahan selama Tool masih dibawa.")
                 retryAfter[target] = os.clock() + 30
                 task.wait(1)
                 return
@@ -331,6 +356,7 @@ task.spawn(function()
         end
     end
 end)
+
 
 
 
