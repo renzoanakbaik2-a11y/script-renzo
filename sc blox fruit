@@ -1,5 +1,5 @@
 -- ========================================================
--- ROBLOX PIGGY - COMPLETE 1-CLICK HUB (TEXT MENU VERIFIED)
+-- ROBLOX PIGGY - COMPLETE 1-CLICK HUB (NO STUCK / NO LOOP)
 -- ========================================================
 
 local Players = game:GetService("Players")
@@ -30,7 +30,7 @@ Workspace.ChildAdded:Connect(function(child)
     end
 end)
 
--- 1. TAMPILAN TEXT MENU (GUI MENU)
+-- 1. GUI MENU
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "PiggyGodHub"
 ScreenGui.Parent = CoreGui
@@ -59,7 +59,6 @@ MainFrame.Draggable = true
 MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
--- TEKS JUDUL MENU
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
@@ -101,7 +100,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- LOGIKA APLIKASI
+-- AMBIL ALAT KE TANGAN DENGAN AMAN
 local function EquipToolFromBackpack()
     local char = LocalPlayer.Character
     if not char then return nil end
@@ -116,14 +115,15 @@ local function EquipToolFromBackpack()
             local hum = char:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum:EquipTool(tool)
-                task.wait(0.4)
-                return tool
+                task.wait(0.3)
+                return char:FindFirstChildOfClass("Tool")
             end
         end
     end
     return nil
 end
 
+-- BACA KODE PINTU KEYPAD
 local function GetDoorCode()
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("TextLabel") and obj.Text then
@@ -136,6 +136,7 @@ local function GetDoorCode()
     return nil
 end
 
+-- URUTAN ITEM FIX
 local SequenceKeywords = {
     {item = "hammer", target = "plank"},
     {item = "wrench", target = "generator"},
@@ -146,6 +147,7 @@ local SequenceKeywords = {
     {item = "crossbow", target = "piggy"}
 }
 
+-- FUNGSI TUNGGAL (SATU KALI JALAN / TANPA LOOP MUTER-MUTER)
 local function ExecuteCollectAndUseSequence()
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -154,32 +156,32 @@ local function ExecuteCollectAndUseSequence()
     for _, seq in ipairs(SequenceKeywords) do
         local itemKeyword = seq.item
         local targetKeyword = seq.target
-        local itemFoundAndUsed = false
 
         for _, obj in pairs(Workspace:GetDescendants()) do
-            if itemFoundAndUsed then break end
-            
             if obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
                 local parentPart = obj.Parent
                 if parentPart and parentPart:IsA("BasePart") and parentPart:IsDescendantOf(Workspace) then
                     local name = string.lower(parentPart.Name)
                     
                     if not UsedItems[parentPart] and name:find(itemKeyword) then
-                        root.CFrame = parentPart.CFrame
+                        -- 1. Teleport Ambil Item
+                        root.CFrame = parentPart.CFrame + Vector3.new(0, 1, 0)
                         task.wait(0.3)
                         
                         if obj:IsA("ClickDetector") then fireclickdetector(obj) end
                         if obj:IsA("ProximityPrompt") then fireproximityprompt(obj) end
                         
-                        task.wait(0.5)
+                        task.wait(0.4)
                         
+                        -- 2. Equip Ke Tangan
                         local tool = EquipToolFromBackpack()
                         
+                        -- 3. Teleport Langsung Gunakan ke Target
                         if tool then
                             if itemKeyword == "gun" or itemKeyword == "crossbow" then
                                 for _, piggyObj in pairs(Workspace:GetDescendants()) do
                                     if (piggyObj.Name == "Piggy" or piggyObj:FindFirstChild("Piggy")) and piggyObj:FindFirstChild("HumanoidRootPart") then
-                                        root.CFrame = CFrame.lookAt(piggyObj.HumanoidRootPart.Position + Vector3.new(0, 0, 12), piggyObj.HumanoidRootPart.Position)
+                                        root.CFrame = CFrame.lookAt(piggyObj.HumanoidRootPart.Position + Vector3.new(0, 0, 8), piggyObj.HumanoidRootPart.Position)
                                         task.wait(0.3)
                                         tool:Activate()
                                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
@@ -194,13 +196,13 @@ local function ExecuteCollectAndUseSequence()
                                         if targetPart and targetPart:IsA("BasePart") and targetPart:IsDescendantOf(Workspace) then
                                             local targetName = string.lower(targetPart.Name)
                                             if targetName:find(targetKeyword) or targetName:find("door") or targetName:find("lock") or targetName:find("padlock") then
-                                                root.CFrame = targetPart.CFrame + (targetPart.CFrame.LookVector * 2.5)
+                                                root.CFrame = targetPart.CFrame + (targetPart.CFrame.LookVector * 2)
                                                 task.wait(0.3)
                                                 
                                                 if targetObj:IsA("ClickDetector") then fireclickdetector(targetObj) end
                                                 if targetObj:IsA("ProximityPrompt") then fireproximityprompt(targetObj) end
                                                 
-                                                task.wait(0.4)
+                                                task.wait(0.3)
                                                 break
                                             end
                                         end
@@ -210,16 +212,18 @@ local function ExecuteCollectAndUseSequence()
                         end
                         
                         UsedItems[parentPart] = true
-                        itemFoundAndUsed = true
                         
+                        -- Terbang Melayang Aman
                         root.CFrame = root.CFrame * CFrame.new(0, 14, 0)
-                        task.wait(0.3)
+                        task.wait(0.2)
+                        break -- Lanjut ke urutan item berikutnya
                     end
                 end
             end
         end
     end
 
+    -- SUBMIT KODE PINTU KEYPAD OTOMATIS
     if not CodeSubmitted then
         local doorCode = GetDoorCode()
         if doorCode then
@@ -229,7 +233,7 @@ local function ExecuteCollectAndUseSequence()
                     local prompt = obj:FindFirstChildOfClass("ProximityPrompt") or obj:FindFirstChildOfClass("ClickDetector")
                     if prompt then
                         root.CFrame = obj.CFrame * CFrame.new(0, 0, -2)
-                        task.wait(0.4)
+                        task.wait(0.3)
                         if prompt:IsA("ClickDetector") then fireclickdetector(prompt) end
                         if prompt:IsA("ProximityPrompt") then fireproximityprompt(prompt) end
                         
@@ -251,12 +255,11 @@ local function ExecuteCollectAndUseSequence()
     end
 end
 
--- TEKS TOMBOL 1 DI MENU GUI
+-- 2. TOMBOL GUI
 CreateActionButton("1-KLIK: COLLECT ALL & USE ITEMS", UDim2.new(0.05, 0, 0.20, 0), function()
     ExecuteCollectAndUseSequence()
 end)
 
--- TEKS TOMBOL 2 DI MENU GUI
 CreateActionButton("1-KLIK: TELEPORT PINTU KELUAR", UDim2.new(0.05, 0, 0.44, 0), function()
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -276,7 +279,6 @@ CreateActionButton("1-KLIK: TELEPORT PINTU KELUAR", UDim2.new(0.05, 0, 0.44, 0),
     end
 end)
 
--- TEKS TOMBOL 3 DI MENU GUI
 local ToggleESPBtn = CreateActionButton("X-Ray / Item ESP: ON", UDim2.new(0.05, 0, 0.68, 0), function(btn)
     Settings.ESP = not Settings.ESP
     btn.Text = Settings.ESP and "X-Ray / Item ESP: ON" or "X-Ray / Item ESP: OFF"
@@ -292,7 +294,7 @@ end)
 
 ToggleESPBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 
--- 3. NOCLIP & ANTI-TRAP
+-- 3. NOCLIP AMAN (GROUND CHECK) & ANTI TRAP
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     if char then
