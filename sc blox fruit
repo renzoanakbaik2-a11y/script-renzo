@@ -1,5 +1,5 @@
 -- ========================================================
--- ROBLOX PIGGY - COMPLETE 1-CLICK HUB WITH AUTO-SHOOT
+-- ROBLOX PIGGY - COMPLETE 1-CLICK HUB (TEXT MENU VERIFIED)
 -- ========================================================
 
 local Players = game:GetService("Players")
@@ -30,7 +30,7 @@ Workspace.ChildAdded:Connect(function(child)
     end
 end)
 
--- 1. GUI MENU
+-- 1. TAMPILAN TEXT MENU (GUI MENU)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "PiggyGodHub"
 ScreenGui.Parent = CoreGui
@@ -50,7 +50,7 @@ OpenBtn.Draggable = true
 OpenBtn.Parent = ScreenGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 240, 0, 230)
+MainFrame.Size = UDim2.new(0, 240, 0, 210)
 MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.BorderSizePixel = 0
@@ -59,10 +59,11 @@ MainFrame.Draggable = true
 MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
+-- TEKS JUDUL MENU
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-Title.Text = "Piggy 1-Click & ESP Hub [RCtrl]"
+Title.Text = "Piggy 1-Click Hub [RCtrl]"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 12
 Title.Font = Enum.Font.SourceSansBold
@@ -100,7 +101,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- FORCE EQUIP ITEM TO HAND
+-- LOGIKA APLIKASI
 local function EquipToolFromBackpack()
     local char = LocalPlayer.Character
     if not char then return nil end
@@ -123,7 +124,6 @@ local function EquipToolFromBackpack()
     return nil
 end
 
--- PEMBACA KODE 4-DIGIT DINAMIS
 local function GetDoorCode()
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("TextLabel") and obj.Text then
@@ -136,7 +136,6 @@ local function GetDoorCode()
     return nil
 end
 
--- URUTAN PUZZLE DENGAN AUTO-SHOOT PIGGY DI AKHIR
 local SequenceKeywords = {
     {item = "hammer", target = "plank"},
     {item = "wrench", target = "generator"},
@@ -147,7 +146,6 @@ local SequenceKeywords = {
     {item = "crossbow", target = "piggy"}
 }
 
--- FUNGSI TUNGGAL SEKALI KLIK EXECUTE
 local function ExecuteCollectAndUseSequence()
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -167,7 +165,6 @@ local function ExecuteCollectAndUseSequence()
                     local name = string.lower(parentPart.Name)
                     
                     if not UsedItems[parentPart] and name:find(itemKeyword) then
-                        -- 1. Teleport Ambil Item
                         root.CFrame = parentPart.CFrame
                         task.wait(0.3)
                         
@@ -176,10 +173,8 @@ local function ExecuteCollectAndUseSequence()
                         
                         task.wait(0.5)
                         
-                        -- 2. Force Equip Ke Tangan
                         local tool = EquipToolFromBackpack()
                         
-                        -- 3. Teleport Langsung Pakai / Tembak Piggy
                         if tool then
                             if itemKeyword == "gun" or itemKeyword == "crossbow" then
                                 for _, piggyObj in pairs(Workspace:GetDescendants()) do
@@ -225,7 +220,6 @@ local function ExecuteCollectAndUseSequence()
         end
     end
 
-    -- SUBMIT KODE PINTU KEYPAD OTOMATIS
     if not CodeSubmitted then
         local doorCode = GetDoorCode()
         if doorCode then
@@ -257,11 +251,12 @@ local function ExecuteCollectAndUseSequence()
     end
 end
 
--- 2. TOMBOL UTAMA
+-- TEKS TOMBOL 1 DI MENU GUI
 CreateActionButton("1-KLIK: COLLECT ALL & USE ITEMS", UDim2.new(0.05, 0, 0.20, 0), function()
     ExecuteCollectAndUseSequence()
 end)
 
+-- TEKS TOMBOL 2 DI MENU GUI
 CreateActionButton("1-KLIK: TELEPORT PINTU KELUAR", UDim2.new(0.05, 0, 0.44, 0), function()
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -281,6 +276,7 @@ CreateActionButton("1-KLIK: TELEPORT PINTU KELUAR", UDim2.new(0.05, 0, 0.44, 0),
     end
 end)
 
+-- TEKS TOMBOL 3 DI MENU GUI
 local ToggleESPBtn = CreateActionButton("X-Ray / Item ESP: ON", UDim2.new(0.05, 0, 0.68, 0), function(btn)
     Settings.ESP = not Settings.ESP
     btn.Text = Settings.ESP and "X-Ray / Item ESP: ON" or "X-Ray / Item ESP: OFF"
@@ -296,7 +292,7 @@ end)
 
 ToggleESPBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 
--- 3. NOCLIP AMAN (GROUND CHECK) & ANTI-TRAP
+-- 3. NOCLIP & ANTI-TRAP
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     if char then
@@ -332,7 +328,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 4. X-RAY / ESP HIGHLIGHT ENGINE
+-- 4. ESP ENGINE
 task.spawn(function()
     while task.wait(1) do
         if Settings.ESP then
@@ -345,543 +341,6 @@ task.spawn(function()
                             highlight.Name = "PiggyESP"
                             highlight.FillTransparency = 0.5
                             highlight.OutlineTransparency = 0
-                            if name:find("piggy") then
-                                highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                            else
-                                highlight.FillColor = Color3.fromRGB(0, 255, 128)
-                            end
-                            highlight.Parent = obj
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)-- ========================================================
--- ROBLOX PIGGY - 1-CLICK HELPER (VERIFIED & BUG FREE)
--- ========================================================
-
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-
-local LocalPlayer = Players.LocalPlayer
-
-if CoreGui:FindFirstChild("PiggyGodHub") then
-    CoreGui.PiggyGodHub:Destroy()
-end
-
--- 1. GUI MENU
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PiggyGodHub"
-ScreenGui.Parent = CoreGui
-ScreenGui.ResetOnSpawn = false
-
-local OpenBtn = Instance.new("TextButton")
-OpenBtn.Name = "OpenMenuButton"
-OpenBtn.Size = UDim2.new(0, 80, 0, 30)
-OpenBtn.Position = UDim2.new(0, 10, 0.4, 0)
-OpenBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-OpenBtn.Text = "PIGGY MENU"
-OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenBtn.Font = Enum.Font.SourceSansBold
-OpenBtn.TextSize = 12
-OpenBtn.Active = true
-OpenBtn.Draggable = true
-OpenBtn.Parent = ScreenGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 240, 0, 310)
-MainFrame.Position = UDim2.new(0.1, 0, 0.25, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Visible = true
-MainFrame.Parent = ScreenGui
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-Title.Text = "1-Click Helper (Clean Engine) [RCtrl]"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 12
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local function CreateActionButton(text, pos, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 32)
-    btn.Position = pos
-    btn.BackgroundColor3 = Color3.fromRGB(45, 85, 155)
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 11
-    btn.Parent = MainFrame
-
-    btn.MouseButton1Click:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-        callback()
-        task.wait(0.3)
-        btn.BackgroundColor3 = Color3.fromRGB(45, 85, 155)
-    end)
-    return btn
-end
-
-OpenBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.RightControl then
-        MainFrame.Visible = not MainFrame.Visible
-    end
-end)
-
--- AMBIL ALAT DARI BACKPACK KE TANGAN
-local function EquipToolFromBackpack()
-    local char = LocalPlayer.Character
-    if not char then return nil end
-    
-    local toolInHand = char:FindFirstChildOfClass("Tool")
-    if toolInHand then return toolInHand end
-    
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-    if backpack then
-        local tool = backpack:FindFirstChildOfClass("Tool")
-        if tool then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum:EquipTool(tool)
-                task.wait(0.4)
-                return tool
-            end
-        end
-    end
-    return nil
-end
-
--- LOGIKA REVISI TOTAL: AMBIL ITEM DAN GUNAKAN KE PINTU/OBJEK
-local function CollectAndUseItem(itemKeyword, targetKeyword)
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    -- Pengecekan awal ketersediaan item
-    local currentTool = char:FindFirstChildOfClass("Tool") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChildOfClass("Tool"))
-    
-    -- Langkah 1: Ambil Item dari Map jika belum ada di inventori
-    if not currentTool then
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
-                local parentPart = obj.Parent
-                if parentPart and parentPart:IsA("BasePart") and parentPart:IsDescendantOf(Workspace) then
-                    local name = string.lower(parentPart.Name)
-                    if name:find(itemKeyword) then
-                        root.CFrame = parentPart.CFrame
-                        task.wait(0.3)
-                        
-                        if obj:IsA("ClickDetector") then fireclickdetector(obj) end
-                        if obj:IsA("ProximityPrompt") then fireproximityprompt(obj) end
-                        
-                        task.wait(0.5)
-                        break
-                    end
-                end
-            end
-        end
-    end
-
-    -- Langkah 2: Paksa Pasang Item ke Tangan
-    currentTool = EquipToolFromBackpack()
-
-    -- Langkah 3: Eksekusi Penggunaan Item ke Pintu / Gembok Target
-    if currentTool then
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
-                local targetPart = obj.Parent
-                if targetPart and targetPart:IsA("BasePart") and targetPart:IsDescendantOf(Workspace) then
-                    local targetName = string.lower(targetPart.Name)
-                    if targetName:find(targetKeyword) or targetName:find("door") or targetName:find("lock") or targetName:find("padlock") then
-                        -- Teleport presisi tepat di depan objek target
-                        root.CFrame = targetPart.CFrame + (targetPart.CFrame.LookVector * 2.5)
-                        task.wait(0.3)
-                        
-                        if obj:IsA("ClickDetector") then fireclickdetector(obj) end
-                        if obj:IsA("ProximityPrompt") then fireproximityprompt(obj) end
-                        
-                        task.wait(0.4)
-                        break
-                    end
-                end
-            end
-        end
-    end
-
-    -- Langkah 4: Kembali Melayang Aman di Udara
-    root.CFrame = root.CFrame * CFrame.new(0, 14, 0)
-end
-
--- 2. ACTION BUTTONS (1-CLICK EXECUTION)
-CreateActionButton("1-KLIK: MARTIL -> LEPAS PAPAN", UDim2.new(0.05, 0, 0.13, 0), function()
-    CollectAndUseItem("hammer", "plank")
-end)
-
-CreateActionButton("1-KLIK: WRENCH -> SAKELAR", UDim2.new(0.05, 0, 0.25, 0), function()
-    CollectAndUseItem("wrench", "generator")
-end)
-
-CreateActionButton("1-KLIK: KEYCARD -> CARD READER", UDim2.new(0.05, 0, 0.37, 0), function()
-    CollectAndUseItem("keycard", "reader")
-end)
-
-CreateActionButton("1-KLIK: KUNCI -> BUKA GEMBOK", UDim2.new(0.05, 0, 0.49, 0), function()
-    CollectAndUseItem("key", "door")
-end)
-
-CreateActionButton("1-KLIK: AMBIL PISTOL & TEMBAK", UDim2.new(0.05, 0, 0.61, 0), function()
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    -- Ambil Senjata
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
-            local p = obj.Parent
-            if p and p:IsA("BasePart") and (string.lower(p.Name):find("gun") or string.lower(p.Name):find("crossbow")) then
-                root.CFrame = p.CFrame
-                task.wait(0.3)
-                if obj:IsA("ClickDetector") then fireclickdetector(obj) end
-                if obj:IsA("ProximityPrompt") then fireproximityprompt(obj) end
-                task.wait(0.4)
-                break
-            end
-        end
-    end
-
-    -- Equip & Tembak Piggy
-    local tool = EquipToolFromBackpack()
-    if tool then
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if (obj.Name == "Piggy" or obj:FindFirstChild("Piggy")) and obj:FindFirstChild("HumanoidRootPart") then
-                root.CFrame = obj.HumanoidRootPart.CFrame * CFrame.new(0, 0, 15)
-                task.wait(0.3)
-                tool:Activate()
-                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-                break
-            end
-        end
-    end
-
-    root.CFrame = root.CFrame * CFrame.new(0, 14, 0)
-end)
-
-CreateActionButton("1-KLIK: TELEPORT PINTU KELUAR", UDim2.new(0.05, 0, 0.73, 0), function()
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if root then
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj.Name == "EscapeDoor" or obj.Name == "Door" or obj.Name == "Exit" then
-                if obj:IsA("BasePart") then
-                    root.CFrame = obj.CFrame * CFrame.new(0, 0, -3)
-                    break
-                elseif obj:FindFirstChildOfClass("BasePart") then
-                    root.CFrame = obj:FindFirstChildOfClass("BasePart").CFrame * CFrame.new(0, 0, -3)
-                    break
-                end
-            end
-        end
-    end
-end)
-
--- 3. SAFE NOCLIP ENGINE (TEMBUS TEMBOK, TIDAK TEMBUS LANTAI/TANAH)
-RunService.Stepped:Connect(function()
-    local char = LocalPlayer.Character
-    if char then
-        local root = char:FindFirstChild("HumanoidRootPart")
-        
-        -- Deteksi Raycast ke tanah di bawah kaki
-        local onGround = false
-        if root then
-            local ray = Ray.new(root.Position, Vector3.new(0, -3.5, 0))
-            local hitPart = Workspace:FindPartOnRayWithIgnoreList(ray, {char})
-            if hitPart then
-                onGround = true
-            end
-        end
-
-        -- Noclip aman: Bagian tubuh dijadikan non-collidable kecuali saat berdiri di atas tanah
-        for _, part in pairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                if part.Name == "HumanoidRootPart" and onGround then
-                    part.CanCollide = true
-                else
-                    part.CanCollide = false
-                end
-            end
-        end
-
-        -- Disable Perangkap Bear Trap
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj.Name == "Trap" or obj.Name == "BearTrap" then
-                if obj:IsA("BasePart") then
-                    obj.CanTouch = false
-                elseif obj:IsA("Model") then
-                    for _, p in pairs(obj:GetChildren()) do
-                        if p:IsA("BasePart") then p.CanTouch = false end
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- 4. ESP HIGHLIGHT
-task.spawn(function()
-    while task.wait(1) do
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj:IsA("Model") or obj:IsA("BasePart") then
-                local name = string.lower(obj.Name)
-                if name:find("key") or name:find("plank") or name:find("wrench") or name:find("hammer") or name:find("door") or name:find("piggy") or name:find("gun") then
-                    if not obj:FindFirstChild("PiggyESP") then
-                        local highlight = Instance.new("Highlight")
-                        highlight.Name = "PiggyESP"
-                        highlight.FillTransparency = 0.5
-                        highlight.OutlineTransparency = 0
-                        if name:find("piggy") then
-                            highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                        else
-                            highlight.FillColor = Color3.fromRGB(0, 255, 128)
-                        end
-                        highlight.Parent = obj
-                    end
-                end
-            end
-        end
-    end
-end)-- ========================================================
--- ROBLOX PIGGY - ONE-CLICK TELEPORT & INTERACT HELPER
--- ========================================================
-
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-
-local LocalPlayer = Players.LocalPlayer
-
-if CoreGui:FindFirstChild("PiggyGodHub") then
-    CoreGui.PiggyGodHub:Destroy()
-end
-
-local Settings = {
-    SafeMode = true,
-    Speed = false,
-    Noclip = true,
-    ESP = true
-}
-
--- 1. GUI MENU CREATION
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PiggyGodHub"
-ScreenGui.Parent = CoreGui
-ScreenGui.ResetOnSpawn = false
-
-local OpenBtn = Instance.new("TextButton")
-OpenBtn.Name = "OpenMenuButton"
-OpenBtn.Size = UDim2.new(0, 80, 0, 30)
-OpenBtn.Position = UDim2.new(0, 10, 0.4, 0)
-OpenBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-OpenBtn.Text = "PIGGY MENU"
-OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenBtn.Font = Enum.Font.SourceSansBold
-OpenBtn.TextSize = 12
-OpenBtn.Active = true
-OpenBtn.Draggable = true
-OpenBtn.Parent = ScreenGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 240, 0, 330)
-MainFrame.Position = UDim2.new(0.1, 0, 0.25, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Visible = true
-MainFrame.Parent = ScreenGui
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-Title.Text = "Piggy Click Teleport Hub [RCtrl]"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 12
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local function CreateButton(text, pos, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 30)
-    btn.Position = pos
-    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 11
-    btn.Parent = MainFrame
-
-    btn.MouseButton1Click:Connect(function()
-        callback(btn)
-    end)
-    return btn
-end
-
-OpenBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.RightControl then
-        MainFrame.Visible = not MainFrame.Visible
-    end
-end)
-
--- HELPER: FUNGSI SAMBAR ITEM/TEMPAT BERDASARKAN KLIK TOMBOL
-local function TeleportAndInteract(keyword)
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
-            local parentPart = obj.Parent
-            if parentPart and parentPart:IsA("BasePart") and parentPart:IsDescendantOf(Workspace) then
-                local itemName = string.lower(parentPart.Name)
-                if itemName:find(keyword) then
-                    -- Teleport Ke Lokasi Item
-                    root.CFrame = parentPart.CFrame
-                    task.wait(0.2)
-                    
-                    if obj:IsA("ClickDetector") then fireclickdetector(obj) end
-                    if obj:IsA("ProximityPrompt") then fireproximityprompt(obj) end
-                    
-                    task.wait(0.2)
-                    
-                    -- Langsung Kembali Melayang
-                    if Settings.SafeMode then
-                        root.CFrame = root.CFrame * CFrame.new(0, 14, 0)
-                    end
-                    break
-                end
-            end
-        end
-    end
-end
-
--- 2. ACTION BUTTONS (SEKALI KLIK LANGSUNG SAMBAR)
-CreateButton("GET HAMMER / PLANK", UDim2.new(0.05, 0, 0.12, 0), function()
-    TeleportAndInteract("hammer")
-    task.wait(0.3)
-    TeleportAndInteract("plank")
-end)
-
-CreateButton("GET WRENCH / GENERATOR", UDim2.new(0.05, 0, 0.22, 0), function()
-    TeleportAndInteract("wrench")
-end)
-
-CreateButton("GET KEYCARD / READER", UDim2.new(0.05, 0, 0.32, 0), function()
-    TeleportAndInteract("keycard")
-end)
-
-CreateButton("GET KEYS (ANY COLOR KEY)", UDim2.new(0.05, 0, 0.42, 0), function()
-    TeleportAndInteract("key")
-end)
-
-CreateButton("GET GUN / SHOOT PIGGY", UDim2.new(0.05, 0, 0.52, 0), function()
-    TeleportAndInteract("gun")
-end)
-
-CreateButton("TELEPORT TO ESCAPE DOOR", UDim2.new(0.05, 0, 0.62, 0), function()
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if root then
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj.Name == "EscapeDoor" or obj.Name == "Door" or obj.Name == "Exit" then
-                if obj:IsA("BasePart") then
-                    root.CFrame = obj.CFrame * CFrame.new(0, 0, -3)
-                    break
-                elseif obj:FindFirstChildOfClass("BasePart") then
-                    root.CFrame = obj:FindFirstChildOfClass("BasePart").CFrame * CFrame.new(0, 0, -3)
-                    break
-                end
-            end
-        end
-    end
-end)
-
--- TOGGLE SAFE FLY & ESP
-local ToggleSafe = CreateButton("Safe Fly Mode: ON", UDim2.new(0.05, 0, 0.74, 0), function(btn)
-    Settings.SafeMode = not Settings.SafeMode
-    btn.Text = Settings.SafeMode and "Safe Fly Mode: ON" or "Safe Fly Mode: OFF"
-    btn.BackgroundColor3 = Settings.SafeMode and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-end)
-
-local ToggleNoclip = CreateButton("Noclip: ON", UDim2.new(0.05, 0, 0.84, 0), function(btn)
-    Settings.Noclip = not Settings.Noclip
-    btn.Text = Settings.Noclip and "Noclip: ON" or "Noclip: OFF"
-    btn.BackgroundColor3 = Settings.Noclip and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-end)
-
-ToggleSafe.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-ToggleNoclip.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-
--- 3. ENGINE PROTECTION (NOCLIP & TRAP DISARM)
-RunService.Stepped:Connect(function()
-    local char = LocalPlayer.Character
-    if char then
-        if Settings.Noclip then
-            for _, part in pairs(char:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj.Name == "Trap" or obj.Name == "BearTrap" then
-                if obj:IsA("BasePart") then
-                    obj.CanTouch = false
-                elseif obj:IsA("Model") then
-                    for _, p in pairs(obj:GetChildren()) do
-                        if p:IsA("BasePart") then p.CanTouch = false end
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- 4. ESP HIGHLIGHTER
-task.spawn(function()
-    while task.wait(1) do
-        if Settings.ESP then
-            for _, obj in pairs(Workspace:GetDescendants()) do
-                if obj:IsA("Model") or obj:IsA("BasePart") then
-                    local name = string.lower(obj.Name)
-                    if name:find("key") or name:find("plank") or name:find("wrench") or name:find("hammer") or name:find("door") or name:find("piggy") or name:find("gun") then
-                        if not obj:FindFirstChild("PiggyESP") then
-                            local highlight = Instance.new("Highlight")
-                            highlight.Name = "PiggyESP"
-                            highlight.FillTransparency = 0.5
-                            highlight.OutlineTransparency = 0
-                            
                             if name:find("piggy") then
                                 highlight.FillColor = Color3.fromRGB(255, 0, 0)
                             else
