@@ -1,89 +1,219 @@
-		return
-	end
+-- ==========================================================
+-- REVISED SCRIPT: AUTO FARM + GACHA CHEST (FIXED LOGIC)
+-- ==========================================================
 
-	setBusy(true)
-	report("Mencari menu Dungeon...\nPlace sekarang: " .. tostring(game.PlaceId))
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
-	local crabbyButton = findButton({"crabby crusade"})
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
 
-	if not crabbyButton then
-		local dungeonButton = findButton({"dungeon"})
-		if dungeonButton then
-			report("Menu Dungeon ditemukan.\nMembuka menu...")
-			local clicked, errorMessage = clickButton(dungeonButton)
-			if not clicked then
-				setBusy(false)
-				report("Gagal membuka menu Dungeon:\n" .. tostring(errorMessage))
-				return
-			end
-			task.wait(1)
-		else
-			setBusy(false)
-			report("Button Dungeon tidak ditemukan.\nDaftar button dikirim ke console.")
-			dumpVisibleButtons()
-			return
-		end
-	end
+-- PARAMETER SETTING
+local CONFIG = {
+    ATTACK_RANGE = 7.0,      -- Jarak aman pedang
+    ORBIT_SPEED = 3.5,       -- Kecepatan orbit
+    ORBIT_ANGLE_MAX = 55,    -- Batas sudut orbit (-55 s/d +55)
+    MAX_APPROACH_DIST = 35.0 -- Jarak maksimal sebelum pendekatan halus
+}
 
-	crabbyButton = waitForButton({"crabby crusade"}, 5)
-	if not crabbyButton then
-		setBusy(false)
-		report("Crabby Crusade tidak ditemukan.\nKemungkinan belum unlocked atau UI berbeda.\nCek console.")
-		dumpVisibleButtons()
-		return
-	end
+local isAutoFarm = false
+local isLooting = false
+local currentTarget = nil
+local orbitTime = 0
+local heartbeatConnection = nil
 
-	report("Crabby Crusade ditemukan.\nMemilih dungeon...")
-	local clickedCrabby, crabbyError = clickButton(crabbyButton)
-	if not clickedCrabby then
-		setBusy(false)
-		report("Gagal memilih Crabby Crusade:\n" .. tostring(crabbyError))
-		return
-	end
+-- 1. UI MENU RINGKAS
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AutoFarmTestUI_Fixed"
+ScreenGui.ResetOnSpawn = false
 
-	task.wait(1)
+pcall(function() ScreenGui.Parent = CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
-	local startButton = waitForButton({"start"}, 5)
-	if not startButton then
-		setBusy(false)
-		report("Crabby dipilih tetapi START tidak ditemukan.\nCek console untuk UI yang aktif.")
-		dumpVisibleButtons()
-		return
-	end
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 200, 0, 110)
+MainFrame.Position = UDim2.new(0.5, -100, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
 
-	report("START ditemukan.\nMeminta World // Zero memulai dungeon...")
-	local clickedStart, startError = clickButton(startButton)
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
 
-	if not clickedStart then
-		setBusy(false)
-		report("Gagal menekan START:\n" .. tostring(startError))
-		return
-	end
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "Auto Dungeon (Fixed)"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 13
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = MainFrame
 
-	report("START sudah ditekan.\nMenunggu server / teleport...")
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 160, 0, 45)
+ToggleBtn.Position = UDim2.new(0.5, -80, 0, 45)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+ToggleBtn.Text = "AUTO FARM: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 13
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Parent = MainFrame
 
-	task.delay(15, function()
-		if not alive or not busy then return end
-		setBusy(false)
-		report("15 detik belum ada teleport.\nSTART sudah ditekan, tetapi kemungkinan ada tahap server/queue lain.\nCek UI + console.")
-		dumpVisibleButtons()
-	end)
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = ToggleBtn
+
+-- 2. CARI MUSUH TERDEKAT (Nearest Mob First)
+local function GetNearestTarget()
+    local nearestEnemy = nil
+    local shortestDistance = math.huge
+    local folderEnemies = Workspace:FindFirstChild("Enemies") or Workspace:FindFirstChild("Mobs")
+    
+    if not folderEnemies then return nil end
+
+    for _, enemy in pairs(folderEnemies:GetChildren()) do
+        local enemyRoot = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("PrimaryPart")
+        local enemyHumanoid = enemy:FindFirstChildOfClass("Humanoid")
+        
+        if enemyRoot and enemyHumanoid and enemyHumanoid.Health > 0 then
+            local distance = (RootPart.Position - enemyRoot.Position).Magnitude
+            
+            -- Raycast obstacle check
+            local rayParams = RaycastParams.new()
+            rayParams.FilterDescendantsInstances = {Character, enemy}
+            rayParams.FilterType = Enum.RaycastFilterType.Exclude
+            local rayResult = Workspace:Raycast(RootPart.Position, (enemyRoot.Position - RootPart.Position), rayParams)
+            
+            if not rayResult and distance < shortestDistance then
+                shortestDistance = distance
+                nearestEnemy = enemy
+            end
+        end
+    end
+    return nearestEnemy
 end
 
-joinButton.Activated:Connect(function()
-	local ok, err = xpcall(joinCrabby, debug.traceback)
-	if not ok then
-		setBusy(false)
-		report("ERROR:\n" .. tostring(err))
-	end
-end)
-
-gui.Destroying:Connect(function()
-	alive = false
-end)
-
-if game.PlaceId == TARGET_PLACE_ID then
-	report("SUDAH DI CRABBY CRUSADE.\nPlaceId: " .. tostring(game.PlaceId))
-else
-	report("Siap.\nPlaceId sekarang: " .. tostring(game.PlaceId) .. "\nTekan JOIN CRABBY CRUSADE.")
+-- 3. LOGIKA GACHA 2 PETI (RECURSIVE PROXIMITY PROMPT FIX)
+local function ClaimGachaChests()
+    if isLooting then return end
+    isLooting = true
+    
+    task.wait(1.5)
+    
+    local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
+    
+    if chestsFolder then
+        local allChests = chestsFolder:GetChildren()
+        
+        if #allChests >= 3 then
+            local availableIndices = {1, 2, 3}
+            local selectedChests = {}
+            
+            -- Gacha kocok 2 dari 3
+            for i = 1, 2 do
+                local randomIndex = math.random(1, #availableIndices)
+                table.insert(selectedChests, allChests[availableIndices[randomIndex]])
+                table.remove(availableIndices, randomIndex)
+            end
+            
+            -- Buka peti hasil gacha (Recursive prompt search)
+            for _, chest in ipairs(selectedChests) do
+                local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
+                if prompt then
+                    fireproximityprompt(prompt)
+                    task.wait(0.8)
+                end
+            end
+        end
+    end
+    
+    task.wait(1)
+    isLooting = false
 end
+
+-- 4. HITUNG POSISI ORBIT (HEIGHT LOCK FIX)
+local function CalculateBackArcCFrame(enemyRoot, dt)
+    orbitTime = orbitTime + (dt * CONFIG.ORBIT_SPEED)
+    local angleOffset = math.sin(orbitTime) * math.rad(CONFIG.ORBIT_ANGLE_MAX)
+    
+    -- Ambil CFrame musuh tapi sesuaikan Y-Axis agar tidak melayang
+    local enemyPos = enemyRoot.Position
+    local targetPos = Vector3.new(enemyPos.X, RootPart.Position.Y, enemyPos.Z)
+    local adjustedEnemyCFrame = CFrame.new(targetPos, targetPos + enemyRoot.CFrame.LookVector)
+    
+    local backPos = adjustedEnemyCFrame * CFrame.Angles(0, math.pi + angleOffset, 0) * CFrame.new(0, 0, CONFIG.ATTACK_RANGE)
+    return CFrame.new(backPos.Position, targetPos)
+end
+
+-- 5. SIMULASI SERANGAN AUTOMATIS
+local function AutoAttack()
+    -- Mengirim klik kiri mouse untuk menebas pedang
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+    task.wait(0.05)
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+end
+
+-- 6. TOGGLE EVENT & HEARTBEAT DISCONNECT FIX
+ToggleBtn.MouseButton1Click:Connect(function()
+    isAutoFarm = not isAutoFarm
+    
+    if isAutoFarm then
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
+        ToggleBtn.Text = "AUTO FARM: ON"
+        
+        -- Start Loop
+        heartbeatConnection = RunService.Heartbeat:Connect(function(dt)
+            if not isAutoFarm then return end
+            
+            -- Anti Stun State Check
+            local state = Humanoid:GetState()
+            if state == Enum.HumanoidStateType.Physics or state == Enum.HumanoidStateType.Ragdoll then
+                return 
+            end
+            
+            -- Re-check target
+            if not currentTarget or not currentTarget:FindFirstChildOfClass("Humanoid") or currentTarget:FindFirstChildOfClass("Humanoid").Health <= 0 then
+                currentTarget = GetNearestTarget()
+            end
+            
+            if currentTarget then
+                local enemyRoot = currentTarget:FindFirstChild("HumanoidRootPart") or currentTarget:FindFirstChild("PrimaryPart")
+                if enemyRoot then
+                    local dist = (RootPart.Position - enemyRoot.Position).Magnitude
+                    
+                    if dist > CONFIG.MAX_APPROACH_DIST then
+                        -- Jika terlalu jauh, dekati pakai MoveTo biar tidak terdeteksi teleport anti-cheat
+                        Humanoid:MoveTo(enemyRoot.Position)
+                    else
+                        -- Jika sudah dekat, kunci dengan Back-Arc Orbit
+                        RootPart.CFrame = RootPart.CFrame:Lerp(CalculateBackArcCFrame(enemyRoot, dt), 0.3)
+                        AutoAttack() -- Serang musuh!
+                    end
+                end
+            else
+                -- Jika musuh habis, buka gacha peti
+                local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
+                if chests and #chests:GetChildren() > 0 and not isLooting then
+                    ClaimGachaChests()
+                end
+            end
+        end)
+    else
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+        ToggleBtn.Text = "AUTO FARM: OFF"
+        currentTarget = nil
+        
+        -- Disconnect Event untuk cegah memory leak
+        if heartbeatConnection then
+            heartbeatConnection:Disconnect()
+            heartbeatConnection = nil
+        end
+    end
+end)
