@@ -1,125 +1,292 @@
 -- ==========================================================
--- TEST SCRIPT: TELEPORT TESTER (WORLD 1-1 CRABBY CRUSADE)
+-- WORLD // ZERO - TELEPORT TESTER
+-- Target: 1-1 Crabby Crusade
+-- Nama remote dan payload belum terverifikasi.
+-- Satu klik = satu percobaan, bukan spam request.
 -- ==========================================================
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CoreGui = game:GetService("CoreGui")
+local TeleportService = game:GetService("TeleportService")
 
-local LocalPlayer = Players.LocalPlayer
+local player = Players.LocalPlayer
+assert(player, "Script harus dijalankan pada client.")
 
--- 1. BUAT SCREENGUI UJI COBA
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "TeleportTestUI"
-ScreenGui.ResetOnSpawn = false
+local playerGui = player:WaitForChild("PlayerGui", 10)
+assert(playerGui, "PlayerGui tidak ditemukan.")
 
--- Proteksi GUI agar tidak mudah terdeteksi / bentrok
-pcall(function()
-    ScreenGui.Parent = CoreGui
-end)
-if not ScreenGui.Parent then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local oldGui = playerGui:FindFirstChild("TeleportTestUI")
+if oldGui then
+    oldGui:Destroy()
 end
 
--- 2. FRAME MENU UTAMA
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 220, 0, 130)
-MainFrame.Position = UDim2.new(0.5, -110, 0.4, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true -- Bisa digeser di layar
-MainFrame.Parent = ScreenGui
+-- UI
+local gui = Instance.new("ScreenGui")
+gui.Name = "TeleportTestUI"
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
+local frame = Instance.new("Frame")
+frame.Size = UDim2.fromOffset(360, 280)
+frame.Position = UDim2.new(0.5, -180, 0.4, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+frame.BorderSizePixel = 0
+frame.Parent = gui
 
--- TITLE TEXT
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundTransparency = 1
-Title.Text = "Dungeon Teleport Tester"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 14
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = frame
 
--- SUBTITLE (NAMA DUNGEON)
-local SubTitle = Instance.new("TextLabel")
-SubTitle.Size = UDim2.new(1, 0, 0, 20)
-SubTitle.Position = UDim2.new(0, 0, 0, 25)
-SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "Target: 1-1 Crabby Crusade"
-SubTitle.TextColor3 = Color3.fromRGB(200, 200, 100)
-SubTitle.TextSize = 12
-SubTitle.Font = Enum.Font.SourceSans
-SubTitle.Parent = MainFrame
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 0, 35)
+title.Position = UDim2.fromOffset(10, 5)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 18
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Text = "Dungeon Teleport Tester"
+title.Parent = frame
 
--- 3. TOMBOL TOGGLE ON/OFF
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Name = "ToggleBtn"
-ToggleBtn.Size = UDim2.new(0, 180, 0, 40)
-ToggleBtn.Position = UDim2.new(0.5, -90, 0, 65)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40) -- Merah (OFF)
-ToggleBtn.Text = "AUTO TELEPORT: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 13
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Parent = MainFrame
+local subtitle = title:Clone()
+subtitle.Position = UDim2.fromOffset(10, 40)
+subtitle.Size = UDim2.new(1, -20, 0, 25)
+subtitle.TextSize = 14
+subtitle.Text = "Target: 1-1 Crabby Crusade"
+subtitle.TextColor3 = Color3.fromRGB(230, 210, 120)
+subtitle.Parent = frame
 
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
+local button = Instance.new("TextButton")
+button.Position = UDim2.fromOffset(15, 75)
+button.Size = UDim2.new(1, -30, 0, 42)
+button.BackgroundColor3 = Color3.fromRGB(45, 110, 180)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 16
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Text = "TES TELEPORT SEKALI"
+button.Parent = frame
 
--- 4. LOGIKA TELEPORTATION
-local isAutoTeleport = false
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 6)
+buttonCorner.Parent = button
 
-local function TriggerTeleport()
-    -- Cek ketersediaan folder Shared / RemoteEvents World // Zero
-    local sharedFolder = ReplicatedStorage:FindFirstChild("Shared") or ReplicatedStorage:FindFirstChild("Packages")
-    
-    -- Mencari RemoteEvent khusus antrean dungeon / teleport
-    local teleportRemote = ReplicatedStorage:FindFirstChild("TeleportToDungeon", true) 
-        or ReplicatedStorage:FindFirstChild("EnterDungeon", true)
-        or ReplicatedStorage:FindFirstChild("JoinQueue", true)
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Position = UDim2.fromOffset(15, 130)
+statusLabel.Size = UDim2.new(1, -30, 0, 135)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Font = Enum.Font.SourceSans
+statusLabel.TextSize = 15
+statusLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+statusLabel.TextWrapped = true
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.TextYAlignment = Enum.TextYAlignment.Top
+statusLabel.Parent = frame
 
-    if teleportRemote and teleportRemote:IsA("RemoteEvent") or teleportRemote:IsA("RemoteFunction") then
-        -- Parameter World 1-1 Crabby Crusade
-        local dungeonData = {
-            World = 1,
-            Dungeon = 1,
-            Name = "Crabby Crusade",
-            Difficulty = "Normal"
-        }
-        
-        if teleportRemote:IsA("RemoteEvent") then
-            teleportRemote:FireServer(dungeonData)
+local alive = true
+local busy = false
+local attemptId = 0
+local connections = {}
+
+local function report(message)
+    print("[TeleportTest] " .. message)
+    if alive then
+        statusLabel.Text = message
+    end
+end
+
+local function setBusy(value)
+    busy = value
+    if alive then
+        button.Text = value
+            and "MENUNGGU HASIL..."
+            or "TES TELEPORT SEKALI"
+        button.AutoButtonColor = not value
+    end
+end
+
+-- Ini nama dugaan dari script awal, bukan database resmi game.
+local candidateNames = {
+    TeleportToDungeon = true,
+    EnterDungeon = true,
+    JoinQueue = true,
+}
+
+local function findCandidates()
+    local candidates = {}
+
+    for _, object in ipairs(ReplicatedStorage:GetDescendants()) do
+        if candidateNames[object.Name] and (
+            object:IsA("RemoteEvent")
+            or object:IsA("RemoteFunction")
+        ) then
+            table.insert(candidates, object)
+            print(
+                "[TeleportTest] Kandidat:",
+                object:GetFullName(),
+                object.ClassName
+            )
+        end
+    end
+
+    return candidates
+end
+
+-- Pantau event teleport sebenarnya, bukan sekadar keberhasilan FireServer.
+table.insert(connections, player.OnTeleport:Connect(function(state)
+    if not alive then return end
+
+    attemptId = attemptId + 1
+
+    if state == Enum.TeleportState.Failed then
+        setBusy(false)
+        report("Roblox melaporkan teleport gagal.")
+    else
+        setBusy(true)
+        report(
+            "Status teleport Roblox: " .. state.Name
+            .. "\nBelum memastikan dungeon tujuan benar."
+        )
+    end
+end))
+
+table.insert(connections, TeleportService.TeleportInitFailed:Connect(
+    function(who, result, message)
+        if not alive or who ~= player then return end
+
+        attemptId = attemptId + 1
+        setBusy(false)
+        report(
+            "Teleport gagal: " .. result.Name
+            .. "\n" .. tostring(message)
+        )
+    end
+))
+
+local function triggerTeleport()
+    if busy or not alive then return end
+    setBusy(true)
+
+    local candidates = findCandidates()
+
+    if #candidates == 0 then
+        setBusy(false)
+        report(
+            "Remote dengan nama dugaan tidak ditemukan."
+            .. "\nBuka menu dungeon lalu coba lagi."
+            .. "\nJika tetap kosong, perlu nama/path remote yang benar."
+        )
+        return
+    end
+
+    if #candidates > 1 then
+        setBusy(false)
+        report(
+            "Ditemukan " .. #candidates .. " kandidat."
+            .. "\nTidak mengirim ke remote sembarang."
+            .. "\nLihat daftar path di console."
+        )
+        return
+    end
+
+    local remote = candidates[1]
+    attemptId = attemptId + 1
+    local thisAttempt = attemptId
+    local finished = false
+    local timedOut = false
+
+    report(
+        "Menguji: " .. remote:GetFullName()
+        .. "\nParameter dari script awal belum terverifikasi."
+    )
+
+    task.delay(15, function()
+        if not alive or thisAttempt ~= attemptId then return end
+        timedOut = true
+
+        if finished then
+            setBusy(false)
+            report(
+                "Panggilan selesai, tetapi belum ada event teleport."
+                .. "\nRemote/payload mungkin tidak cocok atau masih antre."
+            )
         else
-            teleportRemote:InvokeServer(dungeonData)
+            report(
+                "InvokeServer belum merespons setelah 15 detik."
+                .. "\nTombol dikunci agar request tidak bertumpuk."
+                .. "\nPermintaan server belum dibatalkan."
+            )
         end
-    else
-        -- Fallback: Memanggil panggilan klik tombol UI 'Select' bawaan game secara otomatis
-        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if playerGui then
-            -- Simulasi interaksi klik GUI bawaan World // Zero
-            warn("[TEST] Remote direct tidak ditemukan, mencoba trigger via UI Event game...")
+    end)
+
+    task.spawn(function()
+        local ok, response = pcall(function()
+            -- Dipertahankan dari kode awal; format belum terverifikasi.
+            local dungeonData = {
+                World = 1,
+                Dungeon = 1,
+                Name = "Crabby Crusade",
+                Difficulty = "Normal",
+            }
+
+            if remote:IsA("RemoteEvent") then
+                remote:FireServer(dungeonData)
+                return "Permintaan dikirim; belum ada konfirmasi server."
+            elseif remote:IsA("RemoteFunction") then
+                return remote:InvokeServer(dungeonData)
+            else
+                error("Objek bukan RemoteEvent/RemoteFunction.")
+            end
+        end)
+
+        finished = true
+
+        if not alive or thisAttempt ~= attemptId then return end
+
+        if not ok then
+            attemptId = attemptId + 1
+            setBusy(false)
+            report("Error:\n" .. tostring(response))
+            return
         end
-    end
+
+        report(
+            "Hasil panggilan: " .. tostring(response)
+            .. "\nIni belum berarti berhasil masuk dungeon."
+        )
+
+        -- Respons terlambat: beri waktu tambahan untuk event teleport.
+        if timedOut then
+            task.delay(15, function()
+                if not alive or thisAttempt ~= attemptId then return end
+                setBusy(false)
+                report(
+                    "Respons sudah diterima, tetapi belum ada event teleport."
+                    .. "\nPerlu verifikasi remote, parameter, dan syarat join."
+                )
+            end)
+        end
+    end)
 end
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    isAutoTeleport = not isAutoTeleport
-    
-    if isAutoTeleport then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80) -- Hijau (ON)
-        ToggleBtn.Text = "AUTO TELEPORT: ON"
-        
-        -- Eksekusi Teleport
-        TriggerTeleport()
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40) -- Merah (OFF)
-        ToggleBtn.Text = "AUTO TELEPORT: OFF"
+button.Activated:Connect(function()
+    local ok, err = xpcall(triggerTeleport, debug.traceback)
+    if not ok and alive then
+        attemptId = attemptId + 1
+        setBusy(false)
+        report("Error tester:\n" .. tostring(err))
     end
 end)
+
+gui.Destroying:Connect(function()
+    alive = false
+    attemptId = attemptId + 1
+
+    for _, connection in ipairs(connections) do
+        connection:Disconnect()
+    end
+end)
+
+report(
+    "Siap. Tekan TES TELEPORT SEKALI."
+    .. "\nPlace saat ini: " .. tostring(game.PlaceId)
+    .. "\nHasil pemeriksaan muncul di sini."
+)
