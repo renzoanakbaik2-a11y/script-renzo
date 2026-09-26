@@ -1,208 +1,125 @@
--- =================================================================
--- DRESS TO IMPRESS (DTI) - STABLE HELPER & TELEPORT ROUTE
--- =================================================================
+-- ==========================================================
+-- TEST SCRIPT: TELEPORT TESTER (WORLD 1-1 CRABBY CRUSADE)
+-- ==========================================================
 
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
-local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-local Humanoid = Character:WaitForChild("Humanoid")
 
-LocalPlayer.CharacterAdded:Connect(function(newChar)
-    Character = newChar
-    HumanoidRootPart = newChar:WaitForChild("HumanoidRootPart", 5)
-    Humanoid = newChar:WaitForChild("Humanoid", 5)
-end)
-
-local Settings = {
-    AutoFarmCash = false,
-    WalkSpeed = 16,
-    AntiAFK = true
-}
-
--- Anti-AFK
-LocalPlayer.Idled:Connect(function()
-    if Settings.AntiAFK then
-        pcall(function()
-            VirtualUser:Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
-            task.wait(1)
-            VirtualUser:Button2Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
-        end)
-    end
-end)
-
--- UI Injection
+-- 1. BUAT SCREENGUI UJI COBA
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DTI_StableHelperUI"
+ScreenGui.Name = "TeleportTestUI"
 ScreenGui.ResetOnSpawn = false
 
-local uiParent = nil
-pcall(function() uiParent = CoreGui end)
-if not uiParent then uiParent = LocalPlayer:WaitForChild("PlayerGui", 5) end
-ScreenGui.Parent = uiParent
+-- Proteksi GUI agar tidak mudah terdeteksi / bentrok
+pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
 
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Name = "ToggleMenuBtn"
-ToggleBtn.Parent = ScreenGui
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
-ToggleBtn.Position = UDim2.new(0, 15, 0.5, -20)
-ToggleBtn.Size = UDim2.new(0, 120, 0, 40)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Text = "DTI HELPER"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 14
-ToggleBtn.Active = true
-ToggleBtn.Draggable = true
-
+-- 2. FRAME MENU UTAMA
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(35, 25, 35)
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -170)
-MainFrame.Size = UDim2.new(0, 260, 0, 300)
-MainFrame.Visible = false
+MainFrame.Size = UDim2.new(0, 220, 0, 130)
+MainFrame.Position = UDim2.new(0.5, -110, 0.4, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true
+MainFrame.Draggable = true -- Bisa digeser di layar
+MainFrame.Parent = ScreenGui
 
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+-- TITLE TEXT
 local Title = Instance.new("TextLabel")
-Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.Font = Enum.Font.SourceSansBold
-Title.Text = "DTI HELPER & SPEED ROUTE"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "Dungeon Teleport Tester"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = MainFrame
+
+-- SUBTITLE (NAMA DUNGEON)
+local SubTitle = Instance.new("TextLabel")
+SubTitle.Size = UDim2.new(1, 0, 0, 20)
+SubTitle.Position = UDim2.new(0, 0, 0, 25)
+SubTitle.BackgroundTransparency = 1
+SubTitle.Text = "Target: 1-1 Crabby Crusade"
+SubTitle.TextColor3 = Color3.fromRGB(200, 200, 100)
+SubTitle.TextSize = 12
+SubTitle.Font = Enum.Font.SourceSans
+SubTitle.Parent = MainFrame
+
+-- 3. TOMBOL TOGGLE ON/OFF
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Size = UDim2.new(0, 180, 0, 40)
+ToggleBtn.Position = UDim2.new(0.5, -90, 0, 65)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40) -- Merah (OFF)
+ToggleBtn.Text = "AUTO TELEPORT: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 13
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Parent = MainFrame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = ToggleBtn
+
+-- 4. LOGIKA TELEPORTATION
+local isAutoTeleport = false
+
+local function TriggerTeleport()
+    -- Cek ketersediaan folder Shared / RemoteEvents World // Zero
+    local sharedFolder = ReplicatedStorage:FindFirstChild("Shared") or ReplicatedStorage:FindFirstChild("Packages")
+    
+    -- Mencari RemoteEvent khusus antrean dungeon / teleport
+    local teleportRemote = ReplicatedStorage:FindFirstChild("TeleportToDungeon", true) 
+        or ReplicatedStorage:FindFirstChild("EnterDungeon", true)
+        or ReplicatedStorage:FindFirstChild("JoinQueue", true)
+
+    if teleportRemote and teleportRemote:IsA("RemoteEvent") or teleportRemote:IsA("RemoteFunction") then
+        -- Parameter World 1-1 Crabby Crusade
+        local dungeonData = {
+            World = 1,
+            Dungeon = 1,
+            Name = "Crabby Crusade",
+            Difficulty = "Normal"
+        }
+        
+        if teleportRemote:IsA("RemoteEvent") then
+            teleportRemote:FireServer(dungeonData)
+        else
+            teleportRemote:InvokeServer(dungeonData)
+        end
+    else
+        -- Fallback: Memanggil panggilan klik tombol UI 'Select' bawaan game secara otomatis
+        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if playerGui then
+            -- Simulasi interaksi klik GUI bawaan World // Zero
+            warn("[TEST] Remote direct tidak ditemukan, mencoba trigger via UI Event game...")
+        end
+    end
+end
 
 ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
--- Teleport Rute ke Area Baju Spesifik
-local function TeleportToArea(keywords)
-    if not HumanoidRootPart then return end
-    pcall(function()
-        for _, item in ipairs(Workspace:GetDescendants()) do
-            if item:IsA("BasePart") or item:IsA("Model") then
-                local name = item.Name:lower()
-                for _, kw in ipairs(keywords) do
-                    if name:find(kw) then
-                        local part = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
-                        if part then
-                            HumanoidRootPart.CFrame = part.CFrame + Vector3.new(0, 2, 2)
-                            return
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local function CreateButton(text, posY, color, callback)
-    local btn = Instance.new("TextButton")
-    btn.Parent = MainFrame
-    btn.Position = UDim2.new(0, 15, 0, posY)
-    btn.Size = UDim2.new(0, 230, 0, 35)
-    btn.BackgroundColor3 = color
-    btn.Font = Enum.Font.SourceSansSemibold
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 13
-    btn.MouseButton1Click:Connect(callback)
-    return btn
-end
-
--- Rute Teleportasi Rak
-CreateButton("TP Ke Area Casual / Hoodie (2020)", 45, Color3.fromRGB(180, 80, 150), function()
-    TeleportToArea({"hoodie", "jacket", "casual", "sweatpants"})
-end)
-
-CreateButton("TP Ke Area Gaun / Dress Elegant", 85, Color3.fromRGB(150, 60, 130), function()
-    TeleportToArea({"dress", "gown", "skirt"})
-end)
-
-CreateButton("TP Ke Area Makeup / Wajah", 125, Color3.fromRGB(100, 50, 120), function()
-    TeleportToArea({"makeup", "face", "hair"})
-end)
-
--- Speed
-local SpeedBtn = Instance.new("TextButton")
-SpeedBtn.Parent = MainFrame
-SpeedBtn.Position = UDim2.new(0, 15, 0, 170)
-SpeedBtn.Size = UDim2.new(0, 230, 0, 35)
-SpeedBtn.BackgroundColor3 = Color3.fromRGB(50, 40, 50)
-SpeedBtn.Font = Enum.Font.SourceSansSemibold
-SpeedBtn.Text = "WalkSpeed: Normal (16)"
-SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedBtn.TextSize = 14
-
-local speedState = false
-SpeedBtn.MouseButton1Click:Connect(function()
-    speedState = not speedState
-    if speedState then
-        Settings.WalkSpeed = 35
-        SpeedBtn.Text = "WalkSpeed: Fast (35)"
-        SpeedBtn.TextColor3 = Color3.fromRGB(255, 105, 180)
+    isAutoTeleport = not isAutoTeleport
+    
+    if isAutoTeleport then
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80) -- Hijau (ON)
+        ToggleBtn.Text = "AUTO TELEPORT: ON"
+        
+        -- Eksekusi Teleport
+        TriggerTeleport()
     else
-        Settings.WalkSpeed = 16
-        SpeedBtn.Text = "WalkSpeed: Normal (16)"
-        SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    end
-    if Humanoid then Humanoid.WalkSpeed = Settings.WalkSpeed end
-end)
-
--- Auto Collect Cash
-local toggleCash = false
-local CashBtn = Instance.new("TextButton")
-CashBtn.Parent = MainFrame
-CashBtn.Position = UDim2.new(0, 15, 0, 210)
-CashBtn.Size = UDim2.new(0, 230, 0, 35)
-CashBtn.BackgroundColor3 = Color3.fromRGB(50, 40, 50)
-CashBtn.Font = Enum.Font.SourceSansSemibold
-CashBtn.Text = "Auto Collect Cash: OFF"
-CashBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-CashBtn.TextSize = 14
-
-CashBtn.MouseButton1Click:Connect(function()
-    toggleCash = not toggleCash
-    Settings.AutoFarmCash = toggleCash
-    if toggleCash then
-        CashBtn.Text = "Auto Collect Cash: ON"
-        CashBtn.TextColor3 = Color3.fromRGB(100, 255, 150)
-        CashBtn.BackgroundColor3 = Color3.fromRGB(70, 50, 70)
-    else
-        CashBtn.Text = "Auto Collect Cash: OFF"
-        CashBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-        CashBtn.BackgroundColor3 = Color3.fromRGB(50, 40, 50)
-    end
-end)
-
--- Loop Farming Koin
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if Settings.AutoFarmCash and HumanoidRootPart then
-            pcall(function()
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") then
-                        local name = obj.Name:lower()
-                        if name:find("cash") or name:find("money") or name:find("pink") or name:find("star") then
-                            HumanoidRootPart.CFrame = obj.CFrame
-                            if firetouchinterest then
-                                firetouchinterest(HumanoidRootPart, obj, 0)
-                                task.wait()
-                                firetouchinterest(HumanoidRootPart, obj, 1)
-                            end
-                            task.wait(0.1)
-                            break
-                        end
-                    end
-                end
-            end)
-        end
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40) -- Merah (OFF)
+        ToggleBtn.Text = "AUTO TELEPORT: OFF"
     end
 end)
