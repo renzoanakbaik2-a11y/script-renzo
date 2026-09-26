@@ -1,292 +1,89 @@
--- ==========================================================
--- WORLD // ZERO - TELEPORT TESTER
--- Target: 1-1 Crabby Crusade
--- Nama remote dan payload belum terverifikasi.
--- Satu klik = satu percobaan, bukan spam request.
--- ==========================================================
+		return
+	end
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService = game:GetService("TeleportService")
+	setBusy(true)
+	report("Mencari menu Dungeon...\nPlace sekarang: " .. tostring(game.PlaceId))
 
-local player = Players.LocalPlayer
-assert(player, "Script harus dijalankan pada client.")
+	local crabbyButton = findButton({"crabby crusade"})
 
-local playerGui = player:WaitForChild("PlayerGui", 10)
-assert(playerGui, "PlayerGui tidak ditemukan.")
+	if not crabbyButton then
+		local dungeonButton = findButton({"dungeon"})
+		if dungeonButton then
+			report("Menu Dungeon ditemukan.\nMembuka menu...")
+			local clicked, errorMessage = clickButton(dungeonButton)
+			if not clicked then
+				setBusy(false)
+				report("Gagal membuka menu Dungeon:\n" .. tostring(errorMessage))
+				return
+			end
+			task.wait(1)
+		else
+			setBusy(false)
+			report("Button Dungeon tidak ditemukan.\nDaftar button dikirim ke console.")
+			dumpVisibleButtons()
+			return
+		end
+	end
 
-local oldGui = playerGui:FindFirstChild("TeleportTestUI")
-if oldGui then
-    oldGui:Destroy()
+	crabbyButton = waitForButton({"crabby crusade"}, 5)
+	if not crabbyButton then
+		setBusy(false)
+		report("Crabby Crusade tidak ditemukan.\nKemungkinan belum unlocked atau UI berbeda.\nCek console.")
+		dumpVisibleButtons()
+		return
+	end
+
+	report("Crabby Crusade ditemukan.\nMemilih dungeon...")
+	local clickedCrabby, crabbyError = clickButton(crabbyButton)
+	if not clickedCrabby then
+		setBusy(false)
+		report("Gagal memilih Crabby Crusade:\n" .. tostring(crabbyError))
+		return
+	end
+
+	task.wait(1)
+
+	local startButton = waitForButton({"start"}, 5)
+	if not startButton then
+		setBusy(false)
+		report("Crabby dipilih tetapi START tidak ditemukan.\nCek console untuk UI yang aktif.")
+		dumpVisibleButtons()
+		return
+	end
+
+	report("START ditemukan.\nMeminta World // Zero memulai dungeon...")
+	local clickedStart, startError = clickButton(startButton)
+
+	if not clickedStart then
+		setBusy(false)
+		report("Gagal menekan START:\n" .. tostring(startError))
+		return
+	end
+
+	report("START sudah ditekan.\nMenunggu server / teleport...")
+
+	task.delay(15, function()
+		if not alive or not busy then return end
+		setBusy(false)
+		report("15 detik belum ada teleport.\nSTART sudah ditekan, tetapi kemungkinan ada tahap server/queue lain.\nCek UI + console.")
+		dumpVisibleButtons()
+	end)
 end
 
--- UI
-local gui = Instance.new("ScreenGui")
-gui.Name = "TeleportTestUI"
-gui.ResetOnSpawn = false
-gui.Parent = playerGui
-
-local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(360, 280)
-frame.Position = UDim2.new(0.5, -180, 0.4, 0)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-frame.BorderSizePixel = 0
-frame.Parent = gui
-
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
-corner.Parent = frame
-
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -20, 0, 35)
-title.Position = UDim2.fromOffset(10, 5)
-title.BackgroundTransparency = 1
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 18
-title.TextColor3 = Color3.new(1, 1, 1)
-title.Text = "Dungeon Teleport Tester"
-title.Parent = frame
-
-local subtitle = title:Clone()
-subtitle.Position = UDim2.fromOffset(10, 40)
-subtitle.Size = UDim2.new(1, -20, 0, 25)
-subtitle.TextSize = 14
-subtitle.Text = "Target: 1-1 Crabby Crusade"
-subtitle.TextColor3 = Color3.fromRGB(230, 210, 120)
-subtitle.Parent = frame
-
-local button = Instance.new("TextButton")
-button.Position = UDim2.fromOffset(15, 75)
-button.Size = UDim2.new(1, -30, 0, 42)
-button.BackgroundColor3 = Color3.fromRGB(45, 110, 180)
-button.Font = Enum.Font.SourceSansBold
-button.TextSize = 16
-button.TextColor3 = Color3.new(1, 1, 1)
-button.Text = "TES TELEPORT SEKALI"
-button.Parent = frame
-
-local buttonCorner = Instance.new("UICorner")
-buttonCorner.CornerRadius = UDim.new(0, 6)
-buttonCorner.Parent = button
-
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Position = UDim2.fromOffset(15, 130)
-statusLabel.Size = UDim2.new(1, -30, 0, 135)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Font = Enum.Font.SourceSans
-statusLabel.TextSize = 15
-statusLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-statusLabel.TextWrapped = true
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.TextYAlignment = Enum.TextYAlignment.Top
-statusLabel.Parent = frame
-
-local alive = true
-local busy = false
-local attemptId = 0
-local connections = {}
-
-local function report(message)
-    print("[TeleportTest] " .. message)
-    if alive then
-        statusLabel.Text = message
-    end
-end
-
-local function setBusy(value)
-    busy = value
-    if alive then
-        button.Text = value
-            and "MENUNGGU HASIL..."
-            or "TES TELEPORT SEKALI"
-        button.AutoButtonColor = not value
-    end
-end
-
--- Ini nama dugaan dari script awal, bukan database resmi game.
-local candidateNames = {
-    TeleportToDungeon = true,
-    EnterDungeon = true,
-    JoinQueue = true,
-}
-
-local function findCandidates()
-    local candidates = {}
-
-    for _, object in ipairs(ReplicatedStorage:GetDescendants()) do
-        if candidateNames[object.Name] and (
-            object:IsA("RemoteEvent")
-            or object:IsA("RemoteFunction")
-        ) then
-            table.insert(candidates, object)
-            print(
-                "[TeleportTest] Kandidat:",
-                object:GetFullName(),
-                object.ClassName
-            )
-        end
-    end
-
-    return candidates
-end
-
--- Pantau event teleport sebenarnya, bukan sekadar keberhasilan FireServer.
-table.insert(connections, player.OnTeleport:Connect(function(state)
-    if not alive then return end
-
-    attemptId = attemptId + 1
-
-    if state == Enum.TeleportState.Failed then
-        setBusy(false)
-        report("Roblox melaporkan teleport gagal.")
-    else
-        setBusy(true)
-        report(
-            "Status teleport Roblox: " .. state.Name
-            .. "\nBelum memastikan dungeon tujuan benar."
-        )
-    end
-end))
-
-table.insert(connections, TeleportService.TeleportInitFailed:Connect(
-    function(who, result, message)
-        if not alive or who ~= player then return end
-
-        attemptId = attemptId + 1
-        setBusy(false)
-        report(
-            "Teleport gagal: " .. result.Name
-            .. "\n" .. tostring(message)
-        )
-    end
-))
-
-local function triggerTeleport()
-    if busy or not alive then return end
-    setBusy(true)
-
-    local candidates = findCandidates()
-
-    if #candidates == 0 then
-        setBusy(false)
-        report(
-            "Remote dengan nama dugaan tidak ditemukan."
-            .. "\nBuka menu dungeon lalu coba lagi."
-            .. "\nJika tetap kosong, perlu nama/path remote yang benar."
-        )
-        return
-    end
-
-    if #candidates > 1 then
-        setBusy(false)
-        report(
-            "Ditemukan " .. #candidates .. " kandidat."
-            .. "\nTidak mengirim ke remote sembarang."
-            .. "\nLihat daftar path di console."
-        )
-        return
-    end
-
-    local remote = candidates[1]
-    attemptId = attemptId + 1
-    local thisAttempt = attemptId
-    local finished = false
-    local timedOut = false
-
-    report(
-        "Menguji: " .. remote:GetFullName()
-        .. "\nParameter dari script awal belum terverifikasi."
-    )
-
-    task.delay(15, function()
-        if not alive or thisAttempt ~= attemptId then return end
-        timedOut = true
-
-        if finished then
-            setBusy(false)
-            report(
-                "Panggilan selesai, tetapi belum ada event teleport."
-                .. "\nRemote/payload mungkin tidak cocok atau masih antre."
-            )
-        else
-            report(
-                "InvokeServer belum merespons setelah 15 detik."
-                .. "\nTombol dikunci agar request tidak bertumpuk."
-                .. "\nPermintaan server belum dibatalkan."
-            )
-        end
-    end)
-
-    task.spawn(function()
-        local ok, response = pcall(function()
-            -- Dipertahankan dari kode awal; format belum terverifikasi.
-            local dungeonData = {
-                World = 1,
-                Dungeon = 1,
-                Name = "Crabby Crusade",
-                Difficulty = "Normal",
-            }
-
-            if remote:IsA("RemoteEvent") then
-                remote:FireServer(dungeonData)
-                return "Permintaan dikirim; belum ada konfirmasi server."
-            elseif remote:IsA("RemoteFunction") then
-                return remote:InvokeServer(dungeonData)
-            else
-                error("Objek bukan RemoteEvent/RemoteFunction.")
-            end
-        end)
-
-        finished = true
-
-        if not alive or thisAttempt ~= attemptId then return end
-
-        if not ok then
-            attemptId = attemptId + 1
-            setBusy(false)
-            report("Error:\n" .. tostring(response))
-            return
-        end
-
-        report(
-            "Hasil panggilan: " .. tostring(response)
-            .. "\nIni belum berarti berhasil masuk dungeon."
-        )
-
-        -- Respons terlambat: beri waktu tambahan untuk event teleport.
-        if timedOut then
-            task.delay(15, function()
-                if not alive or thisAttempt ~= attemptId then return end
-                setBusy(false)
-                report(
-                    "Respons sudah diterima, tetapi belum ada event teleport."
-                    .. "\nPerlu verifikasi remote, parameter, dan syarat join."
-                )
-            end)
-        end
-    end)
-end
-
-button.Activated:Connect(function()
-    local ok, err = xpcall(triggerTeleport, debug.traceback)
-    if not ok and alive then
-        attemptId = attemptId + 1
-        setBusy(false)
-        report("Error tester:\n" .. tostring(err))
-    end
+joinButton.Activated:Connect(function()
+	local ok, err = xpcall(joinCrabby, debug.traceback)
+	if not ok then
+		setBusy(false)
+		report("ERROR:\n" .. tostring(err))
+	end
 end)
 
 gui.Destroying:Connect(function()
-    alive = false
-    attemptId = attemptId + 1
-
-    for _, connection in ipairs(connections) do
-        connection:Disconnect()
-    end
+	alive = false
 end)
 
-report(
-    "Siap. Tekan TES TELEPORT SEKALI."
-    .. "\nPlace saat ini: " .. tostring(game.PlaceId)
-    .. "\nHasil pemeriksaan muncul di sini."
-)
+if game.PlaceId == TARGET_PLACE_ID then
+	report("SUDAH DI CRABBY CRUSADE.\nPlaceId: " .. tostring(game.PlaceId))
+else
+	report("Siap.\nPlaceId sekarang: " .. tostring(game.PlaceId) .. "\nTekan JOIN CRABBY CRUSADE.")
+end
