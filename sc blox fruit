@@ -1,46 +1,42 @@
 -- ==========================================================
--- REVISED SCRIPT: AUTO FARM + GACHA CHEST (FIXED LOGIC)
+-- WORLD // ZERO - PERFECT FLY FARM + GACHA CHEST SCRIPT
+-- Features: UI Menu, Fly Above Mobs, Dynamic Scan, Gacha Chest
 -- ==========================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 
--- PARAMETER SETTING
+-- CONFIGURATION
 local CONFIG = {
-    ATTACK_RANGE = 7.0,      -- Jarak aman pedang
-    ORBIT_SPEED = 3.5,       -- Kecepatan orbit
-    ORBIT_ANGLE_MAX = 55,    -- Batas sudut orbit (-55 s/d +55)
-    MAX_APPROACH_DIST = 35.0 -- Jarak maksimal sebelum pendekatan halus
+    FLY_HEIGHT = 10.0 -- Ketinggian melayang di atas musuh (studs)
 }
 
 local isAutoFarm = false
 local isLooting = false
-local currentTarget = nil
-local orbitTime = 0
+local currentTargetRoot = nil
 local heartbeatConnection = nil
 
--- 1. UI MENU RINGKAS
+-- 1. UI MENU RINGKAS DENGAN TOMBOL TOGGLE
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AutoFarmTestUI_Fixed"
+ScreenGui.Name = "W0_FlyFarmUI_Complete"
 ScreenGui.ResetOnSpawn = false
 
 pcall(function() ScreenGui.Parent = CoreGui end)
 if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 200, 0, 110)
-MainFrame.Position = UDim2.new(0.5, -100, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+MainFrame.Size = UDim2.new(0, 190, 0, 100)
+MainFrame.Position = UDim2.new(0.5, -95, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
 MainFrame.Active = true
-MainFrame.Draggable = true
+MainFrame.Draggable = true -- UI bisa diseret di layar
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
@@ -50,15 +46,15 @@ UICorner.Parent = MainFrame
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundTransparency = 1
-Title.Text = "Auto Dungeon (Fixed)"
+Title.Text = "World // Zero (Fly Mode)"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 13
+Title.TextSize = 12
 Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 160, 0, 45)
-ToggleBtn.Position = UDim2.new(0.5, -80, 0, 45)
+ToggleBtn.Size = UDim2.new(0, 150, 0, 45)
+ToggleBtn.Position = UDim2.new(0.5, -75, 0, 40)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
 ToggleBtn.Text = "AUTO FARM: OFF"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -70,37 +66,59 @@ local BtnCorner = Instance.new("UICorner")
 BtnCorner.CornerRadius = UDim.new(0, 6)
 BtnCorner.Parent = ToggleBtn
 
--- 2. CARI MUSUH TERDEKAT (Nearest Mob First)
-local function GetNearestTarget()
+-- 2. SCAN TARGET DINAMIS (PENYESUAIAN SUB-FOLDER MOBS)
+local function GetNearestTargetDynamic()
     local nearestEnemy = nil
     local shortestDistance = math.huge
-    local folderEnemies = Workspace:FindFirstChild("Enemies") or Workspace:FindFirstChild("Mobs")
     
-    if not folderEnemies then return nil end
+    local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
+    if not mobsFolder then return nil end
 
-    for _, enemy in pairs(folderEnemies:GetChildren()) do
-        local enemyRoot = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("PrimaryPart")
-        local enemyHumanoid = enemy:FindFirstChildOfClass("Humanoid")
+    -- Memindai semua sub-folder di dalam Mobs (seperti GrassCobra, Boarwolf, dll.)
+    for _, subItem in pairs(mobsFolder:GetChildren()) do
+        local targetsToScan = subItem:IsA("Model") and {subItem} or subItem:GetChildren()
         
-        if enemyRoot and enemyHumanoid and enemyHumanoid.Health > 0 then
-            local distance = (RootPart.Position - enemyRoot.Position).Magnitude
-            
-            -- Raycast obstacle check
-            local rayParams = RaycastParams.new()
-            rayParams.FilterDescendantsInstances = {Character, enemy}
-            rayParams.FilterType = Enum.RaycastFilterType.Exclude
-            local rayResult = Workspace:Raycast(RootPart.Position, (enemyRoot.Position - RootPart.Position), rayParams)
-            
-            if not rayResult and distance < shortestDistance then
-                shortestDistance = distance
-                nearestEnemy = enemy
+        for _, enemyModel in pairs(targetsToScan) do
+            if enemyModel:IsA("Model") then
+                local enemyHumanoid = enemyModel:FindFirstChildOfClass("Humanoid")
+                local enemyRoot = enemyModel:FindFirstChild("HumanoidRootPart") or enemyModel.PrimaryPart
+                
+                if enemyHumanoid and enemyRoot and enemyHumanoid.Health > 0 then
+                    local distance = (RootPart.Position - enemyRoot.Position).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        nearestEnemy = enemyRoot
+                    end
+                end
             end
         end
     end
+    
     return nearestEnemy
 end
 
--- 3. LOGIKA GACHA 2 PETI (RECURSIVE PROXIMITY PROMPT FIX)
+-- 3. AUTO-EQUIP SENJATA & ATTACK
+local function AutoAttack()
+    local tool = Character:FindFirstChildOfClass("Tool")
+    
+    -- Jika senjata masih di Backpack, pasang otomatis ke tangan
+    if not tool then
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if backpack then
+            local backpackTool = backpack:FindFirstChildOfClass("Tool")
+            if backpackTool then
+                Humanoid:EquipTool(backpackTool)
+                tool = backpackTool
+            end
+        end
+    end
+    
+    if tool then
+        tool:Activate()
+    end
+end
+
+-- 4. GACHA 2 PETI (KLAIM 2 DARI 3 PETI GRATIS)
 local function ClaimGachaChests()
     if isLooting then return end
     isLooting = true
@@ -116,14 +134,14 @@ local function ClaimGachaChests()
             local availableIndices = {1, 2, 3}
             local selectedChests = {}
             
-            -- Gacha kocok 2 dari 3
+            -- Pengocokan acak 2 dari 3 peti
             for i = 1, 2 do
                 local randomIndex = math.random(1, #availableIndices)
                 table.insert(selectedChests, allChests[availableIndices[randomIndex]])
                 table.remove(availableIndices, randomIndex)
             end
             
-            -- Buka peti hasil gacha (Recursive prompt search)
+            -- Membuka 2 peti terpilih
             for _, chest in ipairs(selectedChests) do
                 local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
                 if prompt then
@@ -138,29 +156,16 @@ local function ClaimGachaChests()
     isLooting = false
 end
 
--- 4. HITUNG POSISI ORBIT (HEIGHT LOCK FIX)
-local function CalculateBackArcCFrame(enemyRoot, dt)
-    orbitTime = orbitTime + (dt * CONFIG.ORBIT_SPEED)
-    local angleOffset = math.sin(orbitTime) * math.rad(CONFIG.ORBIT_ANGLE_MAX)
-    
-    -- Ambil CFrame musuh tapi sesuaikan Y-Axis agar tidak melayang
+-- 5. HITUNG POSISI TERBANG DI ATAS MOBS
+local function CalculateFlyAboveCFrame(enemyRoot)
     local enemyPos = enemyRoot.Position
-    local targetPos = Vector3.new(enemyPos.X, RootPart.Position.Y, enemyPos.Z)
-    local adjustedEnemyCFrame = CFrame.new(targetPos, targetPos + enemyRoot.CFrame.LookVector)
+    -- Kunci koordinat horizontal tepat di atas musuh dengan offset ketinggian 10 studs
+    local flyPosition = Vector3.new(enemyPos.X, enemyPos.Y + CONFIG.FLY_HEIGHT, enemyPos.Z)
     
-    local backPos = adjustedEnemyCFrame * CFrame.Angles(0, math.pi + angleOffset, 0) * CFrame.new(0, 0, CONFIG.ATTACK_RANGE)
-    return CFrame.new(backPos.Position, targetPos)
+    return CFrame.new(flyPosition, enemyPos)
 end
 
--- 5. SIMULASI SERANGAN AUTOMATIS
-local function AutoAttack()
-    -- Mengirim klik kiri mouse untuk menebas pedang
-    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-    task.wait(0.05)
-    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-end
-
--- 6. TOGGLE EVENT & HEARTBEAT DISCONNECT FIX
+-- 6. TOGGLE EVENT & CORE LOOP
 ToggleBtn.MouseButton1Click:Connect(function()
     isAutoFarm = not isAutoFarm
     
@@ -168,37 +173,34 @@ ToggleBtn.MouseButton1Click:Connect(function()
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
         ToggleBtn.Text = "AUTO FARM: ON"
         
-        -- Start Loop
-        heartbeatConnection = RunService.Heartbeat:Connect(function(dt)
+        heartbeatConnection = RunService.Heartbeat:Connect(function()
             if not isAutoFarm then return end
             
-            -- Anti Stun State Check
+            -- Safety Check (Anti-Stun)
             local state = Humanoid:GetState()
             if state == Enum.HumanoidStateType.Physics or state == Enum.HumanoidStateType.Ragdoll then
                 return 
             end
             
-            -- Re-check target
-            if not currentTarget or not currentTarget:FindFirstChildOfClass("Humanoid") or currentTarget:FindFirstChildOfClass("Humanoid").Health <= 0 then
-                currentTarget = GetNearestTarget()
+            -- Validasi Target Musuh
+            local isTargetValid = false
+            if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
+                local enemyHum = currentTargetRoot.Parent:FindFirstChildOfClass("Humanoid")
+                if enemyHum and enemyHum.Health > 0 then
+                    isTargetValid = true
+                end
             end
             
-            if currentTarget then
-                local enemyRoot = currentTarget:FindFirstChild("HumanoidRootPart") or currentTarget:FindFirstChild("PrimaryPart")
-                if enemyRoot then
-                    local dist = (RootPart.Position - enemyRoot.Position).Magnitude
-                    
-                    if dist > CONFIG.MAX_APPROACH_DIST then
-                        -- Jika terlalu jauh, dekati pakai MoveTo biar tidak terdeteksi teleport anti-cheat
-                        Humanoid:MoveTo(enemyRoot.Position)
-                    else
-                        -- Jika sudah dekat, kunci dengan Back-Arc Orbit
-                        RootPart.CFrame = RootPart.CFrame:Lerp(CalculateBackArcCFrame(enemyRoot, dt), 0.3)
-                        AutoAttack() -- Serang musuh!
-                    end
-                end
+            if not isTargetValid then
+                currentTargetRoot = GetNearestTargetDynamic()
+            end
+            
+            if currentTargetRoot then
+                -- Pindahkan posisi karakter melayang di atas kepala musuh
+                RootPart.CFrame = RootPart.CFrame:Lerp(CalculateFlyAboveCFrame(currentTargetRoot), 0.3)
+                AutoAttack()
             else
-                -- Jika musuh habis, buka gacha peti
+                -- Jika musuh habis (Boss kalah), jalankan Gacha 2 Peti
                 local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
                 if chests and #chests:GetChildren() > 0 and not isLooting then
                     ClaimGachaChests()
@@ -208,9 +210,8 @@ ToggleBtn.MouseButton1Click:Connect(function()
     else
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
         ToggleBtn.Text = "AUTO FARM: OFF"
-        currentTarget = nil
+        currentTargetRoot = nil
         
-        -- Disconnect Event untuk cegah memory leak
         if heartbeatConnection then
             heartbeatConnection:Disconnect()
             heartbeatConnection = nil
