@@ -1,5 +1,5 @@
 -- ==========================================================
--- ROLL A FISHERMAN - SPEED HUB X UI (FIXED SIDEBAR & THICK RED)
+-- ROLL A FISHERMAN - SPEED HUB X UI (FIXED LAYOUT & BORDERS)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -25,16 +25,16 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true -- Mengunci seluruh isi agar tidak keluar dari kotak utama
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 8)
 MainCorner.Parent = MainFrame
 
--- BORDER MERAH DITEBALKAN (THICK NEON RED)
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(255, 30, 60) -- Merah Neon Terang
-MainStroke.Thickness = 3 -- Ketebalan 3 piksel
+MainStroke.Color = Color3.fromRGB(255, 30, 60)
+MainStroke.Thickness = 3
 MainStroke.Parent = MainFrame
 
 -- Top Bar
@@ -80,20 +80,23 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 4)
 CloseCorner.Parent = CloseBtn
 
--- 3. SIDEBAR (KIRI) - UKURAN & LAYOUT FIXED
+-- 3. SIDEBAR CONTAINER (DIPERBAIKI POSISI DAN UKURANNYA)
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 125, 1, -34)
+Sidebar.Name = "Sidebar"
+Sidebar.Size = UDim2.new(0, 130, 1, -34)
 Sidebar.Position = UDim2.new(0, 0, 0, 34)
 Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
 Sidebar.BorderSizePixel = 0
 Sidebar.Parent = MainFrame
 
-local SidebarRightLine = Instance.new("Frame")
-SidebarRightLine.Size = UDim2.new(0, 2, 1, 0)
-SidebarRightLine.Position = UDim2.new(1, -2, 0, 0)
-SidebarRightLine.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-SidebarRightLine.BorderSizePixel = 0
-SidebarRightLine.Parent = Sidebar
+-- GARIS PEMBATAS MERAH (Tepat di Tepi Kanan Sidebar Sesuai Coretan Gambar)
+local SidebarSeparator = Instance.new("Frame")
+SidebarSeparator.Name = "SidebarSeparator"
+SidebarSeparator.Size = UDim2.new(0, 2, 1, 0)
+SidebarSeparator.Position = UDim2.new(1, -2, 0, 0)
+SidebarSeparator.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+SidebarSeparator.BorderSizePixel = 0
+SidebarSeparator.Parent = Sidebar
 
 local SidebarList = Instance.new("UIListLayout")
 SidebarList.Padding = UDim.new(0, 6)
@@ -107,8 +110,9 @@ SidebarPadding.Parent = Sidebar
 
 -- 4. CONTAINER KONTEN TAB (KANAN)
 local ContentArea = Instance.new("Frame")
-ContentArea.Size = UDim2.new(1, -135, 1, -44)
-ContentArea.Position = UDim2.new(0, 135, 0, 40)
+ContentArea.Name = "ContentArea"
+ContentArea.Size = UDim2.new(1, -138, 1, -42)
+ContentArea.Position = UDim2.new(0, 138, 0, 38)
 ContentArea.BackgroundTransparency = 1
 ContentArea.Parent = MainFrame
 
@@ -160,7 +164,7 @@ end
 
 local function CreateTabButton(name)
     local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(0, 110, 0, 32)
+    Btn.Size = UDim2.new(0, 114, 0, 32)
     Btn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
     Btn.Text = "  " .. name
     Btn.TextColor3 = Color3.fromRGB(160, 160, 170)
@@ -191,7 +195,7 @@ local MainBtn = CreateTabButton("Main")
 
 SwitchTab("Home", HomeBtn)
 
--- 5. FUNCTION HELPER: DROPDOWN SECTION (DENGAN BORDER NEON)
+-- 5. DROPDOWN SECTION API
 local function CreateSection(parent, sectionTitle)
     local SectionFrame = Instance.new("Frame")
     SectionFrame.Size = UDim2.new(1, -6, 0, 38)
@@ -315,7 +319,7 @@ local function CreateSection(parent, sectionTitle)
     return SectionAPI
 end
 
--- 6. MENGISI TAB
+-- 6. ISI TAB
 local CollectSection = CreateSection(AutomaticallyTab, "Automation Collect")
 CollectSection:AddToggle("Auto Collect Money", false, function(state) end)
 CollectSection:AddToggle("Auto Collect Fish", false, function(state) end)
@@ -337,7 +341,7 @@ UpgradeSection:AddToggle("Auto Buy Upgrades", false, function(state) end)
 local InfoLabel = Instance.new("TextLabel")
 InfoLabel.Size = UDim2.new(1, -6, 0, 55)
 InfoLabel.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-InfoLabel.Text = "  Welcome, " .. LocalPlayer.Name .. "!\n  Status: Fixed Sidebar & Thick Red Border"
+InfoLabel.Text = "  Welcome, " .. LocalPlayer.Name .. "!\n  Status: Layout & Separator Fixed"
 InfoLabel.TextColor3 = Color3.fromRGB(240, 240, 250)
 InfoLabel.Font = Enum.Font.SourceSansSemibold
 InfoLabel.TextSize = 12
