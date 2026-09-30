@@ -1,4 +1,292 @@
 -- ==========================================================
+-- WORLD // ZERO - FLY & MOVEMENT FIX (PIVOT METHOD)
+-- Features: PivotTo Teleport, Visual Tracker, Auto-Equip, Gacha
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+-- CONFIGURATION
+local CONFIG = {
+    FLY_HEIGHT = 10.0,   -- Ketinggian melayang di atas musuh (studs)
+    ATTACK_DELAY = 0.12 -- Jeda tebasan pedang
+}
+
+local isAutoFarm = false
+local isLooting = false
+local currentTargetRoot = nil
+local heartbeatConnection = nil
+local lastAttackTime = 0
+
+-- OBJEK VISUAL SCANNER
+local tracerBeam = Instance.new("Beam")
+local attachment0 = Instance.new("Attachment")
+local attachment1 = Instance.new("Attachment")
+local targetHighlight = Instance.new("Highlight")
+
+tracerBeam.Name = "MobTracerBeam"
+tracerBeam.Color = ColorSequence.new(Color3.fromRGB(255, 50, 50))
+tracerBeam.Width0 = 0.3
+tracerBeam.Width1 = 0.3
+tracerBeam.FaceCamera = true
+
+targetHighlight.Name = "MobHighlight"
+targetHighlight.FillColor = Color3.fromRGB(255, 0, 0)
+targetHighlight.FillTransparency = 0.5
+targetHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+
+-- 1. UI MENU RINGKAS + MONITOR STATUS
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "W0_PivotFarmUI"
+ScreenGui.ResetOnSpawn = false
+
+pcall(function() ScreenGui.Parent = CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 220, 0, 140)
+MainFrame.Position = UDim2.new(0.5, -110, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 28)
+Title.BackgroundTransparency = 1
+Title.Text = "World // Zero Pivot Mode"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 12
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = MainFrame
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 180, 0, 38)
+ToggleBtn.Position = UDim2.new(0.5, -90, 0, 32)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+ToggleBtn.Text = "AUTO FARM: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 13
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Parent = MainFrame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = ToggleBtn
+
+-- LAYAR STATUS MONITOR
+local StatusFrame = Instance.new("Frame")
+StatusFrame.Size = UDim2.new(0, 180, 0, 50)
+StatusFrame.Position = UDim2.new(0.5, -90, 0, 78)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+StatusFrame.Parent = MainFrame
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 4)
+StatusCorner.Parent = StatusFrame
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Size = UDim2.new(1, -10, 1, 0)
+StatusText.Position = UDim2.new(0, 5, 0, 0)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "Status: IDLE"
+StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusText.TextSize = 10
+StatusText.Font = Enum.Font.SourceSans
+StatusText.TextWrapped = true
+StatusText.Parent = StatusFrame
+
+local function UpdateStatus(msg)
+    StatusText.Text = "Status: " .. tostring(msg)
+end
+
+-- 2. PENULUSURAN TARGET MOBS DINAMIS
+local function GetNearestTarget()
+    local nearestEnemy = nil
+    local shortestDistance = math.huge
+    
+    local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
+    if not mobsFolder then 
+        UpdateStatus("Error: Folder Mobs tidak ada!")
+        return nil 
+    end
+
+    for _, desc in pairs(mobsFolder:GetDescendants()) do
+        if desc:IsA("Model") and desc ~= Character then
+            local enemyHum = desc:FindFirstChildOfClass("Humanoid")
+            local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
+                or desc.PrimaryPart 
+                or desc:FindFirstChild("Collider")
+                or desc:FindFirstChild("Root")
+                or desc:FindFirstChildWhichIsA("BasePart")
+            
+            local isAlive = true
+            if enemyHum and enemyHum.Health <= 0 then
+                isAlive = false
+            elseif desc:GetAttribute("Health") and desc:GetAttribute("Health") <= 0 then
+                isAlive = false
+            end
+            
+            if enemyRoot and isAlive then
+                local dist = (RootPart.Position - enemyRoot.Position).Magnitude
+                if dist < shortestDistance then
+                    shortestDistance = dist
+                    nearestEnemy = enemyRoot
+                end
+            end
+        end
+    end
+    
+    return nearestEnemy
+end
+
+-- 3. VISUAL TRACKER
+local function ClearVisuals()
+    tracerBeam.Parent = nil
+    attachment0.Parent = nil
+    attachment1.Parent = nil
+    targetHighlight.Parent = nil
+end
+
+local function UpdateVisuals(targetRoot)
+    if not targetRoot or not targetRoot.Parent then
+        ClearVisuals()
+        return
+    end
+    attachment0.Parent = RootPart
+    attachment1.Parent = targetRoot
+    tracerBeam.Attachment0 = attachment0
+    tracerBeam.Attachment1 = attachment1
+    tracerBeam.Parent = RootPart
+    targetHighlight.Parent = targetRoot.Parent
+end
+
+-- 4. AUTO-EQUIP & ATTACK
+local function AutoAttack()
+    local now = tick()
+    if now - lastAttackTime < CONFIG.ATTACK_DELAY then return end
+    lastAttackTime = now
+
+    local tool = Character:FindFirstChildOfClass("Tool")
+    if not tool then
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if backpack then
+            local backpackTool = backpack:FindFirstChildOfClass("Tool")
+            if backpackTool then
+                Humanoid:EquipTool(backpackTool)
+                tool = backpackTool
+            end
+        end
+    end
+    if tool then tool:Activate() end
+end
+
+-- 5. GACHA 2 PETI
+local function ClaimGachaChests()
+    if isLooting then return end
+    isLooting = true
+    UpdateStatus("Membuka Peti Gacha...")
+    task.wait(1.5)
+    
+    local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
+    if chestsFolder then
+        local allChests = chestsFolder:GetChildren()
+        if #allChests >= 3 then
+            local availableIndices = {1, 2, 3}
+            local selectedChests = {}
+            for i = 1, 2 do
+                local randomIndex = math.random(1, #availableIndices)
+                table.insert(selectedChests, allChests[availableIndices[randomIndex]])
+                table.remove(availableIndices, randomIndex)
+            end
+            for _, chest in ipairs(selectedChests) do
+                local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
+                if prompt then
+                    fireproximityprompt(prompt)
+                    task.wait(0.8)
+                end
+            end
+        end
+    end
+    task.wait(1)
+    isLooting = false
+end
+
+-- 6. TOGGLE EVENT & MAIN LOOP (DENGAN PIVOT TO)
+ToggleBtn.MouseButton1Click:Connect(function()
+    isAutoFarm = not isAutoFarm
+    
+    if isAutoFarm then
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
+        ToggleBtn.Text = "AUTO FARM: ON"
+        
+        heartbeatConnection = RunService.Heartbeat:Connect(function()
+            if not isAutoFarm then return end
+            
+            Character = LocalPlayer.Character
+            if not Character then return end
+            RootPart = Character:FindFirstChild("HumanoidRootPart")
+            Humanoid = Character:FindFirstChildOfClass("Humanoid")
+            if not RootPart or not Humanoid then return end
+            
+            -- Netralkan Gaya Fisik
+            RootPart.AssemblyLinearVelocity = Vector3.zero
+            
+            -- Validasi Target
+            local isTargetValid = false
+            if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
+                isTargetValid = true
+            end
+            
+            if not isTargetValid then
+                currentTargetRoot = GetNearestTarget()
+            end
+            
+            if currentTargetRoot then
+                local enemyName = currentTargetRoot.Parent.Name
+                local enemyPos = currentTargetRoot.Position
+                local targetFlyPos = Vector3.new(enemyPos.X, enemyPos.Y + CONFIG.FLY_HEIGHT, enemyPos.Z)
+                
+                UpdateStatus("Pivot Fly: " .. enemyName)
+                UpdateVisuals(currentTargetRoot)
+                
+                -- Pindahkan SELURUH Model Karakter Menggunakan PivotTo()
+                Character:PivotTo(CFrame.new(targetFlyPos, enemyPos))
+                AutoAttack()
+            else
+                ClearVisuals()
+                local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
+                if chests and #chests:GetChildren() > 0 and not isLooting then
+                    ClaimGachaChests()
+                else
+                    UpdateStatus("Menunggu Mobs Spawn...")
+                end
+            end
+        end)
+    else
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+        ToggleBtn.Text = "AUTO FARM: OFF"
+        UpdateStatus("IDLE")
+        currentTargetRoot = nil
+        ClearVisuals()
+        
+        if heartbeatConnection then
+            heartbeatConnection:Disconnect()
+            heartbeatConnection = nil
+        end
+    end
+end)-- ==========================================================
 -- WORLD // ZERO - FLYING FARM + VISUAL SCANNER TEST
 -- Features: Red Tracer Line, Highlight, Fly Above, Auto-Equip, Gacha
 -- ==========================================================
