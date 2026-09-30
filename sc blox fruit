@@ -1,4 +1,233 @@
 -- ==========================================================
+-- WORLD // ZERO - FLY ABOVE MOBS (DELTA EXECUTOR GUARANTEED)
+-- ==========================================================
+
+local function InitScript()
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local Workspace = game:GetService("Workspace")
+
+    local LocalPlayer = Players.LocalPlayer
+    if not LocalPlayer then return end
+
+    local CONFIG = {
+        FLY_HEIGHT = 12.0,   -- Ketinggian melayang di atas musuh
+        ATTACK_DELAY = 0.12
+    }
+
+    local isAutoFarm = false
+    local isLooting = false
+    local currentTargetRoot = nil
+    local heartbeatConnection = nil
+    local lastAttackTime = 0
+
+    -- 1. PEMBUATAN UI AMAN (PLAYERGUI)
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+    if not playerGui then return end
+
+    if playerGui:FindFirstChild("W0_DeltaFlyUI") then
+        playerGui.W0_DeltaFlyUI:Destroy()
+    end
+
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "W0_DeltaFlyUI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = playerGui
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 200, 0, 110)
+    MainFrame.Position = UDim2.new(0.5, -100, 0.15, 0)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 32)
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = MainFrame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 30)
+    Title.BackgroundTransparency = 1
+    Title.Text = "World // Zero (Fly Mode)"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 13
+    Title.Font = Enum.Font.SourceSansBold
+    Title.Parent = MainFrame
+
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(0, 160, 0, 42)
+    ToggleBtn.Position = UDim2.new(0.5, -80, 0, 40)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    ToggleBtn.Text = "AUTO FARM: OFF"
+    ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleBtn.TextSize = 13
+    ToggleBtn.Font = Enum.Font.SourceSansBold
+    ToggleBtn.Parent = MainFrame
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.Parent = ToggleBtn
+
+    local StatusLabel = Instance.new("TextLabel")
+    StatusLabel.Size = UDim2.new(1, 0, 0, 20)
+    StatusLabel.Position = UDim2.new(0, 0, 0, 85)
+    StatusLabel.BackgroundTransparency = 1
+    StatusLabel.Text = "Status: READY"
+    StatusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    StatusLabel.TextSize = 10
+    StatusLabel.Font = Enum.Font.SourceSans
+    StatusLabel.Parent = MainFrame
+
+    print("==================================")
+    print("[DELTA] SCRIPT AUTO FARM BERHASIL DI-LOAD!")
+    print("==================================")
+
+    -- 2. PENULUSURAN TARGET MOBS
+    local function GetNearestTarget(myRoot)
+        local nearestEnemy = nil
+        local shortestDistance = math.huge
+        local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
+        if not mobsFolder then return nil end
+
+        for _, desc in pairs(mobsFolder:GetDescendants()) do
+            if desc:IsA("Model") and desc ~= LocalPlayer.Character then
+                local enemyHum = desc:FindFirstChildOfClass("Humanoid")
+                local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
+                    or desc.PrimaryPart 
+                    or desc:FindFirstChild("Collider")
+                    or desc:FindFirstChildWhichIsA("BasePart")
+                
+                local isAlive = true
+                if enemyHum and enemyHum.Health <= 0 then isAlive = false end
+                
+                if enemyRoot and isAlive then
+                    local dist = (myRoot.Position - enemyRoot.Position).Magnitude
+                    if dist < shortestDistance then
+                        shortestDistance = dist
+                        nearestEnemy = enemyRoot
+                    end
+                end
+            end
+        end
+        return nearestEnemy
+    end
+
+    -- 3. AUTO ATTACK
+    local function AutoAttack(char, hum)
+        local now = tick()
+        if now - lastAttackTime < CONFIG.ATTACK_DELAY then return end
+        lastAttackTime = now
+
+        local tool = char:FindFirstChildOfClass("Tool")
+        if not tool then
+            local backpack = LocalPlayer:FindFirstChild("Backpack")
+            if backpack then
+                local backpackTool = backpack:FindFirstChildOfClass("Tool")
+                if backpackTool then
+                    hum:EquipTool(backpackTool)
+                    tool = backpackTool
+                end
+            end
+        end
+        if tool then tool:Activate() end
+    end
+
+    -- 4. GACHA PETI
+    local function ClaimGachaChests()
+        if isLooting then return end
+        isLooting = true
+        StatusLabel.Text = "Status: Membuka Peti..."
+        task.wait(1.5)
+        
+        local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
+        if chestsFolder then
+            local allChests = chestsFolder:GetChildren()
+            if #allChests >= 3 then
+                local availableIndices = {1, 2, 3}
+                local selectedChests = {}
+                for i = 1, 2 do
+                    local randomIndex = math.random(1, #availableIndices)
+                    table.insert(selectedChests, allChests[availableIndices[randomIndex]])
+                    table.remove(availableIndices, randomIndex)
+                end
+                for _, chest in ipairs(selectedChests) do
+                    local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
+                    if prompt then
+                        fireproximityprompt(prompt)
+                        task.wait(0.8)
+                    end
+                end
+            end
+        end
+        task.wait(1)
+        isLooting = false
+    end
+
+    -- 5. TOGGLE EVENT & FLY LOOP
+    ToggleBtn.MouseButton1Click:Connect(function()
+        isAutoFarm = not isAutoFarm
+        
+        if isAutoFarm then
+            ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
+            ToggleBtn.Text = "AUTO FARM: ON"
+            
+            heartbeatConnection = RunService.Heartbeat:Connect(function()
+                if not isAutoFarm then return end
+                
+                local char = LocalPlayer.Character
+                if not char then return end
+                local root = char:FindFirstChild("HumanoidRootPart")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if not root or not hum then return end
+                
+                -- Netralkan gravitasi
+                root.AssemblyLinearVelocity = Vector3.zero
+                
+                local isTargetValid = false
+                if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
+                    isTargetValid = true
+                end
+                
+                if not isTargetValid then
+                    currentTargetRoot = GetNearestTarget(root)
+                end
+                
+                if currentTargetRoot then
+                    local enemyName = currentTargetRoot.Parent.Name
+                    local enemyPos = currentTargetRoot.Position
+                    local targetFlyPos = Vector3.new(enemyPos.X, enemyPos.Y + CONFIG.FLY_HEIGHT, enemyPos.Z)
+                    
+                    StatusLabel.Text = "Status: Terbang di atas " .. enemyName
+                    
+                    -- Pindahkan CFrame melayang di atas musuh
+                    root.CFrame = CFrame.new(targetFlyPos, enemyPos)
+                    AutoAttack(char, hum)
+                else
+                    local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
+                    if chests and #chests:GetChildren() > 0 and not isLooting then
+                        ClaimGachaChests()
+                    else
+                        StatusLabel.Text = "Status: Menunggu Mobs..."
+                    end
+                end
+            end)
+        else
+            ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            ToggleBtn.Text = "AUTO FARM: OFF"
+            StatusLabel.Text = "Status: IDLE"
+            currentTargetRoot = nil
+            
+            if heartbeatConnection then
+                heartbeatConnection:Disconnect()
+                heartbeatConnection = nil
+            end
+        end
+    end)
+end
+
+-- Eksekusi Aman Tanpa Crash
+pcall(InitScript)-- ==========================================================
 -- WORLD // ZERO - FLY ABOVE MOBS (DELTA EXECUTOR FIXED)
 -- ==========================================================
 
