@@ -1,6 +1,6 @@
 -- ==========================================================
--- WORLD // ZERO - FLYING ORBIT ABOVE MOBS AUTO FARM
--- Features: Hover Orbit (Above Mobs), Auto-Equip, Gacha Chest
+-- WORLD // ZERO - VISUAL MOB TRACKER & SCANNER
+-- Features: Red Tracer Line, Highlight Target, UI Status Screen
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -10,35 +10,40 @@ local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 
--- CONFIGURATION
-local CONFIG = {
-    FLY_HEIGHT = 10.0,   -- Ketinggian melayang di atas musuh (studs)
-    ORBIT_RADIUS = 6.0,  -- Radius lingkaran orbit di atas musuh
-    ORBIT_SPEED = 2.5,   -- Kecepatan putaran orbit
-    ATTACK_DELAY = 0.12 -- Jeda tebasan pedang
-}
-
-local isAutoFarm = false
-local isLooting = false
+local isTrackerOn = false
 local currentTargetRoot = nil
 local heartbeatConnection = nil
-local orbitAngle = 0
-local lastAttackTime = 0
 
--- 1. UI MENU RINGKAS
+-- OBJEK VISUAL (GARIS & HIGHLIGHT)
+local tracerBeam = Instance.new("Beam")
+local attachment0 = Instance.new("Attachment")
+local attachment1 = Instance.new("Attachment")
+local targetHighlight = Instance.new("Highlight")
+
+tracerBeam.Name = "MobTracerBeam"
+tracerBeam.Color = ColorSequence.new(Color3.fromRGB(255, 50, 50)) -- Warna Merah
+tracerBeam.Width0 = 0.3
+tracerBeam.Width1 = 0.3
+tracerBeam.FaceCamera = true
+
+targetHighlight.Name = "MobHighlight"
+targetHighlight.FillColor = Color3.fromRGB(255, 0, 0)
+targetHighlight.FillTransparency = 0.5
+targetHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+
+-- 1. UI MENU + LAYAR STATUS
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "W0_FlyOrbitUI"
+ScreenGui.Name = "W0_MobTrackerUI"
 ScreenGui.ResetOnSpawn = false
 
 pcall(function() ScreenGui.Parent = CoreGui end)
 if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 190, 0, 100)
-MainFrame.Position = UDim2.new(0.5, -95, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 220, 0, 140)
+MainFrame.Position = UDim2.new(0.5, -110, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -49,19 +54,19 @@ UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Size = UDim2.new(1, 0, 0, 28)
 Title.BackgroundTransparency = 1
-Title.Text = "World // Zero (Fly Orbit)"
+Title.Text = "World // Zero Mob Scanner"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 12
 Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 150, 0, 45)
-ToggleBtn.Position = UDim2.new(0.5, -75, 0, 40)
+ToggleBtn.Size = UDim2.new(0, 180, 0, 38)
+ToggleBtn.Position = UDim2.new(0.5, -90, 0, 32)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-ToggleBtn.Text = "AUTO FARM: OFF"
+ToggleBtn.Text = "SCANNER: OFF"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleBtn.TextSize = 13
 ToggleBtn.Font = Enum.Font.SourceSansBold
@@ -71,27 +76,65 @@ local BtnCorner = Instance.new("UICorner")
 BtnCorner.CornerRadius = UDim.new(0, 6)
 BtnCorner.Parent = ToggleBtn
 
--- 2. PENULUSURAN TARGET MOBS DINAMIS
-local function GetNearestTarget()
+-- LAYAR STATUS MONITOR
+local StatusFrame = Instance.new("Frame")
+StatusFrame.Size = UDim2.new(0, 180, 0, 50)
+StatusFrame.Position = UDim2.new(0.5, -90, 0, 78)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+StatusFrame.Parent = MainFrame
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 4)
+StatusCorner.Parent = StatusFrame
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Size = UDim2.new(1, -10, 1, 0)
+StatusText.Position = UDim2.new(0, 5, 0, 0)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "Status: MATI"
+StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusText.TextSize = 10
+StatusText.Font = Enum.Font.SourceSans
+StatusText.TextWrapped = true
+StatusText.Parent = StatusFrame
+
+local function UpdateStatus(msg)
+    StatusText.Text = "Status: " .. tostring(msg)
+end
+
+-- 2. PENULUSURAN TARGET MOBS DENGAN VERIFIKASI DEEP SCAN
+local function GetNearestTargetScanner()
     local nearestEnemy = nil
     local shortestDistance = math.huge
     
     local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
-    if not mobsFolder then return nil end
+    if not mobsFolder then 
+        UpdateStatus("Error: Folder Mobs/Enemies tidak ada!")
+        return nil 
+    end
 
-    for _, subFolder in ipairs(mobsFolder:GetChildren()) do
-        local models = subFolder:IsA("Model") and {subFolder} or subFolder:GetChildren()
-        for _, enemyModel in ipairs(models) do
-            if enemyModel:IsA("Model") and enemyModel ~= Character then
-                local enemyHum = enemyModel:FindFirstChildOfClass("Humanoid")
-                local enemyRoot = enemyModel:FindFirstChild("HumanoidRootPart") or enemyModel.PrimaryPart
-                
-                if enemyRoot and enemyHum and enemyHum.Health > 0 then
-                    local dist = (RootPart.Position - enemyRoot.Position).Magnitude
-                    if dist < shortestDistance then
-                        shortestDistance = dist
-                        nearestEnemy = enemyRoot
-                    end
+    -- Memindai seluruh isi folder Mobs secara mendalam
+    for _, desc in pairs(mobsFolder:GetDescendants()) do
+        if desc:IsA("Model") and desc ~= Character then
+            local enemyHum = desc:FindFirstChildOfClass("Humanoid")
+            local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
+                or desc.PrimaryPart 
+                or desc:FindFirstChild("Collider")
+                or desc:FindFirstChild("Root")
+                or desc:FindFirstChildWhichIsA("BasePart")
+            
+            local isAlive = true
+            if enemyHum and enemyHum.Health <= 0 then
+                isAlive = false
+            elseif desc:GetAttribute("Health") and desc:GetAttribute("Health") <= 0 then
+                isAlive = false
+            end
+            
+            if enemyRoot and isAlive then
+                local dist = (RootPart.Position - enemyRoot.Position).Magnitude
+                if dist < shortestDistance then
+                    shortestDistance = dist
+                    nearestEnemy = enemyRoot
                 end
             end
         end
@@ -100,126 +143,77 @@ local function GetNearestTarget()
     return nearestEnemy
 end
 
--- 3. AUTO-EQUIP & ATTACK
-local function AutoAttack()
-    local now = tick()
-    if now - lastAttackTime < CONFIG.ATTACK_DELAY then return end
-    lastAttackTime = now
-
-    local tool = Character:FindFirstChildOfClass("Tool")
-    if not tool then
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack then
-            local backpackTool = backpack:FindFirstChildOfClass("Tool")
-            if backpackTool then
-                Humanoid:EquipTool(backpackTool)
-                tool = backpackTool
-            end
-        end
-    end
-    
-    if tool then
-        tool:Activate()
-    end
+-- 3. FUNGSI UPDATE VISUAL TRACKER
+local function ClearVisuals()
+    tracerBeam.Parent = nil
+    attachment0.Parent = nil
+    attachment1.Parent = nil
+    targetHighlight.Parent = nil
 end
 
--- 4. GACHA 2 PETI (KLAIM 2 DARI 3 PETI GRATIS)
-local function ClaimGachaChests()
-    if isLooting then return end
-    isLooting = true
-    
-    task.wait(1.5)
-    
-    local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-    if chestsFolder then
-        local allChests = chestsFolder:GetChildren()
-        if #allChests >= 3 then
-            local availableIndices = {1, 2, 3}
-            local selectedChests = {}
-            
-            for i = 1, 2 do
-                local randomIndex = math.random(1, #availableIndices)
-                table.insert(selectedChests, allChests[availableIndices[randomIndex]])
-                table.remove(availableIndices, randomIndex)
-            end
-            
-            for _, chest in ipairs(selectedChests) do
-                local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
-                if prompt then
-                    fireproximityprompt(prompt)
-                    task.wait(0.8)
-                end
-            end
-        end
+local function UpdateVisualTracker(targetRoot)
+    if not targetRoot or not targetRoot.Parent then
+        ClearVisuals()
+        return
     end
     
-    task.wait(1)
-    isLooting = false
+    -- Pasang Attachment Garis ke Karakter & Musuh
+    attachment0.Parent = RootPart
+    attachment1.Parent = targetRoot
+    
+    tracerBeam.Attachment0 = attachment0
+    tracerBeam.Attachment1 = attachment1
+    tracerBeam.Parent = RootPart
+    
+    -- Pasang Efek Menyala (Highlight) ke Model Musuh
+    targetHighlight.Parent = targetRoot.Parent
 end
 
--- 5. CALCULATE FLYING ORBIT CFRAME
-local function CalculateFlyOrbitCFrame(enemyRoot, dt)
-    orbitAngle = orbitAngle + (dt * CONFIG.ORBIT_SPEED)
-    
-    local enemyPos = enemyRoot.Position
-    -- Hitung koordinat melingkar di udara di atas kepala musuh
-    local offsetX = math.cos(orbitAngle) * CONFIG.ORBIT_RADIUS
-    local offsetZ = math.sin(orbitAngle) * CONFIG.ORBIT_RADIUS
-    local flyPos = Vector3.new(enemyPos.X + offsetX, enemyPos.Y + CONFIG.FLY_HEIGHT, enemyPos.Z + offsetZ)
-    
-    -- Karakter melayang sambil terus menghadap ke arah posisi musuh
-    return CFrame.new(flyPos, enemyPos)
-end
-
--- 6. TOGGLE EVENT & MAIN LOOP
+-- 4. TOGGLE EVENT & MAIN LOOP
 ToggleBtn.MouseButton1Click:Connect(function()
-    isAutoFarm = not isAutoFarm
+    isTrackerOn = not isTrackerOn
     
-    if isAutoFarm then
+    if isTrackerOn then
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-        ToggleBtn.Text = "AUTO FARM: ON"
+        ToggleBtn.Text = "SCANNER: ON"
+        UpdateStatus("Memulai Pemindaian...")
         
-        heartbeatConnection = RunService.Heartbeat:Connect(function(dt)
-            if not isAutoFarm then return end
+        heartbeatConnection = RunService.Heartbeat:Connect(function()
+            if not isTrackerOn then return end
             
             Character = LocalPlayer.Character
             if not Character then return end
             RootPart = Character:FindFirstChild("HumanoidRootPart")
-            Humanoid = Character:FindFirstChildOfClass("Humanoid")
-            if not RootPart or not Humanoid then return end
-            
-            -- Netralkan Gravitasi Roblox agar Karakter Melayang Mulus di Udara
-            RootPart.AssemblyLinearVelocity = Vector3.zero
+            if not RootPart then return end
             
             -- Validasi Target Terkini
             local isTargetValid = false
-            if currentTargetRoot and currentTargetRoot.Parent then
-                local enemyHum = currentTargetRoot.Parent:FindFirstChildOfClass("Humanoid")
-                if enemyHum and enemyHum.Health > 0 then
-                    isTargetValid = true
-                end
+            if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
+                isTargetValid = true
             end
             
             if not isTargetValid then
-                currentTargetRoot = GetNearestTarget()
+                currentTargetRoot = GetNearestTargetScanner()
             end
             
             if currentTargetRoot then
-                -- Pindahkan CFrame karakter melayang + memutar di atas musuh
-                RootPart.CFrame = CalculateFlyOrbitCFrame(currentTargetRoot, dt)
-                AutoAttack()
+                local enemyName = currentTargetRoot.Parent.Name
+                local dist = math.floor((RootPart.Position - currentTargetRoot.Position).Magnitude)
+                
+                UpdateStatus("Ditemukan: " .. enemyName .. " [" .. dist .. " studs]")
+                UpdateVisualTracker(currentTargetRoot)
             else
-                -- Jika musuh habis (Dungeon selesai), klaim gacha 2 peti
-                local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-                if chests and #chests:GetChildren() > 0 and not isLooting then
-                    ClaimGachaChests()
-                end
+                UpdateStatus("Tidak ada Mobs hidup di sekitar!")
+                ClearVisuals()
             end
         end)
     else
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        ToggleBtn.Text = "AUTO FARM: OFF"
+        ToggleBtn.Text = "SCANNER: OFF"
+        UpdateStatus("MATI")
         currentTargetRoot = nil
+        
+        ClearVisuals()
         
         if heartbeatConnection then
             heartbeatConnection:Disconnect()
