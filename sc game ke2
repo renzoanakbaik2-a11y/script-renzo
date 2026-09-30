@@ -1,118 +1,40 @@
--- Memuat Library UI (Orion Library)
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+-- ==========================================================
+-- SPEED HUB X - AUTOMATIC REMOTE SCANNER FOR ROLL A FISHERMAN
+-- ==========================================================
 
--- Membuat Window Utama
-local Window = OrionLib:MakeWindow({Name = "Shadow SC V33 - Fight Others For Brainrots", HidePremium = false, SaveConfig = true, ConfigFolder = "ShadowConfig"})
+print("=== STARTING SCANNER ===")
 
--- Membuat Tab Utama
-local Tab = Window:MakeTab({
-    Name = "Main Features",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
--- Variabel Status Fitur (On/Off)
-local AutoFarmActive = false
+local foundRemotes = {}
 
--- Fungsi Utama Logika (Cek Pintu -> Jalan ke Gerbang -> Jalan ke Zona Hijau)
-local function runAutoLogic()
-    task.spawn(function()
-        while AutoFarmActive do
-            local player = game.Players.LocalPlayer
-            local character = player.Character or player.CharacterAdded:Wait()
-            local humanoid = character:WaitForChild("Humanoid")
-            local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-            
-            -- ==========================================
-            -- 1. LOGIKA PENGECEKAN PINTU
-            -- ==========================================
-            -- Sesuaikan path "Workspace.Pintu" dengan nama objek pintu asli di game ini
-            local door = workspace:FindFirstChild("Pintu") 
-            
-            local isDoorOpen = false
-            if door then
-                -- Contoh logika: Pintu dianggap terbuka jika transparansinya > 0.5 atau posisinya bergeser
-                -- Kamu bisa mengubah kondisi ini sesuai dengan struktur game aslinya (misal: door.Transparency > 0.5)
-                if door.Transparency > 0.5 or not door.CanCollide then
-                    isDoorOpen = true
-                end
-            else
-                -- Jika script tidak menemukan objek pintu, asumsikan jalur bebas/terbuka
-                isDoorOpen = true 
+local function ScanObject(parent)
+    for _, child in ipairs(parent:GetDescendants()) do
+        if child:IsA("RemoteEvent") or child:IsA("RemoteFunction") then
+            local name = string.lower(child.Name)
+            if string.find(name, "roll") or string.find(name, "gacha") or string.find(name, "buy") or string.find(name, "spin") or string.find(name, "fisherman") then
+                table.insert(foundRemotes, child:GetFullName())
             end
-            
-            if isDoorOpen then
-                print("Pintu Terbuka! Karakter mulai berjalan ke gerbang...")
-                
-                -- ==========================================
-                -- 2. JALAN KE GERBANG
-                -- ==========================================
-                -- Ganti Vector3 ini dengan koordinat posisi gerbang
-                local gatePosition = Vector3.new(15, 0, 10) 
-                humanoid:MoveTo(gatePosition)
-                humanoid.MoveFinished:Wait() -- Menunggu sampai karakter sampai di gerbang
-                
-                -- ==========================================
-                -- 3. JALAN KE ZONA HIJAU (AREA EKSTRAKSI)
-                -- ==========================================
-                print("Melewati gerbang, menuju Zona Hijau...")
-                -- Ganti Vector3 ini dengan koordinat posisi zona hijau/ekstraksi di foto
-                local greenZonePosition = Vector3.new(45, 0, 25) 
-                humanoid:MoveTo(greenZonePosition)
-                humanoid.MoveFinished:Wait() -- Menunggu sampai di zona hijau
-                
-                print("Sampai di Zona Hijau, bersiap mengekstrak...")
-                task.wait(2) -- Jeda sebentar sebelum mengulang siklus
-            else
-                print("Pintu masih tertutup, menunggu...")
-            end
-            
-            task.wait(1) -- Jeda perulangan loop agar tidak lag
         end
-    end)
+    end
 end
 
---- ==========================================
--- PEMBUATAN TOMBOL MENU & TOGGLE UI
---- ==========================================
+-- Scan ReplicatedStorage & Workspace
+ScanObject(ReplicatedStorage)
+ScanObject(Workspace)
 
-Tab:AddToggle({
-    Name = "Auto Walk to Green Zone",
-    Default = false,
-    Callback = function(Value)
-        AutoFarmActive = Value
-        if AutoFarmActive then
-            OrionLib:MakeNotification({
-                Name = "Fitur Diaktifkan",
-                Content = "Auto jalan ke zona hijau dinyalakan!",
-                Image = "rbxassetid://4483345998",
-                Time = 3
-            })
-            runAutoLogic() -- Menjalankan fungsi otomatis saat tombol di-ON-kan
-        else
-            OrionLib:MakeNotification({
-                Name = "Fitur Dimatikan",
-                Content = "Auto jalan dimatikan.",
-                Image = "rbxassetid://4483345998",
-                Time = 3
-            })
+print("=== HASIL PEMINDAIAN REMOTE ===")
+if #foundRemotes > 0 then
+    for i, path in ipairs(foundRemotes) do
+        print("[" .. i .. "] " .. path)
+    end
+else
+    print("Tidak ditemukan remote dengan kata kunci khusus. Menampilkan seluruh RemoteEvent di ReplicatedStorage:")
+    for _, child in ipairs(ReplicatedStorage:GetDescendants()) do
+        if child:IsA("RemoteEvent") or child:IsA("RemoteFunction") then
+            print("-> " .. child:GetFullName())
         end
     end
-})
-
--- Tombol Tambahan untuk Teleport Instan (Opsional jika ingin cepat)
-Tab:AddButton({
-    Name = "Teleport Instan ke Zona Hijau",
-    Callback = function()
-        local player = game.Players.LocalPlayer
-        local character = player.Character
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            -- Ganti koordinat ini sesuai titik zona hijau tujuan
-            character.HumanoidRootPart.CFrame = CFrame.new(45, 5, 25)
-            print("Berhasil berteleportasi ke zona hijau!")
-        end
-    end
-})
-
--- Mengakhiri dan merender GUI
-OrionLib:Init()
+end
+print("=== SCAN FINISHED ===")
