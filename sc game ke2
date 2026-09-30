@@ -1,4 +1,121 @@
 -- ==========================================================
+-- SPEED HUB X - SCREEN REMOTE SCANNER FOR ROLL A FISHERMAN
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+if PlayerGui:FindFirstChild("ScannerUI") then
+    PlayerGui.ScannerUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ScannerUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 360, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -110)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = MainFrame
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(255, 30, 60)
+Stroke.Thickness = 2
+Stroke.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -30, 0, 30)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "RESULTS: HASIL REMOTE EVENT"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainFrame
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Position = UDim2.new(1, -25, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 10
+CloseBtn.Parent = MainFrame
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 4)
+CloseCorner.Parent = CloseBtn
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -16, 1, -40)
+Scroll.Position = UDim2.new(0, 8, 0, 32)
+Scroll.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+Scroll.BorderSizePixel = 0
+Scroll.ScrollBarThickness = 4
+Scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 30, 60)
+Scroll.Parent = MainFrame
+
+local ScrollCorner = Instance.new("UICorner")
+ScrollCorner.CornerRadius = UDim.new(0, 6)
+ScrollCorner.Parent = Scroll
+
+local Layout = Instance.new("UIListLayout")
+Layout.Padding = UDim.new(0, 4)
+Layout.SortOrder = Enum.SortOrder.LayoutOrder
+Layout.Parent = Scroll
+
+local function AddLogText(txt)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -8, 0, 18)
+    Label.BackgroundTransparency = 1
+    Label.Text = " " .. txt
+    Label.TextColor3 = Color3.fromRGB(255, 100, 120)
+    Label.Font = Enum.Font.SourceSansSemibold
+    Label.TextSize = 10
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Scroll
+end
+
+-- CARI REMOTE EVENT
+local foundCount = 0
+
+local function ScanFolder(parent)
+    for _, child in ipairs(parent:GetDescendants()) do
+        if child:IsA("RemoteEvent") or child:IsA("RemoteFunction") then
+            foundCount = foundCount + 1
+            AddLogText("[" .. foundCount .. "] " .. child:GetFullName())
+        end
+    end
+end
+
+ScanFolder(ReplicatedStorage)
+
+if foundCount == 0 then
+    ScanFolder(Workspace)
+end
+
+if foundCount == 0 then
+    AddLogText("Tidak ditemukan RemoteEvent.")
+end
+
+Scroll.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 10)-- ==========================================================
 -- SPEED HUB X - AUTOMATIC REMOTE SCANNER FOR ROLL A FISHERMAN
 -- ==========================================================
 
