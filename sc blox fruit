@@ -1,5 +1,5 @@
 -- ==========================================================
--- ROLL A FISHERMAN - SPEED HUB X UI (STEP BY STEP FIXED)
+-- ROLL A FISHERMAN - SPEED HUB X UI (SIDEBAR & BORDER FIXED)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -25,6 +25,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true -- Mengunci tombol agar tidak melenceng keluar frame
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -79,15 +80,18 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 4)
 CloseCorner.Parent = CloseBtn
 
--- 3. SIDEBAR (KIRI - KEMBALI KE STRUKTUR AMAN)
+-- 3. SIDEBAR (KIRI - DENGAN UKURAN DAN GARIS PEMBATAS DIPERBAIKI)
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 120, 1, -33)
-Sidebar.Position = UDim2.new(0, 0, 0, 33)
+Sidebar.Name = "Sidebar"
+Sidebar.Size = UDim2.new(0, 120, 1, -32)
+Sidebar.Position = UDim2.new(0, 0, 0, 32)
 Sidebar.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 Sidebar.BorderSizePixel = 0
 Sidebar.Parent = MainFrame
 
+-- GARIS MERAH PEMBATAS (Tepat di Tepi Kanan Sidebar)
 local SidebarRightLine = Instance.new("Frame")
+SidebarRightLine.Name = "SidebarRightLine"
 SidebarRightLine.Size = UDim2.new(0, 2, 1, 0)
 SidebarRightLine.Position = UDim2.new(1, -2, 0, 0)
 SidebarRightLine.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
@@ -95,7 +99,7 @@ SidebarRightLine.BorderSizePixel = 0
 SidebarRightLine.Parent = Sidebar
 
 local SidebarList = Instance.new("UIListLayout")
-SidebarList.Padding = UDim.new(0, 5)
+SidebarList.Padding = UDim.new(0, 6)
 SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
 SidebarList.Parent = Sidebar
@@ -106,6 +110,7 @@ SidebarPadding.Parent = Sidebar
 
 -- 4. CONTAINER KONTEN TAB (KANAN)
 local ContentArea = Instance.new("Frame")
+ContentArea.Name = "ContentArea"
 ContentArea.Size = UDim2.new(1, -130, 1, -40)
 ContentArea.Position = UDim2.new(0, 130, 0, 38)
 ContentArea.BackgroundTransparency = 1
@@ -155,7 +160,8 @@ end
 
 local function CreateTabButton(name)
     local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(0, 108, 0, 32)
+    Btn.Name = name .. "Btn"
+    Btn.Size = UDim2.new(0, 106, 0, 32)
     Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
     Btn.Text = "  " .. name
     Btn.TextColor3 = Color3.fromRGB(160, 160, 170)
@@ -340,10 +346,9 @@ local UpgradeSection = CreateSection(MainTab, "Upgrades Shop")
 UpgradeSection:AddToggle("Auto Buy Upgrades", false, function(state) end)
 
 -- ==========================================================
--- 7. TAB HOME DASHBOARD (RED THEME + ADVANCED SCANNER)
+-- 7. TAB HOME DASHBOARD (RED THEME + WORKING SCANNER)
 -- ==========================================================
 
--- Box Profile User
 local ProfileCard = Instance.new("Frame")
 ProfileCard.Size = UDim2.new(1, -5, 0, 42)
 ProfileCard.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
@@ -363,13 +368,12 @@ UserText.Size = UDim2.new(1, -10, 1, 0)
 UserText.Position = UDim2.new(0, 10, 0, 0)
 UserText.BackgroundTransparency = 1
 UserText.Text = "Welcome, " .. LocalPlayer.Name .. "!\nStatus: Connected & Active"
-UserText.TextColor3 = Color3.fromRGB(255, 80, 100) -- Teks Merah
+UserText.TextColor3 = Color3.fromRGB(255, 80, 100)
 UserText.Font = Enum.Font.SourceSansBold
 UserText.TextSize = 12
 UserText.TextXAlignment = Enum.TextXAlignment.Left
 UserText.Parent = ProfileCard
 
--- Box Information Server
 local ServerCard = Instance.new("Frame")
 ServerCard.Size = UDim2.new(1, -5, 0, 160)
 ServerCard.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
@@ -379,7 +383,6 @@ local ServerCorner = Instance.new("UICorner")
 ServerCorner.CornerRadius = UDim.new(0, 6)
 ServerCorner.Parent = ServerCard
 
--- Border Merah di Pinggiran Card
 local ServerStroke = Instance.new("UIStroke")
 ServerStroke.Color = Color3.fromRGB(255, 30, 60)
 ServerStroke.Thickness = 1.5
@@ -390,21 +393,18 @@ StatsText.Size = UDim2.new(1, -16, 1, -10)
 StatsText.Position = UDim2.new(0, 10, 0, 8)
 StatsText.BackgroundTransparency = 1
 StatsText.Text = "SERVER INFORMATION:\n\n• Jam (Real Life)  : " .. os.date("%H:%M:%S") .. "\n• Time Played     : 00h 00m 00s\n• Server Players   : -- / --\n• Richest Player   : Scanning..."
-StatsText.TextColor3 = Color3.fromRGB(255, 90, 110) -- Teks Merah Cerah
+StatsText.TextColor3 = Color3.fromRGB(255, 90, 110)
 StatsText.Font = Enum.Font.SourceSansBold
 StatsText.TextSize = 11
 StatsText.TextXAlignment = Enum.TextXAlignment.Left
 StatsText.TextYAlignment = Enum.TextYAlignment.Top
 StatsText.Parent = ServerCard
 
--- LOGIKA SCANNING ADVANCED & REALTIME UPDATE
+-- LOGIKA SCANNING REALTIME
 local startTime = os.time()
 
--- Fungsi Cerdas Mencari Uang Pemain (Multi-Path)
 local function GetPlayerMoney(plr)
     local money = 0
-    
-    -- Cek Folder leaderstats
     local lstats = plr:FindFirstChild("leaderstats")
     if lstats then
         for _, child in ipairs(lstats:GetChildren()) do
@@ -416,8 +416,6 @@ local function GetPlayerMoney(plr)
             end
         end
     end
-    
-    -- Cek Folder Data
     local dataFolder = plr:FindFirstChild("Data") or plr:FindFirstChild("stats")
     if dataFolder then
         for _, child in ipairs(dataFolder:GetChildren()) do
@@ -429,7 +427,6 @@ local function GetPlayerMoney(plr)
             end
         end
     end
-    
     return money
 end
 
@@ -437,22 +434,17 @@ task.spawn(function()
     while task.wait(1) do
         if not ScreenGui or not ScreenGui.Parent then break end
 
-        -- 1. Jam Real Life
         local realTimeStr = os.date("%H:%M:%S")
-
-        -- 2. Time Played
         local elapsed = os.time() - startTime
         local hrs = math.floor(elapsed / 3600)
         local mins = math.floor((elapsed % 3600) / 60)
         local secs = elapsed % 60
         local playtimeStr = string.format("%02dh %02dm %02ds", hrs, mins, secs)
 
-        -- 3. Total Players
         local allPlayers = Players:GetPlayers()
         local playerAmount = #allPlayers
         local maxPlayers = Players.MaxPlayers or 6
 
-        -- 4. Richest Player Scan
         local richestName = "None"
         local maxCash = -1
 
@@ -469,7 +461,6 @@ task.spawn(function()
             richestStr = richestName .. " ($" .. tostring(maxCash) .. ")"
         end
 
-        -- Update Teks Panel
         StatsText.Text = string.format(
             "SERVER INFORMATION:\n\n• Jam (Real Life)  : %s\n• Time Played     : %s\n• Server Players   : %d / %d Players\n• Richest Player   : %s",
             realTimeStr,
