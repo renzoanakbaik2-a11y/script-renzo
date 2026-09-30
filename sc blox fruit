@@ -1,12 +1,11 @@
 -- ==========================================================
--- ROLL A FISHERMAN - SPEED HUB X STYLE UI FRAMEWORK
+-- ROLL A FISHERMAN - SPEED HUB X UI (DROPDOWN SECTION)
 -- ==========================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Hapus UI lama jika ada agar tidak tumpang tindih
 if PlayerGui:FindFirstChild("FishermanSpeedHubUI") then
     PlayerGui.FishermanSpeedHubUI:Destroy()
 end
@@ -20,9 +19,9 @@ ScreenGui.Parent = PlayerGui
 -- 2. MAIN CONTAINER
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 480, 0, 280)
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -140)
-MainFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+MainFrame.Size = UDim2.new(0, 480, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -150)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -32,10 +31,15 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 8)
 MainCorner.Parent = MainFrame
 
--- Top Bar Title
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(220, 40, 60)
+MainStroke.Thickness = 1.8
+MainStroke.Parent = MainFrame
+
+-- Top Bar
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 32)
-TopBar.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+TopBar.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
 TopBar.BorderSizePixel = 0
 TopBar.Parent = MainFrame
 
@@ -45,24 +49,23 @@ TopBarCorner.Parent = TopBar
 
 local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(1, -40, 1, 0)
-TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.Position = UDim2.new(0, 12, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "Speed Hub X | Roll a Fisherman"
-TitleText.TextColor3 = Color3.fromRGB(220, 220, 240)
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.TextSize = 12
 TitleText.Font = Enum.Font.SourceSansBold
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Parent = TopBar
 
--- Tombol Close/Minimize Small
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseBtn.Position = UDim2.new(1, -28, 0, 4)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.Size = UDim2.new(0, 22, 0, 22)
+CloseBtn.Position = UDim2.new(1, -26, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
 CloseBtn.Text = "X"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 12
+CloseBtn.TextSize = 11
 CloseBtn.Parent = TopBar
 
 local CloseCorner = Instance.new("UICorner")
@@ -71,14 +74,21 @@ CloseCorner.Parent = CloseBtn
 
 -- 3. SIDEBAR (KIRI)
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 120, 1, -32)
-Sidebar.Position = UDim2.new(0, 0, 0, 32)
-Sidebar.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
+Sidebar.Size = UDim2.new(0, 120, 1, -33)
+Sidebar.Position = UDim2.new(0, 0, 0, 33)
+Sidebar.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 Sidebar.BorderSizePixel = 0
 Sidebar.Parent = MainFrame
 
+local SidebarRightLine = Instance.new("Frame")
+SidebarRightLine.Size = UDim2.new(0, 1, 1, 0)
+SidebarRightLine.Position = UDim2.new(1, 0, 0, 0)
+SidebarRightLine.BackgroundColor3 = Color3.fromRGB(220, 40, 60)
+SidebarRightLine.BorderSizePixel = 0
+SidebarRightLine.Parent = Sidebar
+
 local SidebarList = Instance.new("UIListLayout")
-SidebarList.Padding = UDim.new(0, 4)
+SidebarList.Padding = UDim.new(0, 5)
 SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
 SidebarList.Parent = Sidebar
@@ -89,8 +99,8 @@ SidebarPadding.Parent = Sidebar
 
 -- 4. CONTAINER KONTEN TAB (KANAN)
 local ContentArea = Instance.new("Frame")
-ContentArea.Size = UDim2.new(1, -125, 1, -40)
-ContentArea.Position = UDim2.new(0, 125, 0, 36)
+ContentArea.Size = UDim2.new(1, -130, 1, -40)
+ContentArea.Position = UDim2.new(0, 130, 0, 38)
 ContentArea.BackgroundTransparency = 1
 ContentArea.Parent = MainFrame
 
@@ -99,10 +109,11 @@ local TabPages = {}
 local function CreateTabPage(name)
     local Page = Instance.new("ScrollingFrame")
     Page.Name = name .. "Page"
-    Page.Size = UDim2.new(1, -10, 1, 0)
+    Page.Size = UDim2.new(1, -5, 1, 0)
     Page.BackgroundTransparency = 1
     Page.BorderSizePixel = 0
     Page.ScrollBarThickness = 3
+    Page.ScrollBarImageColor3 = Color3.fromRGB(220, 40, 60)
     Page.Visible = false
     Page.Parent = ContentArea
 
@@ -115,35 +126,32 @@ local function CreateTabPage(name)
     return Page
 end
 
--- Pilihan Tab
 local HomeTab = CreateTabPage("Home")
 local AutomaticallyTab = CreateTabPage("Automatically")
 local MainTab = CreateTabPage("Main")
 
--- Set Home Tab sebagai Tab Default
 HomeTab.Visible = true
 
--- Function Ganti Tab Active
 local currentTabBtn = nil
 local function SwitchTab(tabName, btn)
     for name, page in pairs(TabPages) do
         page.Visible = (name == tabName)
     end
     if currentTabBtn then
-        currentTabBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
-        currentTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+        currentTabBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+        currentTabBtn.TextColor3 = Color3.fromRGB(160, 160, 170)
     end
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundColor3 = Color3.fromRGB(45, 20, 28)
+    btn.TextColor3 = Color3.fromRGB(255, 80, 100)
     currentTabBtn = btn
 end
 
 local function CreateTabButton(name)
     local Btn = Instance.new("TextButton")
     Btn.Size = UDim2.new(0, 108, 0, 32)
-    Btn.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+    Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
     Btn.Text = "  " .. name
-    Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    Btn.TextColor3 = Color3.fromRGB(160, 160, 170)
     Btn.Font = Enum.Font.SourceSansBold
     Btn.TextSize = 12
     Btn.TextXAlignment = Enum.TextXAlignment.Left
@@ -164,62 +172,157 @@ local HomeBtn = CreateTabButton("Home")
 local AutoBtn = CreateTabButton("Automatically")
 local MainBtn = CreateTabButton("Main")
 
--- Active Status Default
 SwitchTab("Home", HomeBtn)
 
--- 5. FUNCTION HELPER UNTUK ELEMEN UI (TOGGLE SWITCH)
-local function CreateToggle(parent, labelText, defaultState, callback)
-    local ToggleFrame = Instance.new("Frame")
-    ToggleFrame.Size = UDim2.new(1, 0, 0, 36)
-    ToggleFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-    ToggleFrame.Parent = parent
+-- 5. FUNCTION HELPER: DROPDOWN CATEGORY SECTION (SEPERTI FOTO SPEED HUB X)
+local function CreateSection(parent, sectionTitle)
+    local SectionFrame = Instance.new("Frame")
+    SectionFrame.Size = UDim2.new(1, -5, 0, 36)
+    SectionFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+    SectionFrame.ClipsDescendants = true
+    SectionFrame.Parent = parent
 
-    local FrameCorner = Instance.new("UICorner")
-    FrameCorner.CornerRadius = UDim.new(0, 6)
-    FrameCorner.Parent = ToggleFrame
+    local SectionCorner = Instance.new("UICorner")
+    SectionCorner.CornerRadius = UDim.new(0, 6)
+    SectionCorner.Parent = SectionFrame
 
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -60, 1, 0)
-    Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = labelText
-    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
-    Label.Font = Enum.Font.SourceSansSemibold
-    Label.TextSize = 12
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = ToggleFrame
+    local SectionStroke = Instance.new("UIStroke")
+    SectionStroke.Color = Color3.fromRGB(45, 45, 60)
+    SectionStroke.Thickness = 1
+    SectionStroke.Parent = SectionFrame
 
-    local SwitchBtn = Instance.new("TextButton")
-    SwitchBtn.Size = UDim2.new(0, 42, 0, 20)
-    SwitchBtn.Position = UDim2.new(1, -50, 0.5, -10)
-    SwitchBtn.BackgroundColor3 = defaultState and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(60, 60, 70)
-    SwitchBtn.Text = defaultState and "ON" or "OFF"
-    SwitchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SwitchBtn.Font = Enum.Font.SourceSansBold
-    SwitchBtn.TextSize = 10
-    SwitchBtn.Parent = ToggleFrame
+    -- Header Button (Yang Ditekan Untuk Buka/Tutup)
+    local HeaderBtn = Instance.new("TextButton")
+    HeaderBtn.Size = UDim2.new(1, 0, 0, 36)
+    HeaderBtn.BackgroundTransparency = 1
+    HeaderBtn.Text = "  " .. sectionTitle
+    HeaderBtn.TextColor3 = Color3.fromRGB(240, 240, 250)
+    HeaderBtn.Font = Enum.Font.SourceSansBold
+    HeaderBtn.TextSize = 13
+    HeaderBtn.TextXAlignment = Enum.TextXAlignment.Left
+    HeaderBtn.Parent = SectionFrame
 
-    local SwitchCorner = Instance.new("UICorner")
-    SwitchCorner.CornerRadius = UDim.new(0, 10)
-    SwitchCorner.Parent = SwitchBtn
+    local ArrowLabel = Instance.new("TextLabel")
+    ArrowLabel.Size = UDim2.new(0, 30, 0, 36)
+    ArrowLabel.Position = UDim2.new(1, -30, 0, 0)
+    ArrowLabel.BackgroundTransparency = 1
+    ArrowLabel.Text = "∨"
+    ArrowLabel.TextColor3 = Color3.fromRGB(220, 40, 60)
+    ArrowLabel.Font = Enum.Font.SourceSansBold
+    ArrowLabel.TextSize = 14
+    ArrowLabel.Parent = SectionFrame
 
-    local state = defaultState
-    SwitchBtn.MouseButton1Click:Connect(function()
-        state = not state
-        SwitchBtn.BackgroundColor3 = state and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(60, 60, 70)
-        SwitchBtn.Text = state and "ON" or "OFF"
-        if callback then callback(state) end
+    -- Container Untuk Isi Di Dalam Section
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, 0, 0, 0)
+    Container.Position = UDim2.new(0, 0, 0, 36)
+    Container.BackgroundTransparency = 1
+    Container.Parent = SectionFrame
+
+    local ContainerList = Instance.new("UIListLayout")
+    ContainerList.Padding = UDim.new(0, 4)
+    ContainerList.SortOrder = Enum.SortOrder.LayoutOrder
+    ContainerList.Parent = Container
+
+    local isExpanded = false
+
+    local function UpdateSectionSize()
+        if isExpanded then
+            local contentHeight = ContainerList.AbsoluteContentSize.Y
+            SectionFrame.Size = UDim2.new(1, -5, 0, 36 + contentHeight + 8)
+            Container.Size = UDim2.new(1, 0, 0, contentHeight)
+            ArrowLabel.Text = "∧"
+        else
+            SectionFrame.Size = UDim2.new(1, -5, 0, 36)
+            ArrowLabel.Text = "∨"
+        end
+    end
+
+    HeaderBtn.MouseButton1Click:Connect(function()
+        isExpanded = not isExpanded
+        UpdateSectionSize()
     end)
+
+    -- Function Tambah Sakelar (Toggle) Ke Dalam Section Ini
+    local SectionAPI = {}
+    
+    function SectionAPI:AddToggle(labelText, defaultState, callback)
+        local ToggleFrame = Instance.new("Frame")
+        ToggleFrame.Size = UDim2.new(1, -16, 0, 30)
+        ToggleFrame.Position = UDim2.new(0, 8, 0, 0)
+        ToggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+        ToggleFrame.Parent = Container
+
+        local ToggleCorner = Instance.new("UICorner")
+        ToggleCorner.CornerRadius = UDim.new(0, 4)
+        ToggleCorner.Parent = ToggleFrame
+
+        local Label = Instance.new("TextLabel")
+        Label.Size = UDim2.new(1, -50, 1, 0)
+        Label.Position = UDim2.new(0, 8, 0, 0)
+        Label.BackgroundTransparency = 1
+        Label.Text = labelText
+        Label.TextColor3 = Color3.fromRGB(210, 210, 220)
+        Label.Font = Enum.Font.SourceSansSemibold
+        Label.TextSize = 11
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = ToggleFrame
+
+        local SwitchBtn = Instance.new("TextButton")
+        SwitchBtn.Size = UDim2.new(0, 38, 0, 18)
+        SwitchBtn.Position = UDim2.new(1, -44, 0.5, -9)
+        SwitchBtn.BackgroundColor3 = defaultState and Color3.fromRGB(220, 40, 60) or Color3.fromRGB(60, 60, 70)
+        SwitchBtn.Text = defaultState and "ON" or "OFF"
+        SwitchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        SwitchBtn.Font = Enum.Font.SourceSansBold
+        SwitchBtn.TextSize = 9
+        SwitchBtn.Parent = ToggleFrame
+
+        local SwitchCorner = Instance.new("UICorner")
+        SwitchCorner.CornerRadius = UDim.new(0, 8)
+        SwitchCorner.Parent = SwitchBtn
+
+        local state = defaultState
+        SwitchBtn.MouseButton1Click:Connect(function()
+            state = not state
+            SwitchBtn.BackgroundColor3 = state and Color3.fromRGB(220, 40, 60) or Color3.fromRGB(60, 60, 70)
+            SwitchBtn.Text = state and "ON" or "OFF"
+            if callback then callback(state) end
+        end)
+
+        if isExpanded then UpdateSectionSize() end
+    end
+
+    return SectionAPI
 end
 
--- 6. MENGISI ELEMEN KONTEN PADA MASING-MASING TAB
+-- 6. MENGISI TAB DENGAN DROPDOWN SECTION (PERSIS ALUR GAMBAR)
 
--- A. TAB HOME
+-- TAB AUTOMATICALLY
+local CollectSection = CreateSection(AutomaticallyTab, "Automation Collect")
+CollectSection:AddToggle("Auto Collect Money", false, function(state) end)
+CollectSection:AddToggle("Auto Collect Fish", false, function(state) end)
+
+local RollSection = CreateSection(AutomaticallyTab, "Automation Roll")
+RollSection:AddToggle("Auto Roll Fisherman", false, function(state) end)
+
+local SellSection = CreateSection(AutomaticallyTab, "Automation Sell")
+SellSection:AddToggle("Auto Sell Low-Rarity Fish", false, function(state) end)
+
+-- TAB MAIN
+local EventSection = CreateSection(MainTab, "Event & Machines")
+EventSection:AddToggle("Auto Mutation Machine", false, function(state) end)
+EventSection:AddToggle("Auto Rebirth Check", false, function(state) end)
+
+local UpgradeSection = CreateSection(MainTab, "Upgrades Shop")
+UpgradeSection:AddToggle("Auto Buy Upgrades", false, function(state) end)
+
+-- TAB HOME
 local InfoLabel = Instance.new("TextLabel")
-InfoLabel.Size = UDim2.new(1, 0, 0, 50)
-InfoLabel.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-InfoLabel.Text = "  Welcome, " .. LocalPlayer.Name .. "!\n  Status: UI Framework Ready"
-InfoLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+InfoLabel.Size = UDim2.new(1, -5, 0, 50)
+InfoLabel.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+InfoLabel.Text = "  Welcome, " .. LocalPlayer.Name .. "!\n  Status: Dropdown Section UI Ready"
+InfoLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
 InfoLabel.Font = Enum.Font.SourceSansSemibold
 InfoLabel.TextSize = 12
 InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -229,42 +332,12 @@ local InfoCorner = Instance.new("UICorner")
 InfoCorner.CornerRadius = UDim.new(0, 6)
 InfoCorner.Parent = InfoLabel
 
--- B. TAB AUTOMATICALLY (Fitur Otomatis Utama)
-CreateToggle(AutomaticallyTab, "Auto Collect Money (Stand)", false, function(state)
-    print("Auto Collect Money State:", state)
-end)
-
-CreateToggle(AutomaticallyTab, "Auto Collect Fish (Dermaga)", false, function(state)
-    print("Auto Collect Fish State:", state)
-end)
-
-CreateToggle(AutomaticallyTab, "Auto Roll Fisherman", false, function(state)
-    print("Auto Roll Fisherman State:", state)
-end)
-
-CreateToggle(AutomaticallyTab, "Auto Sell Low-Rarity Fish", false, function(state)
-    print("Auto Sell State:", state)
-end)
-
--- C. TAB MAIN (Event & Features Khusus)
-CreateToggle(MainTab, "Auto Buy Upgrades", false, function(state)
-    print("Auto Buy Upgrades State:", state)
-end)
-
-CreateToggle(MainTab, "Auto Mutation Machine", false, function(state)
-    print("Auto Mutation State:", state)
-end)
-
-CreateToggle(MainTab, "Auto Rebirth Check", false, function(state)
-    print("Auto Rebirth State:", state)
-end)
-
--- 7. TOMBOL TOGGLE UNTUK HIDE / SHOW MENU
+-- 7. TOMBOL OPEN/CLOSE UI
 local OpenToggleBtn = Instance.new("TextButton")
 OpenToggleBtn.Name = "OpenToggleBtn"
-OpenToggleBtn.Size = UDim2.new(0, 80, 0, 30)
+OpenToggleBtn.Size = UDim2.new(0, 85, 0, 30)
 OpenToggleBtn.Position = UDim2.new(0, 10, 0.2, 0)
-OpenToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+OpenToggleBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 OpenToggleBtn.Text = "SpeedHub X"
 OpenToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenToggleBtn.Font = Enum.Font.SourceSansBold
@@ -277,6 +350,11 @@ local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(0, 6)
 OpenCorner.Parent = OpenToggleBtn
 
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Color = Color3.fromRGB(220, 40, 60)
+OpenStroke.Thickness = 1.5
+OpenStroke.Parent = OpenToggleBtn
+
 OpenToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
@@ -284,5 +362,3 @@ end)
 CloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
 end)
-
-print("[SPEED HUB X] UI Framework Berhasil Dimuat!")
