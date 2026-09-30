@@ -1,5 +1,5 @@
 -- ==========================================================
--- ROLL A FISHERMAN - SPEED HUB X UI (SIDEBAR & BORDER FIXED)
+-- SPEED HUB X - ABSOLUTE ALIGNED SIDEBAR & DASHBOARD (FIXED)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -25,7 +25,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.ClipsDescendants = true -- Mengunci tombol agar tidak melenceng keluar frame
+MainFrame.ClipsDescendants = true -- Mengunci elemen agar tidak melenceng keluar
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -80,7 +80,7 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 4)
 CloseCorner.Parent = CloseBtn
 
--- 3. SIDEBAR (KIRI - DENGAN UKURAN DAN GARIS PEMBATAS DIPERBAIKI)
+-- 3. SIDEBAR (KIRI - DENGAN UKURAN & BORDER TEPAT)
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
 Sidebar.Size = UDim2.new(0, 120, 1, -32)
@@ -97,16 +97,6 @@ SidebarRightLine.Position = UDim2.new(1, -2, 0, 0)
 SidebarRightLine.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
 SidebarRightLine.BorderSizePixel = 0
 SidebarRightLine.Parent = Sidebar
-
-local SidebarList = Instance.new("UIListLayout")
-SidebarList.Padding = UDim.new(0, 6)
-SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
-SidebarList.Parent = Sidebar
-
-local SidebarPadding = Instance.new("UIPadding")
-SidebarPadding.PaddingTop = UDim.new(0, 8)
-SidebarPadding.Parent = Sidebar
 
 -- 4. CONTAINER KONTEN TAB (KANAN)
 local ContentArea = Instance.new("Frame")
@@ -144,7 +134,9 @@ local MainTab = CreateTabPage("Main")
 
 HomeTab.Visible = true
 
+-- 5. LOGIKA TOMBOL TAB TERKUNCI PRESISI (POSISI ABSOLUT DARI ATAS)
 local currentTabBtn = nil
+
 local function SwitchTab(tabName, btn)
     for name, page in pairs(TabPages) do
         page.Visible = (name == tabName)
@@ -158,10 +150,11 @@ local function SwitchTab(tabName, btn)
     currentTabBtn = btn
 end
 
-local function CreateTabButton(name)
+local function CreateTabButton(name, posY)
     local Btn = Instance.new("TextButton")
     Btn.Name = name .. "Btn"
-    Btn.Size = UDim2.new(0, 106, 0, 32)
+    Btn.Size = UDim2.new(0, 108, 0, 32)
+    Btn.Position = UDim2.new(0, 6, 0, posY) -- Posisi Y terkunci rapi dari atas
     Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
     Btn.Text = "  " .. name
     Btn.TextColor3 = Color3.fromRGB(160, 160, 170)
@@ -181,13 +174,14 @@ local function CreateTabButton(name)
     return Btn
 end
 
-local HomeBtn = CreateTabButton("Home")
-local AutoBtn = CreateTabButton("Automatically")
-local MainBtn = CreateTabButton("Main")
+-- Membuat tombol dengan koordinat Y pasti (8px, 46px, 84px)
+local HomeBtn = CreateTabButton("Home", 8)
+local AutoBtn = CreateTabButton("Automatically", 46)
+local MainBtn = CreateTabButton("Main", 84)
 
 SwitchTab("Home", HomeBtn)
 
--- 5. DROPDOWN SECTION BUILDER
+-- 6. DROPDOWN SECTION BUILDER
 local function CreateSection(parent, sectionTitle)
     local SectionFrame = Instance.new("Frame")
     SectionFrame.Size = UDim2.new(1, -5, 0, 36)
@@ -321,7 +315,7 @@ local function CreateSection(parent, sectionTitle)
     return SectionAPI
 end
 
--- 6. MENGISI TAB AUTOMATICALLY & MAIN
+-- 7. MENGISI TAB AUTOMATICALLY & MAIN
 local CollectSection = CreateSection(AutomaticallyTab, "Automation Collect")
 CollectSection:AddToggle("Auto Collect Money", false, function(state) end)
 CollectSection:AddToggle("Auto Collect Fish", false, function(state) end)
@@ -345,10 +339,7 @@ RebirthSection:AddToggle("Auto Rebirth", false, function(state) end)
 local UpgradeSection = CreateSection(MainTab, "Upgrades Shop")
 UpgradeSection:AddToggle("Auto Buy Upgrades", false, function(state) end)
 
--- ==========================================================
--- 7. TAB HOME DASHBOARD (RED THEME + WORKING SCANNER)
--- ==========================================================
-
+-- 8. TAB HOME DASHBOARD (RED THEME + WORKING SCANNER)
 local ProfileCard = Instance.new("Frame")
 ProfileCard.Size = UDim2.new(1, -5, 0, 42)
 ProfileCard.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
@@ -472,7 +463,7 @@ task.spawn(function()
     end
 end)
 
--- 8. TOMBOL OPEN/CLOSE UI
+-- 9. TOMBOL OPEN/CLOSE UI
 local OpenToggleBtn = Instance.new("TextButton")
 OpenToggleBtn.Name = "OpenToggleBtn"
 OpenToggleBtn.Size = UDim2.new(0, 85, 0, 30)
