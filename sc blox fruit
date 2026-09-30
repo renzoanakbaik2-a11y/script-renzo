@@ -1,5 +1,5 @@
 -- ==========================================================
--- ROLL A FISHERMAN - SPEED HUB X UI (DROPDOWN SECTION)
+-- ROLL A FISHERMAN - SPEED HUB X UI (FIXED SIDEBAR & THICK RED)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -19,9 +19,9 @@ ScreenGui.Parent = PlayerGui
 -- 2. MAIN CONTAINER
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 480, 0, 300)
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -150)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.Size = UDim2.new(0, 500, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -31,15 +31,16 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 8)
 MainCorner.Parent = MainFrame
 
+-- BORDER MERAH DITEBALKAN (THICK NEON RED)
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(220, 40, 60)
-MainStroke.Thickness = 1.8
+MainStroke.Color = Color3.fromRGB(255, 30, 60) -- Merah Neon Terang
+MainStroke.Thickness = 3 -- Ketebalan 3 piksel
 MainStroke.Parent = MainFrame
 
 -- Top Bar
 local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(1, 0, 0, 32)
-TopBar.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
+TopBar.Size = UDim2.new(1, 0, 0, 34)
+TopBar.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
 TopBar.BorderSizePixel = 0
 TopBar.Parent = MainFrame
 
@@ -47,60 +48,67 @@ local TopBarCorner = Instance.new("UICorner")
 TopBarCorner.CornerRadius = UDim.new(0, 8)
 TopBarCorner.Parent = TopBar
 
+local TopBarLine = Instance.new("Frame")
+TopBarLine.Size = UDim2.new(1, 0, 0, 2)
+TopBarLine.Position = UDim2.new(0, 0, 1, -2)
+TopBarLine.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+TopBarLine.BorderSizePixel = 0
+TopBarLine.Parent = TopBar
+
 local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(1, -40, 1, 0)
 TitleText.Position = UDim2.new(0, 12, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "Speed Hub X | Roll a Fisherman"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleText.TextSize = 12
+TitleText.TextSize = 13
 TitleText.Font = Enum.Font.SourceSansBold
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Parent = TopBar
 
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 22, 0, 22)
-CloseBtn.Position = UDim2.new(1, -26, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+CloseBtn.Position = UDim2.new(1, -28, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
 CloseBtn.Text = "X"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 11
+CloseBtn.TextSize = 12
 CloseBtn.Parent = TopBar
 
 local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 4)
 CloseCorner.Parent = CloseBtn
 
--- 3. SIDEBAR (KIRI)
+-- 3. SIDEBAR (KIRI) - UKURAN & LAYOUT FIXED
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 120, 1, -33)
-Sidebar.Position = UDim2.new(0, 0, 0, 33)
-Sidebar.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+Sidebar.Size = UDim2.new(0, 125, 1, -34)
+Sidebar.Position = UDim2.new(0, 0, 0, 34)
+Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
 Sidebar.BorderSizePixel = 0
 Sidebar.Parent = MainFrame
 
 local SidebarRightLine = Instance.new("Frame")
-SidebarRightLine.Size = UDim2.new(0, 1, 1, 0)
-SidebarRightLine.Position = UDim2.new(1, 0, 0, 0)
-SidebarRightLine.BackgroundColor3 = Color3.fromRGB(220, 40, 60)
+SidebarRightLine.Size = UDim2.new(0, 2, 1, 0)
+SidebarRightLine.Position = UDim2.new(1, -2, 0, 0)
+SidebarRightLine.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
 SidebarRightLine.BorderSizePixel = 0
 SidebarRightLine.Parent = Sidebar
 
 local SidebarList = Instance.new("UIListLayout")
-SidebarList.Padding = UDim.new(0, 5)
+SidebarList.Padding = UDim.new(0, 6)
 SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
 SidebarList.Parent = Sidebar
 
 local SidebarPadding = Instance.new("UIPadding")
-SidebarPadding.PaddingTop = UDim.new(0, 8)
+SidebarPadding.PaddingTop = UDim.new(0, 10)
 SidebarPadding.Parent = Sidebar
 
 -- 4. CONTAINER KONTEN TAB (KANAN)
 local ContentArea = Instance.new("Frame")
-ContentArea.Size = UDim2.new(1, -130, 1, -40)
-ContentArea.Position = UDim2.new(0, 130, 0, 38)
+ContentArea.Size = UDim2.new(1, -135, 1, -44)
+ContentArea.Position = UDim2.new(0, 135, 0, 40)
 ContentArea.BackgroundTransparency = 1
 ContentArea.Parent = MainFrame
 
@@ -109,16 +117,16 @@ local TabPages = {}
 local function CreateTabPage(name)
     local Page = Instance.new("ScrollingFrame")
     Page.Name = name .. "Page"
-    Page.Size = UDim2.new(1, -5, 1, 0)
+    Page.Size = UDim2.new(1, -6, 1, 0)
     Page.BackgroundTransparency = 1
     Page.BorderSizePixel = 0
-    Page.ScrollBarThickness = 3
-    Page.ScrollBarImageColor3 = Color3.fromRGB(220, 40, 60)
+    Page.ScrollBarThickness = 4
+    Page.ScrollBarImageColor3 = Color3.fromRGB(255, 30, 60)
     Page.Visible = false
     Page.Parent = ContentArea
 
     local PageList = Instance.new("UIListLayout")
-    PageList.Padding = UDim.new(0, 6)
+    PageList.Padding = UDim.new(0, 8)
     PageList.SortOrder = Enum.SortOrder.LayoutOrder
     PageList.Parent = Page
 
@@ -138,18 +146,22 @@ local function SwitchTab(tabName, btn)
         page.Visible = (name == tabName)
     end
     if currentTabBtn then
-        currentTabBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+        currentTabBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
         currentTabBtn.TextColor3 = Color3.fromRGB(160, 160, 170)
+        local oldStroke = currentTabBtn:FindFirstChildOfClass("UIStroke")
+        if oldStroke then oldStroke.Color = Color3.fromRGB(40, 40, 50) end
     end
-    btn.BackgroundColor3 = Color3.fromRGB(45, 20, 28)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 15, 22)
     btn.TextColor3 = Color3.fromRGB(255, 80, 100)
+    local newStroke = btn:FindFirstChildOfClass("UIStroke")
+    if newStroke then newStroke.Color = Color3.fromRGB(255, 30, 60) end
     currentTabBtn = btn
 end
 
 local function CreateTabButton(name)
     local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(0, 108, 0, 32)
-    Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    Btn.Size = UDim2.new(0, 110, 0, 32)
+    Btn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
     Btn.Text = "  " .. name
     Btn.TextColor3 = Color3.fromRGB(160, 160, 170)
     Btn.Font = Enum.Font.SourceSansBold
@@ -160,6 +172,11 @@ local function CreateTabButton(name)
     local BtnCorner = Instance.new("UICorner")
     BtnCorner.CornerRadius = UDim.new(0, 6)
     BtnCorner.Parent = Btn
+
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Color = Color3.fromRGB(40, 40, 50)
+    BtnStroke.Thickness = 1.2
+    BtnStroke.Parent = Btn
 
     Btn.MouseButton1Click:Connect(function()
         SwitchTab(name, Btn)
@@ -174,11 +191,11 @@ local MainBtn = CreateTabButton("Main")
 
 SwitchTab("Home", HomeBtn)
 
--- 5. FUNCTION HELPER: DROPDOWN CATEGORY SECTION (SEPERTI FOTO SPEED HUB X)
+-- 5. FUNCTION HELPER: DROPDOWN SECTION (DENGAN BORDER NEON)
 local function CreateSection(parent, sectionTitle)
     local SectionFrame = Instance.new("Frame")
-    SectionFrame.Size = UDim2.new(1, -5, 0, 36)
-    SectionFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+    SectionFrame.Size = UDim2.new(1, -6, 0, 38)
+    SectionFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
     SectionFrame.ClipsDescendants = true
     SectionFrame.Parent = parent
 
@@ -187,40 +204,38 @@ local function CreateSection(parent, sectionTitle)
     SectionCorner.Parent = SectionFrame
 
     local SectionStroke = Instance.new("UIStroke")
-    SectionStroke.Color = Color3.fromRGB(45, 45, 60)
-    SectionStroke.Thickness = 1
+    SectionStroke.Color = Color3.fromRGB(255, 30, 60)
+    SectionStroke.Thickness = 1.5
     SectionStroke.Parent = SectionFrame
 
-    -- Header Button (Yang Ditekan Untuk Buka/Tutup)
     local HeaderBtn = Instance.new("TextButton")
-    HeaderBtn.Size = UDim2.new(1, 0, 0, 36)
+    HeaderBtn.Size = UDim2.new(1, 0, 0, 38)
     HeaderBtn.BackgroundTransparency = 1
     HeaderBtn.Text = "  " .. sectionTitle
-    HeaderBtn.TextColor3 = Color3.fromRGB(240, 240, 250)
+    HeaderBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     HeaderBtn.Font = Enum.Font.SourceSansBold
     HeaderBtn.TextSize = 13
     HeaderBtn.TextXAlignment = Enum.TextXAlignment.Left
     HeaderBtn.Parent = SectionFrame
 
     local ArrowLabel = Instance.new("TextLabel")
-    ArrowLabel.Size = UDim2.new(0, 30, 0, 36)
+    ArrowLabel.Size = UDim2.new(0, 30, 0, 38)
     ArrowLabel.Position = UDim2.new(1, -30, 0, 0)
     ArrowLabel.BackgroundTransparency = 1
     ArrowLabel.Text = "∨"
-    ArrowLabel.TextColor3 = Color3.fromRGB(220, 40, 60)
+    ArrowLabel.TextColor3 = Color3.fromRGB(255, 30, 60)
     ArrowLabel.Font = Enum.Font.SourceSansBold
-    ArrowLabel.TextSize = 14
+    ArrowLabel.TextSize = 15
     ArrowLabel.Parent = SectionFrame
 
-    -- Container Untuk Isi Di Dalam Section
     local Container = Instance.new("Frame")
     Container.Size = UDim2.new(1, 0, 0, 0)
-    Container.Position = UDim2.new(0, 0, 0, 36)
+    Container.Position = UDim2.new(0, 0, 0, 38)
     Container.BackgroundTransparency = 1
     Container.Parent = SectionFrame
 
     local ContainerList = Instance.new("UIListLayout")
-    ContainerList.Padding = UDim.new(0, 4)
+    ContainerList.Padding = UDim.new(0, 5)
     ContainerList.SortOrder = Enum.SortOrder.LayoutOrder
     ContainerList.Parent = Container
 
@@ -229,11 +244,11 @@ local function CreateSection(parent, sectionTitle)
     local function UpdateSectionSize()
         if isExpanded then
             local contentHeight = ContainerList.AbsoluteContentSize.Y
-            SectionFrame.Size = UDim2.new(1, -5, 0, 36 + contentHeight + 8)
+            SectionFrame.Size = UDim2.new(1, -6, 0, 38 + contentHeight + 10)
             Container.Size = UDim2.new(1, 0, 0, contentHeight)
             ArrowLabel.Text = "∧"
         else
-            SectionFrame.Size = UDim2.new(1, -5, 0, 36)
+            SectionFrame.Size = UDim2.new(1, -6, 0, 38)
             ArrowLabel.Text = "∨"
         end
     end
@@ -243,39 +258,43 @@ local function CreateSection(parent, sectionTitle)
         UpdateSectionSize()
     end)
 
-    -- Function Tambah Sakelar (Toggle) Ke Dalam Section Ini
     local SectionAPI = {}
     
     function SectionAPI:AddToggle(labelText, defaultState, callback)
         local ToggleFrame = Instance.new("Frame")
-        ToggleFrame.Size = UDim2.new(1, -16, 0, 30)
+        ToggleFrame.Size = UDim2.new(1, -16, 0, 32)
         ToggleFrame.Position = UDim2.new(0, 8, 0, 0)
-        ToggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+        ToggleFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
         ToggleFrame.Parent = Container
 
         local ToggleCorner = Instance.new("UICorner")
         ToggleCorner.CornerRadius = UDim.new(0, 4)
         ToggleCorner.Parent = ToggleFrame
 
+        local ToggleStroke = Instance.new("UIStroke")
+        ToggleStroke.Color = Color3.fromRGB(50, 50, 65)
+        ToggleStroke.Thickness = 1
+        ToggleStroke.Parent = ToggleFrame
+
         local Label = Instance.new("TextLabel")
-        Label.Size = UDim2.new(1, -50, 1, 0)
-        Label.Position = UDim2.new(0, 8, 0, 0)
+        Label.Size = UDim2.new(1, -55, 1, 0)
+        Label.Position = UDim2.new(0, 10, 0, 0)
         Label.BackgroundTransparency = 1
         Label.Text = labelText
-        Label.TextColor3 = Color3.fromRGB(210, 210, 220)
+        Label.TextColor3 = Color3.fromRGB(220, 220, 230)
         Label.Font = Enum.Font.SourceSansSemibold
-        Label.TextSize = 11
+        Label.TextSize = 12
         Label.TextXAlignment = Enum.TextXAlignment.Left
         Label.Parent = ToggleFrame
 
         local SwitchBtn = Instance.new("TextButton")
-        SwitchBtn.Size = UDim2.new(0, 38, 0, 18)
-        SwitchBtn.Position = UDim2.new(1, -44, 0.5, -9)
-        SwitchBtn.BackgroundColor3 = defaultState and Color3.fromRGB(220, 40, 60) or Color3.fromRGB(60, 60, 70)
+        SwitchBtn.Size = UDim2.new(0, 42, 0, 20)
+        SwitchBtn.Position = UDim2.new(1, -48, 0.5, -10)
+        SwitchBtn.BackgroundColor3 = defaultState and Color3.fromRGB(255, 30, 60) or Color3.fromRGB(60, 60, 75)
         SwitchBtn.Text = defaultState and "ON" or "OFF"
         SwitchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         SwitchBtn.Font = Enum.Font.SourceSansBold
-        SwitchBtn.TextSize = 9
+        SwitchBtn.TextSize = 10
         SwitchBtn.Parent = ToggleFrame
 
         local SwitchCorner = Instance.new("UICorner")
@@ -285,7 +304,7 @@ local function CreateSection(parent, sectionTitle)
         local state = defaultState
         SwitchBtn.MouseButton1Click:Connect(function()
             state = not state
-            SwitchBtn.BackgroundColor3 = state and Color3.fromRGB(220, 40, 60) or Color3.fromRGB(60, 60, 70)
+            SwitchBtn.BackgroundColor3 = state and Color3.fromRGB(255, 30, 60) or Color3.fromRGB(60, 60, 75)
             SwitchBtn.Text = state and "ON" or "OFF"
             if callback then callback(state) end
         end)
@@ -296,9 +315,7 @@ local function CreateSection(parent, sectionTitle)
     return SectionAPI
 end
 
--- 6. MENGISI TAB DENGAN DROPDOWN SECTION (PERSIS ALUR GAMBAR)
-
--- TAB AUTOMATICALLY
+-- 6. MENGISI TAB
 local CollectSection = CreateSection(AutomaticallyTab, "Automation Collect")
 CollectSection:AddToggle("Auto Collect Money", false, function(state) end)
 CollectSection:AddToggle("Auto Collect Fish", false, function(state) end)
@@ -309,7 +326,6 @@ RollSection:AddToggle("Auto Roll Fisherman", false, function(state) end)
 local SellSection = CreateSection(AutomaticallyTab, "Automation Sell")
 SellSection:AddToggle("Auto Sell Low-Rarity Fish", false, function(state) end)
 
--- TAB MAIN
 local EventSection = CreateSection(MainTab, "Event & Machines")
 EventSection:AddToggle("Auto Mutation Machine", false, function(state) end)
 EventSection:AddToggle("Auto Rebirth Check", false, function(state) end)
@@ -319,10 +335,10 @@ UpgradeSection:AddToggle("Auto Buy Upgrades", false, function(state) end)
 
 -- TAB HOME
 local InfoLabel = Instance.new("TextLabel")
-InfoLabel.Size = UDim2.new(1, -5, 0, 50)
-InfoLabel.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
-InfoLabel.Text = "  Welcome, " .. LocalPlayer.Name .. "!\n  Status: Dropdown Section UI Ready"
-InfoLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
+InfoLabel.Size = UDim2.new(1, -6, 0, 55)
+InfoLabel.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+InfoLabel.Text = "  Welcome, " .. LocalPlayer.Name .. "!\n  Status: Fixed Sidebar & Thick Red Border"
+InfoLabel.TextColor3 = Color3.fromRGB(240, 240, 250)
 InfoLabel.Font = Enum.Font.SourceSansSemibold
 InfoLabel.TextSize = 12
 InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -332,16 +348,21 @@ local InfoCorner = Instance.new("UICorner")
 InfoCorner.CornerRadius = UDim.new(0, 6)
 InfoCorner.Parent = InfoLabel
 
+local InfoStroke = Instance.new("UIStroke")
+InfoStroke.Color = Color3.fromRGB(255, 30, 60)
+InfoStroke.Thickness = 1.5
+InfoStroke.Parent = InfoLabel
+
 -- 7. TOMBOL OPEN/CLOSE UI
 local OpenToggleBtn = Instance.new("TextButton")
 OpenToggleBtn.Name = "OpenToggleBtn"
-OpenToggleBtn.Size = UDim2.new(0, 85, 0, 30)
+OpenToggleBtn.Size = UDim2.new(0, 90, 0, 32)
 OpenToggleBtn.Position = UDim2.new(0, 10, 0.2, 0)
-OpenToggleBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+OpenToggleBtn.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
 OpenToggleBtn.Text = "SpeedHub X"
 OpenToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenToggleBtn.Font = Enum.Font.SourceSansBold
-OpenToggleBtn.TextSize = 11
+OpenToggleBtn.TextSize = 12
 OpenToggleBtn.Active = true
 OpenToggleBtn.Draggable = true
 OpenToggleBtn.Parent = ScreenGui
@@ -351,8 +372,8 @@ OpenCorner.CornerRadius = UDim.new(0, 6)
 OpenCorner.Parent = OpenToggleBtn
 
 local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Color = Color3.fromRGB(220, 40, 60)
-OpenStroke.Thickness = 1.5
+OpenStroke.Color = Color3.fromRGB(255, 30, 60)
+OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenToggleBtn
 
 OpenToggleBtn.MouseButton1Click:Connect(function()
