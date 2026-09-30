@@ -1,2125 +1,288 @@
 -- ==========================================================
--- WORLD // ZERO - FLY ABOVE MOBS (DELTA EXECUTOR GUARANTEED)
+-- ROLL A FISHERMAN - SPEED HUB X STYLE UI FRAMEWORK
 -- ==========================================================
 
-local function InitScript()
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-    local LocalPlayer = Players.LocalPlayer
-    if not LocalPlayer then return end
+-- Hapus UI lama jika ada agar tidak tumpang tindih
+if PlayerGui:FindFirstChild("FishermanSpeedHubUI") then
+    PlayerGui.FishermanSpeedHubUI:Destroy()
+end
 
-    local CONFIG = {
-        FLY_HEIGHT = 12.0,   -- Ketinggian melayang di atas musuh
-        ATTACK_DELAY = 0.12
-    }
+-- 1. MAIN SCREEN GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FishermanSpeedHubUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
 
-    local isAutoFarm = false
-    local isLooting = false
-    local currentTargetRoot = nil
-    local heartbeatConnection = nil
-    local lastAttackTime = 0
+-- 2. MAIN CONTAINER
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 480, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -140)
+MainFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
 
-    -- 1. PEMBUATAN UI AMAN (PLAYERGUI)
-    local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
-    if not playerGui then return end
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 8)
+MainCorner.Parent = MainFrame
 
-    if playerGui:FindFirstChild("W0_DeltaFlyUI") then
-        playerGui.W0_DeltaFlyUI:Destroy()
+-- Top Bar Title
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 32)
+TopBar.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopBarCorner = Instance.new("UICorner")
+TopBarCorner.CornerRadius = UDim.new(0, 8)
+TopBarCorner.Parent = TopBar
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -40, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "Speed Hub X | Roll a Fisherman"
+TitleText.TextColor3 = Color3.fromRGB(220, 220, 240)
+TitleText.TextSize = 12
+TitleText.Font = Enum.Font.SourceSansBold
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TopBar
+
+-- Tombol Close/Minimize Small
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+CloseBtn.Position = UDim2.new(1, -28, 0, 4)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 12
+CloseBtn.Parent = TopBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 4)
+CloseCorner.Parent = CloseBtn
+
+-- 3. SIDEBAR (KIRI)
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 120, 1, -32)
+Sidebar.Position = UDim2.new(0, 0, 0, 32)
+Sidebar.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
+Sidebar.BorderSizePixel = 0
+Sidebar.Parent = MainFrame
+
+local SidebarList = Instance.new("UIListLayout")
+SidebarList.Padding = UDim.new(0, 4)
+SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
+SidebarList.Parent = Sidebar
+
+local SidebarPadding = Instance.new("UIPadding")
+SidebarPadding.PaddingTop = UDim.new(0, 8)
+SidebarPadding.Parent = Sidebar
+
+-- 4. CONTAINER KONTEN TAB (KANAN)
+local ContentArea = Instance.new("Frame")
+ContentArea.Size = UDim2.new(1, -125, 1, -40)
+ContentArea.Position = UDim2.new(0, 125, 0, 36)
+ContentArea.BackgroundTransparency = 1
+ContentArea.Parent = MainFrame
+
+local TabPages = {}
+
+local function CreateTabPage(name)
+    local Page = Instance.new("ScrollingFrame")
+    Page.Name = name .. "Page"
+    Page.Size = UDim2.new(1, -10, 1, 0)
+    Page.BackgroundTransparency = 1
+    Page.BorderSizePixel = 0
+    Page.ScrollBarThickness = 3
+    Page.Visible = false
+    Page.Parent = ContentArea
+
+    local PageList = Instance.new("UIListLayout")
+    PageList.Padding = UDim.new(0, 6)
+    PageList.SortOrder = Enum.SortOrder.LayoutOrder
+    PageList.Parent = Page
+
+    TabPages[name] = Page
+    return Page
+end
+
+-- Pilihan Tab
+local HomeTab = CreateTabPage("Home")
+local AutomaticallyTab = CreateTabPage("Automatically")
+local MainTab = CreateTabPage("Main")
+
+-- Set Home Tab sebagai Tab Default
+HomeTab.Visible = true
+
+-- Function Ganti Tab Active
+local currentTabBtn = nil
+local function SwitchTab(tabName, btn)
+    for name, page in pairs(TabPages) do
+        page.Visible = (name == tabName)
     end
+    if currentTabBtn then
+        currentTabBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+        currentTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    currentTabBtn = btn
+end
 
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "W0_DeltaFlyUI"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = playerGui
-
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 200, 0, 110)
-    MainFrame.Position = UDim2.new(0.5, -100, 0.15, 0)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 32)
-    MainFrame.Active = true
-    MainFrame.Draggable = true
-    MainFrame.Parent = ScreenGui
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
-    UICorner.Parent = MainFrame
-
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 30)
-    Title.BackgroundTransparency = 1
-    Title.Text = "World // Zero (Fly Mode)"
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.TextSize = 13
-    Title.Font = Enum.Font.SourceSansBold
-    Title.Parent = MainFrame
-
-    local ToggleBtn = Instance.new("TextButton")
-    ToggleBtn.Size = UDim2.new(0, 160, 0, 42)
-    ToggleBtn.Position = UDim2.new(0.5, -80, 0, 40)
-    ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    ToggleBtn.Text = "AUTO FARM: OFF"
-    ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ToggleBtn.TextSize = 13
-    ToggleBtn.Font = Enum.Font.SourceSansBold
-    ToggleBtn.Parent = MainFrame
+local function CreateTabButton(name)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(0, 108, 0, 32)
+    Btn.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+    Btn.Text = "  " .. name
+    Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    Btn.Font = Enum.Font.SourceSansBold
+    Btn.TextSize = 12
+    Btn.TextXAlignment = Enum.TextXAlignment.Left
+    Btn.Parent = Sidebar
 
     local BtnCorner = Instance.new("UICorner")
     BtnCorner.CornerRadius = UDim.new(0, 6)
-    BtnCorner.Parent = ToggleBtn
+    BtnCorner.Parent = Btn
 
-    local StatusLabel = Instance.new("TextLabel")
-    StatusLabel.Size = UDim2.new(1, 0, 0, 20)
-    StatusLabel.Position = UDim2.new(0, 0, 0, 85)
-    StatusLabel.BackgroundTransparency = 1
-    StatusLabel.Text = "Status: READY"
-    StatusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-    StatusLabel.TextSize = 10
-    StatusLabel.Font = Enum.Font.SourceSans
-    StatusLabel.Parent = MainFrame
+    Btn.MouseButton1Click:Connect(function()
+        SwitchTab(name, Btn)
+    end)
 
-    print("==================================")
-    print("[DELTA] SCRIPT AUTO FARM BERHASIL DI-LOAD!")
-    print("==================================")
+    return Btn
+end
 
-    -- 2. PENULUSURAN TARGET MOBS
-    local function GetNearestTarget(myRoot)
-        local nearestEnemy = nil
-        local shortestDistance = math.huge
-        local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
-        if not mobsFolder then return nil end
+local HomeBtn = CreateTabButton("Home")
+local AutoBtn = CreateTabButton("Automatically")
+local MainBtn = CreateTabButton("Main")
 
-        for _, desc in pairs(mobsFolder:GetDescendants()) do
-            if desc:IsA("Model") and desc ~= LocalPlayer.Character then
-                local enemyHum = desc:FindFirstChildOfClass("Humanoid")
-                local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
-                    or desc.PrimaryPart 
-                    or desc:FindFirstChild("Collider")
-                    or desc:FindFirstChildWhichIsA("BasePart")
-                
-                local isAlive = true
-                if enemyHum and enemyHum.Health <= 0 then isAlive = false end
-                
-                if enemyRoot and isAlive then
-                    local dist = (myRoot.Position - enemyRoot.Position).Magnitude
-                    if dist < shortestDistance then
-                        shortestDistance = dist
-                        nearestEnemy = enemyRoot
-                    end
-                end
-            end
-        end
-        return nearestEnemy
-    end
+-- Active Status Default
+SwitchTab("Home", HomeBtn)
 
-    -- 3. AUTO ATTACK
-    local function AutoAttack(char, hum)
-        local now = tick()
-        if now - lastAttackTime < CONFIG.ATTACK_DELAY then return end
-        lastAttackTime = now
+-- 5. FUNCTION HELPER UNTUK ELEMEN UI (TOGGLE SWITCH)
+local function CreateToggle(parent, labelText, defaultState, callback)
+    local ToggleFrame = Instance.new("Frame")
+    ToggleFrame.Size = UDim2.new(1, 0, 0, 36)
+    ToggleFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+    ToggleFrame.Parent = parent
 
-        local tool = char:FindFirstChildOfClass("Tool")
-        if not tool then
-            local backpack = LocalPlayer:FindFirstChild("Backpack")
-            if backpack then
-                local backpackTool = backpack:FindFirstChildOfClass("Tool")
-                if backpackTool then
-                    hum:EquipTool(backpackTool)
-                    tool = backpackTool
-                end
-            end
-        end
-        if tool then tool:Activate() end
-    end
+    local FrameCorner = Instance.new("UICorner")
+    FrameCorner.CornerRadius = UDim.new(0, 6)
+    FrameCorner.Parent = ToggleFrame
 
-    -- 4. GACHA PETI
-    local function ClaimGachaChests()
-        if isLooting then return end
-        isLooting = true
-        StatusLabel.Text = "Status: Membuka Peti..."
-        task.wait(1.5)
-        
-        local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-        if chestsFolder then
-            local allChests = chestsFolder:GetChildren()
-            if #allChests >= 3 then
-                local availableIndices = {1, 2, 3}
-                local selectedChests = {}
-                for i = 1, 2 do
-                    local randomIndex = math.random(1, #availableIndices)
-                    table.insert(selectedChests, allChests[availableIndices[randomIndex]])
-                    table.remove(availableIndices, randomIndex)
-                end
-                for _, chest in ipairs(selectedChests) do
-                    local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
-                    if prompt then
-                        fireproximityprompt(prompt)
-                        task.wait(0.8)
-                    end
-                end
-            end
-        end
-        task.wait(1)
-        isLooting = false
-    end
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -60, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = labelText
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Label.Font = Enum.Font.SourceSansSemibold
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = ToggleFrame
 
-    -- 5. TOGGLE EVENT & FLY LOOP
-    ToggleBtn.MouseButton1Click:Connect(function()
-        isAutoFarm = not isAutoFarm
-        
-        if isAutoFarm then
-            ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-            ToggleBtn.Text = "AUTO FARM: ON"
-            
-            heartbeatConnection = RunService.Heartbeat:Connect(function()
-                if not isAutoFarm then return end
-                
-                local char = LocalPlayer.Character
-                if not char then return end
-                local root = char:FindFirstChild("HumanoidRootPart")
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if not root or not hum then return end
-                
-                -- Netralkan gravitasi
-                root.AssemblyLinearVelocity = Vector3.zero
-                
-                local isTargetValid = false
-                if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
-                    isTargetValid = true
-                end
-                
-                if not isTargetValid then
-                    currentTargetRoot = GetNearestTarget(root)
-                end
-                
-                if currentTargetRoot then
-                    local enemyName = currentTargetRoot.Parent.Name
-                    local enemyPos = currentTargetRoot.Position
-                    local targetFlyPos = Vector3.new(enemyPos.X, enemyPos.Y + CONFIG.FLY_HEIGHT, enemyPos.Z)
-                    
-                    StatusLabel.Text = "Status: Terbang di atas " .. enemyName
-                    
-                    -- Pindahkan CFrame melayang di atas musuh
-                    root.CFrame = CFrame.new(targetFlyPos, enemyPos)
-                    AutoAttack(char, hum)
-                else
-                    local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-                    if chests and #chests:GetChildren() > 0 and not isLooting then
-                        ClaimGachaChests()
-                    else
-                        StatusLabel.Text = "Status: Menunggu Mobs..."
-                    end
-                end
-            end)
-        else
-            ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-            ToggleBtn.Text = "AUTO FARM: OFF"
-            StatusLabel.Text = "Status: IDLE"
-            currentTargetRoot = nil
-            
-            if heartbeatConnection then
-                heartbeatConnection:Disconnect()
-                heartbeatConnection = nil
-            end
-        end
+    local SwitchBtn = Instance.new("TextButton")
+    SwitchBtn.Size = UDim2.new(0, 42, 0, 20)
+    SwitchBtn.Position = UDim2.new(1, -50, 0.5, -10)
+    SwitchBtn.BackgroundColor3 = defaultState and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(60, 60, 70)
+    SwitchBtn.Text = defaultState and "ON" or "OFF"
+    SwitchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SwitchBtn.Font = Enum.Font.SourceSansBold
+    SwitchBtn.TextSize = 10
+    SwitchBtn.Parent = ToggleFrame
+
+    local SwitchCorner = Instance.new("UICorner")
+    SwitchCorner.CornerRadius = UDim.new(0, 10)
+    SwitchCorner.Parent = SwitchBtn
+
+    local state = defaultState
+    SwitchBtn.MouseButton1Click:Connect(function()
+        state = not state
+        SwitchBtn.BackgroundColor3 = state and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(60, 60, 70)
+        SwitchBtn.Text = state and "ON" or "OFF"
+        if callback then callback(state) end
     end)
 end
 
--- Eksekusi Aman Tanpa Crash
-pcall(InitScript)-- ==========================================================
--- WORLD // ZERO - FLY ABOVE MOBS (DELTA EXECUTOR FIXED)
--- ==========================================================
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
-
-local CONFIG = {
-    FLY_HEIGHT = 12.0,   -- Ketinggian melayang di atas musuh (studs)
-    ATTACK_DELAY = 0.12
-}
-
-local isAutoFarm = false
-local isLooting = false
-local currentTargetRoot = nil
-local heartbeatConnection = nil
-local lastAttackTime = 0
-
--- 1. PEMBUATAN UI KHUSUS DELTA (PARENT DIRECT TO PLAYERGUI)
-local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-
--- Hapus UI lama jika ada biar gak tumpang tindih
-if playerGui:FindFirstChild("W0_DeltaFlyUI") then
-    playerGui.W0_DeltaFlyUI:Destroy()
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "W0_DeltaFlyUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = playerGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 200, 0, 110)
-MainFrame.Position = UDim2.new(0.5, -100, 0.15, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 32)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundTransparency = 1
-Title.Text = "World // Zero (Fly Mode)"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 13
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 160, 0, 42)
-ToggleBtn.Position = UDim2.new(0.5, -80, 0, 40)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-ToggleBtn.Text = "AUTO FARM: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 13
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Parent = MainFrame
-
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, 0, 0, 20)
-StatusLabel.Position = UDim2.new(0, 0, 0, 85)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: IDLE"
-StatusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-StatusLabel.TextSize = 10
-StatusLabel.Font = Enum.Font.SourceSans
-StatusLabel.Parent = MainFrame
-
-print("[DELTA] UI Berhasil Dimuat di PlayerGui!")
-
--- 2. PENULUSURAN TARGET MOBS
-local function GetNearestTarget()
-    local nearestEnemy = nil
-    local shortestDistance = math.huge
-    local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
-    if not mobsFolder then return nil end
-
-    for _, desc in pairs(mobsFolder:GetDescendants()) do
-        if desc:IsA("Model") and desc ~= Character then
-            local enemyHum = desc:FindFirstChildOfClass("Humanoid")
-            local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
-                or desc.PrimaryPart 
-                or desc:FindFirstChild("Collider")
-                or desc:FindFirstChildWhichIsA("BasePart")
-            
-            local isAlive = true
-            if enemyHum and enemyHum.Health <= 0 then isAlive = false end
-            
-            if enemyRoot and isAlive then
-                local dist = (RootPart.Position - enemyRoot.Position).Magnitude
-                if dist < shortestDistance then
-                    shortestDistance = dist
-                    nearestEnemy = enemyRoot
-                end
-            end
-        end
-    end
-    return nearestEnemy
-end
-
--- 3. AUTO ATTACK
-local function AutoAttack()
-    local now = tick()
-    if now - lastAttackTime < CONFIG.ATTACK_DELAY then return end
-    lastAttackTime = now
-
-    local tool = Character:FindFirstChildOfClass("Tool")
-    if not tool then
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack then
-            local backpackTool = backpack:FindFirstChildOfClass("Tool")
-            if backpackTool then
-                Humanoid:EquipTool(backpackTool)
-                tool = backpackTool
-            end
-        end
-    end
-    if tool then tool:Activate() end
-end
-
--- 4. GACHA PETI (2 PETI GRATIS)
-local function ClaimGachaChests()
-    if isLooting then return end
-    isLooting = true
-    StatusLabel.Text = "Status: Membuka Peti..."
-    task.wait(1.5)
-    
-    local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-    if chestsFolder then
-        local allChests = chestsFolder:GetChildren()
-        if #allChests >= 3 then
-            local availableIndices = {1, 2, 3}
-            local selectedChests = {}
-            for i = 1, 2 do
-                local randomIndex = math.random(1, #availableIndices)
-                table.insert(selectedChests, allChests[availableIndices[randomIndex]])
-                table.remove(availableIndices, randomIndex)
-            end
-            for _, chest in ipairs(selectedChests) do
-                local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
-                if prompt then
-                    fireproximityprompt(prompt)
-                    task.wait(0.8)
-                end
-            end
-        end
-    end
-    task.wait(1)
-    isLooting = false
-end
-
--- 5. TOGGLE EVENT & FLY HOVER LOOP
-ToggleBtn.MouseButton1Click:Connect(function()
-    isAutoFarm = not isAutoFarm
-    
-    if isAutoFarm then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-        ToggleBtn.Text = "AUTO FARM: ON"
-        
-        heartbeatConnection = RunService.Heartbeat:Connect(function()
-            if not isAutoFarm then return end
-            
-            Character = LocalPlayer.Character
-            if not Character then return end
-            RootPart = Character:FindFirstChild("HumanoidRootPart")
-            Humanoid = Character:FindFirstChildOfClass("Humanoid")
-            if not RootPart or not Humanoid then return end
-            
-            -- Netralkan gaya gravitasi Roblox agar melayang stabil di udara
-            RootPart.AssemblyLinearVelocity = Vector3.zero
-            
-            local isTargetValid = false
-            if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
-                isTargetValid = true
-            end
-            
-            if not isTargetValid then
-                currentTargetRoot = GetNearestTarget()
-            end
-            
-            if currentTargetRoot then
-                local enemyName = currentTargetRoot.Parent.Name
-                local enemyPos = currentTargetRoot.Position
-                local targetFlyPos = Vector3.new(enemyPos.X, enemyPos.Y + CONFIG.FLY_HEIGHT, enemyPos.Z)
-                
-                StatusLabel.Text = "Status: Terbang di atas " .. enemyName
-                
-                -- Pindahkan posisi CFrame melayang tepat 12 studs di atas musuh
-                RootPart.CFrame = CFrame.new(targetFlyPos, enemyPos)
-                AutoAttack()
-            else
-                local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-                if chests and #chests:GetChildren() > 0 and not isLooting then
-                    ClaimGachaChests()
-                else
-                    StatusLabel.Text = "Status: Menunggu Mobs..."
-                end
-            end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        ToggleBtn.Text = "AUTO FARM: OFF"
-        StatusLabel.Text = "Status: IDLE"
-        currentTargetRoot = nil
-        
-        if heartbeatConnection then
-            heartbeatConnection:Disconnect()
-            heartbeatConnection = nil
-        end
-    end
-end)-- ==========================================================
--- WORLD // ZERO - GROUND AUTO FARM (SYNTAX & UI FIXED)
--- ==========================================================
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local CoreGui = game:GetService("CoreGui")
-
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
-
--- CONFIGURATION
-local CONFIG = {
-    ATTACK_RANGE = 5.5,   -- Jarak aman tebasan pedang
-    APPROACH_SPEED = 0.2, -- Kecepatan lerp mendekat
-    ATTACK_DELAY = 0.12
-}
-
-local isAutoFarm = false
-local isLooting = false
-local currentTargetRoot = nil
-local heartbeatConnection = nil
-local lastAttackTime = 0
-
--- OBJEK VISUAL SCANNER
-local tracerBeam = Instance.new("Beam")
-local attachment0 = Instance.new("Attachment")
-local attachment1 = Instance.new("Attachment")
-local targetHighlight = Instance.new("Highlight")
-
-tracerBeam.Name = "MobTracerBeam"
-tracerBeam.Color = ColorSequence.new(Color3.fromRGB(255, 50, 50))
-tracerBeam.Width0 = 0.3
-tracerBeam.Width1 = 0.3
-tracerBeam.FaceCamera = true
-
-targetHighlight.Name = "MobHighlight"
-targetHighlight.FillColor = Color3.fromRGB(255, 0, 0)
-targetHighlight.FillTransparency = 0.5
-targetHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-
--- 1. UI MENU UTAMA & STATUS MONITOR (STRUKTUR DIPERBAIKI)
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "W0_GroundFarmUI_FinalFixed"
-ScreenGui.ResetOnSpawn = false
-
-pcall(function() ScreenGui.Parent = CoreGui end)
-if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 140)
-MainFrame.Position = UDim2.new(0.5, -110, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 28)
-Title.BackgroundTransparency = 1
-Title.Text = "World // Zero Ground Farm"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 12
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 180, 0, 38)
-ToggleBtn.Position = UDim2.new(0.5, -90, 0, 32)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-ToggleBtn.Text = "AUTO FARM: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 13
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Parent = MainFrame
-
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
-
-local StatusFrame = Instance.new("Frame")
-StatusFrame.Size = UDim2.new(0, 180, 0, 50)
-StatusFrame.Position = UDim2.new(0.5, -90, 0, 78)
-StatusFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-StatusFrame.Parent = MainFrame
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(0, 4)
-StatusCorner.Parent = StatusFrame
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, -10, 1, 0)
-StatusLabel.Position = UDim2.new(0, 5, 0, 0)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: IDLE"
-StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusLabel.TextSize = 10
-StatusLabel.Font = Enum.Font.SourceSans
-StatusLabel.TextWrapped = true
-StatusLabel.Parent = StatusFrame
-
-local function UpdateStatus(msg)
-    StatusLabel.Text = "Status: " .. tostring(msg)
-end
-
--- 2. PENULUSURAN TARGET MOBS DINAMIS
-local function GetNearestTarget()
-    local nearestEnemy = nil
-    local shortestDistance = math.huge
-    
-    local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
-    if not mobsFolder then 
-        UpdateStatus("Error: Folder Mobs tidak ada!")
-        return nil 
-    end
-
-    for _, desc in pairs(mobsFolder:GetDescendants()) do
-        if desc:IsA("Model") and desc ~= Character then
-            local enemyHum = desc:FindFirstChildOfClass("Humanoid")
-            local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
-                or desc.PrimaryPart 
-                or desc:FindFirstChild("Collider")
-                or desc:FindFirstChild("Root")
-                or desc:FindFirstChildWhichIsA("BasePart")
-            
-            local isAlive = true
-            if enemyHum and enemyHum.Health <= 0 then
-                isAlive = false
-            elseif desc:GetAttribute("Health") and desc:GetAttribute("Health") <= 0 then
-                isAlive = false
-            end
-            
-            if enemyRoot and isAlive then
-                local dist = (RootPart.Position - enemyRoot.Position).Magnitude
-                if dist < shortestDistance then
-                    shortestDistance = dist
-                    nearestEnemy = enemyRoot
-                end
-            end
-        end
-    end
-    
-    return nearestEnemy
-end
-
--- 3. VISUAL TRACKER
-local function ClearVisuals()
-    tracerBeam.Parent = nil
-    attachment0.Parent = nil
-    attachment1.Parent = nil
-    targetHighlight.Parent = nil
-end
-
-local function UpdateVisuals(targetRoot)
-    if not targetRoot or not targetRoot.Parent then
-        ClearVisuals()
-        return
-    end
-    attachment0.Parent = RootPart
-    attachment1.Parent = targetRoot
-    tracerBeam.Attachment0 = attachment0
-    tracerBeam.Attachment1 = attachment1
-    tracerBeam.Parent = RootPart
-    targetHighlight.Parent = targetRoot.Parent
-end
-
--- 4. AUTO-EQUIP & ATTACK
-local function AutoAttack()
-    local now = tick()
-    if now - lastAttackTime < CONFIG.ATTACK_DELAY then return end
-    lastAttackTime = now
-
-    local tool = Character:FindFirstChildOfClass("Tool")
-    if not tool then
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack then
-            local backpackTool = backpack:FindFirstChildOfClass("Tool")
-            if backpackTool then
-                Humanoid:EquipTool(backpackTool)
-                tool = backpackTool
-            end
-        end
-    end
-    if tool then tool:Activate() end
-end
-
--- 5. GACHA 2 PETI
-local function ClaimGachaChests()
-    if isLooting then return end
-    isLooting = true
-    UpdateStatus("Membuka Peti Gacha...")
-    task.wait(1.5)
-    
-    local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-    if chestsFolder then
-        local allChests = chestsFolder:GetChildren()
-        if #allChests >= 3 then
-            local availableIndices = {1, 2, 3}
-            local selectedChests = {}
-            for i = 1, 2 do
-                local randomIndex = math.random(1, #availableIndices)
-                table.insert(selectedChests, allChests[availableIndices[randomIndex]])
-                table.remove(availableIndices, randomIndex)
-            end
-            for _, chest in ipairs(selectedChests) do
-                local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
-                if prompt then
-                    fireproximityprompt(prompt)
-                    task.wait(0.8)
-                end
-            end
-        end
-    end
-    task.wait(1)
-    isLooting = false
-end
-
--- 6. TOGGLE EVENT & MAIN LOOP
-ToggleBtn.MouseButton1Click:Connect(function()
-    isAutoFarm = not isAutoFarm
-    
-    if isAutoFarm then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-        ToggleBtn.Text = "AUTO FARM: ON"
-        
-        heartbeatConnection = RunService.Heartbeat:Connect(function()
-            if not isAutoFarm then return end
-            
-            Character = LocalPlayer.Character
-            if not Character then return end
-            RootPart = Character:FindFirstChild("HumanoidRootPart")
-            Humanoid = Character:FindFirstChildOfClass("Humanoid")
-            if not RootPart or not Humanoid then return end
-            
-            -- Validasi Target
-            local isTargetValid = false
-            if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
-                isTargetValid = true
-            end
-            
-            if not isTargetValid then
-                currentTargetRoot = GetNearestTarget()
-            end
-            
-            if currentTargetRoot then
-                local enemyName = currentTargetRoot.Parent.Name
-                local enemyPos = currentTargetRoot.Position
-                local dist = (RootPart.Position - enemyPos).Magnitude
-                
-                UpdateStatus("Attacking: " .. enemyName .. " [" .. math.floor(dist) .. "s]")
-                UpdateVisuals(currentTargetRoot)
-                
-                if dist > CONFIG.ATTACK_RANGE then
-                    Humanoid:MoveTo(enemyPos)
-                else
-                    local targetCFrame = CFrame.new(RootPart.Position, Vector3.new(enemyPos.X, RootPart.Position.Y, enemyPos.Z))
-                    RootPart.CFrame = RootPart.CFrame:Lerp(targetCFrame, CONFIG.APPROACH_SPEED)
-                end
-                
-                AutoAttack()
-            else
-                ClearVisuals()
-                local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-                if chests and #chests:GetChildren() > 0 and not isLooting then
-                    ClaimGachaChests()
-                else
-                    UpdateStatus("Menunggu Mobs Spawn...")
-                end
-            end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        ToggleBtn.Text = "AUTO FARM: OFF"
-        UpdateStatus("IDLE")
-        currentTargetRoot = nil
-        ClearVisuals()
-        
-        if heartbeatConnection then
-            heartbeatConnection:Disconnect()
-            heartbeatConnection = nil
-        end
-    end
-end)-- ==========================================================
--- WORLD // ZERO - GROUND APPROACH AUTO FARM (FIXED SYNTAX)
--- Features: Smooth Movement, Target Lock, Auto-Equip, Gacha
--- ==========================================================
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local CoreGui = game:GetService("CoreGui")
-
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
-
--- CONFIGURATION
-local CONFIG = {
-    ATTACK_RANGE = 5.5,   -- Jarak aman tebasan pedang (studs)
-    APPROACH_SPEED = 0.2, -- Kecepatan pergerakan bertahap (Lerp factor)
-    ATTACK_DELAY = 0.12
-}
-
-local isAutoFarm = false
-local isLooting = false
-local currentTargetRoot = nil
-local heartbeatConnection = nil
-local lastAttackTime = 0
-
--- OBJEK VISUAL SCANNER
-local tracerBeam = Instance.new("Beam")
-local attachment0 = Instance.new("Attachment")
-local attachment1 = Instance.new("Attachment")
-local targetHighlight = Instance.new("Highlight")
-
-tracerBeam.Name = "MobTracerBeam"
-tracerBeam.Color = ColorSequence.new(Color3.fromRGB(255, 50, 50))
-tracerBeam.Width0 = 0.3
-tracerBeam.Width1 = 0.3
-tracerBeam.FaceCamera = true
-
-targetHighlight.Name = "MobHighlight"
-targetHighlight.FillColor = Color3.fromRGB(255, 0, 0)
-targetHighlight.FillTransparency = 0.5
-targetHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-
--- 1. UI MENU RINGKAS + MONITOR STATUS
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "W0_GroundFarmUI_Fixed"
-ScreenGui.ResetOnSpawn = false
-
-pcall(function() ScreenGui.Parent = CoreGui end)
-if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 140)
-MainFrame.Position = UDim2.new(0.5, -110, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 28)
-Title.BackgroundTransparency = 1
-Title.Text = "World // Zero Ground Farm"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 12
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 180, 0, 38)
-ToggleBtn.Position = UDim2.new(0.5, -90, 0, 32)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-ToggleBtn.Text = "AUTO FARM: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 13
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Parent = MainFrame
-
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
-
--- LAYAR STATUS MONITOR
-local StatusFrame = Instance.new("Frame")
-StatusFrame.Size = UDim2.new(0, 180, 0, 50)
-StatusFrame.Position = UDim2.new(0.5, -90, 0, 78)
-StatusFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-StatusFrame.Parent = MainFrame
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(0, 4)
-StatusCorner.Parent = StatusFrame
-
-local StatusText = Instance.new("TextLabel")
-StatusText.Size = UDim2.new(1, -10, 1, 0)
-StatusText.Position = UDim2.new(0, 5, 0, 0)
-StatusText.BackgroundTransparency = 1
-StatusText.Text = "Status: IDLE"
-StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusText.TextSize = 10
-StatusText.Font = Enum.Font.SourceSans
-StatusText.TextWrapped = true
-StatusText.Parent = StatusFrame
-
-local function UpdateStatus(msg)
-    StatusText.Text = "Status: " .. tostring(msg)
-end
-
--- 2. PENULUSURAN TARGET MOBS DINAMIS
-local function GetNearestTarget()
-    local nearestEnemy = nil
-    local shortestDistance = math.huge
-    
-    local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
-    if not mobsFolder then 
-        UpdateStatus("Error: Folder Mobs tidak ada!")
-        return nil 
-    end
-
-    for _, desc in pairs(mobsFolder:GetDescendants()) do
-        if desc:IsA("Model") and desc ~= Character then
-            local enemyHum = desc:FindFirstChildOfClass("Humanoid")
-            local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
-                or desc.PrimaryPart 
-                or desc:FindFirstChild("Collider")
-                or desc:FindFirstChild("Root")
-                or desc:FindFirstChildWhichIsA("BasePart")
-            
-            local isAlive = true
-            if enemyHum and enemyHum.Health <= 0 then
-                isAlive = false
-            elseif desc:GetAttribute("Health") and desc:GetAttribute("Health") <= 0 then
-                isAlive = false
-            end
-            
-            if enemyRoot and isAlive then
-                local dist = (RootPart.Position - enemyRoot.Position).Magnitude
-                if dist < shortestDistance then
-                    shortestDistance = dist
-                    nearestEnemy = enemyRoot
-                end
-            end
-        end
-    end
-    
-    return nearestEnemy
-end
-
--- 3. VISUAL TRACKER
-local function ClearVisuals()
-    tracerBeam.Parent = nil
-    attachment0.Parent = nil
-    attachment1.Parent = nil
-    targetHighlight.Parent = nil
-end
-
-local function UpdateVisuals(targetRoot)
-    if not targetRoot or not targetRoot.Parent then
-        ClearVisuals()
-        return
-    end
-    attachment0.Parent = RootPart
-    attachment1.Parent = targetRoot
-    tracerBeam.Attachment0 = attachment0
-    tracerBeam.Attachment1 = attachment1
-    tracerBeam.Parent = RootPart
-    targetHighlight.Parent = targetRoot.Parent
-end
-
--- 4. AUTO-EQUIP & ATTACK (FIXED TYPO)
-local function AutoAttack()
-    local now = tick()
-    if now - lastAttackTime < CONFIG.ATTACK_DELAY then return end
-    lastAttackTime = now
-
-    local tool = Character:FindFirstChildOfClass("Tool")
-    if not tool then
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack then
-            local backpackTool = backpack:FindFirstChildOfClass("Tool")
-            if backpackTool then
-                Humanoid:EquipTool(backpackTool)
-                tool = backpackTool
-            end
-        end
-    end
-    if tool then tool:Activate() end
-end
-
--- 5. GACHA 2 PETI
-local function ClaimGachaChests()
-    if isLooting then return end
-    isLooting = true
-    UpdateStatus("Membuka Peti Gacha...")
-    task.wait(1.5)
-    
-    local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-    if chestsFolder then
-        local allChests = chestsFolder:GetChildren()
-        if #allChests >= 3 then
-            local availableIndices = {1, 2, 3}
-            local selectedChests = {}
-            for i = 1, 2 do
-                local randomIndex = math.random(1, #availableIndices)
-                table.insert(selectedChests, allChests[availableIndices[randomIndex]])
-                table.remove(availableIndices, randomIndex)
-            end
-            for _, chest in ipairs(selectedChests) do
-                local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
-                if prompt then
-                    fireproximityprompt(prompt)
-                    task.wait(0.8)
-                end
-            end
-        end
-    end
-    task.wait(1)
-    isLooting = false
-end
-
--- 6. TOGGLE EVENT & MAIN LOOP
-ToggleBtn.MouseButton1Click:Connect(function()
-    isAutoFarm = not isAutoFarm
-    
-    if isAutoFarm then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-        ToggleBtn.Text = "AUTO FARM: ON"
-        
-        heartbeatConnection = RunService.Heartbeat:Connect(function()
-            if not isAutoFarm then return end
-            
-            Character = LocalPlayer.Character
-            if not Character then return end
-            RootPart = Character:FindFirstChild("HumanoidRootPart")
-            Humanoid = Character:FindFirstChildOfClass("Humanoid")
-            if not RootPart or not Humanoid then return end
-            
-            -- Validasi Target
-            local isTargetValid = false
-            if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
-                isTargetValid = true
-            end
-            
-            if not isTargetValid then
-                currentTargetRoot = GetNearestTarget()
-            end
-            
-            if currentTargetRoot then
-                local enemyName = currentTargetRoot.Parent.Name
-                local enemyPos = currentTargetRoot.Position
-                local dist = (RootPart.Position - enemyPos).Magnitude
-                
-                UpdateStatus("Attacking: " .. enemyName .. " [" .. math.floor(dist) .. "s]")
-                UpdateVisuals(currentTargetRoot)
-                
-                if dist > CONFIG.ATTACK_RANGE then
-                    Humanoid:MoveTo(enemyPos)
-                else
-                    local targetCFrame = CFrame.new(RootPart.Position, Vector3.new(enemyPos.X, RootPart.Position.Y, enemyPos.Z))
-                    RootPart.CFrame = RootPart.CFrame:Lerp(targetCFrame, CONFIG.APPROACH_SPEED)
-                end
-                
-                AutoAttack()
-            else
-                ClearVisuals()
-                local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-                if chests and #chests:GetChildren() > 0 and not isLooting then
-                    ClaimGachaChests()
-                else
-                    UpdateStatus("Menunggu Mobs Spawn...")
-                end
-            end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        ToggleBtn.Text = "AUTO FARM: OFF"
-        UpdateStatus("IDLE")
-        currentTargetRoot = nil
-        ClearVisuals()
-        
-        if heartbeatConnection then
-            heartbeatConnection:Disconnect()
-            heartbeatConnection = nil
-        end
-    end
-end)-- ==========================================================
--- WORLD // ZERO - GROUND APPROACH AUTO FARM (ANTI-BLOCK)
--- Features: Smooth Movement, Target Lock, Auto-Equip, Gacha
--- ==========================================================
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local CoreGui = game:GetService("CoreGui")
-
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
-
--- CONFIGURATION
-local CONFIG = {
-    ATTACK_RANGE = 5.5,   -- Jarak aman tebasan pedang (studs)
-    APPROACH_SPEED = 0.2, -- Kecepatan pergerakan bertahap (Lerp factor)
-    ATTACK_DELAY = 0.12
-}
-
-local isAutoFarm = false
-local isLooting = false
-local currentTargetRoot = nil
-local heartbeatConnection = nil
-local lastAttackTime = 0
-
--- OBJEK VISUAL SCANNER
-local tracerBeam = Instance.new("Beam")
-local attachment0 = Instance.new("Attachment")
-local attachment1 = Instance.new("Attachment")
-local targetHighlight = Instance.new("Highlight")
-
-tracerBeam.Name = "MobTracerBeam"
-tracerBeam.Color = ColorSequence.new(Color3.fromRGB(255, 50, 50))
-tracerBeam.Width0 = 0.3
-tracerBeam.Width1 = 0.3
-tracerBeam.FaceCamera = true
-
-targetHighlight.Name = "MobHighlight"
-targetHighlight.FillColor = Color3.fromRGB(255, 0, 0)
-targetHighlight.FillTransparency = 0.5
-targetHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-
--- 1. UI MENU RINGKAS + MONITOR STATUS
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "W0_GroundFarmUI"
-ScreenGui.ResetOnSpawn = false
-
-pcall(function() ScreenGui.Parent = CoreGui end)
-if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 140)
-MainFrame.Position = UDim2.new(0.5, -110, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 28)
-Title.BackgroundTransparency = 1
-Title.Text = "World // Zero Ground Farm"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 12
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 180, 0, 38)
-ToggleBtn.Position = UDim2.new(0.5, -90, 0, 32)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-ToggleBtn.Text = "AUTO FARM: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 13
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Parent = MainFrame
-
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
-
--- LAYAR STATUS MONITOR
-local StatusFrame = Instance.new("Frame")
-StatusFrame.Size = UDim2.new(0, 180, 0, 50)
-StatusFrame.Position = UDim2.new(0.5, -90, 0, 78)
-StatusFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-StatusFrame.Parent = MainFrame
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(0, 4)
-StatusCorner.Parent = StatusFrame
-
-local StatusText = Instance.new("TextLabel")
-StatusText.Size = UDim2.new(1, -10, 1, 0)
-StatusText.Position = UDim2.new(0, 5, 0, 0)
-StatusText.BackgroundTransparency = 1
-StatusText.Text = "Status: IDLE"
-StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusText.TextSize = 10
-StatusText.Font = Enum.Font.SourceSans
-StatusText.TextWrapped = true
-StatusText.Parent = StatusFrame
-
-local function UpdateStatus(msg)
-    StatusText.Text = "Status: " .. tostring(msg)
-end
-
--- 2. PENULUSURAN TARGET MOBS DINAMIS
-local function GetNearestTarget()
-    local nearestEnemy = nil
-    local shortestDistance = math.huge
-    
-    local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
-    if not mobsFolder then 
-        UpdateStatus("Error: Folder Mobs tidak ada!")
-        return nil 
-    end
-
-    for _, desc in pairs(mobsFolder:GetDescendants()) do
-        if desc:IsA("Model") and desc ~= Character then
-            local enemyHum = desc:FindFirstChildOfClass("Humanoid")
-            local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
-                or desc.PrimaryPart 
-                or desc:FindFirstChild("Collider")
-                or desc:FindFirstChild("Root")
-                or desc:FindFirstChildWhichIsA("BasePart")
-            
-            local isAlive = true
-            if enemyHum and enemyHum.Health <= 0 then
-                isAlive = false
-            elseif desc:GetAttribute("Health") and desc:GetAttribute("Health") <= 0 then
-                isAlive = false
-            end
-            
-            if enemyRoot and isAlive then
-                local dist = (RootPart.Position - enemyRoot.Position).Magnitude
-                if dist < shortestDistance then
-                    shortestDistance = dist
-                    nearestEnemy = enemyRoot
-                end
-            end
-        end
-    end
-    
-    return nearestEnemy
-end
-
--- 3. VISUAL TRACKER
-local function ClearVisuals()
-    tracerBeam.Parent = nil
-    attachment0.Parent = nil
-    attachment1.Parent = nil
-    targetHighlight.Parent = nil
-end
-
-local function UpdateVisuals(targetRoot)
-    if not targetRoot or not targetRoot.Parent then
-        ClearVisuals()
-        return
-    end
-    attachment0.Parent = RootPart
-    attachment1.Parent = targetRoot
-    tracerBeam.Attachment0 = attachment0
-    tracerBeam.Attachment1 = attachment1
-    tracerBeam.Parent = RootPart
-    targetHighlight.Parent = targetRoot.Parent
-end
-
--- 4. AUTO-EQUIP & ATTACK
-local function AutoAttack()
-    local now = tick()
-    if now - lastAttackTime < CONFIG.ATTACK_DELAY then return end
-    lastAttackTime = now
-
-    local tool = Character:FindFirstChildOfClass("Tool")
-    if not tool then
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack meht
-            local backpackTool = backpack:FindFirstChildOfClass("Tool")
-            if backpackTool then
-                Humanoid:EquipTool(backpackTool)
-                tool = backpackTool
-            end
-        end
-    end
-    if tool then tool:Activate() end
-end
-
--- 5. GACHA 2 PETI
-local function ClaimGachaChests()
-    if isLooting then return end
-    isLooting = true
-    UpdateStatus("Membuka Peti Gacha...")
-    task.wait(1.5)
-    
-    local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-    if chestsFolder then
-        local allChests = chestsFolder:GetChildren()
-        if #allChests >= 3 then
-            local availableIndices = {1, 2, 3}
-            local selectedChests = {}
-            for i = 1, 2 do
-                local randomIndex = math.random(1, #availableIndices)
-                table.insert(selectedChests, allChests[availableIndices[randomIndex]])
-                table.remove(availableIndices, randomIndex)
-            end
-            for _, chest in ipairs(selectedChests) do
-                local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
-                if prompt then
-                    fireproximityprompt(prompt)
-                    task.wait(0.8)
-                end
-            end
-        end
-    end
-    task.wait(1)
-    isLooting = false
-end
-
--- 6. TOGGLE EVENT & MAIN LOOP (MOVE TO GROUND APPROACH)
-ToggleBtn.MouseButton1Click:Connect(function()
-    isAutoFarm = not isAutoFarm
-    
-    if isAutoFarm then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-        ToggleBtn.Text = "AUTO FARM: ON"
-        
-        heartbeatConnection = RunService.Heartbeat:Connect(function()
-            if not isAutoFarm then return end
-            
-            Character = LocalPlayer.Character
-            if not Character then return end
-            RootPart = Character:FindFirstChild("HumanoidRootPart")
-            Humanoid = Character:FindFirstChildOfClass("Humanoid")
-            if not RootPart or not Humanoid then return end
-            
-            -- Validasi Target
-            local isTargetValid = false
-            if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
-                isTargetValid = true
-            end
-            
-            if not isTargetValid then
-                currentTargetRoot = GetNearestTarget()
-            end
-            
-            if currentTargetRoot then
-                local enemyName = currentTargetRoot.Parent.Name
-                local enemyPos = currentTargetRoot.Position
-                local dist = (RootPart.Position - enemyPos).Magnitude
-                
-                UpdateStatus("Attacking: " .. enemyName .. " [" .. math.floor(dist) .. "s]")
-                UpdateVisuals(currentTargetRoot)
-                
-                if dist > CONFIG.ATTACK_RANGE then
-                    -- Gunakan MoveTo bawaan agar server mengizinkan pergerakan
-                    Humanoid:MoveTo(enemyPos)
-                else
-                    -- Kunci pandangan ke musuh saat jarak dekat
-                    local targetCFrame = CFrame.new(RootPart.Position, Vector3.new(enemyPos.X, RootPart.Position.Y, enemyPos.Z))
-                    RootPart.CFrame = RootPart.CFrame:Lerp(targetCFrame, CONFIG.APPROACH_SPEED)
-                end
-                
-                AutoAttack()
-            else
-                ClearVisuals()
-                local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-                if chests and #chests:GetChildren() > 0 and not isLooting then
-                    ClaimGachaChests()
-                else
-                    UpdateStatus("Menunggu Mobs Spawn...")
-                end
-            end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        ToggleBtn.Text = "AUTO FARM: OFF"
-        UpdateStatus("IDLE")
-        currentTargetRoot = nil
-        ClearVisuals()
-        
-        if heartbeatConnection then
-            heartbeatConnection:Disconnect()
-            heartbeatConnection = nil
-        end
-    end
-end)-- ==========================================================
--- WORLD // ZERO - FLY & MOVEMENT FIX (PIVOT METHOD)
--- Features: PivotTo Teleport, Visual Tracker, Auto-Equip, Gacha
--- ==========================================================
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local CoreGui = game:GetService("CoreGui")
-
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
-
--- CONFIGURATION
-local CONFIG = {
-    FLY_HEIGHT = 10.0,   -- Ketinggian melayang di atas musuh (studs)
-    ATTACK_DELAY = 0.12 -- Jeda tebasan pedang
-}
-
-local isAutoFarm = false
-local isLooting = false
-local currentTargetRoot = nil
-local heartbeatConnection = nil
-local lastAttackTime = 0
-
--- OBJEK VISUAL SCANNER
-local tracerBeam = Instance.new("Beam")
-local attachment0 = Instance.new("Attachment")
-local attachment1 = Instance.new("Attachment")
-local targetHighlight = Instance.new("Highlight")
-
-tracerBeam.Name = "MobTracerBeam"
-tracerBeam.Color = ColorSequence.new(Color3.fromRGB(255, 50, 50))
-tracerBeam.Width0 = 0.3
-tracerBeam.Width1 = 0.3
-tracerBeam.FaceCamera = true
-
-targetHighlight.Name = "MobHighlight"
-targetHighlight.FillColor = Color3.fromRGB(255, 0, 0)
-targetHighlight.FillTransparency = 0.5
-targetHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-
--- 1. UI MENU RINGKAS + MONITOR STATUS
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "W0_PivotFarmUI"
-ScreenGui.ResetOnSpawn = false
-
-pcall(function() ScreenGui.Parent = CoreGui end)
-if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 140)
-MainFrame.Position = UDim2.new(0.5, -110, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 28)
-Title.BackgroundTransparency = 1
-Title.Text = "World // Zero Pivot Mode"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 12
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 180, 0, 38)
-ToggleBtn.Position = UDim2.new(0.5, -90, 0, 32)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-ToggleBtn.Text = "AUTO FARM: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 13
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Parent = MainFrame
-
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
-
--- LAYAR STATUS MONITOR
-local StatusFrame = Instance.new("Frame")
-StatusFrame.Size = UDim2.new(0, 180, 0, 50)
-StatusFrame.Position = UDim2.new(0.5, -90, 0, 78)
-StatusFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-StatusFrame.Parent = MainFrame
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(0, 4)
-StatusCorner.Parent = StatusFrame
-
-local StatusText = Instance.new("TextLabel")
-StatusText.Size = UDim2.new(1, -10, 1, 0)
-StatusText.Position = UDim2.new(0, 5, 0, 0)
-StatusText.BackgroundTransparency = 1
-StatusText.Text = "Status: IDLE"
-StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusText.TextSize = 10
-StatusText.Font = Enum.Font.SourceSans
-StatusText.TextWrapped = true
-StatusText.Parent = StatusFrame
-
-local function UpdateStatus(msg)
-    StatusText.Text = "Status: " .. tostring(msg)
-end
-
--- 2. PENULUSURAN TARGET MOBS DINAMIS
-local function GetNearestTarget()
-    local nearestEnemy = nil
-    local shortestDistance = math.huge
-    
-    local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
-    if not mobsFolder then 
-        UpdateStatus("Error: Folder Mobs tidak ada!")
-        return nil 
-    end
-
-    for _, desc in pairs(mobsFolder:GetDescendants()) do
-        if desc:IsA("Model") and desc ~= Character then
-            local enemyHum = desc:FindFirstChildOfClass("Humanoid")
-            local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
-                or desc.PrimaryPart 
-                or desc:FindFirstChild("Collider")
-                or desc:FindFirstChild("Root")
-                or desc:FindFirstChildWhichIsA("BasePart")
-            
-            local isAlive = true
-            if enemyHum and enemyHum.Health <= 0 then
-                isAlive = false
-            elseif desc:GetAttribute("Health") and desc:GetAttribute("Health") <= 0 then
-                isAlive = false
-            end
-            
-            if enemyRoot and isAlive then
-                local dist = (RootPart.Position - enemyRoot.Position).Magnitude
-                if dist < shortestDistance then
-                    shortestDistance = dist
-                    nearestEnemy = enemyRoot
-                end
-            end
-        end
-    end
-    
-    return nearestEnemy
-end
-
--- 3. VISUAL TRACKER
-local function ClearVisuals()
-    tracerBeam.Parent = nil
-    attachment0.Parent = nil
-    attachment1.Parent = nil
-    targetHighlight.Parent = nil
-end
-
-local function UpdateVisuals(targetRoot)
-    if not targetRoot or not targetRoot.Parent then
-        ClearVisuals()
-        return
-    end
-    attachment0.Parent = RootPart
-    attachment1.Parent = targetRoot
-    tracerBeam.Attachment0 = attachment0
-    tracerBeam.Attachment1 = attachment1
-    tracerBeam.Parent = RootPart
-    targetHighlight.Parent = targetRoot.Parent
-end
-
--- 4. AUTO-EQUIP & ATTACK
-local function AutoAttack()
-    local now = tick()
-    if now - lastAttackTime < CONFIG.ATTACK_DELAY then return end
-    lastAttackTime = now
-
-    local tool = Character:FindFirstChildOfClass("Tool")
-    if not tool then
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack then
-            local backpackTool = backpack:FindFirstChildOfClass("Tool")
-            if backpackTool then
-                Humanoid:EquipTool(backpackTool)
-                tool = backpackTool
-            end
-        end
-    end
-    if tool then tool:Activate() end
-end
-
--- 5. GACHA 2 PETI
-local function ClaimGachaChests()
-    if isLooting then return end
-    isLooting = true
-    UpdateStatus("Membuka Peti Gacha...")
-    task.wait(1.5)
-    
-    local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-    if chestsFolder then
-        local allChests = chestsFolder:GetChildren()
-        if #allChests >= 3 then
-            local availableIndices = {1, 2, 3}
-            local selectedChests = {}
-            for i = 1, 2 do
-                local randomIndex = math.random(1, #availableIndices)
-                table.insert(selectedChests, allChests[availableIndices[randomIndex]])
-                table.remove(availableIndices, randomIndex)
-            end
-            for _, chest in ipairs(selectedChests) do
-                local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
-                if prompt then
-                    fireproximityprompt(prompt)
-                    task.wait(0.8)
-                end
-            end
-        end
-    end
-    task.wait(1)
-    isLooting = false
-end
-
--- 6. TOGGLE EVENT & MAIN LOOP (DENGAN PIVOT TO)
-ToggleBtn.MouseButton1Click:Connect(function()
-    isAutoFarm = not isAutoFarm
-    
-    if isAutoFarm then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-        ToggleBtn.Text = "AUTO FARM: ON"
-        
-        heartbeatConnection = RunService.Heartbeat:Connect(function()
-            if not isAutoFarm then return end
-            
-            Character = LocalPlayer.Character
-            if not Character then return end
-            RootPart = Character:FindFirstChild("HumanoidRootPart")
-            Humanoid = Character:FindFirstChildOfClass("Humanoid")
-            if not RootPart or not Humanoid then return end
-            
-            -- Netralkan Gaya Fisik
-            RootPart.AssemblyLinearVelocity = Vector3.zero
-            
-            -- Validasi Target
-            local isTargetValid = false
-            if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
-                isTargetValid = true
-            end
-            
-            if not isTargetValid then
-                currentTargetRoot = GetNearestTarget()
-            end
-            
-            if currentTargetRoot then
-                local enemyName = currentTargetRoot.Parent.Name
-                local enemyPos = currentTargetRoot.Position
-                local targetFlyPos = Vector3.new(enemyPos.X, enemyPos.Y + CONFIG.FLY_HEIGHT, enemyPos.Z)
-                
-                UpdateStatus("Pivot Fly: " .. enemyName)
-                UpdateVisuals(currentTargetRoot)
-                
-                -- Pindahkan SELURUH Model Karakter Menggunakan PivotTo()
-                Character:PivotTo(CFrame.new(targetFlyPos, enemyPos))
-                AutoAttack()
-            else
-                ClearVisuals()
-                local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-                if chests and #chests:GetChildren() > 0 and not isLooting then
-                    ClaimGachaChests()
-                else
-                    UpdateStatus("Menunggu Mobs Spawn...")
-                end
-            end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        ToggleBtn.Text = "AUTO FARM: OFF"
-        UpdateStatus("IDLE")
-        currentTargetRoot = nil
-        ClearVisuals()
-        
-        if heartbeatConnection then
-            heartbeatConnection:Disconnect()
-            heartbeatConnection = nil
-        end
-    end
-end)-- ==========================================================
--- WORLD // ZERO - FLYING FARM + VISUAL SCANNER TEST
--- Features: Red Tracer Line, Highlight, Fly Above, Auto-Equip, Gacha
--- ==========================================================
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local CoreGui = game:GetService("CoreGui")
-
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
-
--- CONFIGURATION
-local CONFIG = {
-    FLY_HEIGHT = 10.0,   -- Ketinggian melayang di atas musuh (studs)
-    ATTACK_DELAY = 0.12 -- Jeda tebasan pedang
-}
-
-local isAutoFarm = false
-local isLooting = false
-local currentTargetRoot = nil
-local heartbeatConnection = nil
-local lastAttackTime = 0
-
--- OBJEK VISUAL SCANNER
-local tracerBeam = Instance.new("Beam")
-local attachment0 = Instance.new("Attachment")
-local attachment1 = Instance.new("Attachment")
-local targetHighlight = Instance.new("Highlight")
-
-tracerBeam.Name = "MobTracerBeam"
-tracerBeam.Color = ColorSequence.new(Color3.fromRGB(255, 50, 50))
-tracerBeam.Width0 = 0.3
-tracerBeam.Width1 = 0.3
-tracerBeam.FaceCamera = true
-
-targetHighlight.Name = "MobHighlight"
-targetHighlight.FillColor = Color3.fromRGB(255, 0, 0)
-targetHighlight.FillTransparency = 0.5
-targetHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-
--- 1. UI MENU RINGKAS + MONITOR STATUS
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "W0_FlyScannerUI"
-ScreenGui.ResetOnSpawn = false
-
-pcall(function() ScreenGui.Parent = CoreGui end)
-if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 140)
-MainFrame.Position = UDim2.new(0.5, -110, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 28)
-Title.BackgroundTransparency = 1
-Title.Text = "World // Zero Fly Test"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 12
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 180, 0, 38)
-ToggleBtn.Position = UDim2.new(0.5, -90, 0, 32)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-ToggleBtn.Text = "AUTO FARM: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 13
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Parent = MainFrame
-
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
-
--- LAYAR STATUS MONITOR
-local StatusFrame = Instance.new("Frame")
-StatusFrame.Size = UDim2.new(0, 180, 0, 50)
-StatusFrame.Position = UDim2.new(0.5, -90, 0, 78)
-StatusFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-StatusFrame.Parent = MainFrame
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(0, 4)
-StatusCorner.Parent = StatusFrame
-
-local StatusText = Instance.new("TextLabel")
-StatusText.Size = UDim2.new(1, -10, 1, 0)
-StatusText.Position = UDim2.new(0, 5, 0, 0)
-StatusText.BackgroundTransparency = 1
-StatusText.Text = "Status: IDLE"
-StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusText.TextSize = 10
-StatusText.Font = Enum.Font.SourceSans
-StatusText.TextWrapped = true
-StatusText.Parent = StatusFrame
-
-local function UpdateStatus(msg)
-    StatusText.Text = "Status: " .. tostring(msg)
-end
-
--- 2. PENULUSURAN TARGET MOBS DINAMIS
-local function GetNearestTarget()
-    local nearestEnemy = nil
-    local shortestDistance = math.huge
-    
-    local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
-    if not mobsFolder then 
-        UpdateStatus("Error: Folder Mobs tidak ada!")
-        return nil 
-    end
-
-    for _, desc in pairs(mobsFolder:GetDescendants()) do
-        if desc:IsA("Model") and desc ~= Character then
-            local enemyHum = desc:FindFirstChildOfClass("Humanoid")
-            local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
-                or desc.PrimaryPart 
-                or desc:FindFirstChild("Collider")
-                or desc:FindFirstChild("Root")
-                or desc:FindFirstChildWhichIsA("BasePart")
-            
-            local isAlive = true
-            if enemyHum and enemyHum.Health <= 0 then
-                isAlive = false
-            elseif desc:GetAttribute("Health") and desc:GetAttribute("Health") <= 0 then
-                isAlive = false
-            end
-            
-            if enemyRoot and isAlive then
-                local dist = (RootPart.Position - enemyRoot.Position).Magnitude
-                if dist < shortestDistance then
-                    shortestDistance = dist
-                    nearestEnemy = enemyRoot
-                end
-            end
-        end
-    end
-    
-    return nearestEnemy
-end
-
--- 3. VISUAL TRACKER
-local function ClearVisuals()
-    tracerBeam.Parent = nil
-    attachment0.Parent = nil
-    attachment1.Parent = nil
-    targetHighlight.Parent = nil
-end
-
-local function UpdateVisuals(targetRoot)
-    if not targetRoot or not targetRoot.Parent then
-        ClearVisuals()
-        return
-    end
-    attachment0.Parent = RootPart
-    attachment1.Parent = targetRoot
-    tracerBeam.Attachment0 = attachment0
-    tracerBeam.Attachment1 = attachment1
-    tracerBeam.Parent = RootPart
-    targetHighlight.Parent = targetRoot.Parent
-end
-
--- 4. AUTO-EQUIP & ATTACK
-local function AutoAttack()
-    local now = tick()
-    if now - lastAttackTime < CONFIG.ATTACK_DELAY then return end
-    lastAttackTime = now
-
-    local tool = Character:FindFirstChildOfClass("Tool")
-    if not tool then
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack then
-            local backpackTool = backpack:FindFirstChildOfClass("Tool")
-            if backpackTool then
-                Humanoid:EquipTool(backpackTool)
-                tool = backpackTool
-            end
-        end
-    end
-    if tool then tool:Activate() end
-end
-
--- 5. GACHA 2 PETI
-local function ClaimGachaChests()
-    if isLooting then return end
-    isLooting = true
-    UpdateStatus("Membuka Peti Gacha...")
-    task.wait(1.5)
-    
-    local chestsFolder = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-    if chestsFolder then
-        local allChests = chestsFolder:GetChildren()
-        if #allChests >= 3 then
-            local availableIndices = {1, 2, 3}
-            local selectedChests = {}
-            for i = 1, 2 do
-                local randomIndex = math.random(1, #availableIndices)
-                table.insert(selectedChests, allChests[availableIndices[randomIndex]])
-                table.remove(availableIndices, randomIndex)
-            end
-            for _, chest in ipairs(selectedChests) do
-                local prompt = chest:FindFirstChildWhichIsA("ProximityPrompt", true)
-                if prompt then
-                    fireproximityprompt(prompt)
-                    task.wait(0.8)
-                end
-            end
-        end
-    end
-    task.wait(1)
-    isLooting = false
-end
-
--- 6. TOGGLE EVENT & CORE LOOP
-ToggleBtn.MouseButton1Click:Connect(function()
-    isAutoFarm = not isAutoFarm
-    
-    if isAutoFarm then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-        ToggleBtn.Text = "AUTO FARM: ON"
-        
-        heartbeatConnection = RunService.Heartbeat:Connect(function()
-            if not isAutoFarm then return end
-            
-            Character = LocalPlayer.Character
-            if not Character then return end
-            RootPart = Character:FindFirstChild("HumanoidRootPart")
-            Humanoid = Character:FindFirstChildOfClass("Humanoid")
-            if not RootPart or not Humanoid then return end
-            
-            -- Netralkan Gravitasi Roblox
-            RootPart.AssemblyLinearVelocity = Vector3.zero
-            
-            -- Validasi Target
-            local isTargetValid = false
-            if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
-                isTargetValid = true
-            end
-            
-            if not isTargetValid then
-                currentTargetRoot = GetNearestTarget()
-            end
-            
-            if currentTargetRoot then
-                local enemyName = currentTargetRoot.Parent.Name
-                local enemyPos = currentTargetRoot.Position
-                local targetFlyPos = Vector3.new(enemyPos.X, enemyPos.Y + CONFIG.FLY_HEIGHT, enemyPos.Z)
-                
-                UpdateStatus("Fly: " .. enemyName)
-                UpdateVisuals(currentTargetRoot)
-                
-                -- Pindahkan CFrame tepat di atas musuh
-                RootPart.CFrame = CFrame.new(targetFlyPos, enemyPos)
-                AutoAttack()
-            else
-                ClearVisuals()
-                local chests = Workspace:FindFirstChild("Chests") or Workspace:FindFirstChild("LootChests") or Workspace:FindFirstChild("Rewards")
-                if chests and #chests:GetChildren() > 0 and not isLooting then
-                    ClaimGachaChests()
-                else
-                    UpdateStatus("Menunggu Mobs Spawn...")
-                end
-            end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        ToggleBtn.Text = "AUTO FARM: OFF"
-        UpdateStatus("IDLE")
-        currentTargetRoot = nil
-        ClearVisuals()
-        
-        if heartbeatConnection then
-            heartbeatConnection:Disconnect()
-            heartbeatConnection = nil
-        end
-    end
-end)-- ==========================================================
--- WORLD // ZERO - VISUAL MOB TRACKER & SCANNER
--- Features: Red Tracer Line, Highlight Target, UI Status Screen
--- ==========================================================
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local CoreGui = game:GetService("CoreGui")
-
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local RootPart = Character:WaitForChild("HumanoidRootPart")
-
-local isTrackerOn = false
-local currentTargetRoot = nil
-local heartbeatConnection = nil
-
--- OBJEK VISUAL (GARIS & HIGHLIGHT)
-local tracerBeam = Instance.new("Beam")
-local attachment0 = Instance.new("Attachment")
-local attachment1 = Instance.new("Attachment")
-local targetHighlight = Instance.new("Highlight")
-
-tracerBeam.Name = "MobTracerBeam"
-tracerBeam.Color = ColorSequence.new(Color3.fromRGB(255, 50, 50)) -- Warna Merah
-tracerBeam.Width0 = 0.3
-tracerBeam.Width1 = 0.3
-tracerBeam.FaceCamera = true
-
-targetHighlight.Name = "MobHighlight"
-targetHighlight.FillColor = Color3.fromRGB(255, 0, 0)
-targetHighlight.FillTransparency = 0.5
-targetHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-
--- 1. UI MENU + LAYAR STATUS
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "W0_MobTrackerUI"
-ScreenGui.ResetOnSpawn = false
-
-pcall(function() ScreenGui.Parent = CoreGui end)
-if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 140)
-MainFrame.Position = UDim2.new(0.5, -110, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 28)
-Title.BackgroundTransparency = 1
-Title.Text = "World // Zero Mob Scanner"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 12
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 180, 0, 38)
-ToggleBtn.Position = UDim2.new(0.5, -90, 0, 32)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-ToggleBtn.Text = "SCANNER: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 13
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Parent = MainFrame
-
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
-
--- LAYAR STATUS MONITOR
-local StatusFrame = Instance.new("Frame")
-StatusFrame.Size = UDim2.new(0, 180, 0, 50)
-StatusFrame.Position = UDim2.new(0.5, -90, 0, 78)
-StatusFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-StatusFrame.Parent = MainFrame
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(0, 4)
-StatusCorner.Parent = StatusFrame
-
-local StatusText = Instance.new("TextLabel")
-StatusText.Size = UDim2.new(1, -10, 1, 0)
-StatusText.Position = UDim2.new(0, 5, 0, 0)
-StatusText.BackgroundTransparency = 1
-StatusText.Text = "Status: MATI"
-StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusText.TextSize = 10
-StatusText.Font = Enum.Font.SourceSans
-StatusText.TextWrapped = true
-StatusText.Parent = StatusFrame
-
-local function UpdateStatus(msg)
-    StatusText.Text = "Status: " .. tostring(msg)
-end
-
--- 2. PENULUSURAN TARGET MOBS DENGAN VERIFIKASI DEEP SCAN
-local function GetNearestTargetScanner()
-    local nearestEnemy = nil
-    local shortestDistance = math.huge
-    
-    local mobsFolder = Workspace:FindFirstChild("Mobs") or Workspace:FindFirstChild("Enemies")
-    if not mobsFolder then 
-        UpdateStatus("Error: Folder Mobs/Enemies tidak ada!")
-        return nil 
-    end
-
-    -- Memindai seluruh isi folder Mobs secara mendalam
-    for _, desc in pairs(mobsFolder:GetDescendants()) do
-        if desc:IsA("Model") and desc ~= Character then
-            local enemyHum = desc:FindFirstChildOfClass("Humanoid")
-            local enemyRoot = desc:FindFirstChild("HumanoidRootPart") 
-                or desc.PrimaryPart 
-                or desc:FindFirstChild("Collider")
-                or desc:FindFirstChild("Root")
-                or desc:FindFirstChildWhichIsA("BasePart")
-            
-            local isAlive = true
-            if enemyHum and enemyHum.Health <= 0 then
-                isAlive = false
-            elseif desc:GetAttribute("Health") and desc:GetAttribute("Health") <= 0 then
-                isAlive = false
-            end
-            
-            if enemyRoot and isAlive then
-                local dist = (RootPart.Position - enemyRoot.Position).Magnitude
-                if dist < shortestDistance then
-                    shortestDistance = dist
-                    nearestEnemy = enemyRoot
-                end
-            end
-        end
-    end
-    
-    return nearestEnemy
-end
-
--- 3. FUNGSI UPDATE VISUAL TRACKER
-local function ClearVisuals()
-    tracerBeam.Parent = nil
-    attachment0.Parent = nil
-    attachment1.Parent = nil
-    targetHighlight.Parent = nil
-end
-
-local function UpdateVisualTracker(targetRoot)
-    if not targetRoot or not targetRoot.Parent then
-        ClearVisuals()
-        return
-    end
-    
-    -- Pasang Attachment Garis ke Karakter & Musuh
-    attachment0.Parent = RootPart
-    attachment1.Parent = targetRoot
-    
-    tracerBeam.Attachment0 = attachment0
-    tracerBeam.Attachment1 = attachment1
-    tracerBeam.Parent = RootPart
-    
-    -- Pasang Efek Menyala (Highlight) ke Model Musuh
-    targetHighlight.Parent = targetRoot.Parent
-end
-
--- 4. TOGGLE EVENT & MAIN LOOP
-ToggleBtn.MouseButton1Click:Connect(function()
-    isTrackerOn = not isTrackerOn
-    
-    if isTrackerOn then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-        ToggleBtn.Text = "SCANNER: ON"
-        UpdateStatus("Memulai Pemindaian...")
-        
-        heartbeatConnection = RunService.Heartbeat:Connect(function()
-            if not isTrackerOn then return end
-            
-            Character = LocalPlayer.Character
-            if not Character then return end
-            RootPart = Character:FindFirstChild("HumanoidRootPart")
-            if not RootPart then return end
-            
-            -- Validasi Target Terkini
-            local isTargetValid = false
-            if currentTargetRoot and currentTargetRoot.Parent and currentTargetRoot:IsDescendantOf(Workspace) then
-                isTargetValid = true
-            end
-            
-            if not isTargetValid then
-                currentTargetRoot = GetNearestTargetScanner()
-            end
-            
-            if currentTargetRoot then
-                local enemyName = currentTargetRoot.Parent.Name
-                local dist = math.floor((RootPart.Position - currentTargetRoot.Position).Magnitude)
-                
-                UpdateStatus("Ditemukan: " .. enemyName .. " [" .. dist .. " studs]")
-                UpdateVisualTracker(currentTargetRoot)
-            else
-                UpdateStatus("Tidak ada Mobs hidup di sekitar!")
-                ClearVisuals()
-            end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        ToggleBtn.Text = "SCANNER: OFF"
-        UpdateStatus("MATI")
-        currentTargetRoot = nil
-        
-        ClearVisuals()
-        
-        if heartbeatConnection then
-            heartbeatConnection:Disconnect()
-            heartbeatConnection = nil
-        end
-    end
+-- 6. MENGISI ELEMEN KONTEN PADA MASING-MASING TAB
+
+-- A. TAB HOME
+local InfoLabel = Instance.new("TextLabel")
+InfoLabel.Size = UDim2.new(1, 0, 0, 50)
+InfoLabel.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+InfoLabel.Text = "  Welcome, " .. LocalPlayer.Name .. "!\n  Status: UI Framework Ready"
+InfoLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+InfoLabel.Font = Enum.Font.SourceSansSemibold
+InfoLabel.TextSize = 12
+InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+InfoLabel.Parent = HomeTab
+
+local InfoCorner = Instance.new("UICorner")
+InfoCorner.CornerRadius = UDim.new(0, 6)
+InfoCorner.Parent = InfoLabel
+
+-- B. TAB AUTOMATICALLY (Fitur Otomatis Utama)
+CreateToggle(AutomaticallyTab, "Auto Collect Money (Stand)", false, function(state)
+    print("Auto Collect Money State:", state)
 end)
+
+CreateToggle(AutomaticallyTab, "Auto Collect Fish (Dermaga)", false, function(state)
+    print("Auto Collect Fish State:", state)
+end)
+
+CreateToggle(AutomaticallyTab, "Auto Roll Fisherman", false, function(state)
+    print("Auto Roll Fisherman State:", state)
+end)
+
+CreateToggle(AutomaticallyTab, "Auto Sell Low-Rarity Fish", false, function(state)
+    print("Auto Sell State:", state)
+end)
+
+-- C. TAB MAIN (Event & Features Khusus)
+CreateToggle(MainTab, "Auto Buy Upgrades", false, function(state)
+    print("Auto Buy Upgrades State:", state)
+end)
+
+CreateToggle(MainTab, "Auto Mutation Machine", false, function(state)
+    print("Auto Mutation State:", state)
+end)
+
+CreateToggle(MainTab, "Auto Rebirth Check", false, function(state)
+    print("Auto Rebirth State:", state)
+end)
+
+-- 7. TOMBOL TOGGLE UNTUK HIDE / SHOW MENU
+local OpenToggleBtn = Instance.new("TextButton")
+OpenToggleBtn.Name = "OpenToggleBtn"
+OpenToggleBtn.Size = UDim2.new(0, 80, 0, 30)
+OpenToggleBtn.Position = UDim2.new(0, 10, 0.2, 0)
+OpenToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+OpenToggleBtn.Text = "SpeedHub X"
+OpenToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenToggleBtn.Font = Enum.Font.SourceSansBold
+OpenToggleBtn.TextSize = 11
+OpenToggleBtn.Active = true
+OpenToggleBtn.Draggable = true
+OpenToggleBtn.Parent = ScreenGui
+
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(0, 6)
+OpenCorner.Parent = OpenToggleBtn
+
+OpenToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+end)
+
+print("[SPEED HUB X] UI Framework Berhasil Dimuat!")
