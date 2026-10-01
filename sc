@@ -1,5 +1,5 @@
 -- ==========================================================
--- TEST SCRIPT: AUTO PAUSE & RESUME (STAND SMART CHECKER)
+-- SPEED HUB X - ROLL A FISHERMAN (AUTO ROLL & AUTO PAUSE)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -7,19 +7,19 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
 
-if PlayerGui:FindFirstChild("TestAutoPauseUI") then
-    PlayerGui.TestAutoPauseUI:Destroy()
+if PlayerGui:FindFirstChild("SpeedHubAutoPauseUI") then
+    PlayerGui.SpeedHubAutoPauseUI:Destroy()
 end
 
 -- 1. UI UTAMA
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "TestAutoPauseUI"
+ScreenGui.Name = "SpeedHubAutoPauseUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 190)
-MainFrame.Position = UDim2.new(0.5, -150, 0.4, -95)
+MainFrame.Size = UDim2.new(0, 320, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -160, 0.4, -140)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -38,7 +38,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -30, 0, 28)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "TEST: Auto Pause & Resume"
+Title.Text = "Speed Hub X | Auto Roll & Auto Pause"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
@@ -59,38 +59,180 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
+-- 2. DAFTAR DROPDOWN 36 NELAYAN
+local FishermanList = {
+    Common = {"Homeless Fisher", "Lobster Trap", "Rookie Sam", "Deep Fisher"},
+    Rare = {"Angler Mia", "Alaskan", "Uncle Bob", "Koi Fisher", "Gnome"},
+    Epic = {"Pirate Pete", "Sir Trooper", "Feather Boy", "Dr. Bob", "Pearl Diver", "Miner"},
+    Legendary = {"Clown Timmy", "Coral Zoe", "Cloud Nine", "Wizard Tom", "Toad Fisher"},
+    Mythical = {"Soldier Steve", "Sea Commander", "Cursed Pirate", "Arctic Noah"},
+    Divine = {"Alien Fisher", "Bee Keeper", "Hazmat"},
+    Deep = {"Tide Knight", "Necromancer", "Ice King", "Tyrone"},
+    Event = {"Tidal Champion", "Kid Floaty", "Crab Lord", "Beach King", "Sea Specialist"}
+}
+
+local selectedTargets = {}
+
+local DropFrame = Instance.new("Frame")
+DropFrame.Size = UDim2.new(1, -20, 0, 32)
+DropFrame.Position = UDim2.new(0, 10, 0, 32)
+DropFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+DropFrame.ClipsDescendants = true
+DropFrame.Parent = MainFrame
+
+local DropCorner = Instance.new("UICorner")
+DropCorner.CornerRadius = UDim.new(0, 6)
+DropCorner.Parent = DropFrame
+
+local DropBtn = Instance.new("TextButton")
+DropBtn.Size = UDim2.new(1, 0, 0, 32)
+DropBtn.BackgroundTransparency = 1
+DropBtn.Text = "  [ Pilih Nelayan Target ]"
+DropBtn.TextColor3 = Color3.fromRGB(240, 240, 250)
+DropBtn.Font = Enum.Font.SourceSansBold
+DropBtn.TextSize = 11
+DropBtn.TextXAlignment = Enum.TextXAlignment.Left
+DropBtn.Parent = DropFrame
+
+local Arrow = Instance.new("TextLabel")
+Arrow.Size = UDim2.new(0, 30, 0, 32)
+Arrow.Position = UDim2.new(1, -30, 0, 0)
+Arrow.BackgroundTransparency = 1
+Arrow.Text = "∨"
+Arrow.TextColor3 = Color3.fromRGB(255, 30, 60)
+Arrow.Font = Enum.Font.SourceSansBold
+Arrow.TextSize = 12
+Arrow.Parent = DropFrame
+
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -8, 0, 110)
+Scroll.Position = UDim2.new(0, 4, 0, 32)
+Scroll.BackgroundTransparency = 1
+Scroll.BorderSizePixel = 0
+Scroll.ScrollBarThickness = 3
+Scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 30, 60)
+Scroll.Parent = DropFrame
+
+local ScrollLayout = Instance.new("UIListLayout")
+ScrollLayout.Padding = UDim.new(0, 3)
+ScrollLayout.Parent = Scroll
+
+local isDropOpen = false
+DropBtn.MouseButton1Click:Connect(function()
+    isDropOpen = not isDropOpen
+    DropFrame.Size = isDropOpen and UDim2.new(1, -20, 0, 150) or UDim2.new(1, -20, 0, 32)
+    Arrow.Text = isDropOpen and "∧" or "∨"
+end)
+
+for rarityName, fishers in pairs(FishermanList) do
+    local RarityHeader = Instance.new("TextLabel")
+    RarityHeader.Size = UDim2.new(1, 0, 0, 18)
+    RarityHeader.BackgroundTransparency = 1
+    RarityHeader.Text = "-- " .. string.upper(rarityName) .. " --"
+    RarityHeader.TextColor3 = Color3.fromRGB(255, 30, 60)
+    RarityHeader.Font = Enum.Font.SourceSansBold
+    RarityHeader.TextSize = 10
+    RarityHeader.Parent = Scroll
+
+    for _, name in ipairs(fishers) do
+        local ItemBtn = Instance.new("TextButton")
+        ItemBtn.Size = UDim2.new(1, -6, 0, 24)
+        ItemBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+        ItemBtn.Text = "  " .. name
+        ItemBtn.TextColor3 = Color3.fromRGB(180, 180, 190)
+        ItemBtn.Font = Enum.Font.SourceSansSemibold
+        ItemBtn.TextSize = 10
+        ItemBtn.TextXAlignment = Enum.TextXAlignment.Left
+        ItemBtn.Parent = Scroll
+
+        local ItemCorner = Instance.new("UICorner")
+        ItemCorner.CornerRadius = UDim.new(0, 4)
+        ItemCorner.Parent = ItemBtn
+
+        local ItemCheck = Instance.new("TextLabel")
+        ItemCheck.Size = UDim2.new(0, 20, 1, 0)
+        ItemCheck.Position = UDim2.new(1, -22, 0, 0)
+        ItemCheck.BackgroundTransparency = 1
+        ItemCheck.Text = ""
+        ItemCheck.TextColor3 = Color3.fromRGB(255, 30, 60)
+        ItemCheck.Font = Enum.Font.SourceSansBold
+        ItemCheck.TextSize = 11
+        ItemCheck.Parent = ItemBtn
+
+        ItemBtn.MouseButton1Click:Connect(function()
+            if selectedTargets[name] then
+                selectedTargets[name] = nil
+                ItemBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+                ItemBtn.TextColor3 = Color3.fromRGB(180, 180, 190)
+                ItemCheck.Text = ""
+            else
+                selectedTargets[name] = true
+                ItemBtn.BackgroundColor3 = Color3.fromRGB(55, 20, 30)
+                ItemBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                ItemCheck.Text = "✓"
+            end
+
+            local count = 0
+            for _ in pairs(selectedTargets) do count = count + 1 end
+            DropBtn.Text = count > 0 and "  [ " .. count .. " Target Locked ]" or "  [ Pilih Nelayan Target ]"
+        end)
+    end
+end
+Scroll.CanvasSize = UDim2.new(0, 0, 0, ScrollLayout.AbsoluteContentSize.Y + 10)
+
 local StatusBox = Instance.new("TextLabel")
-StatusBox.Size = UDim2.new(1, -20, 0, 70)
-StatusBox.Position = UDim2.new(0, 10, 0, 35)
+StatusBox.Size = UDim2.new(1, -20, 0, 38)
+StatusBox.Position = UDim2.new(0, 10, 0, 155)
 StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
 StatusBox.Font = Enum.Font.Code
 StatusBox.TextSize = 10
 StatusBox.TextXAlignment = Enum.TextXAlignment.Left
 StatusBox.TextYAlignment = Enum.TextYAlignment.Top
-StatusBox.Text = "Status: Menunggu diaktifkan...\n- Stand Kosong = Otomatis Roll\n- Stand Terisi = Jeda (Pause buat dibeli)"
+StatusBox.Text = "Status: Pilih target & aktifkan sakelar..."
 StatusBox.Parent = MainFrame
 
 local BoxCorner = Instance.new("UICorner")
 BoxCorner.CornerRadius = UDim.new(0, 6)
 BoxCorner.Parent = StatusBox
 
--- SAKELAR UTAMA ON / OFF
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(1, -20, 0, 36)
-ToggleBtn.Position = UDim2.new(0, 10, 0, 130)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-ToggleBtn.Text = "MASTER SAKELAR: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.TextSize = 11
-ToggleBtn.Parent = MainFrame
+-- 3. TOMBOL SAKELAR ON/OFF AUTO ROLL
+local ToggleFrame = Instance.new("Frame")
+ToggleFrame.Size = UDim2.new(1, -20, 0, 34)
+ToggleFrame.Position = UDim2.new(0, 10, 0, 200)
+ToggleFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+ToggleFrame.Parent = MainFrame
 
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 6)
+ToggleCorner.Parent = ToggleFrame
 
--- 2. FUNGSI PROXIMITY PROMPT
+local ToggleLabel = Instance.new("TextLabel")
+ToggleLabel.Size = UDim2.new(1, -55, 1, 0)
+ToggleLabel.Position = UDim2.new(0, 10, 0, 0)
+ToggleLabel.BackgroundTransparency = 1
+ToggleLabel.Text = "Auto Roll & Pause Target"
+ToggleLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+ToggleLabel.Font = Enum.Font.SourceSansBold
+ToggleLabel.TextSize = 11
+ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+ToggleLabel.Parent = ToggleFrame
+
+local SwitchBtn = Instance.new("TextButton")
+SwitchBtn.Size = UDim2.new(0, 45, 0, 20)
+SwitchBtn.Position = UDim2.new(1, -50, 0.5, -10)
+SwitchBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+SwitchBtn.Text = "OFF"
+SwitchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SwitchBtn.Font = Enum.Font.SourceSansBold
+SwitchBtn.TextSize = 10
+SwitchBtn.Parent = ToggleFrame
+
+local SwitchCorner = Instance.new("UICorner")
+SwitchCorner.CornerRadius = UDim.new(0, 10)
+SwitchCorner.Parent = SwitchBtn
+
+-- 4. FUNGSI PROXIMITY PROMPT
 local function GetMyRollPrompt()
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -122,8 +264,8 @@ local function GetMyRollPrompt()
     return closestPrompt
 end
 
--- 3. FUNGSI CEK APAKAH STAND PULAU SEDANG TERISI NELAYAN
-local function IsStandOccupied()
+-- 5. FUNGSI CEK STAND PULAU (APAKAH ADA NELAYAN TARGET)
+local function CheckTargetOnStand(targetsTable)
     local scriptable = Workspace:FindFirstChild("Scriptable")
     if scriptable and scriptable:FindFirstChild("Plots") and scriptable.Plots:FindFirstChild("Buildings") then
         for _, building in ipairs(scriptable.Plots.Buildings:GetChildren()) do
@@ -132,41 +274,55 @@ local function IsStandOccupied()
                 for _, stand in ipairs(rollStands:GetChildren()) do
                     local reel = stand:FindFirstChild("Reel")
                     if reel and reel:FindFirstChild("Fisherman") then
-                        -- Jika folder Fisherman ada isinya / karakternya muncul di stand
-                        if #reel.Fisherman:GetChildren() > 0 then
-                            return true
+                        -- Cek apakah model karakter nelayan / anak objek di reel sesuai dengan target
+                        for _, child in ipairs(reel.Fisherman:GetChildren()) do
+                            local nameLower = string.lower(child.Name)
+                            for targetName, _ in pairs(targetsTable) do
+                                if string.find(nameLower, string.lower(targetName), 1, true) then
+                                    return true, targetName
+                                end
+                            end
                         end
                     end
                 end
             end
         end
     end
-    return false
+    return false, ""
 end
 
--- 4. LOGIKA UTAMA AUTO PAUSE & RESUME
-local isMasterActive = false
+-- 6. LOGIKA UTAMA SAKELAR ON/OFF
+local isRunning = false
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    isMasterActive = not isMasterActive
+SwitchBtn.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
 
-    if isMasterActive then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-        ToggleBtn.Text = "MASTER SAKELAR: ON (BERJALAN)"
+    if isRunning then
+        SwitchBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+        SwitchBtn.Text = "ON"
 
         task.spawn(function()
-            while isMasterActive do
-                -- Cek apakah stand sedang terisi nelayan
-                local occupied = IsStandOccupied()
+            while isRunning do
+                local targetCount = 0
+                for _ in pairs(selectedTargets) do targetCount = targetCount + 1 end
 
-                if occupied then
-                    -- JIKA TERISI: Jeda roll (Pause) biar nelayannya bisa dibeli
-                    StatusBox.Text = "Status: [PAUSED] Stand terisi nelayan!\nSilakan dibeli dulu, nanti lanjut roll otomatis."
-                    task.wait(1) -- Cek berkala sampai stand dikosongkan/dibeli
+                if targetCount == 0 then
+                    StatusBox.Text = "Status: Pilih minimal 1 nelayan di dropdown!"
+                    task.wait(1)
+                    continue
+                end
+
+                -- Cek apakah nelayan target sedang nongkrong di stand pulau
+                local foundTarget, targetName = CheckTargetOnStand(selectedTargets)
+
+                if foundTarget then
+                    -- PAUSE OTOMATIS: Berhenti roll biar bisa dibeli dulu
+                    StatusBox.Text = "Status: [PAUSED] Target Dapet: " + targetName + "\nSilakan dibeli, nanti lanjut roll sendiri."
+                    task.wait(1.5) -- Jeda jeda sampai nelayan dibeli (stand kosong)
                 else
-                    -- JIKA KOSONG: Lanjut gacha otomatis (Resume)
-                    StatusBox.Text = "Status: [ROLLING] Stand kosong, lanjut gacha..."
-                    
+                    -- LANJUT ROLL OTOMATIS
+                    StatusBox.Text = "Status: [ROLLING] Mencari target..."
+
                     local prompt = GetMyRollPrompt()
                     if prompt then
                         if fireproximityprompt then
@@ -178,14 +334,14 @@ ToggleBtn.MouseButton1Click:Connect(function()
                         end
                     end
 
-                    task.wait(0.7) -- Jeda aman antar roll
+                    task.wait(0.7)
                 end
             end
         end)
     else
-        isMasterActive = false
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-        ToggleBtn.Text = "MASTER SAKELAR: OFF"
-        StatusBox.Text = "Status: Dimatikan."
+        isRunning = false
+        SwitchBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+        SwitchBtn.Text = "OFF"
+        StatusBox.Text = "Status: Sakelar dimatikan."
     end
 end)
