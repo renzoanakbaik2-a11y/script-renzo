@@ -1,5 +1,5 @@
 -- ==========================================================
--- SPEED HUB X - ROLL A FISHERMAN (AUTO ROLL & AUTO PAUSE)
+-- SPEED HUB X - TRUE LOCK & PAUSE (FIXED)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -7,13 +7,13 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
 
-if PlayerGui:FindFirstChild("SpeedHubAutoPauseUI") then
-    PlayerGui.SpeedHubAutoPauseUI:Destroy()
+if PlayerGui:FindFirstChild("SpeedHubTrueLockUI") then
+    PlayerGui.SpeedHubTrueLockUI:Destroy()
 end
 
 -- 1. UI UTAMA
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpeedHubAutoPauseUI"
+ScreenGui.Name = "SpeedHubTrueLockUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
@@ -38,7 +38,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -30, 0, 28)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Speed Hub X | Auto Roll & Auto Pause"
+Title.Text = "Speed Hub X | True Lock & Pause"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
@@ -59,7 +59,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- 2. DAFTAR DROPDOWN 36 NELAYAN
+-- 2. DAFTAR DROPDOWN NELAYAN
 local FishermanList = {
     Common = {"Homeless Fisher", "Lobster Trap", "Rookie Sam", "Deep Fisher"},
     Rare = {"Angler Mia", "Alaskan", "Uncle Bob", "Koi Fisher", "Gnome"},
@@ -87,7 +87,7 @@ DropCorner.Parent = DropFrame
 local DropBtn = Instance.new("TextButton")
 DropBtn.Size = UDim2.new(1, 0, 0, 32)
 DropBtn.BackgroundTransparency = 1
-DropBtn.Text = "  [ Pilih Nelayan Target ]"
+DropBtn.Text = "  [ Pilih Nelayan Target Lock ]"
 DropBtn.TextColor3 = Color3.fromRGB(240, 240, 250)
 DropBtn.Font = Enum.Font.SourceSansBold
 DropBtn.TextSize = 11
@@ -174,7 +174,7 @@ for rarityName, fishers in pairs(FishermanList) do
 
             local count = 0
             for _ in pairs(selectedTargets) do count = count + 1 end
-            DropBtn.Text = count > 0 and "  [ " .. count .. " Target Locked ]" or "  [ Pilih Nelayan Target ]"
+            DropBtn.Text = count > 0 and "  [ " .. count .. " Target Locked ]" or "  [ Pilih Nelayan Target Lock ]"
         end)
     end
 end
@@ -196,7 +196,7 @@ local BoxCorner = Instance.new("UICorner")
 BoxCorner.CornerRadius = UDim.new(0, 6)
 BoxCorner.Parent = StatusBox
 
--- 3. TOMBOL SAKELAR ON/OFF AUTO ROLL
+-- 3. TOMBOL SAKELAR ON/OFF
 local ToggleFrame = Instance.new("Frame")
 ToggleFrame.Size = UDim2.new(1, -20, 0, 34)
 ToggleFrame.Position = UDim2.new(0, 10, 0, 200)
@@ -211,7 +211,7 @@ local ToggleLabel = Instance.new("TextLabel")
 ToggleLabel.Size = UDim2.new(1, -55, 1, 0)
 ToggleLabel.Position = UDim2.new(0, 10, 0, 0)
 ToggleLabel.BackgroundTransparency = 1
-ToggleLabel.Text = "Auto Roll & Pause Target"
+ToggleLabel.Text = "Auto Roll & Target Lock"
 ToggleLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
 ToggleLabel.Font = Enum.Font.SourceSansBold
 ToggleLabel.TextSize = 11
@@ -264,8 +264,8 @@ local function GetMyRollPrompt()
     return closestPrompt
 end
 
--- 5. FUNGSI CEK STAND PULAU (APAKAH ADA NELAYAN TARGET)
-local function CheckTargetOnStand(targetsTable)
+-- 5. FUNGSI CEK STAND PULAU (COCOKKAN NAMA DI FOLDER FISHERMAN DENGAN TARGET)
+local function FindMatchedTargetOnStand(targetsTable)
     local scriptable = Workspace:FindFirstChild("Scriptable")
     if scriptable and scriptable:FindFirstChild("Plots") and scriptable.Plots:FindFirstChild("Buildings") then
         for _, building in ipairs(scriptable.Plots.Buildings:GetChildren()) do
@@ -274,11 +274,23 @@ local function CheckTargetOnStand(targetsTable)
                 for _, stand in ipairs(rollStands:GetChildren()) do
                     local reel = stand:FindFirstChild("Reel")
                     if reel and reel:FindFirstChild("Fisherman") then
-                        -- Cek apakah model karakter nelayan / anak objek di reel sesuai dengan target
+                        -- Periksa semua isi model di dalam folder Fisherman
                         for _, child in ipairs(reel.Fisherman:GetChildren()) do
-                            local nameLower = string.lower(child.Name)
+                            local objName = string.lower(child.Name)
                             for targetName, _ in pairs(targetsTable) do
-                                if string.find(nameLower, string.lower(targetName), 1, true) then
+                                local cleanTarget = string.lower(targetName)
+                                -- Jika nama objek di stand mengandung nama target yang dicentang
+                                if string.find(objName, cleanTarget, 1, true) or string.find(cleanTarget, objName, 1, true) then
+                                    return true, targetName
+                                end
+                            end
+                        end
+                        -- Cek juga atribut internal jika ada
+                        local attrName = reel.Fisherman:GetAttribute("FishermanName")
+                        if attrName then
+                            local attrLower = string.lower(tostring(attrName))
+                            for targetName, _ in pairs(targetsTable) do
+                                if string.find(attrLower, string.lower(targetName), 1, true) then
                                     return true, targetName
                                 end
                             end
@@ -307,20 +319,20 @@ SwitchBtn.MouseButton1Click:Connect(function()
                 for _ in pairs(selectedTargets) do targetCount = targetCount + 1 end
 
                 if targetCount == 0 then
-                    StatusBox.Text = "Status: Pilih minimal 1 nelayan di dropdown!"
+                    StatusBox.Text = "Status: Pilih minimal 1 nelayan target di dropdown!"
                     task.wait(1)
                     continue
                 end
 
-                -- Cek apakah nelayan target sedang nongkrong di stand pulau
-                local foundTarget, targetName = CheckTargetOnStand(selectedTargets)
+                -- Cek apakah nelayan target bener-bener ada di stand
+                local isMatched, matchedName = FindMatchedTargetOnStand(selectedTargets)
 
-                if foundTarget then
-                    -- PAUSE OTOMATIS: Berhenti roll biar bisa dibeli dulu
-                    StatusBox.Text = "Status: [PAUSED] Target Dapet: " + targetName + "\nSilakan dibeli, nanti lanjut roll sendiri."
-                    task.wait(1.5) -- Jeda jeda sampai nelayan dibeli (stand kosong)
+                if isMatched then
+                    -- DIAM TOTAL / PAUSE: Berhenti gacha total sampai nelayan dibeli (stand kosong)
+                    StatusBox.Text = "Status: [DIAM/PAUSE] Target Dapet: " .. matchedName .. "\nSilakan dibeli dulu, baru lanjut gacha."
+                    task.wait(1) -- Berhenti nge-roll selama target masih nongkrong di stand
                 else
-                    -- LANJUT ROLL OTOMATIS
+                    -- LANJUT GACHA OTOMATIS
                     StatusBox.Text = "Status: [ROLLING] Mencari target..."
 
                     local prompt = GetMyRollPrompt()
