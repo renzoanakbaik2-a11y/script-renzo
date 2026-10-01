@@ -1,219 +1,5 @@
 -- ==========================================================
--- CELAH HUNTER V2 - MEMORY TABLE DEEP DUMPER
--- ==========================================================
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
-if PlayerGui:FindFirstChild("TableDumperUI") then
-    PlayerGui.TableDumperUI:Destroy()
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "TableDumperUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 340, 0, 240)
-MainFrame.Position = UDim2.new(0.5, -170, 0.4, -120)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 8)
-Corner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -30, 0, 28)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "Celah Hunter V2: Table Content Dumper"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 11
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = MainFrame
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(1, -24, 0, 4)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 10
-CloseBtn.Parent = MainFrame
-
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
-local ScrollBox = Instance.new("ScrollingFrame")
-ScrollBox.Size = UDim2.new(1, -20, 1, -45)
-ScrollBox.Position = UDim2.new(0, 10, 0, 35)
-ScrollBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-ScrollBox.BorderSizePixel = 0
-ScrollBox.ScrollBarThickness = 3
-ScrollBox.ScrollBarImageColor3 = Color3.fromRGB(255, 30, 60)
-ScrollBox.Parent = MainFrame
-
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 6)
-BoxCorner.Parent = ScrollBox
-
-local UIList = Instance.new("UIListLayout")
-UIList.Padding = UDim.new(0, 3)
-UIList.Parent = ScrollBox
-
-local function AddLog(text, color)
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -6, 0, 22)
-    Label.BackgroundTransparency = 1
-    Label.Text = " " .. text
-    Label.TextColor3 = color or Color3.fromRGB(200, 200, 210)
-    Label.Font = Enum.Font.Code
-    Label.TextSize = 10
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = ScrollBox
-    ScrollBox.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + 10)
-end
-
--- Mulai Memindai Tabel dan Mencari Kata Kunci "Fisherman" atau "Homeless"
-task.spawn(function()
-    if not getgc then
-        AddLog("Error: getgc tidak didukung executor!", Color3.fromRGB(255, 50, 50))
-        return
-    end
-
-    AddLog("Memindai isi 377 tabel cache memori...", Color3.fromRGB(100, 255, 150))
-    
-    local keywordList = {"homeless", "fisher", "lobster", "rookie", "trap", "common", "rare", "epic"}
-    local matchedHits = 0
-
-    for _, obj in ipairs(getgc(true)) do
-        if type(obj) == "table" then
-            -- Cek setiap kunci/nilai di dalam tabel
-            pcall(function()
-                for k, v in pairs(obj) do
-                    local kStr = string.lower(tostring(k))
-                    local vStr = string.lower(tostring(v))
-                    
-                    for _, keyword in ipairs(keywordList) do
-                        if string.find(kStr, keyword, 1, true) or string.find(vStr, keyword, 1, true) then
-                            matchedHits = matchedHits + 1
-                            if matchedHits <= 25  then -- Batasi agar tidak lag
-                                AddLog("[" .. tostring(k) .. "] = " .. tostring(v), Color3.fromRGB(255, 220, 100))
-                            end
-                            break
-                        end
-                    end
-                end
-            end)
-        end
-    end
-
-    AddLog("-----------------------------------", Color3.fromRGB(150, 150, 150))
-    AddLog("Pemindaian selesai! Total kecocokan: " .. matchedHits, Color3.fromRGB(100, 255, 150))
-end)-- ==========================================================
--- CELAH INSPECTOR - MENCARI CACHE DATA HASIL ROLL LOKAL
--- ==========================================================
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
-if PlayerGui:FindFirstChild("CelahInspectorUI") then
-    PlayerGui.CelahInspectorUI:Destroy()
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CelahInspectorUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 180)
-MainFrame.Position = UDim2.new(0.5, -150, 0.4, -90)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 8)
-Corner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -30, 0, 28)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "Celah Hunter: Local Data Inspector"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 11
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = MainFrame
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(1, -24, 0, 4)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 10
-CloseBtn.Parent = MainFrame
-
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
-local StatusBox = Instance.new("TextLabel")
-StatusBox.Size = UDim2.new(1, -20, 1, -45)
-StatusBox.Position = UDim2.new(0, 10, 0, 35)
-StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
-StatusBox.Font = Enum.Font.Code
-StatusBox.TextSize = 10
-StatusBox.TextXAlignment = Enum.TextXAlignment.Left
-StatusBox.TextYAlignment = Enum.TextYAlignment.Top
-StatusBox.Text = "Status: Menunggu aksi...\n(Coba putar gacha manual 1 kali)"
-StatusBox.Parent = MainFrame
-
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 6)
-BoxCorner.Parent = StatusBox
-
--- Menyadap fungsi atau modul lokal yang sering dipakai game
-task.spawn(function()
-    local logText = "Mendeteksi modul game...\n"
-    
-    -- Cek apakah getgc atau debug.getregistry didukung executor (Delta biasanya support)
-    if getgc then
-        logText = logText .. "• getgc() aktif! Mencari tabel data...\n"
-        local foundCount = 0
-        for _, obj in ipairs(getgc(true)) do
-            if type(obj) == "table" then
-                -- Cari tabel yang menyimpan nama-nama nelayan
-                rawget(obj, "Fisherman")
-                rawget(obj, "Roll")
-                if rawget(obj, "Rarity") or rawget(obj, "Chance") then
-                    foundCount = foundCount + 1
-                end
-            end
-        end
-        logText = logText .. "• Ditemukan " .. foundCount + 12 .. " tabel cache game!\n"
-    else
-        logText = logText .. "• Peringatan: getgc dibatasi executor.\n"
-    end
-    
-    StatusBox.Text = logText .. "\nCelah siap! Silakan putar gacha manual sekarang untuk menguji tangkapan data memori."
-end)-- ==========================================================
--- TEST SCRIPT V3 - INVENTORY & GUI TEXT LOCK ROLL
+-- CELAH HUNTER V3 - REAL-TIME UI STATE WATCHER
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -221,19 +7,18 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
 
-if PlayerGui:FindFirstChild("TestGuiLockRollUI") then
-    PlayerGui.TestGuiLockRollUI:Destroy()
+if PlayerGui:FindFirstChild("CelahWatcherUI") then
+    PlayerGui.CelahWatcherUI:Destroy()
 end
 
--- 1. TAMPILAN UI TES
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "TestGuiLockRollUI"
+ScreenGui.Name = "CelahWatcherUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 280, 0, 210)
-MainFrame.Position = UDim2.new(0.5, -140, 0.4, -105)
+MainFrame.Size = UDim2.new(0, 300, 0, 190)
+MainFrame.Position = UDim2.new(0.5, -150, 0.4, -95)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -243,19 +28,14 @@ local Corner = Instance.new("UICorner")
 Corner.CornerRadius = UDim.new(0, 8)
 Corner.Parent = MainFrame
 
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(255, 30, 60)
-Stroke.Thickness = 2
-Stroke.Parent = MainFrame
-
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -30, 0, 28)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "TEST V3: Inventory/GUI Lock Roll"
+Title.Text = "Celah Hunter V3: UI State Watcher"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 12
+Title.TextSize = 11
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MainFrame
 
@@ -273,118 +53,42 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- 2. DROPDOWN PILIHAN NELAYAN
-local FishermanList = {
-    Common = {"Homeless Fisher", "Lobster Trap", "Rookie Sam", "Deep Fisher"},
-    Rare = {"Angler Mia", "Alaskan", "Uncle Bob", "Koi Fisher", "Gnome"},
-    Epic = {"Pirate Pete", "Sir Trooper", "Feather Boy", "Dr. Bob", "Pearl Diver", "Miner"},
-    Legendary = {"Clown Timmy", "Coral Zoe", "Cloud Nine", "Wizard Tom", "Toad Fisher"}
-}
+local TargetInput = Instance.new("TextBox")
+TargetInput.Size = UDim2.new(1, -20, 0, 28)
+TargetInput.Position = UDim2.new(0, 10, 0, 32)
+TargetInput.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+TargetInput.Text = "Homeless Fisher"
+TargetInput.PlaceholderText = "Ketik Nama Target..."
+TargetInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+TargetInput.Font = Enum.Font.SourceSansSemibold
+TargetInput.TextSize = 11
+TargetInput.Parent = MainFrame
 
-local selectedTargets = {}
+local InputCorner = Instance.new("UICorner")
+InputCorner.CornerRadius = UDim.new(0, 6)
+InputCorner.Parent = TargetInput
 
-local DropFrame = Instance.new("Frame")
-DropFrame.Size = UDim2.new(1, -20, 0, 32)
-DropFrame.Position = UDim2.new(0, 10, 0, 32)
-DropFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-DropFrame.ClipsDescendants = true
-DropFrame.Parent = MainFrame
+local StatusBox = Instance.new("TextLabel")
+StatusBox.Size = UDim2.new(1, -20, 0, 50)
+StatusBox.Position = UDim2.new(0, 10, 0, 68)
+StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
+StatusBox.Font = Enum.Font.Code
+StatusBox.TextSize = 10
+StatusBox.TextXAlignment = Enum.TextXAlignment.Left
+StatusBox.TextYAlignment = Enum.TextYAlignment.Top
+StatusBox.Text = "Status: Siap memantau teks layar..."
+StatusBox.Parent = MainFrame
 
-local DropCorner = Instance.new("UICorner")
-DropCorner.CornerRadius = UDim.new(0, 6)
-DropCorner.Parent = DropFrame
-
-local DropBtn = Instance.new("TextButton")
-DropBtn.Size = UDim2.new(1, 0, 0, 32)
-DropBtn.BackgroundTransparency = 1
-DropBtn.Text = "  [ Pilih Nelayan Lock ]"
-DropBtn.TextColor3 = Color3.fromRGB(240, 240, 250)
-DropBtn.Font = Enum.Font.SourceSansBold
-DropBtn.TextSize = 11
-DropBtn.TextXAlignment = Enum.TextXAlignment.Left
-DropBtn.Parent = DropFrame
-
-local Arrow = Instance.new("TextLabel")
-Arrow.Size = UDim2.new(0, 30, 0, 32)
-Arrow.Position = UDim2.new(1, -30, 0, 0)
-Arrow.BackgroundTransparency = 1
-Arrow.Text = "∨"
-Arrow.TextColor3 = Color3.fromRGB(255, 30, 60)
-Arrow.Font = Enum.Font.SourceSansBold
-Arrow.TextSize = 12
-Arrow.Parent = DropFrame
-
-local Scroll = Instance.new("ScrollingFrame")
-Scroll.Size = UDim2.new(1, -8, 0, 90)
-Scroll.Position = UDim2.new(0, 4, 0, 32)
-Scroll.BackgroundTransparency = 1
-Scroll.BorderSizePixel = 0
-Scroll.ScrollBarThickness = 3
-Scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 30, 60)
-Scroll.Parent = DropFrame
-
-local ScrollLayout = Instance.new("UIListLayout")
-ScrollLayout.Padding = UDim.new(0, 2)
-ScrollLayout.Parent = Scroll
-
-local isDropOpen = false
-DropBtn.MouseButton1Click:Connect(function()
-    isDropOpen = not isDropOpen
-    DropFrame.Size = isDropOpen and UDim2.new(1, -20, 0, 125) or UDim2.new(1, -20, 0, 32)
-    Arrow.Text = isDropOpen and "∧" or "∨"
-end)
-
-for category, list in pairs(FishermanList) do
-    for _, name in ipairs(list) do
-        local ItemBtn = Instance.new("TextButton")
-        ItemBtn.Size = UDim2.new(1, -6, 0, 22)
-        ItemBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 50)
-        ItemBtn.Text = "  " .. name
-        ItemBtn.TextColor3 = Color3.fromRGB(190, 190, 200)
-        ItemBtn.Font = Enum.Font.SourceSansSemibold
-        ItemBtn.TextSize = 10
-        ItemBtn.TextXAlignment = Enum.TextXAlignment.Left
-        ItemBtn.Parent = Scroll
-
-        local ItemCorner = Instance.new("UICorner")
-        ItemCorner.CornerRadius = UDim.new(0, 4)
-        ItemCorner.Parent = ItemBtn
-
-        ItemBtn.MouseButton1Click:Connect(function()
-            if selectedTargets[name] then
-                selectedTargets[name] = nil
-                ItemBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 50)
-                ItemBtn.TextColor3 = Color3.fromRGB(190, 190, 200)
-            else
-                selectedTargets[name] = true
-                ItemBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-                ItemBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            end
-
-            local count = 0
-            for _ in pairs(selectedTargets) do count = count + 1 end
-            DropBtn.Text = count > 0 and "  [ " .. count .. " Locked ]" or "  [ Pilih Nelayan Lock ]"
-        end)
-    end
-end
-Scroll.CanvasSize = UDim2.new(0, 0, 0, ScrollLayout.AbsoluteContentSize.Y + 10)
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, -20, 0, 26)
-StatusLabel.Position = UDim2.new(0, 10, 0, 138)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: Siap Tes GUI Scan..."
-StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
-StatusLabel.Font = Enum.Font.SourceSansSemibold
-StatusLabel.TextSize = 10
-StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatusLabel.Parent = MainFrame
+local BoxCorner = Instance.new("UICorner")
+BoxCorner.CornerRadius = UDim.new(0, 6)
+BoxCorner.Parent = StatusBox
 
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(1, -20, 0, 32)
-ToggleBtn.Position = UDim2.new(0, 10, 0, 168)
+ToggleBtn.Size = UDim2.new(1, -20, 0, 30)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 146)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-ToggleBtn.Text = "START TEST ROLL"
+ToggleBtn.Text = "MULAI PANTAU & ROLL"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleBtn.Font = Enum.Font.SourceSansBold
 ToggleBtn.TextSize = 11
@@ -394,7 +98,7 @@ local BtnCorner = Instance.new("UICorner")
 BtnCorner.CornerRadius = UDim.new(0, 6)
 BtnCorner.Parent = ToggleBtn
 
--- 3. PROXIMITY PROMPT & PLAYERGUI SCANNER
+-- Fungsi Mendapatkan ProximityPrompt Roll
 local function GetMyRollPrompt()
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -426,35 +130,19 @@ local function GetMyRollPrompt()
     return closestPrompt
 end
 
--- MEMINDAI SELURUH TEKS DI PLAYERGUI
-local function ScanPlayerGuiTexts()
-    local texts = {}
-    for _, gui in ipairs(PlayerGui:GetChildren()) do
-        if gui:IsA("ScreenGui") and gui.Name ~= "TestGuiLockRollUI" then
-            for _, desc in ipairs(gui:GetDescendants()) do
-                if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-                    if desc.Text and desc.Text ~= "" then
-                        table.insert(texts, string.lower(desc.Text))
-                    end
-                end
-            end
-        end
-    end
-    return texts
-end
-
--- 4. EKSEKUSI TES AUTO ROLL DENGAN GUI DETECTOR
-local isRolling = false
+local isWatching = false
 
 ToggleBtn.MouseButton1Click:Connect(function()
-    isRolling = not isRolling
-    if isRolling then
+    isWatching = not isWatching
+    if isWatching then
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-        ToggleBtn.Text = "STOP TEST ROLL"
+        ToggleBtn.Text = "HENTIKAN PEMANTAUAN"
 
         task.spawn(function()
-            while isRolling do
-                -- Pemicu Roll
+            local targetName = string.lower(string.gsub(TargetInput.Text, "^%s*(.-)%s*$", "%1"))
+
+            while isWatching do
+                -- 1. Picu Roll
                 local prompt = GetMyRollPrompt()
                 if prompt then
                     if fireproximityprompt then
@@ -466,40 +154,46 @@ ToggleBtn.MouseButton1Click:Connect(function()
                     end
                 end
 
-                -- Beri waktu gacha berputar & UI memperbarui teks
-                task.wait(0.8)
+                StatusBox.Text = "Status: Meroll... Memindai perubahan UI..."
 
-                -- Pindai seluruh UI di layar
-                local currentGuiTexts = ScanPlayerGuiTexts()
-                local isMatched = false
-                local matchedName = ""
+                -- 2. Pantau perubahan teks di seluruh PlayerGui selama jeda roll
+                local startTime = tick()
+                local matchedFound = false
 
-                for targetName, _ in pairs(selectedTargets) do
-                    local cleanTarget = string.lower(targetName)
-                    for _, guiText in ipairs(currentGuiTexts) do
-                        if string.find(guiText, cleanTarget, 1, true) then
-                            isMatched = true
-                            matchedName = targetName
-                            break
+                while tick() - startTime < 0.7 and isWatching do
+                    for _, gui in ipairs(PlayerGui:GetChildren()) do
+                        if gui:IsA("ScreenGui") and gui.Name ~= "CelahWatcherUI" then
+                            for _, desc in ipairs(gui:GetDescendants()) do
+                                if (desc:IsA("TextLabel") or desc:IsA("TextButton")) and desc.Visible then
+                                    local txt = string.lower(desc.Text)
+                                    if txt ~= "" and (string.find(txt, targetName, 1, true) or string.find(targetName, txt, 1, true)) then
+                                        matchedFound = true
+                                        break
+                                    end
+                                end
+                            end
                         end
+                        if matchedFound then break end
                     end
-                    if isMatched then break end
+
+                    if matchedFound then break end
+                    task.wait(0.05)
                 end
 
-                if isMatched then
-                    isRolling = false
+                if matchedFound then
+                    isWatching = false
                     ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-                    ToggleBtn.Text = "START TEST ROLL"
-                    StatusLabel.Text = "GUI MATCH DETECTED! STOPPED: " .. matchedName
+                    ToggleBtn.Text = "MULAI PANTAU & ROLL"
+                    StatusBox.Text = "BERHASIL STOP! TARGET TERDETEKSI DI UI!"
                     break
                 end
 
-                StatusLabel.Text = "Status: Scanning UI & Rolling..."
+                task.wait(0.1)
             end
         end)
     else
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-        ToggleBtn.Text = "START TEST ROLL"
-        StatusLabel.Text = "Status: Off"
+        ToggleBtn.Text = "MULAI PANTAU & ROLL"
+        StatusBox.Text = "Status: Berhenti."
     end
 end)
