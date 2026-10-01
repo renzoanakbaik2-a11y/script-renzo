@@ -1,4 +1,768 @@
 -- ==========================================================
+-- ROLL A FISHERMAN - SPEED HUB X (FIXED LOCK & AUTO STOP)
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+if PlayerGui:FindFirstChild("FishermanSpeedHubUI") then
+    PlayerGui.FishermanSpeedHubUI:Destroy()
+end
+
+-- 1. MAIN SCREEN GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FishermanSpeedHubUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+-- 2. MAIN CONTAINER
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 480, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -140)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 8)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(255, 30, 60)
+MainStroke.Thickness = 2.5
+MainStroke.Parent = MainFrame
+
+-- Top Bar
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 32)
+TopBar.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopBarCorner = Instance.new("UICorner")
+TopBarCorner.CornerRadius = UDim.new(0, 8)
+TopBarCorner.Parent = TopBar
+
+local TopBarLine = Instance.new("Frame")
+TopBarLine.Size = UDim2.new(1, 0, 0, 2)
+TopBarLine.Position = UDim2.new(0, 0, 1, -2)
+TopBarLine.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+TopBarLine.BorderSizePixel = 0
+TopBarLine.Parent = TopBar
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -40, 1, 0)
+TitleText.Position = UDim2.new(0, 12, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "Speed Hub X | Roll a Fisherman"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Font = Enum.Font.SourceSansBold
+TitleText.TextSize = 12
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TopBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 22, 0, 22)
+CloseBtn.Position = UDim2.new(1, -26, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 11
+CloseBtn.Parent = TopBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 4)
+CloseCorner.Parent = CloseBtn
+
+-- 3. SIDEBAR (KIRI)
+local Sidebar = Instance.new("Frame")
+Sidebar.Name = "Sidebar"
+Sidebar.Size = UDim2.new(0, 120, 1, -32)
+Sidebar.Position = UDim2.new(0, 0, 0, 32)
+Sidebar.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+Sidebar.BorderSizePixel = 0
+Sidebar.Parent = MainFrame
+
+local SidebarRightLine = Instance.new("Frame")
+SidebarRightLine.Name = "SidebarRightLine"
+SidebarRightLine.Size = UDim2.new(0, 2, 1, 0)
+SidebarRightLine.Position = UDim2.new(1, -2, 0, 0)
+SidebarRightLine.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+SidebarRightLine.BorderSizePixel = 0
+SidebarRightLine.Parent = Sidebar
+
+-- 4. CONTAINER KONTEN TAB
+local ContentArea = Instance.new("Frame")
+ContentArea.Name = "ContentArea"
+ContentArea.Size = UDim2.new(1, -130, 1, -40)
+ContentArea.Position = UDim2.new(0, 130, 0, 38)
+ContentArea.BackgroundTransparency = 1
+ContentArea.Parent = MainFrame
+
+local TabPages = {}
+
+local function CreateTabPage(name)
+    local Page = Instance.new("ScrollingFrame")
+    Page.Name = name .. "Page"
+    Page.Size = UDim2.new(1, -5, 1, 0)
+    Page.BackgroundTransparency = 1
+    Page.BorderSizePixel = 0
+    Page.ScrollBarThickness = 3
+    Page.ScrollBarImageColor3 = Color3.fromRGB(255, 30, 60)
+    Page.Visible = false
+    Page.Parent = ContentArea
+
+    local PageList = Instance.new("UIListLayout")
+    PageList.Padding = UDim.new(0, 6)
+    PageList.SortOrder = Enum.SortOrder.LayoutOrder
+    PageList.Parent = Page
+
+    TabPages[name] = Page
+    return Page
+end
+
+local HomeTab = CreateTabPage("Home")
+local AutomaticallyTab = CreateTabPage("Automatically")
+local MainTab = CreateTabPage("Main")
+
+HomeTab.Visible = true
+
+-- LOGIKA TAB SIDEBAR
+local currentTabBtn = nil
+
+local function SwitchTab(tabName, btn)
+    for name, page in pairs(TabPages) do
+        page.Visible = (name == tabName)
+    end
+    if currentTabBtn then
+        currentTabBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+        currentTabBtn.TextColor3 = Color3.fromRGB(160, 160, 170)
+    end
+    btn.BackgroundColor3 = Color3.fromRGB(45, 20, 28)
+    btn.TextColor3 = Color3.fromRGB(255, 80, 100)
+    currentTabBtn = btn
+end
+
+local function CreateTabButton(name, posY)
+    local Btn = Instance.new("TextButton")
+    Btn.Name = name .. "Btn"
+    Btn.Size = UDim2.new(0, 108, 0, 32)
+    Btn.Position = UDim2.new(0, 6, 0, posY)
+    Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    Btn.Text = "  " .. name
+    Btn.TextColor3 = Color3.fromRGB(160, 160, 170)
+    Btn.Font = Enum.Font.SourceSansBold
+    Btn.TextSize = 12
+    Btn.TextXAlignment = Enum.TextXAlignment.Left
+    Btn.Parent = Sidebar
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.Parent = Btn
+
+    Btn.MouseButton1Click:Connect(function()
+        SwitchTab(name, Btn)
+    end)
+
+    return Btn
+end
+
+local HomeBtn = CreateTabButton("Home", 8)
+local AutoBtn = CreateTabButton("Automatically", 46)
+local MainBtn = CreateTabButton("Main", 84)
+
+SwitchTab("Home", HomeBtn)
+
+-- 5. DROPDOWN SECTION BUILDER DENGAN FITUR MULTI-SELECT & AUTO ROLL INTEGRATED
+local selectedFishermen = {}
+local autoRollActive = false
+local updateAutoRollToggleUI = nil
+
+local function CleanString(str)
+    return string.lower(string.match(tostring(str), "^%s*(.-)%s*$") or tostring(str))
+end
+
+local function CreateSection(parent, sectionTitle)
+    local SectionFrame = Instance.new("Frame")
+    SectionFrame.Size = UDim2.new(1, -5, 0, 36)
+    SectionFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+    SectionFrame.ClipsDescendants = true
+    SectionFrame.Parent = parent
+
+    local SectionCorner = Instance.new("UICorner")
+    SectionCorner.CornerRadius = UDim.new(0, 6)
+    SectionCorner.Parent = SectionFrame
+
+    local SectionStroke = Instance.new("UIStroke")
+    SectionStroke.Color = Color3.fromRGB(255, 30, 60)
+    SectionStroke.Thickness = 1.2
+    SectionStroke.Parent = SectionFrame
+
+    local HeaderBtn = Instance.new("TextButton")
+    HeaderBtn.Size = UDim2.new(1, 0, 0, 36)
+    HeaderBtn.BackgroundTransparency = 1
+    HeaderBtn.Text = "  " .. sectionTitle
+    HeaderBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    HeaderBtn.Font = Enum.Font.SourceSansBold
+    HeaderBtn.TextSize = 12
+    HeaderBtn.TextXAlignment = Enum.TextXAlignment.Left
+    HeaderBtn.Parent = SectionFrame
+
+    local ArrowLabel = Instance.new("TextLabel")
+    ArrowLabel.Size = UDim2.new(0, 30, 0, 36)
+    ArrowLabel.Position = UDim2.new(1, -30, 0, 0)
+    ArrowLabel.BackgroundTransparency = 1
+    ArrowLabel.Text = "∨"
+    ArrowLabel.TextColor3 = Color3.fromRGB(255, 30, 60)
+    ArrowLabel.Font = Enum.Font.SourceSansBold
+    ArrowLabel.TextSize = 14
+    ArrowLabel.Parent = SectionFrame
+
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, 0, 0, 0)
+    Container.Position = UDim2.new(0, 0, 0, 36)
+    Container.BackgroundTransparency = 1
+    Container.Parent = SectionFrame
+
+    local ContainerList = Instance.new("UIListLayout")
+    ContainerList.Padding = UDim.new(0, 4)
+    ContainerList.SortOrder = Enum.SortOrder.LayoutOrder
+    ContainerList.Parent = Container
+
+    local isExpanded = false
+
+    local function UpdateSectionSize()
+        if isExpanded then
+            local contentHeight = ContainerList.AbsoluteContentSize.Y
+            SectionFrame.Size = UDim2.new(1, -5, 0, 36 + contentHeight + 8)
+            Container.Size = UDim2.new(1, 0, 0, contentHeight)
+            ArrowLabel.Text = "∧"
+        else
+            SectionFrame.Size = UDim2.new(1, -5, 0, 36)
+            ArrowLabel.Text = "∨"
+        end
+    end
+
+    HeaderBtn.MouseButton1Click:Connect(function()
+        isExpanded = not isExpanded
+        UpdateSectionSize()
+    end)
+
+    local SectionAPI = {}
+    
+    function SectionAPI:AddToggle(labelText, defaultState, callback, isAutoRollToggle)
+        local ToggleFrame = Instance.new("Frame")
+        ToggleFrame.Size = UDim2.new(1, -12, 0, 30)
+        ToggleFrame.Position = UDim2.new(0, 6, 0, 0)
+        ToggleFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+        ToggleFrame.Parent = Container
+
+        local ToggleCorner = Instance.new("UICorner")
+        ToggleCorner.CornerRadius = UDim.new(0, 4)
+        ToggleCorner.Parent = ToggleFrame
+
+        local Label = Instance.new("TextLabel")
+        Label.Size = UDim2.new(1, -50, 1, 0)
+        Label.Position = UDim2.new(0, 8, 0, 0)
+        Label.BackgroundTransparency = 1
+        Label.Text = labelText
+        Label.TextColor3 = Color3.fromRGB(220, 220, 230)
+        Label.Font = Enum.Font.SourceSansSemibold
+        Label.TextSize = 11
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = ToggleFrame
+
+        local SwitchBtn = Instance.new("TextButton")
+        SwitchBtn.Size = UDim2.new(0, 38, 0, 18)
+        SwitchBtn.Position = UDim2.new(1, -44, 0.5, -9)
+        SwitchBtn.BackgroundColor3 = defaultState and Color3.fromRGB(255, 30, 60) or Color3.fromRGB(60, 60, 75)
+        SwitchBtn.Text = defaultState and "ON" or "OFF"
+        SwitchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        SwitchBtn.Font = Enum.Font.SourceSansBold
+        SwitchBtn.TextSize = 9
+        SwitchBtn.Parent = ToggleFrame
+
+        local SwitchCorner = Instance.new("UICorner")
+        SwitchCorner.CornerRadius = UDim.new(0, 8)
+        SwitchCorner.Parent = SwitchBtn
+
+        local state = defaultState
+
+        local function SetToggleState(newState)
+            state = newState
+            SwitchBtn.BackgroundColor3 = state and Color3.fromRGB(255, 30, 60) or Color3.fromRGB(60, 60, 75)
+            SwitchBtn.Text = state and "ON" or "OFF"
+            if callback then callback(state) end
+        end
+
+        SwitchBtn.MouseButton1Click:Connect(function()
+            SetToggleState(not state)
+        end)
+
+        if isAutoRollToggle then
+            updateAutoRollToggleUI = function(forcedState)
+                SetToggleState(forcedState)
+            end
+        end
+
+        if isExpanded then UpdateSectionSize() end
+    end
+
+    function SectionAPI:AddSubText(text)
+        local SubTextLabel = Instance.new("TextLabel")
+        SubTextLabel.Size = UDim2.new(1, -12, 0, 20)
+        SubTextLabel.Position = UDim2.new(0, 6, 0, 0)
+        SubTextLabel.BackgroundTransparency = 1
+        SubTextLabel.Text = "  [ " .. text .. " ]"
+        SubTextLabel.TextColor3 = Color3.fromRGB(255, 80, 100)
+        SubTextLabel.Font = Enum.Font.SourceSansBold
+        SubTextLabel.TextSize = 10
+        SubTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+        SubTextLabel.Parent = Container
+
+        if isExpanded then UpdateSectionSize() end
+    end
+
+    function SectionAPI:AddFishermanDropdown(defaultTitle, listData, callback)
+        local DropFrame = Instance.new("Frame")
+        DropFrame.Size = UDim2.new(1, -12, 0, 32)
+        DropFrame.Position = UDim2.new(0, 6, 0, 0)
+        DropFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+        DropFrame.ClipsDescendants = true
+        DropFrame.Parent = Container
+
+        local DropCorner = Instance.new("UICorner")
+        DropCorner.CornerRadius = UDim.new(0, 4)
+        DropCorner.Parent = DropFrame
+
+        local DropStroke = Instance.new("UIStroke")
+        DropStroke.Color = Color3.fromRGB(50, 50, 65)
+        DropStroke.Thickness = 1
+        DropStroke.Parent = DropFrame
+
+        local MainDropBtn = Instance.new("TextButton")
+        MainDropBtn.Size = UDim2.new(1, 0, 0, 32)
+        MainDropBtn.BackgroundTransparency = 1
+        MainDropBtn.Text = "  " .. defaultTitle
+        MainDropBtn.TextColor3 = Color3.fromRGB(240, 240, 250)
+        MainDropBtn.Font = Enum.Font.SourceSansBold
+        MainDropBtn.TextSize = 11
+        MainDropBtn.TextXAlignment = Enum.TextXAlignment.Left
+        MainDropBtn.Parent = DropFrame
+
+        local Arrow = Instance.new("TextLabel")
+        Arrow.Size = UDim2.new(0, 30, 0, 32)
+        Arrow.Position = UDim2.new(1, -30, 0, 0)
+        Arrow.BackgroundTransparency = 1
+        Arrow.Text = "∨"
+        Arrow.TextColor3 = Color3.fromRGB(255, 30, 60)
+        Arrow.Font = Enum.Font.SourceSansBold
+        Arrow.TextSize = 12
+        Arrow.Parent = DropFrame
+
+        local ListScroll = Instance.new("ScrollingFrame")
+        ListScroll.Size = UDim2.new(1, -8, 0, 120)
+        ListScroll.Position = UDim2.new(0, 4, 0, 32)
+        ListScroll.BackgroundTransparency = 1
+        ListScroll.BorderSizePixel = 0
+        ListScroll.ScrollBarThickness = 3
+        ListScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 30, 60)
+        ListScroll.Parent = DropFrame
+
+        local ListLayout = Instance.new("UIListLayout")
+        ListLayout.Padding = UDim.new(0, 3)
+        ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        ListLayout.Parent = ListScroll
+
+        local selectedQueue = {}
+        local selectedMap = {}
+
+        local function RefreshHeaderTitle()
+            if #selectedQueue > 0 then
+                MainDropBtn.Text = "  [ " .. #selectedQueue .. " Locked ] " .. selectedQueue[1]
+                MainDropBtn.TextColor3 = Color3.fromRGB(255, 80, 100)
+            else
+                MainDropBtn.Text = "  " .. defaultTitle
+                MainDropBtn.TextColor3 = Color3.fromRGB(240, 240, 250)
+            end
+        end
+
+        local isDropOpen = false
+        local function ToggleMenu()
+            isDropOpen = not isDropOpen
+            if isDropOpen then
+                DropFrame.Size = UDim2.new(1, -12, 0, 158)
+                Arrow.Text = "∧"
+            else
+                DropFrame.Size = UDim2.new(1, -12, 0, 32)
+                Arrow.Text = "∨"
+            end
+            if isExpanded then UpdateSectionSize() end
+        end
+
+        MainDropBtn.MouseButton1Click:Connect(ToggleMenu)
+
+        for rarityName, fishers in pairs(listData) do
+            local RarityHeader = Instance.new("TextLabel")
+            RarityHeader.Size = UDim2.new(1, 0, 0, 18)
+            RarityHeader.BackgroundTransparency = 1
+            RarityHeader.Text = "-- " .. string.upper(rarityName) .. " --"
+            RarityHeader.TextColor3 = Color3.fromRGB(255, 30, 60)
+            RarityHeader.Font = Enum.Font.SourceSansBold
+            RarityHeader.TextSize = 10
+            RarityHeader.Parent = ListScroll
+
+            for _, fisherName in ipairs(fishers) do
+                local ItemBtn = Instance.new("TextButton")
+                ItemBtn.Size = UDim2.new(1, -6, 0, 24)
+                ItemBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+                ItemBtn.Text = "  " .. fisherName
+                ItemBtn.TextColor3 = Color3.fromRGB(180, 180, 190)
+                ItemBtn.Font = Enum.Font.SourceSansSemibold
+                ItemBtn.TextSize = 10
+                ItemBtn.TextXAlignment = Enum.TextXAlignment.Left
+                ItemBtn.Parent = ListScroll
+
+                local ItemCorner = Instance.new("UICorner")
+                ItemCorner.CornerRadius = UDim.new(0, 4)
+                ItemCorner.Parent = ItemBtn
+
+                local ItemCheck = Instance.new("TextLabel")
+                ItemCheck.Size = UDim2.new(0, 20, 1, 0)
+                ItemCheck.Position = UDim2.new(1, -22, 0, 0)
+                ItemCheck.BackgroundTransparency = 1
+                ItemCheck.Text = ""
+                ItemCheck.TextColor3 = Color3.fromRGB(255, 30, 60)
+                ItemCheck.Font = Enum.Font.SourceSansBold
+                ItemCheck.TextSize = 11
+                ItemCheck.Parent = ItemBtn
+
+                ItemBtn.MouseButton1Click:Connect(function()
+                    if selectedMap[fisherName] then
+                        selectedMap[fisherName] = nil
+                        ItemBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+                        ItemBtn.TextColor3 = Color3.fromRGB(180, 180, 190)
+                        ItemCheck.Text = ""
+                        for i, name in ipairs(selectedQueue) do
+                            if name == fisherName then
+                                table.remove(selectedQueue, i)
+                                break
+                            end
+                        end
+                    else
+                        selectedMap[fisherName] = true
+                        ItemBtn.BackgroundColor3 = Color3.fromRGB(55, 20, 30)
+                        ItemBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        ItemCheck.Text = "✓"
+                        table.insert(selectedQueue, fisherName)
+                    end
+
+                    selectedFishermen = selectedQueue
+                    RefreshHeaderTitle()
+                    if callback then callback(selectedQueue) end
+                end)
+            end
+        end
+
+        ListScroll.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 10)
+        if isExpanded then UpdateSectionSize() end
+    end
+
+    return SectionAPI
+end
+
+-- 6. DAFTAR KELOMPOK 36 NELAYAN
+local FishermanList = {
+    Common = {"Homeless Fisher", "Lobster Trap", "Rookie Sam", "Deep Fisher"},
+    Rare = {"Angler Mia", "Alaskan", "Uncle Bob", "Koi Fisher", "Gnome"},
+    Epic = {"Pirate Pete", "Sir Trooper", "Feather Boy", "Dr. Bob", "Pearl Diver", "Miner"},
+    Legendary = {"Clown Timmy", "Coral Zoe", "Cloud Nine", "Wizard Tom", "Toad Fisher"},
+    Mythical = {"Soldier Steve", "Sea Commander", "Cursed Pirate", "Arctic Noah"},
+    Divine = {"Alien Fisher", "Bee Keeper", "Hazmat"},
+    Deep = {"Tide Knight", "Necromancer", "Ice King", "Tyrone"},
+    Event = {"Tidal Champion", "Kid Floaty", "Crab Lord", "Beach King", "Sea Specialist"}
+}
+
+-- 7. LOGIKA AUTO ROLL UTAMA (PROXIMITY PROMPT & STRICT ANNOUNCE CHECK)
+local function GetMyRollPrompt()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = character.HumanoidRootPart.Position
+
+    local closestPrompt = nil
+    local shortestDistance = 15
+
+    local scriptable = Workspace:FindFirstChild("Scriptable")
+    if scriptable and scriptable:FindFirstChild("Plots") and scriptable.Plots:FindFirstChild("Buildings") then
+        for _, building in ipairs(scriptable.Plots.Buildings:GetChildren()) do
+            local rollBtn = building:FindFirstChild("RollButton")
+            if rollBtn then
+                for _, prompt in ipairs(rollBtn:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        local part = prompt.Parent
+                        if part and part:IsA("BasePart") then
+                            local dist = (part.Position - myPos).Magnitude
+                            if dist < shortestDistance then
+                                shortestDistance = dist
+                                closestPrompt = prompt
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestPrompt
+end
+
+-- LISTEN KE REMOTE ANNOUNCE DARI SERVER DENGAN PENCOCOKAN TEKS PRESISI
+pcall(function()
+    local NetFolder = ReplicatedStorage:WaitForChild("Modules", 2):WaitForChild("Util", 2):WaitForChild("Net", 2)
+    local AnnounceRemote = NetFolder:FindFirstChild("Announce")
+
+    if AnnounceRemote then
+        AnnounceRemote.OnClientEvent:Connect(function(...)
+            local args = {...}
+            if autoRollActive and #args >= 3 then
+                local pName = CleanString(args[1])
+                local action = CleanString(args[2])
+                local rolledFisherman = CleanString(args[3])
+                local myName = CleanString(LocalPlayer.Name)
+
+                -- Verifikasi bahwa pesan dipancarkan untuk player ini dan jenis aksinya "rolled"
+                if pName == myName and (action == "rolled" or string.find(action, "roll")) then
+                    for _, targetName in ipairs(selectedFishermen) do
+                        local targetClean = CleanString(targetName)
+                        
+                        -- Pencocokan fleksibel dua arah (mencegah kegagalan akibat spasi/nama ringkas)
+                        if string.find(rolledFisherman, targetClean, 1, true) or string.find(targetClean, rolledFisherman, 1, true) then
+                            autoRollActive = false
+                            if updateAutoRollToggleUI then
+                                updateAutoRollToggleUI(false)
+                            end
+                            break
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- 8. MENGISI TAB AUTOMATICALLY & MAIN
+local CollectSection = CreateSection(AutomaticallyTab, "Automation Collect")
+CollectSection:AddToggle("Auto Collect Money", false, function(state) end)
+CollectSection:AddToggle("Auto Collect Fish", false, function(state) end)
+
+local RollSection = CreateSection(AutomaticallyTab, "Automation Roll")
+RollSection:AddFishermanDropdown("Pilih Nelayan", FishermanList, function(selectedList) end)
+
+RollSection:AddToggle("Auto Roll Fisherman", false, function(state)
+    autoRollActive = state
+    if autoRollActive then
+        task.spawn(function()
+            while autoRollActive do
+                if #selectedFishermen == 0 then
+                    autoRollActive = false
+                    if updateAutoRollToggleUI then updateAutoRollToggleUI(false) end
+                    break
+                end
+
+                local prompt = GetMyRollPrompt()
+                if prompt then
+                    if fireproximityprompt then
+                        fireproximityprompt(prompt)
+                    else
+                        prompt:InputHoldBegin()
+                        task.wait(0.05)
+                        prompt:InputHoldEnd()
+                    end
+                end
+
+                -- Interval aman anti-spam & memberi ruang bagi event server merespons
+                task.wait(0.7)
+            end
+        end)
+    end
+end, true)
+
+local SellSection = CreateSection(AutomaticallyTab, "Automation Sell")
+SellSection:AddToggle("Auto Sell Fish", false, function(state) end)
+
+local EventSection = CreateSection(MainTab, "Event & Machines")
+EventSection:AddSubText("FUSE MACHINE")
+EventSection:AddToggle("Auto Fuse Machine", false, function(state) end)
+EventSection:AddSubText("MUTATION MACHINE")
+EventSection:AddToggle("Auto Mutation Machine", false, function(state) end)
+
+local RebirthSection = CreateSection(MainTab, "Automation Rebirth")
+RebirthSection:AddToggle("Auto Collect Rebirth Fish", false, function(state) end)
+RebirthSection:AddToggle("Auto Rebirth", false, function(state) end)
+
+local UpgradeSection = CreateSection(MainTab, "Upgrades Shop")
+UpgradeSection:AddToggle("Auto Buy Upgrades", false, function(state) end)
+
+-- 9. TAB HOME DASHBOARD
+local ProfileCard = Instance.new("Frame")
+ProfileCard.Size = UDim2.new(1, -5, 0, 42)
+ProfileCard.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+ProfileCard.Parent = HomeTab
+
+local ProfileCorner = Instance.new("UICorner")
+ProfileCorner.CornerRadius = UDim.new(0, 6)
+ProfileCorner.Parent = ProfileCard
+
+local ProfileStroke = Instance.new("UIStroke")
+ProfileStroke.Color = Color3.fromRGB(255, 30, 60)
+ProfileStroke.Thickness = 1.5
+ProfileStroke.Parent = ProfileCard
+
+local UserText = Instance.new("TextLabel")
+UserText.Size = UDim2.new(1, -10, 1, 0)
+UserText.Position = UDim2.new(0, 10, 0, 0)
+UserText.BackgroundTransparency = 1
+UserText.Text = "Welcome, " .. LocalPlayer.Name .. "!\nStatus: Connected & Active"
+UserText.TextColor3 = Color3.fromRGB(255, 80, 100)
+UserText.Font = Enum.Font.SourceSansBold
+UserText.TextSize = 12
+UserText.TextXAlignment = Enum.TextXAlignment.Left
+UserText.Parent = ProfileCard
+
+local ServerCard = Instance.new("Frame")
+ServerCard.Size = UDim2.new(1, -5, 0, 160)
+ServerCard.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+ServerCard.Parent = HomeTab
+
+local ServerCorner = Instance.new("UICorner")
+ServerCorner.CornerRadius = UDim.new(0, 6)
+ServerCorner.Parent = ServerCard
+
+local ServerStroke = Instance.new("UIStroke")
+ServerStroke.Color = Color3.fromRGB(255, 30, 60)
+ServerStroke.Thickness = 1.5
+ServerStroke.Parent = ServerCard
+
+local StatsText = Instance.new("TextLabel")
+StatsText.Size = UDim2.new(1, -16, 1, -10)
+StatsText.Position = UDim2.new(0, 10, 0, 8)
+StatsText.BackgroundTransparency = 1
+StatsText.Text = "SERVER INFORMATION:\n\n• Jam (Real Life)  : " .. os.date("%H:%M:%S") .. "\n• Time Played     : 00h 00m 00s\n• Server Players   : -- / --\n• Richest Player   : Scanning..."
+StatsText.TextColor3 = Color3.fromRGB(255, 90, 110)
+StatsText.Font = Enum.Font.SourceSansBold
+StatsText.TextSize = 11
+StatsText.TextXAlignment = Enum.TextXAlignment.Left
+StatsText.TextYAlignment = Enum.TextYAlignment.Top
+StatsText.Parent = ServerCard
+
+local startTime = os.time()
+
+local function GetPlayerMoney(plr)
+    local money = 0
+    local lstats = plr:FindFirstChild("leaderstats")
+    if lstats then
+        for _, child in ipairs(lstats:GetChildren()) do
+            if child:IsA("ValueBase") then
+                local n = string.lower(child.Name)
+                if n == "cash" or n == "money" or n == "coins" or n == "$" or string.find(n, "cash") then
+                    return tonumber(child.Value) or 0
+                end
+            end
+        end
+    end
+    local dataFolder = plr:FindFirstChild("Data") or plr:FindFirstChild("stats")
+    if dataFolder then
+        for _, child in ipairs(dataFolder:GetChildren()) do
+            if child:IsA("ValueBase") then
+                local n = string.lower(child.Name)
+                if n == "cash" or n == "money" or n == "coins" then
+                    return tonumber(child.Value) or 0
+                end
+            end
+        end
+    end
+    return money
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        if not ScreenGui or not ScreenGui.Parent then break end
+
+        local realTimeStr = os.date("%H:%M:%S")
+        local elapsed = os.time() - startTime
+        local hrs = math.floor(elapsed / 3600)
+        local mins = math.floor((elapsed % 3600) / 60)
+        local secs = elapsed % 60
+        local playtimeStr = string.format("%02dh %02dm %02ds", hrs, mins, secs)
+
+        local allPlayers = Players:GetPlayers()
+        local playerAmount = #allPlayers
+        local maxPlayers = Players.MaxPlayers or 6
+
+        local richestName = "None"
+        local maxCash = -1
+
+        for _, plr in ipairs(allPlayers) do
+            local pMoney = GetPlayerMoney(plr)
+            if pMoney > maxCash then
+                maxCash = pMoney
+                richestName = plr.Name
+            end
+        end
+
+        local richestStr = richestName
+        if maxCash > -1 then
+            richestStr = richestName .. " ($" .. tostring(maxCash) .. ")"
+        end
+
+        StatsText.Text = string.format(
+            "SERVER INFORMATION:\n\n• Jam (Real Life)  : %s\n• Time Played     : %s\n• Server Players   : %d / %d Players\n• Richest Player   : %s",
+            realTimeStr,
+            playtimeStr,
+            playerAmount,
+            maxPlayers,
+            richestStr
+        )
+    end
+end)
+
+-- 10. TOMBOL OPEN/CLOSE UI
+local OpenToggleBtn = Instance.new("TextButton")
+OpenToggleBtn.Name = "OpenToggleBtn"
+OpenToggleBtn.Size = UDim2.new(0, 85, 0, 30)
+OpenToggleBtn.Position = UDim2.new(0, 10, 0.2, 0)
+OpenToggleBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+OpenToggleBtn.Text = "SpeedHub X"
+OpenToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenToggleBtn.Font = Enum.Font.SourceSansBold
+OpenToggleBtn.TextSize = 11
+OpenToggleBtn.Active = true
+OpenToggleBtn.Draggable = true
+OpenToggleBtn.Parent = ScreenGui
+
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(0, 6)
+OpenCorner.Parent = OpenToggleBtn
+
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Color = Color3.fromRGB(255, 30, 60)
+OpenStroke.Thickness = 1.5
+OpenStroke.Parent = OpenToggleBtn
+
+OpenToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+end)-- ==========================================================
 -- ROLL A FISHERMAN - SPEED HUB X (FINAL INTEGRATED AUTO ROLL)
 -- ==========================================================
 
