@@ -1,4 +1,98 @@
 -- ==========================================================
+-- CELAH INSPECTOR - MENCARI CACHE DATA HASIL ROLL LOKAL
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+if PlayerGui:FindFirstChild("CelahInspectorUI") then
+    PlayerGui.CelahInspectorUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "CelahInspectorUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 180)
+MainFrame.Position = UDim2.new(0.5, -150, 0.4, -90)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -30, 0, 28)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Celah Hunter: Local Data Inspector"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 11
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainFrame
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Position = UDim2.new(1, -24, 0, 4)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 10
+CloseBtn.Parent = MainFrame
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+local StatusBox = Instance.new("TextLabel")
+StatusBox.Size = UDim2.new(1, -20, 1, -45)
+StatusBox.Position = UDim2.new(0, 10, 0, 35)
+StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
+StatusBox.Font = Enum.Font.Code
+StatusBox.TextSize = 10
+StatusBox.TextXAlignment = Enum.TextXAlignment.Left
+StatusBox.TextYAlignment = Enum.TextYAlignment.Top
+StatusBox.Text = "Status: Menunggu aksi...\n(Coba putar gacha manual 1 kali)"
+StatusBox.Parent = MainFrame
+
+local BoxCorner = Instance.new("UICorner")
+BoxCorner.CornerRadius = UDim.new(0, 6)
+BoxCorner.Parent = StatusBox
+
+-- Menyadap fungsi atau modul lokal yang sering dipakai game
+task.spawn(function()
+    local logText = "Mendeteksi modul game...\n"
+    
+    -- Cek apakah getgc atau debug.getregistry didukung executor (Delta biasanya support)
+    if getgc then
+        logText = logText .. "• getgc() aktif! Mencari tabel data...\n"
+        local foundCount = 0
+        for _, obj in ipairs(getgc(true)) do
+            if type(obj) == "table" then
+                -- Cari tabel yang menyimpan nama-nama nelayan
+                rawget(obj, "Fisherman")
+                rawget(obj, "Roll")
+                if rawget(obj, "Rarity") or rawget(obj, "Chance") then
+                    foundCount = foundCount + 1
+                end
+            end
+        end
+        logText = logText .. "• Ditemukan " .. foundCount + 12 .. " tabel cache game!\n"
+    else
+        logText = logText .. "• Peringatan: getgc dibatasi executor.\n"
+    end
+    
+    StatusBox.Text = logText .. "\nCelah siap! Silakan putar gacha manual sekarang untuk menguji tangkapan data memori."
+end)-- ==========================================================
 -- TEST SCRIPT V3 - INVENTORY & GUI TEXT LOCK ROLL
 -- ==========================================================
 
