@@ -1,5 +1,5 @@
 -- ==========================================================
--- SPEED HUB X - AUTO ROLL + AUTO BUY TARGET (AUTO-SAMBAR)
+-- SPEED HUB X - FULL AUTO ROLL & AUTO-BUY TARGET (FINAL)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -7,13 +7,13 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
 
-if PlayerGui:FindFirstChild("SpeedHubAutoBuyUI") then
-    PlayerGui.SpeedHubAutoBuyUI:Destroy()
+if PlayerGui:FindFirstChild("SpeedHubFinalUI") then
+    PlayerGui.SpeedHubFinalUI:Destroy()
 end
 
--- 1. UI UTAMA
+-- 1. TAMPILAN UTAMA UI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpeedHubAutoBuyUI"
+ScreenGui.Name = "SpeedHubFinalUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
@@ -38,7 +38,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -30, 0, 28)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Speed Hub X | Auto Roll + Auto-Buy"
+Title.Text = "Speed Hub X | Full Auto Roll & Buy"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
@@ -64,11 +64,7 @@ local FishermanList = {
     Common = {"Homeless Fisher", "Lobster Trap", "Rookie Sam", "Deep Fisher"},
     Rare = {"Angler Mia", "Alaskan", "Uncle Bob", "Koi Fisher", "Gnome"},
     Epic = {"Pirate Pete", "Sir Trooper", "Feather Boy", "Dr. Bob", "Pearl Diver", "Miner"},
-    Legendary = {"Clown Timmy", "Coral Zoe", "Cloud Nine", "Wizard Tom", "Toad Fisher"},
-    Mythical = {"Soldier Steve", "Sea Commander", "Cursed Pirate", "Arctic Noah"},
-    Divine = {"Alien Fisher", "Bee Keeper", "Hazmat"},
-    Deep = {"Tide Knight", "Necromancer", "Ice King", "Tyrone"},
-    Event = {"Tidal Champion", "Kid Floaty", "Crab Lord", "Beach King", "Sea Specialist"}
+    Legendary = {"Clown Timmy", "Coral Zoe", "Cloud Nine", "Wizard Tom", "Toad Fisher"}
 }
 
 local selectedTargets = {}
@@ -180,6 +176,7 @@ for rarityName, fishers in pairs(FishermanList) do
 end
 Scroll.CanvasSize = UDim2.new(0, 0, 0, ScrollLayout.AbsoluteContentSize.Y + 10)
 
+-- 3. KOTAK STATUS
 local StatusBox = Instance.new("TextLabel")
 StatusBox.Size = UDim2.new(1, -20, 0, 38)
 StatusBox.Position = UDim2.new(0, 10, 0, 155)
@@ -189,14 +186,14 @@ StatusBox.Font = Enum.Font.Code
 StatusBox.TextSize = 10
 StatusBox.TextXAlignment = Enum.TextXAlignment.Left
 StatusBox.TextYAlignment = Enum.TextYAlignment.Top
-StatusBox.Text = "Status: Pilih target & nyalakan sakelar..."
+StatusBox.Text = "Status: Siap dijalankan..."
 StatusBox.Parent = MainFrame
 
 local BoxCorner = Instance.new("UICorner")
 BoxCorner.CornerRadius = UDim.new(0, 6)
 BoxCorner.Parent = StatusBox
 
--- 3. TOMBOL SAKELAR ON/OFF
+-- 4. TOMBOL SAKELAR ON/OFF
 local ToggleFrame = Instance.new("Frame")
 ToggleFrame.Size = UDim2.new(1, -20, 0, 34)
 ToggleFrame.Position = UDim2.new(0, 10, 0, 200)
@@ -232,7 +229,7 @@ local SwitchCorner = Instance.new("UICorner")
 SwitchCorner.CornerRadius = UDim.new(0, 10)
 SwitchCorner.Parent = SwitchBtn
 
--- 4. FUNGSI MENCARI PROXIMITY PROMPT ROLL
+-- 5. FUNGSI PROXIMITY PROMPT ROLL
 local function GetMyRollPrompt()
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -264,8 +261,8 @@ local function GetMyRollPrompt()
     return closestPrompt
 end
 
--- 5. FUNGSI AUTO-BUY (MENCARI PROMPT PEMBELIAN DI STAND & MENYAMBARNYA)
-local function TryAutoBuyTarget(targetsTable)
+-- 6. FUNGSI AUTO BUY (MENYAMBAR TOMBOL BELI DI STAND)
+local function CheckAndBuyTarget(targetsTable)
     local scriptable = Workspace:FindFirstChild("Scriptable")
     if scriptable and scriptable:FindFirstChild("Plots") and scriptable.Plots:FindFirstChild("Buildings") then
         for _, building in ipairs(scriptable.Plots.Buildings:GetChildren()) do
@@ -274,35 +271,26 @@ local function TryAutoBuyTarget(targetsTable)
                 for _, stand in ipairs(rollStands:GetChildren()) do
                     local reel = stand:FindFirstChild("Reel")
                     if reel and reel:FindFirstChild("Fisherman") then
-                        -- Cek apakah nelayan di stand cocok dengan target yang dicentang
-                        local isTargetFound = false
-                        local foundName = ""
-
                         for _, child in ipairs(reel.Fisherman:GetChildren()) do
                             local objName = string.lower(child.Name)
                             for targetName, _ in pairs(targetsTable) do
                                 local cleanTarget = string.lower(targetName)
-                                if string.find(objName, cleanTarget, 1, true) or string.find(cleanTarget, objName, 1, true) then
-                                    isTargetFound = true
-                                    foundName = targetName
-                                    break
-                                end
-                            end
-                            if isTargetFound then break end
-                        end
-
-                        -- Jika cocok, cari ProximityPrompt / Tombol Beli di sekitar stand tersebut dan picu otomatis
-                        if isTargetFound then
-                            for _, desc in ipairs(stand:GetDescendants()) do
-                                if desc:IsA("ProximityPrompt") then
-                                    if fireproximityprompt then
-                                        fireproximityprompt(desc)
-                                    else
-                                        desc:InputHoldBegin()
-                                        task.wait(0.05)
-                                        desc:InputHoldEnd()
+                                if string.find(objName, cleanTarget, 1, true) then
+                                    for _, desc in ipairs(stand:GetDescendants()) do
+                                        if desc:IsA("ClickDetector") then
+                                            fireclickdetector(desc)
+                                            return true, targetName
+                                        elseif desc:IsA("ProximityPrompt") then
+                                            if fireproximityprompt then
+                                                fireproximityprompt(desc)
+                                            else
+                                                desc:InputHoldBegin()
+                                                task.wait(0.05)
+                                                desc:InputHoldEnd()
+                                            end
+                                            return true, targetName
+                                        end
                                     end
-                                    return true, foundName
                                 end
                             end
                         end
@@ -314,7 +302,7 @@ local function TryAutoBuyTarget(targetsTable)
     return false, ""
 end
 
--- 6. LOGIKA UTAMA SAKELAR ON/OFF (ROLL TERUS + AUTO BUY SAAT KETEMU)
+-- 7. EKSEKUSI UTAMA OTONOM
 local isRunning = false
 
 SwitchBtn.MouseButton1Click:Connect(function()
@@ -330,19 +318,19 @@ SwitchBtn.MouseButton1Click:Connect(function()
                 for _ in pairs(selectedTargets) do targetCount = targetCount + 1 end
 
                 if targetCount == 0 then
-                    StatusBox.Text = "Status: Pilih minimal 1 nelayan target di dropdown!"
+                    StatusBox.Text = "Status: Pilih minimal 1 target di dropdown!"
                     task.wait(1)
                     continue
                 end
 
-                -- A. Cek apakah nelayan target ada di stand, kalau ada langsung SAMBAR (Buy)
-                local bought, targetName = TryAutoBuyTarget(selectedTargets)
+                -- A. Cek dan Auto-Buy Target
+                local bought, nameFound = CheckAndBuyTarget(selectedTargets)
                 if bought then
-                    StatusBox.Text = "Status: [AUTO-BUY] Berhasil menyambar: " .. targetName .. "!"
-                    task.wait(1.5) -- Jeda setelah dibeli
+                    StatusBox.Text = "Status: [AUTO-BUY] Sukses beli: " .. nameFound
+                    task.wait(1.5)
                 end
 
-                -- B. Tetap putar gacha otomatis tanpa henti
+                -- B. Putar Gacha Otomatis
                 StatusBox.Text = "Status: [ROLLING] Gacha jalan terus..."
                 local prompt = GetMyRollPrompt()
                 if prompt then
@@ -355,13 +343,13 @@ SwitchBtn.MouseButton1Click:Connect(function()
                     end
                 end
 
-                task.wait(0.65) -- Interval putar gacha
+                task.wait(0.7)
             end
         end)
     else
         isRunning = false
         SwitchBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
         SwitchBtn.Text = "OFF"
-        StatusBox.Text = "Status: Sakelar dimatikan."
+        StatusBox.Text = "Status: Dimatikan."
     end
 end)
