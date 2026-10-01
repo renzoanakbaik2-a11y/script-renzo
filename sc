@@ -1,4 +1,124 @@
 -- ==========================================================
+-- CELAH HUNTER V2 - MEMORY TABLE DEEP DUMPER
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+if PlayerGui:FindFirstChild("TableDumperUI") then
+    PlayerGui.TableDumperUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "TableDumperUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 340, 0, 240)
+MainFrame.Position = UDim2.new(0.5, -170, 0.4, -120)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -30, 0, 28)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Celah Hunter V2: Table Content Dumper"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 11
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainFrame
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Position = UDim2.new(1, -24, 0, 4)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 10
+CloseBtn.Parent = MainFrame
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+local ScrollBox = Instance.new("ScrollingFrame")
+ScrollBox.Size = UDim2.new(1, -20, 1, -45)
+ScrollBox.Position = UDim2.new(0, 10, 0, 35)
+ScrollBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+ScrollBox.BorderSizePixel = 0
+ScrollBox.ScrollBarThickness = 3
+ScrollBox.ScrollBarImageColor3 = Color3.fromRGB(255, 30, 60)
+ScrollBox.Parent = MainFrame
+
+local BoxCorner = Instance.new("UICorner")
+BoxCorner.CornerRadius = UDim.new(0, 6)
+BoxCorner.Parent = ScrollBox
+
+local UIList = Instance.new("UIListLayout")
+UIList.Padding = UDim.new(0, 3)
+UIList.Parent = ScrollBox
+
+local function AddLog(text, color)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -6, 0, 22)
+    Label.BackgroundTransparency = 1
+    Label.Text = " " .. text
+    Label.TextColor3 = color or Color3.fromRGB(200, 200, 210)
+    Label.Font = Enum.Font.Code
+    Label.TextSize = 10
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = ScrollBox
+    ScrollBox.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + 10)
+end
+
+-- Mulai Memindai Tabel dan Mencari Kata Kunci "Fisherman" atau "Homeless"
+task.spawn(function()
+    if not getgc then
+        AddLog("Error: getgc tidak didukung executor!", Color3.fromRGB(255, 50, 50))
+        return
+    end
+
+    AddLog("Memindai isi 377 tabel cache memori...", Color3.fromRGB(100, 255, 150))
+    
+    local keywordList = {"homeless", "fisher", "lobster", "rookie", "trap", "common", "rare", "epic"}
+    local matchedHits = 0
+
+    for _, obj in ipairs(getgc(true)) do
+        if type(obj) == "table" then
+            -- Cek setiap kunci/nilai di dalam tabel
+            pcall(function()
+                for k, v in pairs(obj) do
+                    local kStr = string.lower(tostring(k))
+                    local vStr = string.lower(tostring(v))
+                    
+                    for _, keyword in ipairs(keywordList) do
+                        if string.find(kStr, keyword, 1, true) or string.find(vStr, keyword, 1, true) then
+                            matchedHits = matchedHits + 1
+                            if matchedHits <= 25  then -- Batasi agar tidak lag
+                                AddLog("[" .. tostring(k) .. "] = " .. tostring(v), Color3.fromRGB(255, 220, 100))
+                            end
+                            break
+                        end
+                    end
+                end
+            end)
+        end
+    end
+
+    AddLog("-----------------------------------", Color3.fromRGB(150, 150, 150))
+    AddLog("Pemindaian selesai! Total kecocokan: " .. matchedHits, Color3.fromRGB(100, 255, 150))
+end)-- ==========================================================
 -- CELAH INSPECTOR - MENCARI CACHE DATA HASIL ROLL LOKAL
 -- ==========================================================
 
