@@ -1,18 +1,12 @@
--- ==========================================================
--- SPEED HUB X - MOBILE AUTO ROLL & TOUCH BUY (DELTA HP)
--- ==========================================================
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 
 if PlayerGui:FindFirstChild("SpeedHubMobileUI") then
     PlayerGui.SpeedHubMobileUI:Destroy()
 end
 
--- 1. TAMPILAN UI UTAMA
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SpeedHubMobileUI"
 ScreenGui.ResetOnSpawn = false
@@ -39,7 +33,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -30, 0, 28)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Speed Hub X | Mobile Touch Auto-Buy"
+Title.Text = "Speed Hub X | Auto Roll Target Stop"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
@@ -60,12 +54,35 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- 2. DAFTAR DROPDOWN NELAYAN
 local FishermanList = {
-    Common = {"Homeless Fisher", "Lobster Trap", "Rookie Sam", "Deep Fisher"},
-    Rare = {"Angler Mia", "Alaskan", "Uncle Bob", "Koi Fisher", "Gnome"},
-    Epic = {"Pirate Pete", "Sir Trooper", "Feather Boy", "Dr. Bob", "Pearl Diver", "Miner"},
-    Legendary = {"Clown Timmy", "Coral Zoe", "Cloud Nine", "Wizard Tom", "Toad Fisher"}
+    Common = {
+        "Homeless Fisher",
+        "Lobster Trap",
+        "Rookie Sam",
+        "Deep Fisher"
+    },
+    Rare = {
+        "Angler Mia",
+        "Alaskan",
+        "Uncle Bob",
+        "Koi Fisher",
+        "Gnome"
+    },
+    Epic = {
+        "Pirate Pete",
+        "Sir Trooper",
+        "Feather Boy",
+        "Dr. Bob",
+        "Pearl Diver",
+        "Miner"
+    },
+    Legendary = {
+        "Clown Timmy",
+        "Coral Zoe",
+        "Cloud Nine",
+        "Wizard Tom",
+        "Toad Fisher"
+    }
 }
 
 local selectedTargets = {}
@@ -84,7 +101,7 @@ DropCorner.Parent = DropFrame
 local DropBtn = Instance.new("TextButton")
 DropBtn.Size = UDim2.new(1, 0, 0, 32)
 DropBtn.BackgroundTransparency = 1
-DropBtn.Text = "  [ Pilih Target Auto-Buy ]"
+DropBtn.Text = "  [ Pilih Target Auto-Stop ]"
 DropBtn.TextColor3 = Color3.fromRGB(240, 240, 250)
 DropBtn.Font = Enum.Font.SourceSansBold
 DropBtn.TextSize = 11
@@ -115,10 +132,16 @@ ScrollLayout.Padding = UDim.new(0, 3)
 ScrollLayout.Parent = Scroll
 
 local isDropOpen = false
+
 DropBtn.MouseButton1Click:Connect(function()
     isDropOpen = not isDropOpen
-    DropFrame.Size = isDropOpen and UDim2.new(1, -20, 0, 150) or UDim2.new(1, -20, 0, 32)
-    Arrow.Text = isDropOpen and "∧" or "∨"
+    if isDropOpen then
+        DropFrame.Size = UDim2.new(1, -20, 0, 150)
+        Arrow.Text = "∧"
+    else
+        DropFrame.Size = UDim2.new(1, -20, 0, 32)
+        Arrow.Text = "∨"
+    end
 end)
 
 for rarityName, fishers in pairs(FishermanList) do
@@ -170,14 +193,21 @@ for rarityName, fishers in pairs(FishermanList) do
             end
 
             local count = 0
-            for _ in pairs(selectedTargets) do count = count + 1 end
-            DropBtn.Text = count > 0 and "  [ " .. count .. " Target Auto-Buy ]" or "  [ Pilih Target Auto-Buy ]"
+            for _ in pairs(selectedTargets) do
+                count = count + 1
+            end
+
+            if count > 0 then
+                DropBtn.Text = "  [ " .. count .. " Target Auto-Stop ]"
+            else
+                DropBtn.Text = "  [ Pilih Target Auto-Stop ]"
+            end
         end)
     end
 end
+
 Scroll.CanvasSize = UDim2.new(0, 0, 0, ScrollLayout.AbsoluteContentSize.Y + 10)
 
--- 3. KOTAK STATUS
 local StatusBox = Instance.new("TextLabel")
 StatusBox.Size = UDim2.new(1, -20, 0, 38)
 StatusBox.Position = UDim2.new(0, 10, 0, 155)
@@ -187,14 +217,13 @@ StatusBox.Font = Enum.Font.Code
 StatusBox.TextSize = 10
 StatusBox.TextXAlignment = Enum.TextXAlignment.Left
 StatusBox.TextYAlignment = Enum.TextYAlignment.Top
-StatusBox.Text = "Status: Siap dijalankan di HP..."
+StatusBox.Text = "Status: Pilih target lalu tekan ON..."
 StatusBox.Parent = MainFrame
 
 local BoxCorner = Instance.new("UICorner")
 BoxCorner.CornerRadius = UDim.new(0, 6)
 BoxCorner.Parent = StatusBox
 
--- 4. TOMBOL SAKELAR ON/OFF
 local ToggleFrame = Instance.new("Frame")
 ToggleFrame.Size = UDim2.new(1, -20, 0, 34)
 ToggleFrame.Position = UDim2.new(0, 10, 0, 200)
@@ -209,7 +238,7 @@ local ToggleLabel = Instance.new("TextLabel")
 ToggleLabel.Size = UDim2.new(1, -55, 1, 0)
 ToggleLabel.Position = UDim2.new(0, 10, 0, 0)
 ToggleLabel.BackgroundTransparency = 1
-ToggleLabel.Text = "Auto Roll & Touch Buy"
+ToggleLabel.Text = "Auto Roll → Stop On Target"
 ToggleLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
 ToggleLabel.Font = Enum.Font.SourceSansBold
 ToggleLabel.TextSize = 11
@@ -230,81 +259,70 @@ local SwitchCorner = Instance.new("UICorner")
 SwitchCorner.CornerRadius = UDim.new(0, 10)
 SwitchCorner.Parent = SwitchBtn
 
--- 5. FUNGSI PROXIMITY PROMPT ROLL
 local function GetMyRollPrompt()
     local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
-    local myPos = character.HumanoidRootPart.Position
+    if not character then return nil end
 
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return nil end
+
+    local scriptable = Workspace:FindFirstChild("Scriptable")
+    if not scriptable then return nil end
+
+    local plots = scriptable:FindFirstChild("Plots")
+    if not plots then return nil end
+
+    local buildings = plots:FindFirstChild("Buildings")
+    if not buildings then return nil end
+
+    local myPos = root.Position
     local closestPrompt = nil
     local shortestDistance = 15
 
-    local scriptable = Workspace:FindFirstChild("Scriptable")
-    if scriptable and scriptable:FindFirstChild("Plots") and scriptable.Plots:FindFirstChild("Buildings") then
-        for _, building in ipairs(scriptable.Plots.Buildings:GetChildren()) do
-            local rollBtn = building:FindFirstChild("RollButton")
-            if rollBtn then
-                for _, prompt in ipairs(rollBtn:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") then
-                        local part = prompt.Parent
-                        if part and part:IsA("BasePart") then
-                            local dist = (part.Position - myPos).Magnitude
-                            if dist < shortestDistance then
-                                shortestDistance = dist
-                                closestPrompt = prompt
-                            end
+    for _, building in ipairs(buildings:GetChildren()) do
+        local rollBtn = building:FindFirstChild("RollButton")
+        if rollBtn then
+            for _, prompt in ipairs(rollBtn:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") then
+                    local part = prompt.Parent
+                    if part and part:IsA("BasePart") then
+                        local dist = (part.Position - myPos).Magnitude
+                        if dist < shortestDistance then
+                            shortestDistance = dist
+                            closestPrompt = prompt
                         end
                     end
                 end
             end
         end
     end
+
     return closestPrompt
 end
 
--- 6. FUNGSI SIMULASI SENTUHAN LAYAR HP (TOUCH CLICK)
-local function CheckAndTouchBuy(targetsTable)
+local function CheckTargetFound()
     local scriptable = Workspace:FindFirstChild("Scriptable")
-    if scriptable and scriptable:FindFirstChild("Plots") and scriptable.Plots:FindFirstChild("Buildings") then
-        for _, building in ipairs(scriptable.Plots.Buildings:GetChildren()) do
-            local rollStands = building:FindFirstChild("RollStands")
-            if rollStands then
-                for _, stand in ipairs(rollStands:GetChildren()) do
-                    local reel = stand:FindFirstChild("Reel")
-                    if reel and reel:FindFirstChild("Fisherman") then
-                        for _, child in ipairs(reel.Fisherman:GetChildren()) do
-                            local objName = string.lower(child.Name)
-                            for targetName, _ in pairs(targetsTable) do
-                                local cleanTarget = string.lower(targetName)
-                                if string.find(objName, cleanTarget, 1, true) then
-                                    -- Target ketemu, cari ClickDetector atau pemicu sentuh
-                                    for _, desc in ipairs(stand:GetDescendants()) do
-                                        if desc:IsA("ClickDetector") then
-                                            fireclickdetector(desc)
-                                            return true, targetName
-                                        elseif desc:IsA("ProximityPrompt") then
-                                            if fireproximityprompt then
-                                                fireproximityprompt(desc)
-                                            else
-                                                desc:InputHoldBegin()
-                                                task.wait(0.05)
-                                                desc:InputHoldEnd()
-                                            end
-                                            return true, targetName
-                                        end
-                                    end
-                                    
-                                    -- Simulasi ketukan sentuh layar HP ke posisi bagian stand jika tidak ada prompt
-                                    local part = stand:FindFirstChildWhichIsA("BasePart")
-                                    if part then
-                                        local screenPos, onScreen = Workspace.CurrentCamera:WorldToScreenPoint(part.Position)
-                                        if onScreen and VirtualInputManager then
-                                            VirtualInputManager:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, true, game, 0)
-                                            task.wait(0.05)
-                                            VirtualInputManager:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, false, game, 0)
-                                            return true, targetName
-                                        end
-                                    end
+    if not scriptable then return false, "" end
+
+    local plots = scriptable:FindFirstChild("Plots")
+    if not plots then return false, "" end
+
+    local buildings = plots:FindFirstChild("Buildings")
+    if not buildings then return false, "" end
+
+    for _, building in ipairs(buildings:GetChildren()) do
+        local rollStands = building:FindFirstChild("RollStands")
+        if rollStands then
+            for _, stand in ipairs(rollStands:GetChildren()) do
+                local reel = stand:FindFirstChild("Reel")
+                if reel then
+                    local fisherman = reel:FindFirstChild("Fisherman")
+                    if fisherman then
+                        for _, child in ipairs(fisherman:GetChildren()) do
+                            local objectName = string.lower(child.Name)
+                            for targetName in pairs(selectedTargets) do
+                                if string.find(objectName, string.lower(targetName), 1, true) then
+                                    return true, targetName
                                 end
                             end
                         end
@@ -313,40 +331,49 @@ local function CheckAndTouchBuy(targetsTable)
             end
         end
     end
+
     return false, ""
 end
 
--- 7. EKSEKUSI UTAMA
 local isRunning = false
 
 SwitchBtn.MouseButton1Click:Connect(function()
     isRunning = not isRunning
 
     if isRunning then
+        local targetCount = 0
+        for _ in pairs(selectedTargets) do
+            targetCount = targetCount + 1
+        end
+
+        if targetCount == 0 then
+            isRunning = false
+            SwitchBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+            SwitchBtn.Text = "OFF"
+            StatusBox.Text = "Status: Pilih minimal 1 target!"
+            return
+        end
+
         SwitchBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
         SwitchBtn.Text = "ON"
+        StatusBox.Text = "Status: Auto Roll berjalan..."
 
         task.spawn(function()
             while isRunning do
-                local targetCount = 0
-                for _ in pairs(selectedTargets) do targetCount = targetCount + 1 end
+                local found, foundName = CheckTargetFound()
 
-                if targetCount == 0 then
-                    StatusBox.Text = "Status: Pilih minimal 1 target di dropdown!"
-                    task.wait(1)
-                    continue
+                if found then
+                    isRunning = false
+                    SwitchBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+                    SwitchBtn.Text = "OFF"
+                    StatusBox.Text = "Status: TARGET DITEMUKAN! → " .. foundName
+                    break
                 end
 
-                -- A. Cek dan Sentuh Beli Target
-                local bought, nameFound = CheckAndTouchBuy(selectedTargets)
-                if bought then
-                    StatusBox.Text = "Status: [TOUCH-BUY] Berhasil beli: " .. nameFound
-                    task.wait(1.5)
-                end
+                StatusBox.Text = "Status: [ROLLING] Mencari target..."
 
-                -- B. Putar Gacha Otomatis
-                StatusBox.Text = "Status: [ROLLING] Gacha jalan terus..."
                 local prompt = GetMyRollPrompt()
+
                 if prompt then
                     if fireproximityprompt then
                         fireproximityprompt(prompt)
@@ -358,6 +385,16 @@ SwitchBtn.MouseButton1Click:Connect(function()
                 end
 
                 task.wait(0.7)
+
+                local foundAfterRoll, foundNameAfterRoll = CheckTargetFound()
+
+                if foundAfterRoll then
+                    isRunning = false
+                    SwitchBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+                    SwitchBtn.Text = "OFF"
+                    StatusBox.Text = "Status: TARGET DITEMUKAN! → " .. foundNameAfterRoll
+                    break
+                end
             end
         end)
     else
