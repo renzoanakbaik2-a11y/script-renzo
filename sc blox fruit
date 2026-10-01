@@ -1,10 +1,12 @@
 -- ==========================================================
--- ROLL A FISHERMAN - SPEED HUB X UI (FISHERMAN SELECTOR)
+-- ROLL A FISHERMAN - SPEED HUB X (FINAL INTEGRATED AUTO ROLL)
 -- ==========================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 if PlayerGui:FindFirstChild("FishermanSpeedHubUI") then
     PlayerGui.FishermanSpeedHubUI:Destroy()
@@ -61,8 +63,8 @@ TitleText.Position = UDim2.new(0, 12, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "Speed Hub X | Roll a Fisherman"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleText.TextSize = 12
 TitleText.Font = Enum.Font.SourceSansBold
+TitleText.TextSize = 12
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Parent = TopBar
 
@@ -97,7 +99,7 @@ SidebarRightLine.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
 SidebarRightLine.BorderSizePixel = 0
 SidebarRightLine.Parent = Sidebar
 
--- 4. CONTAINER KONTEN TAB (KANAN)
+-- 4. CONTAINER KONTEN TAB
 local ContentArea = Instance.new("Frame")
 ContentArea.Name = "ContentArea"
 ContentArea.Size = UDim2.new(1, -130, 1, -40)
@@ -133,7 +135,7 @@ local MainTab = CreateTabPage("Main")
 
 HomeTab.Visible = true
 
--- 5. LOGIKA TOMBOL TAB TERKUNCI PRESISI
+-- LOGIKA TAB SIDEBAR
 local currentTabBtn = nil
 
 local function SwitchTab(tabName, btn)
@@ -179,7 +181,11 @@ local MainBtn = CreateTabButton("Main", 84)
 
 SwitchTab("Home", HomeBtn)
 
--- 6. DROPDOWN SECTION BUILDER DENGAN FITUR MULTI-SELECT
+-- 5. DROPDOWN SECTION BUILDER DENGAN FITUR MULTI-SELECT & AUTO ROLL INTEGRATED
+local selectedFishermen = {}
+local autoRollActive = false
+local updateAutoRollToggleUI = nil
+
 local function CreateSection(parent, sectionTitle)
     local SectionFrame = Instance.new("Frame")
     SectionFrame.Size = UDim2.new(1, -5, 0, 36)
@@ -248,7 +254,7 @@ local function CreateSection(parent, sectionTitle)
 
     local SectionAPI = {}
     
-    function SectionAPI:AddToggle(labelText, defaultState, callback)
+    function SectionAPI:AddToggle(labelText, defaultState, callback, isAutoRollToggle)
         local ToggleFrame = Instance.new("Frame")
         ToggleFrame.Size = UDim2.new(1, -12, 0, 30)
         ToggleFrame.Position = UDim2.new(0, 6, 0, 0)
@@ -285,12 +291,23 @@ local function CreateSection(parent, sectionTitle)
         SwitchCorner.Parent = SwitchBtn
 
         local state = defaultState
-        SwitchBtn.MouseButton1Click:Connect(function()
-            state = not state
+
+        local function SetToggleState(newState)
+            state = newState
             SwitchBtn.BackgroundColor3 = state and Color3.fromRGB(255, 30, 60) or Color3.fromRGB(60, 60, 75)
             SwitchBtn.Text = state and "ON" or "OFF"
             if callback then callback(state) end
+        end
+
+        SwitchBtn.MouseButton1Click:Connect(function()
+            SetToggleState(not state)
         end)
+
+        if isAutoRollToggle then
+            updateAutoRollToggleUI = function(forcedState)
+                SetToggleState(forcedState)
+            end
+        end
 
         if isExpanded then UpdateSectionSize() end
     end
@@ -310,7 +327,6 @@ local function CreateSection(parent, sectionTitle)
         if isExpanded then UpdateSectionSize() end
     end
 
-    -- KUSUS: Bikin Multi-Select Dropdown Nelayan
     function SectionAPI:AddFishermanDropdown(defaultTitle, listData, callback)
         local DropFrame = Instance.new("Frame")
         DropFrame.Size = UDim2.new(1, -12, 0, 32)
@@ -362,12 +378,12 @@ local function CreateSection(parent, sectionTitle)
         ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
         ListLayout.Parent = ListScroll
 
-        local selectedQueue = {} -- Menyimpan urutan pilihan
+        local selectedQueue = {}
         local selectedMap = {}
 
         local function RefreshHeaderTitle()
             if #selectedQueue > 0 then
-                MainDropBtn.Text = "  " .. selectedQueue[1]
+                MainDropBtn.Text = "  [ " .. #selectedQueue .. " Locked ] " .. selectedQueue[1]
                 MainDropBtn.TextColor3 = Color3.fromRGB(255, 80, 100)
             else
                 MainDropBtn.Text = "  " .. defaultTitle
@@ -390,9 +406,7 @@ local function CreateSection(parent, sectionTitle)
 
         MainDropBtn.MouseButton1Click:Connect(ToggleMenu)
 
-        -- Isi Nelayan Per-Rarity
         for rarityName, fishers in pairs(listData) do
-            -- Label Rarity
             local RarityHeader = Instance.new("TextLabel")
             RarityHeader.Size = UDim2.new(1, 0, 0, 18)
             RarityHeader.BackgroundTransparency = 1
@@ -433,7 +447,6 @@ local function CreateSection(parent, sectionTitle)
                         ItemBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
                         ItemBtn.TextColor3 = Color3.fromRGB(180, 180, 190)
                         ItemCheck.Text = ""
-                        -- Hapus dari Queue
                         for i, name in ipairs(selectedQueue) do
                             if name == fisherName then
                                 table.remove(selectedQueue, i)
@@ -448,6 +461,7 @@ local function CreateSection(parent, sectionTitle)
                         table.insert(selectedQueue, fisherName)
                     end
 
+                    selectedFishermen = selectedQueue
                     RefreshHeaderTitle()
                     if callback then callback(selectedQueue) end
                 end)
@@ -461,7 +475,7 @@ local function CreateSection(parent, sectionTitle)
     return SectionAPI
 end
 
--- 7. DAFTAR KELOMPOK NELAYAN (LENGKAP SEMUA FOTO)
+-- 6. DAFTAR KELOMPOK 36 NELAYAN
 local FishermanList = {
     Common = {"Homeless Fisher", "Lobster Trap", "Rookie Sam", "Deep Fisher"},
     Rare = {"Angler Mia", "Alaskan", "Uncle Bob", "Koi Fisher", "Gnome"},
@@ -473,6 +487,64 @@ local FishermanList = {
     Event = {"Tidal Champion", "Kid Floaty", "Crab Lord", "Beach King", "Sea Specialist"}
 }
 
+-- 7. LOGIKA AUTO ROLL UTAMA (PROXIMITY PROMPT & ANNOUNCE STOP)
+local function GetMyRollPrompt()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = character.HumanoidRootPart.Position
+
+    local closestPrompt = nil
+    local shortestDistance = 15
+
+    local scriptable = Workspace:FindFirstChild("Scriptable")
+    if scriptable and scriptable:FindFirstChild("Plots") and scriptable.Plots:FindFirstChild("Buildings") then
+        for _, building in ipairs(scriptable.Plots.Buildings:GetChildren()) do
+            local rollBtn = building:FindFirstChild("RollButton")
+            if rollBtn then
+                for _, prompt in ipairs(rollBtn:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        local part = prompt.Parent
+                        if part and part:IsA("BasePart") then
+                            local dist = (part.Position - myPos).Magnitude
+                            if dist < shortestDistance then
+                                shortestDistance = dist
+                                closestPrompt = prompt
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestPrompt
+end
+
+-- LISTEN KE REMOTE ANNOUNCE DARI SERVER UNTUK PENCOCOKAN NELAYAN
+pcall(function()
+    local NetFolder = ReplicatedStorage:WaitForChild("Modules", 2):WaitForChild("Util", 2):WaitForChild("Net", 2)
+    local AnnounceRemote = NetFolder:FindFirstChild("Announce")
+
+    if AnnounceRemote then
+        AnnounceRemote.OnClientEvent:Connect(function(...)
+            local args = {...}
+            if autoRollActive and #args >= 3 and tostring(args[1]) == LocalPlayer.Name and tostring(args[2]) == "rolled" then
+                local rolledFishermanName = tostring(args[3])
+                
+                -- Cek apakah nama nelayan yang didapat ada di daftar incaran
+                for _, targetName in ipairs(selectedFishermen) do
+                    if string.lower(targetName) == string.lower(rolledFishermanName) then
+                        autoRollActive = false
+                        if updateAutoRollToggleUI then
+                            updateAutoRollToggleUI(false)
+                        end
+                        break
+                    end
+                end
+            end
+        end)
+    end
+end)
+
 -- 8. MENGISI TAB AUTOMATICALLY & MAIN
 local CollectSection = CreateSection(AutomaticallyTab, "Automation Collect")
 CollectSection:AddToggle("Auto Collect Money", false, function(state) end)
@@ -480,7 +552,34 @@ CollectSection:AddToggle("Auto Collect Fish", false, function(state) end)
 
 local RollSection = CreateSection(AutomaticallyTab, "Automation Roll")
 RollSection:AddFishermanDropdown("Pilih Nelayan", FishermanList, function(selectedList) end)
-RollSection:AddToggle("Auto Roll Fisherman", false, function(state) end)
+
+RollSection:AddToggle("Auto Roll Fisherman", false, function(state)
+    autoRollActive = state
+    if autoRollActive then
+        task.spawn(function()
+            while autoRollActive do
+                if #selectedFishermen == 0 then
+                    autoRollActive = false
+                    if updateAutoRollToggleUI then updateAutoRollToggleUI(false) end
+                    break
+                end
+
+                local prompt = GetMyRollPrompt()
+                if prompt then
+                    if fireproximityprompt then
+                        fireproximityprompt(prompt)
+                    else
+                        prompt:InputHoldBegin()
+                        task.wait(0.05)
+                        prompt:InputHoldEnd()
+                    end
+                end
+
+                task.wait(0.65) -- Interval aman anti-kick
+            end
+        end)
+    end
+end, true)
 
 local SellSection = CreateSection(AutomaticallyTab, "Automation Sell")
 SellSection:AddToggle("Auto Sell Fish", false, function(state) end)
@@ -550,7 +649,6 @@ StatsText.TextXAlignment = Enum.TextXAlignment.Left
 StatsText.TextYAlignment = Enum.TextYAlignment.Top
 StatsText.Parent = ServerCard
 
--- LOGIKA SCANNING REALTIME
 local startTime = os.time()
 
 local function GetPlayerMoney(plr)
