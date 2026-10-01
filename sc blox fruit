@@ -1,4 +1,152 @@
+-- ==========================================================
+-- SPEED HUB X - OBJECT & REMOTE FINDER (UNTUK CARI NAMA)
+-- ==========================================================
+
 local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+if PlayerGui:FindFirstChild("FinderUI") then
+    PlayerGui.FinderUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FinderUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 320, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -160, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -30, 0, 30)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "SPEED HUB X | FINDER DETEKTIF"
+Title.TextColor3 = Color3.fromRGB(255, 200, 50)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 13
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainFrame
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 22, 0, 22)
+CloseBtn.Position = UDim2.new(1, -26, 0, 4)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 11
+CloseBtn.Parent = MainFrame
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+local LogBox = Instance.new("TextBox")
+LogBox.Size = UDim2.new(1, -20, 0, 160)
+LogBox.Position = UDim2.new(0, 10, 0, 35)
+LogBox.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
+LogBox.TextColor3 = Color3.fromRGB(100, 255, 150)
+LogBox.Font = Enum.Font.Code
+LogBox.TextSize = 10
+LogBox.TextXAlignment = Enum.TextXAlignment.Left
+LogBox.TextYAlignment = Enum.TextYAlignment.Top
+LogBox.ClearTextOnFocus = false
+LogBox.MultiLine = true
+LogBox.TextWrapped = true
+LogBox.ReadOnly = true
+LogBox.Text = "--- HASIL PEMINDAIAN APLIKASI ---\nKlik tombol di bawah untuk mulai nyari..."
+LogBox.Parent = MainFrame
+
+local BoxCorner = Instance.new("UICorner")
+BoxCorner.CornerRadius = UDim.new(0, 6)
+BoxCorner.Parent = LogBox
+
+local ScanBtn = Instance.new("TextButton")
+ScanBtn.Size = UDim2.new(1, -20, 0, 36)
+ScanBtn.Position = UDim2.new(0, 10, 0, 205)
+ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+ScanBtn.Text = "1. CARI LOKASI & NAMA ASLI BUI/STAND"
+ScanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ScanBtn.Font = Enum.Font.SourceSansBold
+ScanBtn.TextSize = 11
+ScanBtn.Parent = MainFrame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = ScanBtn
+
+-- FUNGSI PEMINDAI UTAMA
+ScanBtn.MouseButton1Click:Connect(function()
+    LogBox.Text = "Sedang memindai seluruh memori game...\nMohon tunggu 2 detik..."
+    task.wait(0.5)
+
+    local report = "=== HASIL TEMUAN DETEKTIF ===\n\n"
+    local foundCount = 0
+
+    -- 1. Cek semua RemoteEvent di ReplicatedStorage (Cari Remote Buy/Purchase)
+    report = report .. "[1. REMOTE EVENT PEMBELIAN]\n"
+    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+            local nameLower = string.lower(obj.Name)
+            if string.find(nameLower, "buy") or string.find(nameLower, "purchase") or string.find(nameLower, "roll") or string.find(nameLower, "stand") or string.find(nameLower, "claim") then
+                report = report .. "-> Remote: " .. obj.Name .. " (Path: " .. obj:GetFullName() .. ")\n"
+                foundCount = foundCount + 1
+            end
+        end
+    end
+
+    -- 2. Cek Atribut atau Value di dalam RollStands
+    report = report .. "\n[2. NILAI/ATRIBUT DI ROLLSTANDS]\n"
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj.Name == "RollStands" then
+            for _, stand in ipairs(obj:GetChildren()) do
+                report = report .. "Stand: " .. stand.Name .. "\n"
+                -- Cek Attributes
+                local attrs = stand:GetAttributes()
+                for attrName, attrVal in pairs(attrs) do
+                    report = report .. "  Attr: " .. tostring(attrName) .. " = " .. tostring(attrVal) .. "\n"
+                end
+                -- Cek anak-anak objeknya
+                for _, child in ipairs(stand:GetChildren()) do
+                    if child:IsA("StringValue") or child:IsA("ObjectValue") then
+                        report = report .. "  Value: " .. child.Name .. " = " .. tostring(child.Value) .. "\n"
+                    end
+                end
+            end
+        end
+    end
+
+    -- 3. Cek Teks GUI Pembelian di PlayerGui
+    report = report .. "\n[3. TEKS BUTTON BUY DI PLAYERGUI]\n"
+    for _, gui in ipairs(PlayerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Name ~= "FinderUI" and gui.Name ~= "SpeedHubFinalUI" then
+            for _, desc in ipairs(gui:GetDescendants()) do
+                if (desc:IsA("TextLabel") or desc:IsA("TextButton")) and desc.Visible then
+                    local txt = string.lower(desc.Text)
+                    if string.find(txt, "buy") or string.find(txt, "250") or string.find(txt, "$") then
+                        report = report .. "-> GUI Teks: '" .. desc.Text .. "' | Parent: " .. desc.Parent.Name .. " (Path: " .. desc:GetFullName() .. ")\n"
+                    end
+                end
+            end
+        end
+    end
+
+    report = report .. "\n=== PEMINDAIAN SELESAI ==="
+    LogBox.Text = report
+end)local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
