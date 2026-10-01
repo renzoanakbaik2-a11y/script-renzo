@@ -1,4 +1,212 @@
 -- ==========================================================
+-- SPEED HUB X - DEEP TREE INSPECTOR & SEARCH ENGINE
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+if PlayerGui:FindFirstChild("TreeInspectorUI") then
+    PlayerGui.TreeInspectorUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "TreeInspectorUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 340, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -170, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = MainFrame
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(255, 30, 60)
+Stroke.Thickness = 2
+Stroke.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -30, 0, 28)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Speed Hub X | Object Inspector & Search"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainFrame
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Position = UDim2.new(1, -24, 0, 4)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 10
+CloseBtn.Parent = MainFrame
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- INPUT CARI / SEARCH BAR
+local SearchBox = Instance.new("TextBox")
+SearchBox.Size = UDim2.new(1, -100, 0, 30)
+SearchBox.Position = UDim2.new(0, 10, 0, 32)
+SearchBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchBox.PlaceholderText = "Ketik kata kunci (ex: Buy, Stand, Reel)..."
+SearchBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 150)
+SearchBox.Font = Enum.Font.SourceSans
+SearchBox.TextSize = 11
+SearchBox.TextXAlignment = Enum.TextXAlignment.Left
+SearchBox.Parent = MainFrame
+
+local SearchCorner = Instance.new("UICorner")
+SearchCorner.CornerRadius = UDim.new(0, 6)
+SearchCorner.Parent = SearchBox
+
+local SearchBtn = Instance.new("TextButton")
+SearchBtn.Size = UDim2.new(0, 75, 0, 30)
+SearchBtn.Position = UDim2.new(1, -85, 0, 32)
+SearchBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+SearchBtn.Text = "CARI"
+SearchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchBtn.Font = Enum.Font.SourceSansBold
+SearchBtn.TextSize = 11
+SearchBtn.Parent = MainFrame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = SearchBtn
+
+-- AREA HASIL / SCROLLING
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -20, 0, 235)
+Scroll.Position = UDim2.new(0, 10, 0, 70)
+Scroll.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
+Scroll.BorderSizePixel = 0
+Scroll.ScrollBarThickness = 4
+Scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 30, 60)
+Scroll.Parent = MainFrame
+
+local ScrollLayout = Instance.new("UIListLayout")
+ScrollLayout.Padding = UDim.new(0, 4)
+ScrollLayout.Parent = Scroll
+
+local ScrollCorner = Instance.new("UICorner")
+ScrollCorner.CornerRadius = UDim.new(0, 6)
+ScrollCorner.Parent = Scroll
+
+-- FUNGSI INSPEKSI HIRARKI (INDUK & ISI)
+local function PerformSearch(query)
+    -- Bersihkan hasil lama
+    for _, child in ipairs(Scroll:GetChildren()) do
+        if not child:IsA("UIListLayout") then
+            child:Destroy()
+        end
+    end
+
+    if query == "" then return end
+    local cleanQuery = query:lower()
+
+    local targetsToScan = {
+        Workspace,
+        ReplicatedStorage,
+        PlayerGui
+    }
+
+    local matchCount = 0
+
+    for _, rootLocation in ipairs(targetsToScan) do
+        for _, obj in ipairs(rootLocation:GetDescendants()) do
+            local nameMatch = obj.Name:lower():find(cleanQuery, 1, true)
+            local textMatch = false
+
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                if obj.Text and obj.Text:lower():find(cleanQuery, 1, true) then
+                    textMatch = true
+                end
+            end
+
+            if nameMatch or textMatch then
+                matchCount = matchCount + 1
+                if matchCount > 50 then break end -- Batasi 50 hasil agar tidak lag
+
+                local Card = Instance.new("Frame")
+                Card.Size = UDim2.new(1, -8, 0, 65)
+                Card.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+                Card.Parent = Scroll
+
+                local CardCorner = Instance.new("UICorner")
+                CardCorner.CornerRadius = UDim.new(0, 4)
+                CardCorner.Parent = Card
+
+                local InfoText = Instance.new("TextLabel")
+                InfoText.Size = UDim2.new(1, -10, 1, -10)
+                InfoText.Position = UDim2.new(0, 5, 0, 5)
+                InfoText.BackgroundTransparency = 1
+                InfoText.TextColor3 = Color3.fromRGB(220, 220, 230)
+                InfoText.Font = Enum.Font.Code
+                InfoText.TextSize = 9
+                InfoText.TextXAlignment = Enum.TextXAlignment.Left
+                InfoText.TextYAlignment = Enum.TextYAlignment.Top
+                InfoText.TextWrapped = true
+
+                local parentName = obj.Parent and obj.Parent.Name or "GAK ADA (ROOT)"
+                local fullPath = obj:GetFullName()
+                local extraInfo = ""
+
+                if obj:IsA("StringValue") or obj:IsA("IntValue") or obj:IsA("NumberValue") or obj:IsA("BoolValue") then
+                    extraInfo = " | Value: " .. tostring(obj.Value)
+                elseif obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                    extraInfo = " | Text: '" .. tostring(obj.Text) .. "'"
+                end
+
+                InfoText.Text = "📌 OBJEK: " .. obj.Name .. " (" .. obj.ClassName .. ")" .. extraInfo ..
+                                "\n👨‍👦 INDUK (PARENT): " .. parentName ..
+                                "\n📂 PATH: " .. fullPath
+
+                InfoText.Parent = Card
+            end
+        end
+        if matchCount > 50 then break end
+    end
+
+    if matchCount == 0 then
+        local EmptyCard = Instance.new("TextLabel")
+        EmptyCard.Size = UDim2.new(1, 0, 0, 30)
+        EmptyCard.BackgroundTransparency = 1
+        EmptyCard.Text = "Tidak ditemukan objek dengan kata kunci '" .. query .. "'"
+        EmptyCard.TextColor3 = Color3.fromRGB(255, 100, 100)
+        EmptyCard.Font = Enum.Font.SourceSans
+        EmptyCard.TextSize = 11
+        EmptyCard.Parent = Scroll
+    end
+
+    task.wait(0.05)
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, ScrollLayout.AbsoluteContentSize.Y + 10)
+end
+
+SearchBtn.MouseButton1Click:Connect(function()
+    PerformSearch(SearchBox.Text)
+end)
+
+SearchBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        PerformSearch(SearchBox.Text)
+    end
+end)-- ==========================================================
 -- SPEED HUB X - DEEP MEMORY INSPECTION & HYPER SCANNER
 -- ==========================================================
 
