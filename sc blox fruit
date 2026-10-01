@@ -1,19 +1,20 @@
 -- ==========================================================
--- SPEED HUB X - FULL AUTO ROLL & AUTO-BUY TARGET (FINAL)
+-- SPEED HUB X - MOBILE AUTO ROLL & TOUCH BUY (DELTA HP)
 -- ==========================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
-if PlayerGui:FindFirstChild("SpeedHubFinalUI") then
-    PlayerGui.SpeedHubFinalUI:Destroy()
+if PlayerGui:FindFirstChild("SpeedHubMobileUI") then
+    PlayerGui.SpeedHubMobileUI:Destroy()
 end
 
--- 1. TAMPILAN UTAMA UI
+-- 1. TAMPILAN UI UTAMA
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpeedHubFinalUI"
+ScreenGui.Name = "SpeedHubMobileUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
@@ -38,7 +39,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -30, 0, 28)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Speed Hub X | Full Auto Roll & Buy"
+Title.Text = "Speed Hub X | Mobile Touch Auto-Buy"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
@@ -186,7 +187,7 @@ StatusBox.Font = Enum.Font.Code
 StatusBox.TextSize = 10
 StatusBox.TextXAlignment = Enum.TextXAlignment.Left
 StatusBox.TextYAlignment = Enum.TextYAlignment.Top
-StatusBox.Text = "Status: Siap dijalankan..."
+StatusBox.Text = "Status: Siap dijalankan di HP..."
 StatusBox.Parent = MainFrame
 
 local BoxCorner = Instance.new("UICorner")
@@ -208,7 +209,7 @@ local ToggleLabel = Instance.new("TextLabel")
 ToggleLabel.Size = UDim2.new(1, -55, 1, 0)
 ToggleLabel.Position = UDim2.new(0, 10, 0, 0)
 ToggleLabel.BackgroundTransparency = 1
-ToggleLabel.Text = "Auto Roll & Auto-Buy Target"
+ToggleLabel.Text = "Auto Roll & Touch Buy"
 ToggleLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
 ToggleLabel.Font = Enum.Font.SourceSansBold
 ToggleLabel.TextSize = 11
@@ -261,8 +262,8 @@ local function GetMyRollPrompt()
     return closestPrompt
 end
 
--- 6. FUNGSI AUTO BUY (MENYAMBAR TOMBOL BELI DI STAND)
-local function CheckAndBuyTarget(targetsTable)
+-- 6. FUNGSI SIMULASI SENTUHAN LAYAR HP (TOUCH CLICK)
+local function CheckAndTouchBuy(targetsTable)
     local scriptable = Workspace:FindFirstChild("Scriptable")
     if scriptable and scriptable:FindFirstChild("Plots") and scriptable.Plots:FindFirstChild("Buildings") then
         for _, building in ipairs(scriptable.Plots.Buildings:GetChildren()) do
@@ -276,6 +277,7 @@ local function CheckAndBuyTarget(targetsTable)
                             for targetName, _ in pairs(targetsTable) do
                                 local cleanTarget = string.lower(targetName)
                                 if string.find(objName, cleanTarget, 1, true) then
+                                    -- Target ketemu, cari ClickDetector atau pemicu sentuh
                                     for _, desc in ipairs(stand:GetDescendants()) do
                                         if desc:IsA("ClickDetector") then
                                             fireclickdetector(desc)
@@ -291,6 +293,18 @@ local function CheckAndBuyTarget(targetsTable)
                                             return true, targetName
                                         end
                                     end
+                                    
+                                    -- Simulasi ketukan sentuh layar HP ke posisi bagian stand jika tidak ada prompt
+                                    local part = stand:FindFirstChildWhichIsA("BasePart")
+                                    if part then
+                                        local screenPos, onScreen = Workspace.CurrentCamera:WorldToScreenPoint(part.Position)
+                                        if onScreen and VirtualInputManager then
+                                            VirtualInputManager:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, true, game, 0)
+                                            task.wait(0.05)
+                                            VirtualInputManager:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, false, game, 0)
+                                            return true, targetName
+                                        end
+                                    end
                                 end
                             end
                         end
@@ -302,7 +316,7 @@ local function CheckAndBuyTarget(targetsTable)
     return false, ""
 end
 
--- 7. EKSEKUSI UTAMA OTONOM
+-- 7. EKSEKUSI UTAMA
 local isRunning = false
 
 SwitchBtn.MouseButton1Click:Connect(function()
@@ -323,10 +337,10 @@ SwitchBtn.MouseButton1Click:Connect(function()
                     continue
                 end
 
-                -- A. Cek dan Auto-Buy Target
-                local bought, nameFound = CheckAndBuyTarget(selectedTargets)
+                -- A. Cek dan Sentuh Beli Target
+                local bought, nameFound = CheckAndTouchBuy(selectedTargets)
                 if bought then
-                    StatusBox.Text = "Status: [AUTO-BUY] Sukses beli: " .. nameFound
+                    StatusBox.Text = "Status: [TOUCH-BUY] Berhasil beli: " .. nameFound
                     task.wait(1.5)
                 end
 
