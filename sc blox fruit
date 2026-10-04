@@ -1,303 +1,37 @@
 -- ==========================================================
--- SPEED HUB X - STEP 1 (TEST v1.5: INTERNAL MODULE ATTACK)
+-- SPEED HUB X - STEP 1 (TEST v1.8: ARGUMENT & UI HOOK)
 -- ==========================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
--- 1. PEMBERSIHAN OTOMATIS: Hapus semua menu Speed Hub lama agar tidak tumpuk
-for _, gui in ipairs(PlayerGui:GetChildren()) do
-    if gui:IsA("ScreenGui") and (gui.Name:find("SpeedHub") or gui.Name:find("Step1")) then
-        gui:Destroy()
-    end
-end
-
--- 2. INI BIKIN SCREEN GUI BARU (HANYA 1 MENU)
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpeedHubStep1V15UI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 310, 0, 160)
-MainFrame.Position = UDim2.new(0.5, -155, 0.35, -80)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 8)
-Corner.Parent = MainFrame
-
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(255, 30, 60)
-Stroke.Thickness = 2
-Stroke.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -30, 0, 28)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "Speed Hub X | Step 1 (TEST v1.5)"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 12
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = MainFrame
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(1, -24, 0, 4)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 10
-CloseBtn.Parent = MainFrame
-
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
-local StatusBox = Instance.new("TextLabel")
-StatusBox.Size = UDim2.new(1, -20, 0, 45)
-StatusBox.Position = UDim2.new(0, 10, 0, 32)
-StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
-StatusBox.Font = Enum.Font.Code
-StatusBox.TextSize = 10
-StatusBox.TextXAlignment = Enum.TextXAlignment.Left
-StatusBox.TextYAlignment = Enum.TextYAlignment.Top
-StatusBox.Text = "Status TEST v1.5: Internal Module Attack..."
-StatusBox.Parent = MainFrame
-
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 6)
-BoxCorner.Parent = StatusBox
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(1, -20, 0, 36)
-ToggleBtn.Position = UDim2.new(0, 10, 0, 110)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-ToggleBtn.Text = "AUTO ATTACK: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.TextSize = 11
-ToggleBtn.Parent = MainFrame
-
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 6)
-ToggleCorner.Parent = ToggleBtn
-
-local isRunning = false
-
--- FUNGSI MEMANGGIL FUNGSI SERANGAN INTERNAL DARI MODUL KARAKTER
-local function InternalModuleAttack()
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    -- Cari skrip lokal / modul pertarungan di dalam Karakter
-    for _, scriptObj in ipairs(char:GetDescendants()) do
-        if scriptObj:IsA("LocalScript") or scriptObj:IsA("ModuleScript") then
-            local sName = scriptObj.Name:lower()
-            if sName:find("combat") or sName:find("attack") or sName:find("weapon") or sName:find("controller") then
-                -- Jalankan perintah serangan internal tanpa memicu pemicu layar
-                pcall(function()
-                    local loadedModule = require(scriptObj)
-                    if type(loadedModule) == "table" then
-                        if loadedModule.Attack then loadedModule:Attack()
-                        elseif loadedModule.Swing then loadedModule:Swing()
-                        elseif loadedModule.M1 then loadedModule:M1()
-                        end
-                    end
-                end)
-            end
-        end
-    end
-
-    -- Fallback aman: Kirim sinyal lewat remote internal tool tanpa klik
-    local tool = char:FindFirstChildOfClass("Tool")
-    if tool then
-        for _, rem in ipairs(tool:GetDescendants()) do
-            if rem:IsA("RemoteEvent") then
-                rem:FireServer()
-            end
-        end
-    end
-end
-
-ToggleBtn.MouseButton1Click:Connect(function()
-    isRunning = not isRunning
-    if isRunning then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-        ToggleBtn.Text = "AUTO ATTACK: ON"
-
-        task.spawn(function()
-            while isRunning do
-                StatusBox.Text = "Status: [v1.5] Executing Internal Attack..."
-                InternalModuleAttack()
-                task.wait(0.18)
-            end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-        ToggleBtn.Text = "AUTO ATTACK: OFF"
-        StatusBox.Text = "Status: Dimatikan."
-    end
-end)-- ==========================================================
--- SPEED HUB X - STEP 1 (TEST v1.4: SMART ATTACK FIX)
--- ==========================================================
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
-if PlayerGui:FindFirstChild("SpeedHubStep1V14UI") then
-    PlayerGui.SpeedHubStep1V14UI:Destroy()
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpeedHubStep1V14UI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 310, 0, 160)
-MainFrame.Position = UDim2.new(0.5, -155, 0.35, -80)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 8)
-Corner.Parent = MainFrame
-
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(255, 30, 60)
-Stroke.Thickness = 2
-Stroke.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -30, 0, 28)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "Speed Hub X | Step 1 (TEST v1.4)"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 12
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = MainFrame
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(1, -24, 0, 4)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 10
-CloseBtn.Parent = MainFrame
-
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
-local StatusBox = Instance.new("TextLabel")
-StatusBox.Size = UDim2.new(1, -20, 0, 45)
-StatusBox.Position = UDim2.new(0, 10, 0, 32)
-StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
-StatusBox.Font = Enum.Font.Code
-StatusBox.TextSize = 10
-StatusBox.TextXAlignment = Enum.TextXAlignment.Left
-StatusBox.TextYAlignment = Enum.TextYAlignment.Top
-StatusBox.Text = "Status TEST v1.4: Smart Input Attack..."
-StatusBox.Parent = MainFrame
-
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 6)
-BoxCorner.Parent = StatusBox
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(1, -20, 0, 36)
-ToggleBtn.Position = UDim2.new(0, 10, 0, 110)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-ToggleBtn.Text = "AUTO ATTACK: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.TextSize = 11
-ToggleBtn.Parent = MainFrame
-
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 6)
-ToggleCorner.Parent = ToggleBtn
-
-local isRunning = false
-
-local function SmartAttack()
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    -- Method 1: Cari RemoteEvent di dalam Character/Tool pemain
-    local foundRemote = false
-    for _, item in ipairs(char:GetDescendants()) do
-        if item:IsA("RemoteEvent") then
-            item:FireServer()
-            foundRemote = true
-        end
-    end
-
-    -- Method 2: Kirim Virtual Mouse Down pada sudut aman (pojok kanan bawah/area kosong)
-    if not foundRemote then
-        VirtualInputManager:SendMouseButtonEvent(10, 10, 0, true, game, 0)
-        task.wait(0.01)
-        VirtualInputManager:SendMouseButtonEvent(10, 10, 0, false, game, 0)
-    end
-end
-
-ToggleBtn.MouseButton1Click:Connect(function()
-    isRunning = not isRunning
-    if isRunning then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-        ToggleBtn.Text = "AUTO ATTACK: ON"
-
-        task.spawn(function()
-            while isRunning do
-                StatusBox.Text = "Status: [v1.4] Attacking..."
-                SmartAttack()
-                task.wait(0.18)
-            end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-        ToggleBtn.Text = "AUTO ATTACK: OFF"
-        StatusBox.Text = "Status: Dimatikan."
-    end
-end)-- ==========================================================
--- SPEED HUB X - STEP 1: PURE REMOTE ATTACK (UI SAFE 100%)
--- ==========================================================
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-if PlayerGui:FindFirstChild("SpeedHubStep1RemoteUI") then
-    PlayerGui.SpeedHubStep1RemoteUI:Destroy()
+-- 1. CLEANER TOTAL (Pembersih UI Lama)
+local function CleanUI(parent)
+    if not parent then return end
+    for _, child in ipairs(parent:GetChildren()) do
+        if child:IsA("ScreenGui") and (child.Name:find("SpeedHub") or child.Name:find("Step1") or child.Name:find("Fix")) then
+            pcall(function() child:Destroy() end)
+        end
+    end
 end
 
+CleanUI(PlayerGui)
+pcall(function() CleanUI(CoreGui) end)
+
+task.wait(0.1)
+
+-- 2. MEMBUAT UI V1.8
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpeedHubStep1RemoteUI"
+ScreenGui.Name = "SpeedHubStep1V18UI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 160)
-MainFrame.Position = UDim2.new(0.5, -150, 0.35, -80)
+MainFrame.Size = UDim2.new(0, 310, 0, 160)
+MainFrame.Position = UDim2.new(0.5, -155, 0.35, -80)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -316,7 +50,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -30, 0, 28)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Speed Hub X | Step 1: Remote Attack"
+Title.Text = "Speed Hub X | Step 1 (TEST v1.8)"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
@@ -346,7 +80,7 @@ StatusBox.Font = Enum.Font.Code
 StatusBox.TextSize = 10
 StatusBox.TextXAlignment = Enum.TextXAlignment.Left
 StatusBox.TextYAlignment = Enum.TextYAlignment.Top
-StatusBox.Text = "Status: Siap dites tanpa sentuh UI..."
+StatusBox.Text = "Status v1.8: Ready to Test..."
 StatusBox.Parent = MainFrame
 
 local BoxCorner = Instance.new("UICorner")
@@ -367,288 +101,67 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 6)
 ToggleCorner.Parent = ToggleBtn
 
--- MENCARI REMOTE EVENT SERANGAN GAME
-local attackRemote = nil
-for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-    if v:IsA("RemoteEvent") then
-        local name = v.Name:lower()
-        if name:find("attack") or name:find("m1") or name:find("swing") or name:find("hit") or name:find("damage") or name:find("combat") then
-            attackRemote = v
-            break
-        end
-    end
-end
-
-local isRunning = false
-
-local function SendRemoteAttack()
-    if attackRemote then
-        -- Kirim sinyal serangan langsung ke server tanpa memicu animasi UI
-        attackRemote:FireServer()
-    else
-        -- Jika remote spesifik tidak ditemukan, gunakan pemicu Tool internal tanpa Activate
-        local char = LocalPlayer.Character
-        if char then
-            local tool = char:FindFirstChildOfClass("Tool")
-            if tool and tool:FindFirstChild("RemoteEvent") then
-                tool.RemoteEvent:FireServer()
+-- 3. LOGIKA MEMAKSA UI SKILL TETAP MUNCUL (PREVENT HIDE)
+local function ForceSkillUIVisible()
+    for _, gui in ipairs(PlayerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Name ~= "SpeedHubStep1V18UI" then
+            for _, descendant in ipairs(gui:GetDescendants()) do
+                if descendant:IsA("Frame") or descendant:IsA("ImageLabel") or descendant:IsA("CanvasGroup") then
+                    local name = descendant.Name:lower()
+                    if name:find("skill") or name:find("ability") or name:find("button") or name:find("hud") then
+                        descendant.Visible = true
+                    end
+                end
             end
         end
     end
 end
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    isRunning = not isRunning
-    if isRunning then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-        ToggleBtn.Text = "AUTO ATTACK: ON"
+-- 4. LOGIKA SERANGAN DENGAN ARGUMEN REMOTE
+local comboCount = 1
 
-        task.spawn(function()
-            while isRunning do
-                StatusBox.Text = "Status: [REMOTE FIRE] Menyerang di background..."
-                SendRemoteAttack()
-                task.wait(0.15)
-            end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-        ToggleBtn.Text = "AUTO ATTACK: OFF"
-        StatusBox.Text = "Status: Dimatikan."
-    end
-end)-- ==========================================================
--- SPEED HUB X - STEP 1: AUTO-ATTACK FIX (NO UI HIDE)
--- ==========================================================
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
-if PlayerGui:FindFirstChild("SpeedHubStep1FixUI") then
-    PlayerGui.SpeedHubStep1FixUI:Destroy()
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpeedHubStep1FixUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 160)
-MainFrame.Position = UDim2.new(0.5, -150, 0.35, -80)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 8)
-Corner.Parent = MainFrame
-
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(255, 30, 60)
-Stroke.Thickness = 2
-Stroke.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -30, 0, 28)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "Speed Hub X | Step 1: Fix Attack"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 12
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = MainFrame
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(1, -24, 0, 4)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 10
-CloseBtn.Parent = MainFrame
-
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
-local StatusBox = Instance.new("TextLabel")
-StatusBox.Size = UDim2.new(1, -20, 0, 45)
-StatusBox.Position = UDim2.new(0, 10, 0, 32)
-StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
-StatusBox.Font = Enum.Font.Code
-StatusBox.TextSize = 10
-StatusBox.TextXAlignment = Enum.TextXAlignment.Left
-StatusBox.TextYAlignment = Enum.TextYAlignment.Top
-StatusBox.Text = "Status: Siap dites tanpa sembunyiin UI..."
-StatusBox.Parent = MainFrame
-
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 6)
-BoxCorner.Parent = StatusBox
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(1, -20, 0, 36)
-ToggleBtn.Position = UDim2.new(0, 10, 0, 110)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-ToggleBtn.Text = "AUTO ATTACK: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.TextSize = 11
-ToggleBtn.Parent = MainFrame
-
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 6)
-ToggleCorner.Parent = ToggleBtn
-
-local isRunning = false
-
-local function PureToolAttack()
+local function PerformAttackWithArgs()
     local char = LocalPlayer.Character
-    if char then
-        -- Murni picu Tool tanpa klik layar
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            tool:Activate()
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+    local hrp = char.HumanoidRootPart
+    local tool = char:FindFirstChildOfClass("Tool")
+
+    -- Cari RemoteEvent di Tool atau ReplicatedStorage
+    local remote = nil
+    if tool then
+        for _, obj in ipairs(tool:GetDescendants()) do
+            if obj:IsA("RemoteEvent") then remote = obj break end
         end
     end
-end
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    isRunning = not isRunning
-    if isRunning then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-        ToggleBtn.Text = "AUTO ATTACK: ON"
-
-        task.spawn(function()
-            while isRunning do
-                StatusBox.Text = "Status: [PURE ATTACK] Mukul tanpa sentuh UI..."
-                PureToolAttack()
-                task.wait(0.12)
+    if not remote then
+        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+            if obj:IsA("RemoteEvent") then
+                local n = obj.Name:lower()
+                if n:find("attack") or n:find("combat") or n:find("m1") or n:find("swing") then
+                    remote = obj
+                    break
+                end
             end
-        end)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-        ToggleBtn.Text = "AUTO ATTACK: OFF"
-        StatusBox.Text = "Status: Dimatikan."
+        end
     end
-end)-- ==========================================================
--- SPEED HUB X - STEP 1: AUTO-ATTACK TESTING (ANTI-GAGAL)
--- ==========================================================
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local Workspace = game:GetService("Workspace")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
--- Hapus UI lama jika ada
-if PlayerGui:FindFirstChild("SpeedHubStep1UI") then
-    PlayerGui.SpeedHubStep1UI:Destroy()
+    -- Kirim Remote dengan Argumen Standar RPG
+    if remote then
+        pcall(function()
+            remote:FireServer(comboCount, hrp.CFrame)
+            remote:FireServer("Attack", comboCount)
+            remote:FireServer({["Combo"] = comboCount, ["CFrame"] = hrp.CFrame})
+        end)
+        
+        comboCount = comboCount + 1
+        if comboCount > 4 then comboCount = 1 end
+    end
 end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpeedHubStep1UI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 160)
-MainFrame.Position = UDim2.new(0.5, -150, 0.35, -80)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 8)
-Corner.Parent = MainFrame
-
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(255, 30, 60)
-Stroke.Thickness = 2
-Stroke.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -30, 0, 28)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "Speed Hub X | Step 1: Auto-Attack"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 12
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = MainFrame
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(1, -24, 0, 4)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 10
-CloseBtn.Parent = MainFrame
-
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
-local StatusBox = Instance.new("TextLabel")
-StatusBox.Size = UDim2.new(1, -20, 0, 45)
-StatusBox.Position = UDim2.new(0, 10, 0, 32)
-StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
-StatusBox.Font = Enum.Font.Code
-StatusBox.TextSize = 10
-StatusBox.TextXAlignment = Enum.TextXAlignment.Left
-StatusBox.TextYAlignment = Enum.TextYAlignment.Top
-StatusBox.Text = "Status: Siap dites...\nPegang senjata & nyalakan sakelar."
-StatusBox.Parent = MainFrame
-
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 6)
-BoxCorner.Parent = StatusBox
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(1, -20, 0, 36)
-ToggleBtn.Position = UDim2.new(0, 10, 0, 110)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-ToggleBtn.Text = "AUTO ATTACK: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.TextSize = 11
-ToggleBtn.Parent = MainFrame
-
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 6)
-ToggleCorner.Parent = ToggleBtn
 
 local isRunning = false
 
--- FUNGSI MEMICU SERANGAN AUTOMATIS
-local function DoAttack()
-    local char = LocalPlayer.Character
-    if char then
-        -- 1. Pemicu Senjata Aktif di Tangan (Tool Activation)
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            tool:Activate()
-        end
-    end
-
-    -- 2. Pemicu Klik Virtual Layar (Fallback Click)
-    local viewportSize = Workspace.CurrentCamera.ViewportSize
-    local centerX = viewportSize.X / 2
-    local centerY = viewportSize.Y / 2
-    VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
-    task.wait(0.02)
-    VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
-end
-
 ToggleBtn.MouseButton1Click:Connect(function()
     isRunning = not isRunning
     if isRunning then
@@ -657,9 +170,10 @@ ToggleBtn.MouseButton1Click:Connect(function()
 
         task.spawn(function()
             while isRunning do
-                StatusBox.Text = "Status: [ATTACKING] Memukul otomatis..."
-                DoAttack()
-                task.wait(0.15) -- Jeda antar tebasan/serangan
+                StatusBox.Text = "Status: [v1.8] Attacking & Locking UI..."
+                PerformAttackWithArgs()
+                ForceSkillUIVisible() -- Memaksa UI Skill tidak hilang
+                task.wait(0.18)
             end
         end)
     else
