@@ -1,4 +1,155 @@
 -- ==========================================================
+-- SPEED HUB X - STEP 1 (TEST v1.9: NATIVE BUTTON SPOOFER)
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local CoreGui = game:GetService("CoreGui")
+
+-- 1. CLEANER TOTAL (Sapu Bersih Menu Lama)
+for _, gui in ipairs(CoreGui:GetChildren()) do
+    if gui:IsA("ScreenGui") and gui.Name:find("SpeedHub") then pcall(function() gui:Destroy() end) end
+end
+for _, gui in ipairs(PlayerGui:GetChildren()) do
+    if gui:IsA("ScreenGui") and gui.Name:find("SpeedHub") then pcall(function() gui:Destroy() end) end
+end
+
+-- 2. BUAT UI V1.9 (Hanya 1 Menu di Layar)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SpeedHubStep1V19UI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 310, 0, 160)
+MainFrame.Position = UDim2.new(0.5, -155, 0.35, -80)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = MainFrame
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(255, 30, 60)
+Stroke.Thickness = 2
+Stroke.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -30, 0, 28)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Speed Hub X | Step 1 (TEST v1.9)"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainFrame
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Position = UDim2.new(1, -24, 0, 4)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 10
+CloseBtn.Parent = MainFrame
+
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+local StatusBox = Instance.new("TextLabel")
+StatusBox.Size = UDim2.new(1, -20, 0, 45)
+StatusBox.Position = UDim2.new(0, 10, 0, 32)
+StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
+StatusBox.Font = Enum.Font.Code
+StatusBox.TextSize = 10
+StatusBox.TextXAlignment = Enum.TextXAlignment.Left
+StatusBox.TextYAlignment = Enum.TextYAlignment.Top
+StatusBox.Text = "Status v1.9: Siap pakai tombol bawaan..."
+StatusBox.Parent = MainFrame
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(1, -20, 0, 36)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 110)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+ToggleBtn.Text = "AUTO ATTACK: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.TextSize = 11
+ToggleBtn.Parent = MainFrame
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 6)
+
+-- 3. LOGIKA KLIK TOMBOL BAWAAN GAME
+local isRunning = false
+
+local function TapNativeButton()
+    local clicked = false
+    
+    -- Lacak semua UI di layar untuk mencari tombol Attack bawaan
+    for _, gui in ipairs(PlayerGui:GetDescendants()) do
+        if (gui:IsA("ImageButton") or gui:IsA("TextButton")) and gui.Visible then
+            local name = gui.Name:lower()
+            local parentName = gui.Parent and gui.Parent.Name:lower() or ""
+            
+            -- Filter nama yang sering dipakai developer buat tombol serang
+            if name:find("attack") or name:find("combat") or name:find("m1") or name:find("basic") or name:find("action") or parentName:find("attack") then
+                
+                -- Eksekusi lewat getconnections (Invisible click)
+                if getconnections then
+                    pcall(function()
+                        for _, conn in pairs(getconnections(gui.MouseButton1Down)) do conn:Fire() end
+                        for _, conn in pairs(getconnections(gui.MouseButton1Click)) do conn:Fire() end
+                        for _, conn in pairs(getconnections(gui.Activated)) do conn:Fire() end
+                        for _, conn in pairs(getconnections(gui.TouchTap)) do conn:Fire() end
+                    end)
+                end
+
+                -- Eksekusi lewat koordinat murni tombol (Fisik)
+                local inset = game:GetService("GuiService"):GetGuiInset()
+                local centerX = gui.AbsolutePosition.X + (gui.AbsoluteSize.X / 2)
+                local centerY = gui.AbsolutePosition.Y + (gui.AbsoluteSize.Y / 2) + inset.Y
+                
+                VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
+                task.wait(0.01)
+                VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
+                
+                clicked = true
+            end
+        end
+    end
+
+    -- Kalau tombol gagal dilacak, pakai simulasi klik kiri (M1) tanpa sentuh layar virtual
+    if not clicked then
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        task.wait(0.01)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+    if isRunning then
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+        ToggleBtn.Text = "AUTO ATTACK: ON"
+        task.spawn(function()
+            while isRunning do
+                StatusBox.Text = "Status: [v1.9] Tapping Game Button..."
+                TapNativeButton()
+                task.wait(0.15)
+            end
+        end)
+    else
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+        ToggleBtn.Text = "AUTO ATTACK: OFF"
+        StatusBox.Text = "Status: Dimatikan."
+    end
+end)-- ==========================================================
 -- SPEED HUB X - STEP 1 (TEST v1.8: ARGUMENT & UI HOOK)
 -- ==========================================================
 
