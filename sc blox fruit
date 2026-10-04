@@ -143,4 +143,149 @@ ToggleBtn.MouseButton1Click:Connect(function()
         ToggleBtn.Text = "AUTO ATTACK: OFF"
         StatusBox.Text = "Status: Dimatikan."
     end
+end)-- ==========================================================
+-- SPEED HUB X - STEP 1 (TEST v2.0: SMART REMOTE REPLAY)
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local CoreGui = game:GetService("CoreGui")
+
+-- 1. CLEANER TOTAL (Pastiin 1 Menu Doang)
+local function SapuBersih(parent)
+    if not parent then return end
+    for _, gui in ipairs(parent:GetChildren()) do
+        if gui:IsA("ScreenGui") and (gui.Name:find("SpeedHub") or gui.Name:find("Step1") or gui.Name:find("Fix") or gui.Name:find("V1")) then
+            pcall(function() gui:Destroy() end)
+        end
+    end
+end
+SapuBersih(PlayerGui)
+pcall(function() SapuBersih(CoreGui) end)
+task.wait(0.1)
+
+-- 2. BUAT UI V2.0
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SpeedHubStep1V20UI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 310, 0, 160)
+MainFrame.Position = UDim2.new(0.5, -155, 0.35, -80)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Color = Color3.fromRGB(255, 30, 60)
+Stroke.Thickness = 2
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, -30, 0, 28)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Speed Hub X | Step 1 (TEST v2.0)"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+local CloseBtn = Instance.new("TextButton", MainFrame)
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Position = UDim2.new(1, -24, 0, 4)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 10
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+local StatusBox = Instance.new("TextLabel", MainFrame)
+StatusBox.Size = UDim2.new(1, -20, 0, 45)
+StatusBox.Position = UDim2.new(0, 10, 0, 32)
+StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
+StatusBox.Font = Enum.Font.Code
+StatusBox.TextSize = 10
+StatusBox.TextXAlignment = Enum.TextXAlignment.Left
+StatusBox.TextYAlignment = Enum.TextYAlignment.Top
+StatusBox.Text = "Status: TUNGGU! Mukul manual 1x dulu..."
+Instance.new("UICorner", StatusBox).CornerRadius = UDim.new(0, 6)
+
+local ToggleBtn = Instance.new("TextButton", MainFrame)
+ToggleBtn.Size = UDim2.new(1, -20, 0, 36)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 110)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+ToggleBtn.Text = "AUTO ATTACK: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.TextSize = 11
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 6)
+
+-- 3. LOGIKA PEREKAM SINYAL (HOOKING)
+local capturedRemote = nil
+local capturedArgs = nil
+local isRunning = false
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    
+    -- Tangkap sinyal FireServer saat player mukul manual
+    if method == "FireServer" and not checkcaller() then
+        local rName = tostring(self.Name):lower()
+        -- Abaikan sinyal ga penting kayak gerak atau kamera
+        if not rName:find("mouse") and not rName:find("camera") and not rName:find("move") and not rName:find("ping") then
+            capturedRemote = self
+            capturedArgs = {...}
+        end
+    end
+    
+    return oldNamecall(self, ...)
+end)
+
+-- Update layar status biar lu tau kalo datanya udah direkam
+task.spawn(function()
+    while task.wait(0.5) do
+        if not isRunning then
+            if capturedRemote then
+                StatusBox.Text = "Status: Data Terekam! (" .. tostring(capturedRemote.Name) .. ")\nSiap Auto Attack Visual!"
+            else
+                StatusBox.Text = "Status: MUKUL MANUAL 1X DULU buat ngerekam data..."
+            end
+        end
+    end
+end)
+
+-- 4. LOGIKA AUTO ATTACK VISUAL
+ToggleBtn.MouseButton1Click:Connect(function()
+    if not capturedRemote then
+        StatusBox.Text = "GAGAL: Lu harus mukul manual 1x dulu, bro!"
+        return
+    end
+
+    isRunning = not isRunning
+    if isRunning then
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+        ToggleBtn.Text = "AUTO ATTACK: ON"
+        
+        task.spawn(function()
+            while isRunning do
+                StatusBox.Text = "Status: [v2.0] Attack Visual Aktif (Bypass UI)"
+                pcall(function()
+                    -- Tembak langsung ke server pake data yang udah dicuri tadi
+                    capturedRemote:FireServer(unpack(capturedArgs))
+                end)
+                task.wait(0.15)
+            end
+        end)
+    else
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+        ToggleBtn.Text = "AUTO ATTACK: OFF"
+        StatusBox.Text = "Status: Dimatikan."
+    end
 end)
