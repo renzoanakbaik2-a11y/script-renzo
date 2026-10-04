@@ -1,4 +1,152 @@
 -- ==========================================================
+-- SPEED HUB X - STEP 1 (TEST v1.5: INTERNAL MODULE ATTACK)
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- 1. PEMBERSIHAN OTOMATIS: Hapus semua menu Speed Hub lama agar tidak tumpuk
+for _, gui in ipairs(PlayerGui:GetChildren()) do
+    if gui:IsA("ScreenGui") and (gui.Name:find("SpeedHub") or gui.Name:find("Step1")) then
+        gui:Destroy()
+    end
+end
+
+-- 2. INI BIKIN SCREEN GUI BARU (HANYA 1 MENU)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SpeedHubStep1V15UI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 310, 0, 160)
+MainFrame.Position = UDim2.new(0.5, -155, 0.35, -80)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = MainFrame
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(255, 30, 60)
+Stroke.Thickness = 2
+Stroke.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -30, 0, 28)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Speed Hub X | Step 1 (TEST v1.5)"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainFrame
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Position = UDim2.new(1, -24, 0, 4)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 10
+CloseBtn.Parent = MainFrame
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+local StatusBox = Instance.new("TextLabel")
+StatusBox.Size = UDim2.new(1, -20, 0, 45)
+StatusBox.Position = UDim2.new(0, 10, 0, 32)
+StatusBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+StatusBox.TextColor3 = Color3.fromRGB(100, 255, 150)
+StatusBox.Font = Enum.Font.Code
+StatusBox.TextSize = 10
+StatusBox.TextXAlignment = Enum.TextXAlignment.Left
+StatusBox.TextYAlignment = Enum.TextYAlignment.Top
+StatusBox.Text = "Status TEST v1.5: Internal Module Attack..."
+StatusBox.Parent = MainFrame
+
+local BoxCorner = Instance.new("UICorner")
+BoxCorner.CornerRadius = UDim.new(0, 6)
+BoxCorner.Parent = StatusBox
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(1, -20, 0, 36)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 110)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+ToggleBtn.Text = "AUTO ATTACK: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.TextSize = 11
+ToggleBtn.Parent = MainFrame
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 6)
+ToggleCorner.Parent = ToggleBtn
+
+local isRunning = false
+
+-- FUNGSI MEMANGGIL FUNGSI SERANGAN INTERNAL DARI MODUL KARAKTER
+local function InternalModuleAttack()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    -- Cari skrip lokal / modul pertarungan di dalam Karakter
+    for _, scriptObj in ipairs(char:GetDescendants()) do
+        if scriptObj:IsA("LocalScript") or scriptObj:IsA("ModuleScript") then
+            local sName = scriptObj.Name:lower()
+            if sName:find("combat") or sName:find("attack") or sName:find("weapon") or sName:find("controller") then
+                -- Jalankan perintah serangan internal tanpa memicu pemicu layar
+                pcall(function()
+                    local loadedModule = require(scriptObj)
+                    if type(loadedModule) == "table" then
+                        if loadedModule.Attack then loadedModule:Attack()
+                        elseif loadedModule.Swing then loadedModule:Swing()
+                        elseif loadedModule.M1 then loadedModule:M1()
+                        end
+                    end
+                end)
+            end
+        end
+    end
+
+    -- Fallback aman: Kirim sinyal lewat remote internal tool tanpa klik
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool then
+        for _, rem in ipairs(tool:GetDescendants()) do
+            if rem:IsA("RemoteEvent") then
+                rem:FireServer()
+            end
+        end
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+    if isRunning then
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+        ToggleBtn.Text = "AUTO ATTACK: ON"
+
+        task.spawn(function()
+            while isRunning do
+                StatusBox.Text = "Status: [v1.5] Executing Internal Attack..."
+                InternalModuleAttack()
+                task.wait(0.18)
+            end
+        end)
+    else
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+        ToggleBtn.Text = "AUTO ATTACK: OFF"
+        StatusBox.Text = "Status: Dimatikan."
+    end
+end)-- ==========================================================
 -- SPEED HUB X - STEP 1 (TEST v1.4: SMART ATTACK FIX)
 -- ==========================================================
 
