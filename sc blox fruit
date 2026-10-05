@@ -3,22 +3,22 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
 
--- 1. PEMBERSIHAN MENU LAMA (Biar nggak numpuk)
+-- 1. CLEANUP MENU LAMA
 local existing = PlayerGui:FindFirstChild("MenuResetUI")
 if existing then
 	existing:Destroy()
 end
 
--- 2. BIKIN MENU SEDERHANA
+-- 2. BIKIN MENU SIMPLE
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "MenuResetUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 220, 0, 120)
-Frame.Position = UDim2.new(0.5, -110, 0.4, -60)
-Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+Frame.Size = UDim2.new(0, 240, 0, 130)
+Frame.Position = UDim2.new(0.5, -120, 0.4, -65)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
 Frame.Active = true
 Frame.Draggable = true
 Frame.Parent = ScreenGui
@@ -27,7 +27,7 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "AUTO BOLA (RESET v1.0)"
+Title.Text = "AUTO BOLA & MUKUL (v1.1)"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 13
@@ -35,7 +35,7 @@ Title.BackgroundTransparency = 1
 
 local Tombol = Instance.new("TextButton", Frame)
 Tombol.Size = UDim2.new(1, -20, 0, 45)
-Tombol.Position = UDim2.new(0, 10, 0, 40)
+Tombol.Position = UDim2.new(0, 10, 0, 35)
 Tombol.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
 Tombol.Text = "AUTO CHASE & HIT: OFF"
 Tombol.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -45,35 +45,52 @@ Tombol.TextSize = 12
 Instance.new("UICorner", Tombol).CornerRadius = UDim.new(0, 6)
 
 local Status = Instance.new("TextLabel", Frame)
-Status.Size = UDim2.new(1, -20, 0, 20)
-Status.Position = UDim2.new(0, 10, 0, 90)
+Status.Size = UDim2.new(1, -20, 0, 35)
+Status.Position = UDim2.new(0, 10, 0, 85)
 Status.Text = "Status: Off"
 Status.TextColor3 = Color3.fromRGB(150, 150, 150)
 Status.Font = Enum.Font.Code
 Status.TextSize = 10
+Status.TextWrapped = true
 Status.BackgroundTransparency = 1
 
--- 3. LOGIKA UTAMA (TELEPORT + MUKUL)
-local isRunning = false
-
--- Fungsi cari bola di Workspace
+-- 3. LOGIKA CARI BOLA (LEBIH PINTAR & LENGKAP)
 local function cariBola()
-	-- Mencari part/model yang namanya mengandung kata "Ball" atau "Bola"
-	for _, obj in ipairs(Workspace:GetChildren()) do
-		if obj:IsA("BasePart") or obj:IsA("Model") then
-			if obj.Name:lower():find("ball") or obj.Name:lower():find("bola") then
-				if obj:IsA("BasePart") then
-					return obj
-				elseif obj:IsA("Model") and obj.PrimaryPart then
-					return obj.PrimaryPart
-				end
+	-- Cari di seluruh Workspace (termasuk di dalam folder-folder)
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local nama = obj.Name:lower()
+			-- Deteksi berbagai kemungkinan nama bola di Roblox
+			if nama:find("ball") or nama:find("bola") or nama:find("tps") or nama:find("football") or nama:find("soccer") then
+				return obj
 			end
 		end
 	end
 	return nil
 end
 
--- Fungsi eksekusi Teleport & Pukul
+-- 4. LOGIKA MUKUL LENGKAP
+local function eksekusiMukul(tool)
+	if not tool then return end
+	
+	-- Cara 1: Menggunakan :Activate() standar Roblox
+	pcall(function()
+		tool:Activate()
+	end)
+	
+	-- Cara 2: Jika alat punya event / script pemukul bawaan (RemoteEvent)
+	for _, child in ipairs(tool:GetDescendants()) do
+		if child:IsA("RemoteEvent") then
+			pcall(function()
+				child:FireServer()
+			end)
+		end
+	end
+end
+
+-- 5. LOGIKA UTAMA TELEPORT + MUKUL
+local isRunning = false
+
 local function kejarDanPukul()
 	local char = LocalPlayer.Character
 	if not char then return end
@@ -81,38 +98,36 @@ local function kejarDanPukul()
 	local hrp = char:FindFirstChild("HumanoidRootPart")
 	if not hrp then return end
 	
-	-- 1. Ambil/Equip Senjata
+	-- Equip Senjata Otomatis
 	local tool = char:FindFirstChildOfClass("Tool")
 	if not tool then
 		local backpack = LocalPlayer:FindFirstChild("Backpack")
 		if backpack then
 			tool = backpack:FindFirstChildOfClass("Tool")
 			if tool then
-				tool.Parent = char -- Equip senjata
+				tool.Parent = char
 			end
 		end
 	end
 	
-	-- 2. Cari Bola
+	-- Cari Bola
 	local bola = cariBola()
 	if bola then
-		-- Teleport ke posisi bola (agak sedikit di atas bola biar gak nempel banget)
-		hrp.CFrame = bola.CFrame * CFrame.new(0, 2, 3)
+		-- Teleport Tepat di Samping/Atas Bola
+		hrp.CFrame = bola.CFrame * CFrame.new(0, 2, 2)
 		
-		-- Mukul pakai senjata
-		if tool then
-			tool:Activate()
-		end
+		-- Eksekusi Pemukul
+		eksekusiMukul(tool)
 		
-		Status.Text = "Status: Teleport & Mukul Bola!"
+		Status.Text = "Status: Menemukan [" .. bola.Name .. "] & Mukul!"
 		Status.TextColor3 = Color3.fromRGB(100, 255, 150)
 	else
-		Status.Text = "Status: Bola tidak ditemukan!"
+		Status.Text = "Status: Bola tidak ditemukan di Workspace!"
 		Status.TextColor3 = Color3.fromRGB(255, 100, 100)
 	end
 end
 
--- 4. PENGHUBUNG TOMBOL
+-- 6. PENGHUBUNG TOMBOL
 Tombol.MouseButton1Click:Connect(function()
 	isRunning = not isRunning
 	
@@ -123,7 +138,7 @@ Tombol.MouseButton1Click:Connect(function()
 		task.spawn(function()
 			while isRunning do
 				kejarDanPukul()
-				task.wait(0.1) -- Jeda loop teleport & mukul
+				task.wait(0.05) -- Jeda lebih cepat biar langsung nempel & mukul terus
 			end
 		end)
 	else
