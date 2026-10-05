@@ -1,4 +1,225 @@
--- [[ RACKET RIVALS ULTIMATE HUB - POLISHED VERSION ]] --
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- 1. PEMBERSIHAN MENU LAMA
+local function Cleanup()
+    local existing = PlayerGui:FindFirstChild("SpeedHubMainMenuUI")
+    if existing then
+        existing:Destroy()
+    end
+end
+Cleanup()
+
+-- 2. WADAH UTAMA (ScreenGui)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SpeedHubMainMenuUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+-- 3. FRAME UTAMA MENU
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 360, 0, 240)
+MainFrame.Position = UDim2.new(0.5, -180, 0.4, -120)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+-- Corner & Border Effect
+local MainCorner = Instance.new("UICorner", MainFrame)
+MainCorner.CornerRadius = UDim.new(0, 10)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(255, 30, 60)
+MainStroke.Thickness = 2
+
+-- 4. TITLE BAR (Header Menu)
+local TitleBar = Instance.new("Frame", MainFrame)
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+
+local TitleCorner = Instance.new("UICorner", TitleBar)
+TitleCorner.CornerRadius = UDim.new(0, 10)
+
+local TitleText = Instance.new("TextLabel", TitleBar)
+TitleText.Size = UDim2.new(1, -40, 1, 0)
+TitleText.Position = UDim2.new(0, 12, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "SPEED HUB X | Racket Rivals"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Font = Enum.Font.SourceSansBold
+TitleText.TextSize = 14
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Tombol Close (X)
+local CloseBtn = Instance.new("TextButton", TitleBar)
+CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+CloseBtn.Position = UDim2.new(1, -29, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 45, 70)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 12
+
+local CloseCorner = Instance.new("UICorner", CloseBtn)
+CloseCorner.CornerRadius = UDim.new(0, 6)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- 5. CONTAINER TOMBOL (Layout)
+local ContentContainer = Instance.new("Frame", MainFrame)
+ContentContainer.Size = UDim2.new(1, -20, 1, -50)
+ContentContainer.Position = UDim2.new(0, 10, 0, 42)
+ContentContainer.BackgroundTransparency = 1
+
+local UIList = Instance.new("UIListLayout", ContentContainer)
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 8)
+
+-- 6. TOMBOL 1: AUTO TELEPORT & HIT RING
+local BtnTeleportHit = Instance.new("TextButton", ContentContainer)
+BtnTeleportHit.Size = UDim2.new(1, 0, 0, 40)
+BtnTeleportHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+BtnTeleportHit.Text = "AUTO TELEPORT & HIT: OFF"
+BtnTeleportHit.TextColor3 = Color3.fromRGB(220, 220, 220)
+BtnTeleportHit.Font = Enum.Font.SourceSansBold
+BtnTeleportHit.TextSize = 12
+
+Instance.new("UICorner", BtnTeleportHit).CornerRadius = UDim.new(0, 6)
+
+-- 7. TOMBOL 2: SPEED BOOST
+local BtnSpeed = Instance.new("TextButton", ContentContainer)
+BtnSpeed.Size = UDim2.new(1, 0, 0, 40)
+BtnSpeed.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+BtnSpeed.Text = "SUPER SPEED: OFF"
+BtnSpeed.TextColor3 = Color3.fromRGB(220, 220, 220)
+BtnSpeed.Font = Enum.Font.SourceSansBold
+BtnSpeed.TextSize = 12
+
+Instance.new("UICorner", BtnSpeed).CornerRadius = UDim.new(0, 6)
+
+-- 8. STATUS BOX
+local StatusText = Instance.new("TextLabel", ContentContainer)
+StatusText.Size = UDim2.new(1, 0, 0, 30)
+StatusText.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
+StatusText.Text = "Status: Idle (Ready)"
+StatusText.TextColor3 = Color3.fromRGB(120, 255, 160)
+StatusText.Font = Enum.Font.Code
+StatusText.TextSize = 11
+
+Instance.new("UICorner", StatusText).CornerRadius = UDim.new(0, 6)
+
+-- ===================================================
+-- 9. LOGIKA SCRIPT & HELPER FUNCTIONS (Bumbu Tambahan)
+-- ===================================================
+local isAutoHitActive = false
+local isSpeeding = false
+local defaultWalkSpeed = 16
+local customSpeed = 32
+local isDebounce = false
+
+-- Fungsi Eksekusi Ayunan Raket
+local function SwingRacket()
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+    task.wait(0.02)
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+end
+
+-- Fungsi Mencari Ring / Target Indicator Bola di Lapangan
+local function GetBallRing()
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        -- Mendeteksi part/ring indikator pendaratan bola berdasarkan karakteristik umum di Racket Rivals
+        if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("CylinderHandleAdornment") then
+            local name = obj.Name:lower()
+            if name:find("ring") or name:find("indicator") or name:find("target") or name:find("circle") or name:find("landing") then
+                return obj
+            end
+        end
+    end
+    return nil
+end
+
+-- 10. INTERAKSI TOMBOL & LOOP LOGIC
+BtnTeleportHit.MouseButton1Click:Connect(function()
+    isAutoHitActive = not isAutoHitActive
+    if isAutoHitActive then
+        BtnTeleportHit.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+        BtnTeleportHit.Text = "AUTO TELEPORT & HIT: ON"
+        StatusText.Text = "Status: Scanning Ball Ring..."
+    else
+        BtnTeleportHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+        BtnTeleportHit.Text = "AUTO TELEPORT & HIT: OFF"
+        StatusText.Text = "Status: Auto Hit Stopped"
+    end
+end)
+
+BtnSpeed.MouseButton1Click:Connect(function()
+    isSpeeding = not isSpeeding
+    if isSpeeding then
+        BtnSpeed.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+        BtnSpeed.Text = "SUPER SPEED: ON"
+        StatusText.Text = "Status: Speed Boost Active"
+    else
+        BtnSpeed.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+        BtnSpeed.Text = "SUPER SPEED: OFF"
+        StatusText.Text = "Status: Normal Speed"
+        
+        -- Reset Kecepatan Normal
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = defaultWalkSpeed
+        end
+    end
+end)
+
+-- Main Loop (RenderStepped Engine)
+RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Humanoid") then return end
+    
+    local HRP = char.HumanoidRootPart
+    local Humanoid = char.Humanoid
+
+    -- Handle Speed Boost
+    if isSpeeding then
+        Humanoid.WalkSpeed = customSpeed
+    end
+
+    -- Handle Auto Teleport & Hit
+    if isAutoHitActive and not isDebounce then
+        local targetRing = GetBallRing()
+        
+        if targetRing then
+            local ringPos = targetRing:IsA("BasePart") and targetRing.Position or (targetRing.Parent:IsA("BasePart") and targetRing.Parent.Position)
+            
+            if ringPos then
+                isDebounce = true
+                StatusText.Text = "Status: Teleporting & Hitting!"
+                
+                -- Teleport ke atas ring dikit (Offset Y + 2.5 biar posisi berdiri rapi di ring)
+                HRP.CFrame = CFrame.new(ringPos + Vector3.new(0, 2.5, 0), Vector3.new(ringPos.X, HRP.Position.Y, ringPos.Z))
+                
+                -- Eksekusi Swing
+                SwingRacket()
+                
+                -- Cooldown / Delay singkat biar gak ke-detect spamming oleh server
+                task.wait(0.2)
+                isDebounce = false
+                
+                if isAutoHitActive then
+                    StatusText.Text = "Status: Scanning Ball Ring..."
+                end
+            end
+        end
+    end
+end)-- [[ RACKET RIVALS ULTIMATE HUB - POLISHED VERSION ]] --
 -- Features: Auto Hit (Auto Swing), Auto Ability, Ball Magnet, ESP, Safe Error Handling
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
