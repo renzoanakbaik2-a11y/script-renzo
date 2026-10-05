@@ -1,228 +1,135 @@
--- ====================================================================
--- RACKET RIVALS: FULL SYSTEM WITH ON/OFF UI & AUTO-PARRY LOGIC
--- ====================================================================
-
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Stats = game:GetService("Stats")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local Workspace = game:GetService("Workspace")
 
--- Config System
-local Settings = {
-    Enabled = false,               -- Status Toggle Main
-    AutoSwing = true,              -- Auto Swing Toggle
-    Keybind = Enum.KeyCode.V,      -- Hotkey ON/OFF
-    MaxReachDistance = 40,         -- Radius Deteksi Bola
-    DashSpeed = 0.08,              -- Kecepatan Pergerakan
-    PingOffsetMultiplier = 0.0015, -- Latency Compensation
-}
-
--- References & Variables
-local NetBoundaryZ = 0
-
--- ====================================================================
--- 1. UTILITY FUNCTIONS
--- ====================================================================
-
-local function GetPing()
-    local ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
-    return ping or 50
+-- 1. PEMBERSIHAN MENU LAMA (Biar nggak numpuk)
+local existing = PlayerGui:FindFirstChild("MenuResetUI")
+if existing then
+	existing:Destroy()
 end
 
-local function GetBall()
-    for _, obj in pairs(workspace:GetChildren()) do
-        if obj:IsA("BasePart") and (obj.Name:find("Ball") or obj.Name:find("Shuttle") or obj.Name:find("Projectile")) then
-            return obj
-        end
-    end
-    return nil
-end
-
-local function LocateNet()
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and (obj.Name:lower():find("net") or obj.Name:lower():find("jaring")) then
-            return obj.Position.Z
-        end
-    end
-    return 0
-end
-
-NetBoundaryZ = LocateNet()
-
--- ====================================================================
--- 2. ZONE CHECK & TRAJECTORY PREDICTION
--- ====================================================================
-
-local function IsBallInMyZone(ballPos)
-    local playerSide = HumanoidRootPart.Position.Z > NetBoundaryZ
-    if playerSide then
-        return ballPos.Z > NetBoundaryZ
-    else
-        return ballPos.Z < NetBoundaryZ
-    end
-end
-
-local function PredictLandingPosition(ball)
-    local velocity = ball.AssemblyLinearVelocity
-    local position = ball.Position
-    local ping = GetPing()
-    
-    local pingCompensation = velocity * (ping * Settings.PingOffsetMultiplier)
-    return position + pingCompensation
-end
-
-local function PerformHit(ballHeight)
-    if not Settings.AutoSwing then return end
-    if ballHeight > (HumanoidRootPart.Position.Y + 6) then
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
-        task.wait(0.02)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
-    else
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-        task.wait(0.02)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-    end
-end
-
--- ====================================================================
--- 3. GUI CREATION (ON/OFF MENU)
--- ====================================================================
-
+-- 2. BIKIN MENU SEDERHANA
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RacketRivalsMenu"
+ScreenGui.Name = "MenuResetUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 180)
-MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 220, 0, 120)
+Frame.Position = UDim2.new(0.5, -110, 0.4, -60)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+Frame.Active = true
+Frame.Draggable = true
+Frame.Parent = ScreenGui
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
-UICorner.Parent = MainFrame
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.BackgroundTransparency = 1
-Title.Text = "RACKET RIVALS HUB"
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "AUTO BOLA (RESET v1.0)"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 13
+Title.BackgroundTransparency = 1
 
--- Toggle Button Auto Parry
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0.85, 0, 0, 38)
-ToggleBtn.Position = UDim2.new(0.075, 0, 0.25, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-ToggleBtn.Text = "AUTO PARRY: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 14
-ToggleBtn.Font = Enum.Font.GothamSemibold
-ToggleBtn.Parent = MainFrame
+local Tombol = Instance.new("TextButton", Frame)
+Tombol.Size = UDim2.new(1, -20, 0, 45)
+Tombol.Position = UDim2.new(0, 10, 0, 40)
+Tombol.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+Tombol.Text = "AUTO CHASE & HIT: OFF"
+Tombol.TextColor3 = Color3.fromRGB(255, 255, 255)
+Tombol.Font = Enum.Font.SourceSansBold
+Tombol.TextSize = 12
 
-local BtnCorner1 = Instance.new("UICorner")
-BtnCorner1.CornerRadius = UDim.new(0, 8)
-BtnCorner1.Parent = ToggleBtn
+Instance.new("UICorner", Tombol).CornerRadius = UDim.new(0, 6)
 
--- Toggle Button Auto Swing
-local SwingBtn = Instance.new("TextButton")
-SwingBtn.Size = UDim2.new(0.85, 0, 0, 38)
-SwingBtn.Position = UDim2.new(0.075, 0, 0.52, 0)
-SwingBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 80)
-SwingBtn.Text = "AUTO SWING: ON"
-SwingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SwingBtn.TextSize = 14
-SwingBtn.Font = Enum.Font.GothamSemibold
-SwingBtn.Parent = MainFrame
+local Status = Instance.new("TextLabel", Frame)
+Status.Size = UDim2.new(1, -20, 0, 20)
+Status.Position = UDim2.new(0, 10, 0, 90)
+Status.Text = "Status: Off"
+Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+Status.Font = Enum.Font.Code
+Status.TextSize = 10
+Status.BackgroundTransparency = 1
 
-local BtnCorner2 = Instance.new("UICorner")
-BtnCorner2.CornerRadius = UDim.new(0, 8)
-BtnCorner2.Parent = SwingBtn
+-- 3. LOGIKA UTAMA (TELEPORT + MUKUL)
+local isRunning = false
 
-local StatusInfo = Instance.new("TextLabel")
-StatusInfo.Size = UDim2.new(1, 0, 0, 25)
-StatusInfo.Position = UDim2.new(0, 0, 0.82, 0)
-StatusInfo.BackgroundTransparency = 1
-StatusInfo.Text = "Press [V] to Toggle Menu"
-StatusInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
-StatusInfo.TextSize = 11
-StatusInfo.Font = Enum.Font.Gotham
-StatusInfo.Parent = MainFrame
-
--- Update Button Styles Function
-local function UpdateUI()
-    if Settings.Enabled then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-        ToggleBtn.Text = "AUTO PARRY: ON"
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-        ToggleBtn.Text = "AUTO PARRY: OFF"
-    end
-    
-    if Settings.AutoSwing then
-        SwingBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-        SwingBtn.Text = "AUTO SWING: ON"
-    else
-        SwingBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-        SwingBtn.Text = "AUTO SWING: OFF"
-    end
+-- Fungsi cari bola di Workspace
+local function cariBola()
+	-- Mencari part/model yang namanya mengandung kata "Ball" atau "Bola"
+	for _, obj in ipairs(Workspace:GetChildren()) do
+		if obj:IsA("BasePart") or obj:IsA("Model") then
+			if obj.Name:lower():find("ball") or obj.Name:lower():find("bola") then
+				if obj:IsA("BasePart") then
+					return obj
+				elseif obj:IsA("Model") and obj.PrimaryPart then
+					return obj.PrimaryPart
+				end
+			end
+		end
+	end
+	return nil
 end
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    Settings.Enabled = not Settings.Enabled
-    UpdateUI()
-end)
+-- Fungsi eksekusi Teleport & Pukul
+local function kejarDanPukul()
+	local char = LocalPlayer.Character
+	if not char then return end
+	
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+	
+	-- 1. Ambil/Equip Senjata
+	local tool = char:FindFirstChildOfClass("Tool")
+	if not tool then
+		local backpack = LocalPlayer:FindFirstChild("Backpack")
+		if backpack then
+			tool = backpack:FindFirstChildOfClass("Tool")
+			if tool then
+				tool.Parent = char -- Equip senjata
+			end
+		end
+	end
+	
+	-- 2. Cari Bola
+	local bola = cariBola()
+	if bola then
+		-- Teleport ke posisi bola (agak sedikit di atas bola biar gak nempel banget)
+		hrp.CFrame = bola.CFrame * CFrame.new(0, 2, 3)
+		
+		-- Mukul pakai senjata
+		if tool then
+			tool:Activate()
+		end
+		
+		Status.Text = "Status: Teleport & Mukul Bola!"
+		Status.TextColor3 = Color3.fromRGB(100, 255, 150)
+	else
+		Status.Text = "Status: Bola tidak ditemukan!"
+		Status.TextColor3 = Color3.fromRGB(255, 100, 100)
+	end
+end
 
-SwingBtn.MouseButton1Click:Connect(function()
-    Settings.AutoSwing = not Settings.AutoSwing
-    UpdateUI()
-end)
-
--- ====================================================================
--- 4. MAIN LOOP & KEYBIND TOGGLE
--- ====================================================================
-
-RunService.RenderStepped:Connect(function()
-    if not Settings.Enabled then return end
-    
-    Character = LocalPlayer.Character
-    if not Character or not Character:FindFirstChild("HumanoidRootPart") then return end
-    HumanoidRootPart = Character.HumanoidRootPart
-
-    local currentBall = GetBall()
-    if not currentBall then return end
-
-    local ballPos = currentBall.Position
-    local distance = (HumanoidRootPart.Position - ballPos).Magnitude
-
-    -- Hanya aktif saat bola berada di area lapangan kita
-    if IsBallInMyZone(ballPos) and distance <= Settings.MaxReachDistance then
-        local targetPos = PredictLandingPosition(currentBall)
-        local destinationCFrame = CFrame.new(targetPos.X, HumanoidRootPart.Position.Y, targetPos.Z) * HumanoidRootPart.CFrame.Rotation
-        
-        HumanoidRootPart.CFrame = HumanoidRootPart.CFrame:Lerp(destinationCFrame, Settings.DashSpeed)
-
-        if distance <= 12 then
-            PerformHit(ballPos.Y)
-        end
-    end
-end)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Settings.Keybind then
-        MainFrame.Visible = not MainFrame.Visible
-    end
+-- 4. PENGHUBUNG TOMBOL
+Tombol.MouseButton1Click:Connect(function()
+	isRunning = not isRunning
+	
+	if isRunning then
+		Tombol.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+		Tombol.Text = "AUTO CHASE & HIT: ON"
+		
+		task.spawn(function()
+			while isRunning do
+				kejarDanPukul()
+				task.wait(0.1) -- Jeda loop teleport & mukul
+			end
+		end)
+	else
+		Tombol.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+		Tombol.Text = "AUTO CHASE & HIT: OFF"
+		Status.Text = "Status: Off"
+		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+	end
 end)
