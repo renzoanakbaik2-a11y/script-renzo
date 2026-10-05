@@ -1,196 +1,31 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- 1. CLEANUP UI LAMA
-local function Cleanup()
-    local existing = PlayerGui:FindFirstChild("SpeedHubMainMenuUI")
-    if existing then
-        existing:Destroy()
+local function ScanNearbyObjects()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then 
+        warn("Karakter belum spawn!")
+        return 
     end
-end
-Cleanup()
-
--- 2. GUI SETUP
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpeedHubMainMenuUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 360, 0, 270)
-MainFrame.Position = UDim2.new(0.5, -180, 0.4, -135)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-
-local MainStroke = Instance.new("UIStroke", MainFrame)
-MainStroke.Color = Color3.fromRGB(255, 30, 60)
-MainStroke.Thickness = 2
-
--- 3. TITLE BAR
-local TitleBar = Instance.new("Frame", MainFrame)
-TitleBar.Size = UDim2.new(1, 0, 0, 35)
-TitleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
-
-local TitleText = Instance.new("TextLabel", TitleBar)
-TitleText.Size = UDim2.new(1, -40, 1, 0)
-TitleText.Position = UDim2.new(0, 12, 0, 0)
-TitleText.BackgroundTransparency = 1
-TitleText.Text = "SPEED HUB X | Ball Scanner Fix"
-TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleText.Font = Enum.Font.SourceSansBold
-TitleText.TextSize = 14
-TitleText.TextXAlignment = Enum.TextXAlignment.Left
-
-local CloseBtn = Instance.new("TextButton", TitleBar)
-CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseBtn.Position = UDim2.new(1, -29, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 45, 70)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 12
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
-
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
--- 4. CONTAINER
-local ContentContainer = Instance.new("Frame", MainFrame)
-ContentContainer.Size = UDim2.new(1, -20, 1, -50)
-ContentContainer.Position = UDim2.new(0, 10, 0, 42)
-ContentContainer.BackgroundTransparency = 1
-
-local UIList = Instance.new("UIListLayout", ContentContainer)
-UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 6)
-
--- 5. BUTTONS
-local BtnAutoHit = Instance.new("TextButton", ContentContainer)
-BtnAutoHit.Size = UDim2.new(1, 0, 0, 38)
-BtnAutoHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-BtnAutoHit.Text = "AUTO HIT / TELEPORT BOLA: OFF"
-BtnAutoHit.TextColor3 = Color3.fromRGB(220, 220, 220)
-BtnAutoHit.Font = Enum.Font.SourceSansBold
-BtnAutoHit.TextSize = 12
-Instance.new("UICorner", BtnAutoHit).CornerRadius = UDim.new(0, 6)
-
-local BtnReset = Instance.new("TextButton", ContentContainer)
-BtnReset.Size = UDim2.new(1, 0, 0, 38)
-BtnReset.BackgroundColor3 = Color3.fromRGB(200, 80, 20)
-BtnReset.Text = "⚠️ RESET / EMERGENCY STOP"
-BtnReset.TextColor3 = Color3.fromRGB(255, 255, 255)
-BtnReset.Font = Enum.Font.SourceSansBold
-BtnReset.TextSize = 12
-Instance.new("UICorner", BtnReset).CornerRadius = UDim.new(0, 6)
-
-local StatusText = Instance.new("TextLabel", ContentContainer)
-StatusText.Size = UDim2.new(1, 0, 0, 30)
-StatusText.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
-StatusText.Text = "Status: Scanning Workspace..."
-StatusText.TextColor3 = Color3.fromRGB(120, 255, 160)
-StatusText.Font = Enum.Font.Code
-StatusText.TextSize = 11
-Instance.new("UICorner", StatusText).CornerRadius = UDim.new(0, 6)
-
--- ===================================================
--- 6. SMART BALL FINDER (FIX DIAM AJA)
--- ===================================================
-local isAutoHitActive = false
-local isProcessingHit = false
-local lastHitTime = 0
-
-local function SingleSwing()
-    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-    task.wait(0.02)
-    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-end
-
--- BUMBU RAHASIA: Pencari Bola Super Fleksibel
-local function FindAnyBall()
+    
+    local HRP = char.HumanoidRootPart
+    print("================ [ HASIL SCANNING OBJECT ] ================")
+    
+    local count = 0
     for _, obj in pairs(Workspace:GetDescendants()) do
-        -- Cek apakah namanya mengandung kata bola/ball/tennis/projectile
-        local name = obj.Name:lower()
-        if name:find("ball") or name:find("tennis") or name:find("projectile") or name:find("ring") then
-            if obj:IsA("BasePart") and obj.Transparency < 1 then
-                return obj
-            elseif obj:IsA("Model") then
-                local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                if part then return part end
+        if obj:IsA("BasePart") then
+            local dist = (HRP.Position - obj.Position).Magnitude
+            -- Scan semua part di sekitar jarak 80 studs (kecuali karakter sendiri)
+            if dist <= 80 and not obj:IsDescendantOf(char) then
+                print(string.format("Nama: %s | Class: %s | Distance: %.1f studs | Parent: %s", 
+                    obj.Name, obj.ClassName, dist, obj.Parent and obj.Parent.Name or "Nil"))
+                count = count + 1
             end
         end
     end
-    return nil
+    print("================ Total Part Ditemukan: " .. count .. " ================")
 end
 
-local function ResetScriptState()
-    isAutoHitActive = false
-    isProcessingHit = false
-    BtnAutoHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    BtnAutoHit.Text = "AUTO HIT / TELEPORT BOLA: OFF"
-    StatusText.Text = "Status: Reset Done"
-end
-
-BtnAutoHit.MouseButton1Click:Connect(function()
-    isAutoHitActive = not isAutoHitActive
-    if isAutoHitActive then
-        BtnAutoHit.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-        BtnAutoHit.Text = "AUTO HIT / TELEPORT BOLA: ON"
-        StatusText.Text = "Status: Searching for Ball..."
-    else
-        ResetScriptState()
-    end
-end)
-
-BtnReset.MouseButton1Click:Connect(function()
-    ResetScriptState()
-end)
-
--- LOOP ENGINE
-RunService.RenderStepped:Connect(function()
-    if not isAutoHitActive or isProcessingHit then return end
-
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local HRP = char.HumanoidRootPart
-
-    local ballPart = FindAnyBall()
-
-    if ballPart then
-        local dist = (HRP.Position - ballPart.Position).Magnitude
-        
-        -- Update Status Teks Live Nama Object Bola Yang Ditemukan
-        StatusText.Text = "Found: " .. ballPart.Name .. " (" .. math.floor(dist) .. " studs)"
-
-        -- Kalau bola dalam jangkauan 60 studs
-        if dist <= 60 and (tick() - lastHitTime > 0.3) then
-            isProcessingHit = true
-            lastHitTime = tick()
-            
-            StatusText.Text = "Hit Executed on: " .. ballPart.Name
-
-            -- Teleport langsung ke posisi bola
-            local targetPos = ballPart.Position
-            HRP.CFrame = CFrame.new(Vector3.new(targetPos.X, HRP.Position.Y, targetPos.Z), Vector3.new(targetPos.X, HRP.Position.Y, targetPos.Z))
-
-            -- Swing raket
-            SingleSwing()
-
-            task.wait(0.2)
-            isProcessingHit = false
-        end
-    else
-        StatusText.Text = "Status: Ball NOT Found! (Scanning...)"
-    end
-end)
+-- Eksekusi scan saat ini
+ScanNearbyObjects()
