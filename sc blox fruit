@@ -6,14 +6,14 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- 1. CLEANUP SCRIPT LAMA
+-- 1. CLEANUP UI LAMA
 local function Cleanup()
     local existing = PlayerGui:FindFirstChild("SpeedHubMainMenuUI")
     if existing then existing:Destroy() end
 end
 Cleanup()
 
--- 2. GUI BASE SETUP
+-- 2. SETUP UI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SpeedHubMainMenuUI"
 ScreenGui.ResetOnSpawn = false
@@ -21,8 +21,8 @@ ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 360, 0, 270)
-MainFrame.Position = UDim2.new(0.5, -180, 0.4, -135)
+MainFrame.Size = UDim2.new(0, 360, 0, 240)
+MainFrame.Position = UDim2.new(0.5, -180, 0.4, -120)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -44,7 +44,7 @@ local TitleText = Instance.new("TextLabel", TitleBar)
 TitleText.Size = UDim2.new(1, -40, 1, 0)
 TitleText.Position = UDim2.new(0, 12, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "SPEED HUB X | Anti-Void Teleport Fix"
+TitleText.Text = "SPEED HUB X | Pure Ball Teleport"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.Font = Enum.Font.SourceSansBold
 TitleText.TextSize = 14
@@ -64,7 +64,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     Cleanup()
 end)
 
--- Container
+-- Layout Container
 local ContentContainer = Instance.new("Frame", MainFrame)
 ContentContainer.Size = UDim2.new(1, -20, 1, -50)
 ContentContainer.Position = UDim2.new(0, 10, 0, 42)
@@ -72,78 +72,68 @@ ContentContainer.BackgroundTransparency = 1
 
 local UIList = Instance.new("UIListLayout", ContentContainer)
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 6)
+UIList.Padding = UDim.new(0, 8)
 
 -- Buttons
-local BtnSafeHit = Instance.new("TextButton", ContentContainer)
-BtnSafeHit.Size = UDim2.new(1, 0, 0, 38)
-BtnSafeHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-BtnSafeHit.Text = "REAL BALL TELEPORT & HIT: OFF"
-BtnSafeHit.TextColor3 = Color3.fromRGB(220, 220, 220)
-BtnSafeHit.Font = Enum.Font.SourceSansBold
-BtnSafeHit.TextSize = 12
-Instance.new("UICorner", BtnSafeHit).CornerRadius = UDim.new(0, 6)
-
-local BtnSpeed = Instance.new("TextButton", ContentContainer)
-BtnSpeed.Size = UDim2.new(1, 0, 0, 38)
-BtnSpeed.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-BtnSpeed.Text = "SUPER SPEED: OFF"
-BtnSpeed.TextColor3 = Color3.fromRGB(220, 220, 220)
-BtnSpeed.Font = Enum.Font.SourceSansBold
-BtnSpeed.TextSize = 12
-Instance.new("UICorner", BtnSpeed).CornerRadius = UDim.new(0, 6)
+local BtnAutoHit = Instance.new("TextButton", ContentContainer)
+BtnAutoHit.Size = UDim2.new(1, 0, 0, 40)
+BtnAutoHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+BtnAutoHit.Text = "AUTO TELEPORT BALL: OFF"
+BtnAutoHit.TextColor3 = Color3.fromRGB(220, 220, 220)
+BtnAutoHit.Font = Enum.Font.SourceSansBold
+BtnAutoHit.TextSize = 12
+Instance.new("UICorner", BtnAutoHit).CornerRadius = UDim.new(0, 6)
 
 local BtnReset = Instance.new("TextButton", ContentContainer)
-BtnReset.Size = UDim2.new(1, 0, 0, 38)
+BtnReset.Size = UDim2.new(1, 0, 0, 40)
 BtnReset.BackgroundColor3 = Color3.fromRGB(200, 80, 20)
-BtnReset.Text = "⚠️ RESET SCRIPT"
+BtnReset.Text = "⚠️️ RESET SCRIPT"
 BtnReset.TextColor3 = Color3.fromRGB(255, 255, 255)
 BtnReset.Font = Enum.Font.SourceSansBold
 BtnReset.TextSize = 12
 Instance.new("UICorner", BtnReset).CornerRadius = UDim.new(0, 6)
 
 local StatusText = Instance.new("TextLabel", ContentContainer)
-StatusText.Size = UDim2.new(1, 0, 0, 30)
+StatusText.Size = UDim2.new(1, 0, 0, 32)
 StatusText.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
-StatusText.Text = "Status: Idle (Ready)"
+StatusText.Text = "Status: Standby"
 StatusText.TextColor3 = Color3.fromRGB(120, 255, 160)
 StatusText.Font = Enum.Font.Code
 StatusText.TextSize = 11
 Instance.new("UICorner", StatusText).CornerRadius = UDim.new(0, 6)
 
 -- ===================================================
--- 3. LOGIKA ANTI-DIMENSI / ANTI-VOID (FILTER KOORDINAT)
+-- LOGIKA TELEPORT MURNI (NO BUG / NO VOID)
 -- ===================================================
 local isAutoHitActive = false
-local isSpeeding = false
-local isDebounce = false
-local defaultWalkSpeed = 16
-local customSpeed = 32
+local isProcessingHit = false
+local lastHitTime = 0
 
-local function SwingRacket()
+local function SingleSwing()
     VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-    task.wait(0.01)
+    task.wait(0.02)
     VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
 end
 
--- BUMBU ANTI-DIMENSI: Scan hanya koordinat nyata yang rasional!
-local function GetRealBallInCourt()
+-- Pencari Bola Presisi
+local function GetValidCourtBall()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
-    local myPos = char.HumanoidRootPart.Position
+    local HRP = char.HumanoidRootPart
 
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and obj.Transparency < 1 then
-            local name = obj.Name:lower()
-            if name:find("ball") or name:find("tennis") or name:find("ring") or name:find("landing") or name:find("indicator") then
-                local pos = obj.Position
-
-                -- FILTER TINGGI (Y-Axis): Harus berada di antara Y = 0 sampai Y = 60 (Tinggi wajar arena game)
-                if pos.Y >= 0 and pos.Y <= 60 then
-                    -- FILTER JARAK 2D: Maksimal 45 studs dari posisi kita berdiri
-                    local dist2D = (Vector2.new(myPos.X, myPos.Z) - Vector2.new(pos.X, pos.Z)).Magnitude
-                    if dist2D <= 45 then
-                        return obj
+    for _, obj in pairs(Workspace:GetChildren()) do
+        -- Cek objek bola aktif di Workspace utama
+        local name = obj.Name:lower()
+        if name:find("ball") or name:find("tennis") or obj:FindFirstChild("Ball") then
+            local part = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")))
+            if part then
+                local bPos = part.Position
+                -- Syarat 1: Bola tidak di bawah tanah dan tidak ketinggian aneh
+                if bPos.Y >= 1 and bPos.Y <= 40 then
+                    -- Syarat 2: Jarak horisontal bola mendekati area kita (Max 50 studs)
+                    local dist2D = (Vector2.new(HRP.Position.X, HRP.Position.Z) - Vector2.new(bPos.X, bPos.Z)).Magnitude
+                    if dist2D <= 50 then
+                        return part
                     end
                 end
             end
@@ -154,44 +144,20 @@ end
 
 local function ResetScriptState()
     isAutoHitActive = false
-    isSpeeding = false
-    isDebounce = false
-    BtnSafeHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    BtnSafeHit.Text = "REAL BALL TELEPORT & HIT: OFF"
-    BtnSpeed.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    BtnSpeed.Text = "SUPER SPEED: OFF"
+    isProcessingHit = false
+    BtnAutoHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    BtnAutoHit.Text = "AUTO TELEPORT BALL: OFF"
     StatusText.Text = "Status: Reset Done!"
-
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = defaultWalkSpeed
-    end
 end
 
--- LISTENERS
-BtnSafeHit.MouseButton1Click:Connect(function()
+BtnAutoHit.MouseButton1Click:Connect(function()
     isAutoHitActive = not isAutoHitActive
     if isAutoHitActive then
-        BtnSafeHit.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-        BtnSafeHit.Text = "REAL BALL TELEPORT & HIT: ON"
-        StatusText.Text = "Status: Tracking Real Court Ball..."
+        BtnAutoHit.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+        BtnAutoHit.Text = "AUTO TELEPORT BALL: ON"
+        StatusText.Text = "Status: Waiting Ball..."
     else
         ResetScriptState()
-    end
-end)
-
-BtnSpeed.MouseButton1Click:Connect(function()
-    isSpeeding = not isSpeeding
-    if isSpeeding then
-        BtnSpeed.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-        BtnSpeed.Text = "SUPER SPEED: ON"
-        StatusText.Text = "Status: Speed Boost Active"
-    else
-        BtnSpeed.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-        BtnSpeed.Text = "SUPER SPEED: OFF"
-        StatusText.Text = "Status: Normal Speed"
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.WalkSpeed = defaultWalkSpeed
-        end
     end
 end)
 
@@ -199,43 +165,36 @@ BtnReset.MouseButton1Click:Connect(function()
     ResetScriptState()
 end)
 
--- LOOP ENGINE
+-- ENGINE LOOP
 RunService.RenderStepped:Connect(function()
+    if not isAutoHitActive or isProcessingHit then return end
+
     local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Humanoid") then return end
-
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local HRP = char.HumanoidRootPart
-    local Humanoid = char.Humanoid
 
-    if isSpeeding then
-        Humanoid.WalkSpeed = customSpeed
-    end
+    local ballPart = GetValidCourtBall()
 
-    if isAutoHitActive and not isDebounce then
-        local targetBall = GetRealBallInCourt()
+    if ballPart and (tick() - lastHitTime > 0.3) then
+        isProcessingHit = true
+        lastHitTime = tick()
 
-        if targetBall then
-            isDebounce = true
-            local targetPos = targetBall.Position
+        StatusText.Text = "Status: Ball Intercepted!"
 
-            StatusText.Text = "Status: Valid Ball Found! Intercepting..."
+        local bPos = ballPart.Position
+        
+        -- KUNCI UTAMA: Teleport HANYA di koordinat X dan Z bola, Y TETAP di ketinggian berdiri karakter
+        HRP.CFrame = CFrame.new(Vector3.new(bPos.X, HRP.Position.Y, bPos.Z), Vector3.new(bPos.X, HRP.Position.Y, bPos.Z))
 
-            -- TELEPORT AMAN: Hanya ubah X dan Z, nilai Y KUNCI di ketinggian berdiri karakter
-            HRP.CFrame = CFrame.new(Vector3.new(targetPos.X, HRP.Position.Y, targetPos.Z), Vector3.new(targetPos.X, HRP.Position.Y, targetPos.Z))
+        -- Mukul 1 Kali
+        task.wait(0.02)
+        SingleSwing()
 
-            -- Eksekusi Swing
-            SwingRacket()
+        task.wait(0.2)
+        isProcessingHit = false
 
-            task.wait(0.2)
-            isDebounce = false
-
-            if isAutoHitActive then
-                StatusText.Text = "Status: Tracking Real Court Ball..."
-            end
-        else
-            if isAutoHitActive then
-                StatusText.Text = "Status: Waiting Valid Ball in Court..."
-            end
+        if isAutoHitActive then
+            StatusText.Text = "Status: Waiting Ball..."
         end
     end
 end)
