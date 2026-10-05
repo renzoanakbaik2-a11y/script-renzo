@@ -24,8 +24,8 @@ ScreenGui.Parent = PlayerGui
 -- 3. FRAME UTAMA MENU
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 360, 0, 240)
-MainFrame.Position = UDim2.new(0.5, -180, 0.4, -120)
+MainFrame.Size = UDim2.new(0, 360, 0, 270)
+MainFrame.Position = UDim2.new(0.5, -180, 0.4, -135)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -51,7 +51,7 @@ local TitleText = Instance.new("TextLabel", TitleBar)
 TitleText.Size = UDim2.new(1, -40, 1, 0)
 TitleText.Position = UDim2.new(0, 12, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "SPEED HUB X | Racket Rivals"
+TitleText.Text = "SPEED HUB X | Racket Rivals Fix"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.Font = Enum.Font.SourceSansBold
 TitleText.TextSize = 14
@@ -82,31 +82,39 @@ ContentContainer.BackgroundTransparency = 1
 
 local UIList = Instance.new("UIListLayout", ContentContainer)
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 8)
+UIList.Padding = UDim.new(0, 6)
 
--- 6. TOMBOL 1: AUTO TELEPORT & HIT RING
+-- 6. TOMBOL 1: AUTO TELEPORT & HIT
 local BtnTeleportHit = Instance.new("TextButton", ContentContainer)
-BtnTeleportHit.Size = UDim2.new(1, 0, 0, 40)
+BtnTeleportHit.Size = UDim2.new(1, 0, 0, 38)
 BtnTeleportHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 BtnTeleportHit.Text = "AUTO TELEPORT & HIT: OFF"
 BtnTeleportHit.TextColor3 = Color3.fromRGB(220, 220, 220)
 BtnTeleportHit.Font = Enum.Font.SourceSansBold
 BtnTeleportHit.TextSize = 12
-
 Instance.new("UICorner", BtnTeleportHit).CornerRadius = UDim.new(0, 6)
 
--- 7. TOMBOL 2: SPEED BOOST
+-- 7. TOMBOL 2: SUPER SPEED
 local BtnSpeed = Instance.new("TextButton", ContentContainer)
-BtnSpeed.Size = UDim2.new(1, 0, 0, 40)
+BtnSpeed.Size = UDim2.new(1, 0, 0, 38)
 BtnSpeed.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 BtnSpeed.Text = "SUPER SPEED: OFF"
 BtnSpeed.TextColor3 = Color3.fromRGB(220, 220, 220)
 BtnSpeed.Font = Enum.Font.SourceSansBold
 BtnSpeed.TextSize = 12
-
 Instance.new("UICorner", BtnSpeed).CornerRadius = UDim.new(0, 6)
 
--- 8. STATUS BOX
+-- 8. TOMBOL 3: EMERGENCY RESET
+local BtnReset = Instance.new("TextButton", ContentContainer)
+BtnReset.Size = UDim2.new(1, 0, 0, 38)
+BtnReset.BackgroundColor3 = Color3.fromRGB(200, 80, 20)
+BtnReset.Text = "⚠️ RESET / EMERGENCY STOP"
+BtnReset.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnReset.Font = Enum.Font.SourceSansBold
+BtnReset.TextSize = 12
+Instance.new("UICorner", BtnReset).CornerRadius = UDim.new(0, 6)
+
+-- 9. STATUS BOX
 local StatusText = Instance.new("TextLabel", ContentContainer)
 StatusText.Size = UDim2.new(1, 0, 0, 30)
 StatusText.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
@@ -114,11 +122,10 @@ StatusText.Text = "Status: Idle (Ready)"
 StatusText.TextColor3 = Color3.fromRGB(120, 255, 160)
 StatusText.Font = Enum.Font.Code
 StatusText.TextSize = 11
-
 Instance.new("UICorner", StatusText).CornerRadius = UDim.new(0, 6)
 
 -- ===================================================
--- 9. LOGIKA SCRIPT & HELPER FUNCTIONS (Bumbu Tambahan)
+-- 10. LOGIKA REVISI & INTEGRASI BOLA (Bumbu Terbaru)
 -- ===================================================
 local isAutoHitActive = false
 local isSpeeding = false
@@ -126,34 +133,59 @@ local defaultWalkSpeed = 16
 local customSpeed = 32
 local isDebounce = false
 
--- Fungsi Eksekusi Ayunan Raket
+-- Fungsi Swing Fast & Anti-Delay
 local function SwingRacket()
     VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-    task.wait(0.02)
+    task.wait(0.01)
     VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
 end
 
--- Fungsi Mencari Ring / Target Indicator Bola di Lapangan
-local function GetBallRing()
+-- Bumbu Fix Scanner: Pencari Objek Bola/Ring secara mendalam di Workspace
+local function GetBallOrRing()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = char.HumanoidRootPart.Position
+
     for _, obj in pairs(Workspace:GetDescendants()) do
-        -- Mendeteksi part/ring indikator pendaratan bola berdasarkan karakteristik umum di Racket Rivals
-        if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("CylinderHandleAdornment") then
+        if obj:IsA("BasePart") then
             local name = obj.Name:lower()
-            if name:find("ring") or name:find("indicator") or name:find("target") or name:find("circle") or name:find("landing") then
-                return obj
+            -- Scan nama bola/ring/landing indicator
+            if name:find("ball") or name:find("tennis") or name:find("ring") or name:find("landing") or name:find("target") or name:find("indicator") then
+                -- Jarak maksimal 65 studs (Menandakan bola berada di area lapangan kita)
+                local dist = (Vector2.new(myPos.X, myPos.Z) - Vector2.new(obj.Position.X, obj.Position.Z)).Magnitude
+                if dist <= 65 then
+                    return obj
+                end
             end
         end
     end
     return nil
 end
 
--- 10. INTERAKSI TOMBOL & LOOP LOGIC
+-- Emergency Reset Function
+local function ResetScriptState()
+    isAutoHitActive = false
+    isSpeeding = false
+    isDebounce = false
+    
+    BtnTeleportHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    BtnTeleportHit.Text = "AUTO TELEPORT & HIT: OFF"
+    BtnSpeed.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    BtnSpeed.Text = "SUPER SPEED: OFF"
+    StatusText.Text = "Status: Script Reset Successfully!"
+    
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = defaultWalkSpeed
+    end
+end
+
+-- 11. EVENT LISTENERS
 BtnTeleportHit.MouseButton1Click:Connect(function()
     isAutoHitActive = not isAutoHitActive
     if isAutoHitActive then
         BtnTeleportHit.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
         BtnTeleportHit.Text = "AUTO TELEPORT & HIT: ON"
-        StatusText.Text = "Status: Scanning Ball Ring..."
+        StatusText.Text = "Status: Tracking Incoming Ball..."
     else
         BtnTeleportHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
         BtnTeleportHit.Text = "AUTO TELEPORT & HIT: OFF"
@@ -172,14 +204,17 @@ BtnSpeed.MouseButton1Click:Connect(function()
         BtnSpeed.Text = "SUPER SPEED: OFF"
         StatusText.Text = "Status: Normal Speed"
         
-        -- Reset Kecepatan Normal
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
             LocalPlayer.Character.Humanoid.WalkSpeed = defaultWalkSpeed
         end
     end
 end)
 
--- Main Loop (RenderStepped Engine)
+BtnReset.MouseButton1Click:Connect(function()
+    ResetScriptState()
+end)
+
+-- 12. MAIN LOOP ENGINE
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Humanoid") then return end
@@ -194,28 +229,26 @@ RunService.RenderStepped:Connect(function()
 
     -- Handle Auto Teleport & Hit
     if isAutoHitActive and not isDebounce then
-        local targetRing = GetBallRing()
+        local targetObj = GetBallOrRing()
         
-        if targetRing then
-            local ringPos = targetRing:IsA("BasePart") and targetRing.Position or (targetRing.Parent:IsA("BasePart") and targetRing.Parent.Position)
+        if targetObj then
+            isDebounce = true
+            StatusText.Text = "Status: Teleporting & Hitting!"
             
-            if ringPos then
-                isDebounce = true
-                StatusText.Text = "Status: Teleporting & Hitting!"
-                
-                -- Teleport ke atas ring dikit (Offset Y + 2.5 biar posisi berdiri rapi di ring)
-                HRP.CFrame = CFrame.new(ringPos + Vector3.new(0, 2.5, 0), Vector3.new(ringPos.X, HRP.Position.Y, ringPos.Z))
-                
-                -- Eksekusi Swing
-                SwingRacket()
-                
-                -- Cooldown / Delay singkat biar gak ke-detect spamming oleh server
-                task.wait(0.2)
-                isDebounce = false
-                
-                if isAutoHitActive then
-                    StatusText.Text = "Status: Scanning Ball Ring..."
-                end
+            local targetPos = targetObj.Position
+            
+            -- Teleport langsung di koordinat X, Z bola (Y aman di tinggi berdiri karakter)
+            HRP.CFrame = CFrame.new(Vector3.new(targetPos.X, HRP.Position.Y, targetPos.Z), Vector3.new(targetPos.X, HRP.Position.Y, targetPos.Z))
+            
+            -- Eksekusi Pukulan Raket
+            SwingRacket()
+            
+            -- Cooldown / Delay halus biar gak spam berlebih
+            task.wait(0.2)
+            isDebounce = false
+            
+            if isAutoHitActive then
+                StatusText.Text = "Status: Tracking Incoming Ball..."
             end
         end
     end
