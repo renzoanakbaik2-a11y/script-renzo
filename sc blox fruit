@@ -12,14 +12,10 @@ local function Cleanup()
     if existing then
         existing:Destroy()
     end
-    local oldZone = Workspace:FindFirstChild("SpeedHub_VisualZone")
-    if oldZone then
-        oldZone:Destroy()
-    end
 end
 Cleanup()
 
--- 2. GUI BASE SETUP
+-- 2. GUI SETUP
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SpeedHubMainMenuUI"
 ScreenGui.ResetOnSpawn = false
@@ -27,8 +23,8 @@ ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 360, 0, 300)
-MainFrame.Position = UDim2.new(0.5, -180, 0.4, -150)
+MainFrame.Size = UDim2.new(0, 360, 0, 270)
+MainFrame.Position = UDim2.new(0.5, -180, 0.4, -135)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -50,7 +46,7 @@ local TitleText = Instance.new("TextLabel", TitleBar)
 TitleText.Size = UDim2.new(1, -40, 1, 0)
 TitleText.Position = UDim2.new(0, 12, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "SPEED HUB X | Visual Zone Intercept"
+TitleText.Text = "SPEED HUB X | Ball Scanner Fix"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.Font = Enum.Font.SourceSansBold
 TitleText.TextSize = 14
@@ -67,10 +63,10 @@ CloseBtn.TextSize = 12
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
 CloseBtn.MouseButton1Click:Connect(function()
-    Cleanup()
+    ScreenGui:Destroy()
 end)
 
--- 4. CONTAINER & BUTTONS
+-- 4. CONTAINER
 local ContentContainer = Instance.new("Frame", MainFrame)
 ContentContainer.Size = UDim2.new(1, -20, 1, -50)
 ContentContainer.Position = UDim2.new(0, 10, 0, 42)
@@ -80,29 +76,18 @@ local UIList = Instance.new("UIListLayout", ContentContainer)
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 6)
 
--- Tombol 1: Visual Zone Toggle
-local BtnShowZone = Instance.new("TextButton", ContentContainer)
-BtnShowZone.Size = UDim2.new(1, 0, 0, 36)
-BtnShowZone.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-BtnShowZone.Text = "VISUAL COURT ZONE: OFF"
-BtnShowZone.TextColor3 = Color3.fromRGB(220, 220, 220)
-BtnShowZone.Font = Enum.Font.SourceSansBold
-BtnShowZone.TextSize = 12
-Instance.new("UICorner", BtnShowZone).CornerRadius = UDim.new(0, 6)
+-- 5. BUTTONS
+local BtnAutoHit = Instance.new("TextButton", ContentContainer)
+BtnAutoHit.Size = UDim2.new(1, 0, 0, 38)
+BtnAutoHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+BtnAutoHit.Text = "AUTO HIT / TELEPORT BOLA: OFF"
+BtnAutoHit.TextColor3 = Color3.fromRGB(220, 220, 220)
+BtnAutoHit.Font = Enum.Font.SourceSansBold
+BtnAutoHit.TextSize = 12
+Instance.new("UICorner", BtnAutoHit).CornerRadius = UDim.new(0, 6)
 
--- Tombol 2: Auto Intercept Toggle
-local BtnZoneIntercept = Instance.new("TextButton", ContentContainer)
-BtnZoneIntercept.Size = UDim2.new(1, 0, 0, 36)
-BtnZoneIntercept.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-BtnZoneIntercept.Text = "AUTO INTERCEPT IN ZONE: OFF"
-BtnZoneIntercept.TextColor3 = Color3.fromRGB(220, 220, 220)
-BtnZoneIntercept.Font = Enum.Font.SourceSansBold
-BtnZoneIntercept.TextSize = 12
-Instance.new("UICorner", BtnZoneIntercept).CornerRadius = UDim.new(0, 6)
-
--- Tombol 3: Emergency Reset
 local BtnReset = Instance.new("TextButton", ContentContainer)
-BtnReset.Size = UDim2.new(1, 0, 0, 36)
+BtnReset.Size = UDim2.new(1, 0, 0, 38)
 BtnReset.BackgroundColor3 = Color3.fromRGB(200, 80, 20)
 BtnReset.Text = "⚠️ RESET / EMERGENCY STOP"
 BtnReset.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -113,57 +98,18 @@ Instance.new("UICorner", BtnReset).CornerRadius = UDim.new(0, 6)
 local StatusText = Instance.new("TextLabel", ContentContainer)
 StatusText.Size = UDim2.new(1, 0, 0, 30)
 StatusText.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
-StatusText.Text = "Status: Idle (Ready)"
+StatusText.Text = "Status: Scanning Workspace..."
 StatusText.TextColor3 = Color3.fromRGB(120, 255, 160)
 StatusText.Font = Enum.Font.Code
 StatusText.TextSize = 11
 Instance.new("UICorner", StatusText).CornerRadius = UDim.new(0, 6)
 
 -- ===================================================
--- 5. LOGIKA VISUAL ZONE & AUTO INTERCEPT
+-- 6. SMART BALL FINDER (FIX DIAM AJA)
 -- ===================================================
-local isZoneVisible = false
-local isZoneActive = false
+local isAutoHitActive = false
 local isProcessingHit = false
 local lastHitTime = 0
-
-local visualPart = nil
-
--- Fungsi Buat Kotak Visual Area Lapangan
-local function UpdateVisualZone()
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local HRP = char.HumanoidRootPart
-
-    if isZoneVisible then
-        if not visualPart or not visualPart.Parent then
-            visualPart = Instance.new("Part")
-            visualPart.Name = "SpeedHub_VisualZone"
-            visualPart.Anchored = true
-            visualPart.CanCollide = false
-            visualPart.Material = Enum.Material.ForceField
-            visualPart.Color = Color3.fromRGB(0, 255, 150)
-            visualPart.Transparency = 0.6
-            visualPart.Size = Vector3.new(45, 15, 45) -- Ukuran Area Lapangan (45x45 Studs)
-            visualPart.Parent = Workspace
-            
-            -- Efek Garis / SelectionBox
-            local box = Instance.new("SelectionBox")
-            box.Adornee = visualPart
-            box.Color3 = Color3.fromRGB(0, 255, 200)
-            box.LineThickness = 0.05
-            box.Parent = visualPart
-        end
-        
-        -- Mengikuti koordinat karakter tapi tetap berada di lantai
-        visualPart.CFrame = CFrame.new(HRP.Position.X, HRP.Position.Y + 2.5, HRP.Position.Z)
-    else
-        if visualPart then
-            visualPart:Destroy()
-            visualPart = nil
-        end
-    end
-end
 
 local function SingleSwing()
     VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
@@ -171,12 +117,17 @@ local function SingleSwing()
     VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
 end
 
-local function GetBallPart()
+-- BUMBU RAHASIA: Pencari Bola Super Fleksibel
+local function FindAnyBall()
     for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local name = obj.Name:lower()
-            if name == "ball" or name:find("tennis") or name:find("volley") then
+        -- Cek apakah namanya mengandung kata bola/ball/tennis/projectile
+        local name = obj.Name:lower()
+        if name:find("ball") or name:find("tennis") or name:find("projectile") or name:find("ring") then
+            if obj:IsA("BasePart") and obj.Transparency < 1 then
                 return obj
+            elseif obj:IsA("Model") then
+                local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                if part then return part end
             end
         end
     end
@@ -184,42 +135,21 @@ local function GetBallPart()
 end
 
 local function ResetScriptState()
-    isZoneVisible = false
-    isZoneActive = false
+    isAutoHitActive = false
     isProcessingHit = false
-    UpdateVisualZone()
-    BtnShowZone.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    BtnShowZone.Text = "VISUAL COURT ZONE: OFF"
-    BtnZoneIntercept.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    BtnZoneIntercept.Text = "AUTO INTERCEPT IN ZONE: OFF"
+    BtnAutoHit.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    BtnAutoHit.Text = "AUTO HIT / TELEPORT BOLA: OFF"
     StatusText.Text = "Status: Reset Done"
 end
 
--- 6. EVENT LISTENERS
-BtnShowZone.MouseButton1Click:Connect(function()
-    isZoneVisible = not isZoneVisible
-    if isZoneVisible then
-        BtnShowZone.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-        BtnShowZone.Text = "VISUAL COURT ZONE: ON"
-        StatusText.Text = "Status: Visual Area Created!"
+BtnAutoHit.MouseButton1Click:Connect(function()
+    isAutoHitActive = not isAutoHitActive
+    if isAutoHitActive then
+        BtnAutoHit.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+        BtnAutoHit.Text = "AUTO HIT / TELEPORT BOLA: ON"
+        StatusText.Text = "Status: Searching for Ball..."
     else
-        BtnShowZone.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-        BtnShowZone.Text = "VISUAL COURT ZONE: OFF"
-        StatusText.Text = "Status: Visual Area Hidden"
-    end
-    UpdateVisualZone()
-end)
-
-BtnZoneIntercept.MouseButton1Click:Connect(function()
-    isZoneActive = not isZoneActive
-    if isZoneActive then
-        BtnZoneIntercept.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-        BtnZoneIntercept.Text = "AUTO INTERCEPT IN ZONE: ON"
-        StatusText.Text = "Status: Monitoring Zone Entry..."
-    else
-        BtnZoneIntercept.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-        BtnZoneIntercept.Text = "AUTO INTERCEPT IN ZONE: OFF"
-        StatusText.Text = "Status: Intercept Stopped"
+        ResetScriptState()
     end
 end)
 
@@ -229,55 +159,38 @@ end)
 
 -- LOOP ENGINE
 RunService.RenderStepped:Connect(function()
-    if isZoneVisible then
-        UpdateVisualZone()
-    end
-
-    if not isZoneActive or isProcessingHit then return end
+    if not isAutoHitActive or isProcessingHit then return end
 
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local HRP = char.HumanoidRootPart
 
-    local ball = GetBallPart()
+    local ballPart = FindAnyBall()
 
-    if ball and (tick() - lastHitTime > 0.4) then
-        local ballPos = ball.Position
+    if ballPart then
+        local dist = (HRP.Position - ballPart.Position).Magnitude
         
-        -- Deteksi 2D Distance (Sumbu X dan Z)
-        local player2D = Vector2.new(HRP.Position.X, HRP.Position.Z)
-        local ball2D = Vector2.new(ballPos.X, ballPos.Z)
-        local dist2D = (player2D - ball2D).Magnitude
+        -- Update Status Teks Live Nama Object Bola Yang Ditemukan
+        StatusText.Text = "Found: " .. ballPart.Name .. " (" .. math.floor(dist) .. " studs)"
 
-        -- BUKTI VISUAL: Radius 22.5 studs (setengah dari ukuran kotak 45 studs)
-        if dist2D <= 22.5 then
+        -- Kalau bola dalam jangkauan 60 studs
+        if dist <= 60 and (tick() - lastHitTime > 0.3) then
             isProcessingHit = true
             lastHitTime = tick()
-            StatusText.Text = "Status: Ball Inside Zone! Intercepting..."
+            
+            StatusText.Text = "Hit Executed on: " .. ballPart.Name
 
-            -- Ubah warna kotak visual jadi MERAH pas bola masuk
-            if visualPart then
-                visualPart.Color = Color3.fromRGB(255, 30, 60)
-            end
+            -- Teleport langsung ke posisi bola
+            local targetPos = ballPart.Position
+            HRP.CFrame = CFrame.new(Vector3.new(targetPos.X, HRP.Position.Y, targetPos.Z), Vector3.new(targetPos.X, HRP.Position.Y, targetPos.Z))
 
-            -- Teleport ke X, Z Bola
-            HRP.CFrame = CFrame.new(Vector3.new(ballPos.X, HRP.Position.Y, ballPos.Z), Vector3.new(ballPos.X, HRP.Position.Y, ballPos.Z))
-
-            -- Swing
+            -- Swing raket
             SingleSwing()
 
-            task.wait(0.25)
-            
-            -- Balikin warna hijau
-            if visualPart then
-                visualPart.Color = Color3.fromRGB(0, 255, 150)
-            end
-
+            task.wait(0.2)
             isProcessingHit = false
-
-            if isZoneActive then
-                StatusText.Text = "Status: Monitoring Zone Entry..."
-            end
         end
+    else
+        StatusText.Text = "Status: Ball NOT Found! (Scanning...)"
     end
 end)
