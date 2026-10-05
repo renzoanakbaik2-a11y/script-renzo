@@ -1,31 +1,249 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
-local function ScanNearbyObjects()
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- 1. CLEANUP LAMA
+local function Cleanup()
+    local existingUI = PlayerGui:FindFirstChild("SpeedHubMainMenuUI")
+    if existingUI then existingUI:Destroy() end
+    local oldZone = Workspace:FindFirstChild("SpeedHub_CourtSensorZone")
+    if oldZone then oldZone:Destroy() end
+end
+Cleanup()
+
+-- 2. GUI BASE SETUP
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SpeedHubMainMenuUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 360, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -180, 0.4, -140)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(255, 30, 60)
+MainStroke.Thickness = 2
+
+-- Title Bar
+local TitleBar = Instance.new("Frame", MainFrame)
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
+
+local TitleText = Instance.new("TextLabel", TitleBar)
+TitleText.Size = UDim2.new(1, -40, 1, 0)
+TitleText.Position = UDim2.new(0, 12, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "SPEED HUB X | Continuous Teleport Spam"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Font = Enum.Font.SourceSansBold
+TitleText.TextSize = 14
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+
+local CloseBtn = Instance.new("TextButton", TitleBar)
+CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+CloseBtn.Position = UDim2.new(1, -29, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 45, 70)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 12
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    Cleanup()
+end)
+
+-- Layout Container
+local ContentContainer = Instance.new("Frame", MainFrame)
+ContentContainer.Size = UDim2.new(1, -20, 1, -50)
+ContentContainer.Position = UDim2.new(0, 10, 0, 42)
+ContentContainer.BackgroundTransparency = 1
+
+local UIList = Instance.new("UIListLayout", ContentContainer)
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 6)
+
+-- Buttons
+local BtnToggleSpam = Instance.new("TextButton", ContentContainer)
+BtnToggleSpam.Size = UDim2.new(1, 0, 0, 38)
+BtnToggleSpam.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+BtnToggleSpam.Text = "AUTO TELEPORT & SPAM SWING: OFF"
+BtnToggleSpam.TextColor3 = Color3.fromRGB(220, 220, 220)
+BtnToggleSpam.Font = Enum.Font.SourceSansBold
+BtnToggleSpam.TextSize = 12
+Instance.new("UICorner", BtnToggleSpam).CornerRadius = UDim.new(0, 6)
+
+local BtnLockZone = Instance.new("TextButton", ContentContainer)
+BtnLockZone.Size = UDim2.new(1, 0, 0, 38)
+BtnLockZone.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+BtnLockZone.Text = "LOCK COURT ZONE POSITION"
+BtnLockZone.TextColor3 = Color3.fromRGB(220, 220, 220)
+BtnLockZone.Font = Enum.Font.SourceSansBold
+BtnLockZone.TextSize = 12
+Instance.new("UICorner", BtnLockZone).CornerRadius = UDim.new(0, 6)
+
+local BtnReset = Instance.new("TextButton", ContentContainer)
+BtnReset.Size = UDim2.new(1, 0, 0, 38)
+BtnReset.BackgroundColor3 = Color3.fromRGB(200, 80, 20)
+BtnReset.Text = "⚠️ RESET SCRIPT"
+BtnReset.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnReset.Font = Enum.Font.SourceSansBold
+BtnReset.TextSize = 12
+Instance.new("UICorner", BtnReset).CornerRadius = UDim.new(0, 6)
+
+local StatusText = Instance.new("TextLabel", ContentContainer)
+StatusText.Size = UDim2.new(1, 0, 0, 30)
+StatusText.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
+StatusText.Text = "Status: Idle (Ready)"
+StatusText.TextColor3 = Color3.fromRGB(120, 255, 160)
+StatusText.Font = Enum.Font.Code
+StatusText.TextSize = 11
+Instance.new("UICorner", StatusText).CornerRadius = UDim.new(0, 6)
+
+-- ===================================================
+-- 3. CONTINUOUS TRACKING & SPAM ENGINE
+-- ===================================================
+local isSpamActive = false
+local isZoneLocked = false
+local sensorPart = nil
+
+-- Buat Area Sensor Lapangan (Zona Kita)
+local function CreateSensorZone()
     local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then 
-        warn("Karakter belum spawn!")
-        return 
-    end
-    
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local HRP = char.HumanoidRootPart
-    print("================ [ HASIL SCANNING OBJECT ] ================")
-    
-    local count = 0
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local dist = (HRP.Position - obj.Position).Magnitude
-            -- Scan semua part di sekitar jarak 80 studs (kecuali karakter sendiri)
-            if dist <= 80 and not obj:IsDescendantOf(char) then
-                print(string.format("Nama: %s | Class: %s | Distance: %.1f studs | Parent: %s", 
-                    obj.Name, obj.ClassName, dist, obj.Parent and obj.Parent.Name or "Nil"))
-                count = count + 1
+
+    if not sensorPart or not sensorPart.Parent then
+        sensorPart = Instance.new("Part")
+        sensorPart.Name = "SpeedHub_CourtSensorZone"
+        sensorPart.Anchored = true
+        sensorPart.CanCollide = false
+        sensorPart.Material = Enum.Material.ForceField
+        sensorPart.Color = Color3.fromRGB(0, 255, 120)
+        sensorPart.Transparency = 0.7
+        sensorPart.Size = Vector3.new(45, 30, 45) -- Area Lapangan 45x45 Studs
+        sensorPart.Parent = Workspace
+    end
+
+    if not isZoneLocked then
+        sensorPart.CFrame = CFrame.new(HRP.Position.X, HRP.Position.Y + 10, HRP.Position.Z)
+    end
+end
+
+-- Spam Click Hit
+local function FastSpamClick()
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+    task.wait(0.01)
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+end
+
+-- Deteksi Part Apapun di Zona Lapangan Kita
+local function GetBallInZone()
+    if not sensorPart then return nil end
+
+    local overlapParams = OverlapParams.new()
+    overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+    if LocalPlayer.Character then
+        overlapParams.FilterDescendantsInstances = {LocalPlayer.Character, sensorPart}
+    end
+
+    local partsInZone = Workspace:GetPartsInPart(sensorPart, overlapParams)
+
+    for _, part in pairs(partsInZone) do
+        if part:IsA("BasePart") then
+            local name = part.Name:lower()
+            -- Deteksi bola/ring/projectile/part bergerak
+            if name:find("ball") or name:find("tennis") or name:find("ring") or name:find("target") or name:find("indicator") or name:find("landing") then
+                return part
             end
         end
     end
-    print("================ Total Part Ditemukan: " .. count .. " ================")
+    return nil
 end
 
--- Eksekusi scan saat ini
-ScanNearbyObjects()
+local function ResetScriptState()
+    isSpamActive = false
+    isZoneLocked = false
+    if sensorPart then
+        sensorPart:Destroy()
+        sensorPart = nil
+    end
+    BtnToggleSpam.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    BtnToggleSpam.Text = "AUTO TELEPORT & SPAM SWING: OFF"
+    BtnLockZone.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    BtnLockZone.Text = "LOCK COURT ZONE POSITION"
+    StatusText.Text = "Status: Script Reset Done!"
+end
+
+-- Event Listeners
+BtnToggleSpam.MouseButton1Click:Connect(function()
+    isSpamActive = not isSpamActive
+    if isSpamActive then
+        CreateSensorZone()
+        BtnToggleSpam.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+        BtnToggleSpam.Text = "AUTO TELEPORT & SPAM SWING: ON"
+        StatusText.Text = "Status: Waiting Ball Entry..."
+    else
+        ResetScriptState()
+    end
+end)
+
+BtnLockZone.MouseButton1Click:Connect(function()
+    if isSpamActive and sensorPart then
+        isZoneLocked = not isZoneLocked
+        if isZoneLocked then
+            BtnLockZone.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+            BtnLockZone.Text = "ZONE POSITION: LOCKED 🔒"
+            StatusText.Text = "Status: Zone Locked to Court!"
+        else
+            BtnLockZone.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+            BtnLockZone.Text = "LOCK COURT ZONE POSITION"
+            StatusText.Text = "Status: Tracking Character..."
+        end
+    end
+end)
+
+BtnReset.MouseButton1Click:Connect(function()
+    ResetScriptState()
+end)
+
+-- CONTINUOUS LOOP (RenderStepped)
+RunService.RenderStepped:Connect(function()
+    if not isSpamActive then return end
+
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local HRP = char.HumanoidRootPart
+
+    if not isZoneLocked then
+        CreateSensorZone()
+    end
+
+    local targetPart = GetBallInZone()
+
+    if targetPart then
+        StatusText.Text = "Status: SPAMMING HIT ON BALL!"
+
+        -- 1. Teleport nempel terus ke posisi X, Z bola saat itu juga
+        local ballPos = targetPart.Position
+        HRP.CFrame = CFrame.new(Vector3.new(ballPos.X, HRP.Position.Y, ballPos.Z), Vector3.new(ballPos.X, HRP.Position.Y, ballPos.Z))
+
+        -- 2. Spam pukul tanpa jeda!
+        FastSpamClick()
+    else
+        StatusText.Text = "Status: Waiting Ball in Zone..."
+    end
+end)
