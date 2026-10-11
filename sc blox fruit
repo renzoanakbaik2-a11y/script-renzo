@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 -- Pembersihan UI Lama
 if PlayerGui:FindFirstChild("RacketBotUI") then
@@ -96,8 +98,9 @@ local function apakahDiZonaKita(hrp, shuttle, net)
 	return samadiZ and samadiX
 end
 
--- 4. Perintah Ayun Raket
+-- 4. PERINTAH AUTO HIT MULTI-METHOD (Pasti Mukul!)
 local function pukulRaket(char)
+	-- METODE A: Equip & Activate Tool
 	local tool = char:FindFirstChildOfClass("Tool")
 	if not tool then
 		local backpack = LocalPlayer:FindFirstChild("Backpack")
@@ -106,12 +109,36 @@ local function pukulRaket(char)
 			if tool then tool.Parent = char end
 		end
 	end
-	
 	if tool then
 		pcall(function() tool:Activate() end)
-		for _, child in ipairs(tool:GetDescendants()) do
-			if child:IsA("RemoteEvent") then
-				pcall(function() child:FireServer() end)
+	end
+	
+	-- METODE B: Virtual Input Klik Kiri Mouse (M1 Click)
+	pcall(function()
+		VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+		task.wait(0.01)
+		VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+	end)
+
+	-- METODE C: Virtual Input Tombol 'F' & 'Space' (Tombol Hit Game)
+	pcall(function()
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+	end)
+
+	-- METODE D: Native Executor Mouse Click
+	if mouse1click then
+		pcall(mouse1click)
+	end
+
+	-- METODE E: Tembak Seluruh RemoteEvent Berbau Swing/Hit
+	for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+		if remote:IsA("RemoteEvent") then
+			local nama = remote.Name:lower()
+			if nama:find("hit") or nama:find("swing") or nama:find("racket") or nama:find("action") or nama:find("smash") then
+				pcall(function() remote:FireServer() end)
 			end
 		end
 	end
