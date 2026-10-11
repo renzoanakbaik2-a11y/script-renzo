@@ -3,6 +3,181 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
 
+-- 1. PEMBERSIHAN UI LAMA
+if PlayerGui:FindFirstChild("RacketBotUI") then
+	PlayerGui.RacketBotUI:Destroy()
+end
+
+-- 2. WADAH & TAMPILAN MENU (UI)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RacketBotUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 250, 0, 130)
+Frame.Position = UDim2.new(0.5, -125, 0.4, -65)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Frame.Active = true
+Frame.Draggable = true
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "RACKET RIVALS: FIXED ZONE BOT"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 13
+Title.BackgroundTransparency = 1
+
+local Tombol = Instance.new("TextButton", Frame)
+Tombol.Size = UDim2.new(1, -20, 0, 45)
+Tombol.Position = UDim2.new(0, 10, 0, 35)
+Tombol.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+Tombol.Text = "AUTO ZONE BOT: OFF"
+Tombol.TextColor3 = Color3.fromRGB(255, 255, 255)
+Tombol.Font = Enum.Font.SourceSansBold
+Tombol.TextSize = 12
+Instance.new("UICorner", Tombol).CornerRadius = UDim.new(0, 6)
+
+local Status = Instance.new("TextLabel", Frame)
+Status.Size = UDim2.new(1, -20, 0, 35)
+Status.Position = UDim2.new(0, 10, 0, 85)
+Status.Text = "Status: Off"
+Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+Status.Font = Enum.Font.Code
+Status.TextSize = 10
+Status.TextWrapped = true
+Status.BackgroundTransparency = 1
+
+local isRunning = false
+
+-- 3. DETEKSI OBJEK NET / JARING
+local function cariNet()
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local nama = obj.Name:lower()
+			if nama:find("net") or nama:find("jaring") then
+				return obj
+			end
+		end
+	end
+	return nil
+end
+
+-- 4. DETEKSI SHUTTLE BOLA (DENGAN FILTER VOID)
+local function cariShuttle()
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local nama = obj.Name:lower()
+			if (nama:find("shuttle") or nama:find("ball") or nama:find("kok")) then
+				-- FILTER BOLA AKTIF: Harus melayang di atas lapangan (Y > 1) & transparan < 0.9
+				if obj.Position.Y > 1 and obj.Transparency < 0.9 then
+					return obj
+				end
+			end
+		end
+	end
+	return nil
+end
+
+-- 5. PEMERIKSAAN POSISI ZONA LAPANGAN
+local function apakahDiZonaKita(hrp, shuttle, net)
+	if not net then
+		-- Jika Net tidak ditemukan, gunakan jarak aman radius 30 stud
+		return (shuttle.Position - hrp.Position).Magnitude <= 30
+	end
+	
+	-- Menghitung posisi relatif karakter dan shuttle terhadap Net
+	local bedaKarakterZ = hrp.Position.Z - net.Position.Z
+	local bedaShuttleZ = shuttle.Position.Z - net.Position.Z
+	
+	local bedaKarakterX = hrp.Position.X - net.Position.X
+	local bedaShuttleX = shuttle.Position.X - net.Position.X
+	
+	-- Hasil perkalian bernilai positif jika kedua objek berada di sisi Net yang sama
+	local samaDiZ = (bedaKarakterZ * bedaShuttleZ) > 0
+	local samaDiX = (bedaKarakterX * bedaShuttleX) > 0
+	
+	return samaDiZ and samaDiX
+end
+
+-- 6. EKSEKUSI PEMUKUL / RAKET
+local function pukulRaket(char)
+	local tool = char:FindFirstChildOfClass("Tool")
+	if not tool then
+		local backpack = LocalPlayer:FindFirstChild("Backpack")
+		if backpack then
+			tool = backpack:FindFirstChildOfClass("Tool")
+			if tool then tool.Parent = char end
+		end
+	end
+	
+	if tool then
+		pcall(function() tool:Activate() end)
+		for _, child in ipairs(tool:GetDescendants()) do
+			if child:IsA("RemoteEvent") then
+				pcall(function() child:FireServer() end)
+			end
+		end
+	end
+end
+
+-- 7. EKSEKUSI UTAMA BOT
+local function eksekusiBot()
+	local char = LocalPlayer.Character
+	if not char then return end
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+	
+	-- Abaikan jika karakter sedang berada di luar map / void
+	if hrp.Position.Y < -10 then return end
+
+	local shuttle = cariShuttle()
+	local net = cariNet()
+	
+	if shuttle then
+		if apakahDiZonaKita(hrp, shuttle, net) then
+			-- Teleport & Pukul ketika bola masuk ke lapangan sendiri
+			hrp.CFrame = shuttle.CFrame * CFrame.new(0, 2, 2)
+			pukulRaket(char)
+			
+			Status.Text = "Status: BOLA DI ZONA KITA! Teleport & Smash!"
+			Status.TextColor3 = Color3.fromRGB(100, 255, 150)
+		else
+			-- Diam jika bola masih berada di area lawan
+			Status.Text = "Status: Bola di Zona Lawan (Diam...)"
+			Status.TextColor3 = Color3.fromRGB(255, 200, 100)
+		end
+	else
+		Status.Text = "Status: Menunggu Servis / Match Dimulai..."
+		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+	end
+end
+
+-- 8. PENGHUBUNG TOMBOL SAKLAR ON / OFF
+Tombol.MouseButton1Click:Connect(function()
+	isRunning = not isRunning
+	if isRunning then
+		Tombol.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+		Tombol.Text = "AUTO ZONE BOT: ON"
+		task.spawn(function()
+			while isRunning do
+				eksekusiBot()
+				task.wait(0.05)
+			end
+		end)
+	else
+		Tombol.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+		Tombol.Text = "AUTO ZONE BOT: OFF"
+		Status.Text = "Status: Off"
+		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+	end
+end)local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Workspace = game:GetService("Workspace")
+
 -- Pembersihan UI Lama
 if PlayerGui:FindFirstChild("RacketBotUI") then
 	PlayerGui.RacketBotUI:Destroy()
