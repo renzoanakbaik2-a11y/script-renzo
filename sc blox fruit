@@ -4,23 +4,23 @@ local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- 1. ANTI-AFK (Biar nggak kena kick 20 menit)
+-- 1. ANTI-AFK
 LocalPlayer.Idled:Connect(function()
 	VirtualUser:CaptureController()
 	VirtualUser:ClickButton2(Vector2.new(0, 0))
 end)
 
 -- 2. PEMBERSIHAN UI LAMA
-if LocalPlayer.PlayerGui:FindFirstChild("AnimeZeroQuestUI") then
-	LocalPlayer.PlayerGui.AnimeZeroQuestUI:Destroy()
+if LocalPlayer.PlayerGui:FindFirstChild("AnimeZeroDirectQuestUI") then
+	LocalPlayer.PlayerGui.AnimeZeroDirectQuestUI:Destroy()
 end
 
 -- 3. TAMPILAN MENU (UI)
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "AnimeZeroQuestUI"
+ScreenGui.Name = "AnimeZeroDirectQuestUI"
 
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 250, 0, 170)
+Frame.Size = UDim2.new(0, 250, 0, 160)
 Frame.Position = UDim2.new(0.5, -125, 0.3, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 Frame.Active = true
@@ -29,7 +29,7 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "ANIME ZERO: AUTO QUEST"
+Title.Text = "ANIME ZERO: AUTO DIRECT QUEST"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
@@ -39,16 +39,16 @@ local BtnQuest = Instance.new("TextButton", Frame)
 BtnQuest.Size = UDim2.new(1, -20, 0, 45)
 BtnQuest.Position = UDim2.new(0, 10, 0, 40)
 BtnQuest.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-BtnQuest.Text = "AUTO QUEST MASTER: OFF"
+BtnQuest.Text = "AUTO MISI LANGSUNG: OFF"
 BtnQuest.TextColor3 = Color3.fromRGB(255, 255, 255)
 BtnQuest.Font = Enum.Font.SourceSansBold
 BtnQuest.TextSize = 11
 Instance.new("UICorner", BtnQuest).CornerRadius = UDim.new(0, 6)
 
 local Status = Instance.new("TextLabel", Frame)
-Status.Size = UDim2.new(1, -20, 0, 65)
+Status.Size = UDim2.new(1, -20, 0, 55)
 Status.Position = UDim2.new(0, 10, 0, 95)
-Status.Text = "Status: Standby\n(Siap Jalani Misi Dunia Ini)"
+Status.Text = "Status: Standby"
 Status.TextColor3 = Color3.fromRGB(150, 150, 150)
 Status.Font = Enum.Font.Code
 Status.TextSize = 10
@@ -57,8 +57,12 @@ Status.BackgroundTransparency = 1
 
 local isQuestActive = false
 
--- 4. NOCLIP (Tembus Tembok Pas Terbang)
-local function enableNoclip(char)
+-- AMANKAN KARAKTER (Biar Nggak Mati Kena Anti-Cheat / Jatuh)
+local function amankanKarakter(char)
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum:ChangeState(Enum.HumanoidStateType.Swimming)
+	end
 	for _, part in ipairs(char:GetDescendants()) do
 		if part:IsA("BasePart") then
 			part.CanCollide = false
@@ -66,13 +70,13 @@ local function enableNoclip(char)
 	end
 end
 
--- 5. FUNGSI TERBANG MELAYANG (TWEEN FLY)
+-- FUNGSI TERBANG MELAYANG (TWEEN FLY)
 local function terbangKe(cframeTujuan, speed)
 	local char = LocalPlayer.Character
 	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 	local hrp = char.HumanoidRootPart
 	
-	enableNoclip(char)
+	amankanKarakter(char)
 	
 	local jarak = (hrp.Position - cframeTujuan.Position).Magnitude
 	local durasi = jarak / (speed or 180)
@@ -83,7 +87,7 @@ local function terbangKe(cframeTujuan, speed)
 	tween.Completed:Wait()
 end
 
--- 6. PUKUL OTOMATIS
+-- PUKUL OTOMATIS
 local function hitTarget()
 	local char = LocalPlayer.Character
 	if not char then return end
@@ -93,12 +97,12 @@ local function hitTarget()
 	end
 end
 
--- 7. DETEKSI STATUS TEKS MISI DI UI GAME
+-- DETEKSI TEKS MISI AKTIF DI UI
 local function dapatkanInfoQuestUI()
 	for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
 		if gui:IsA("TextLabel") and gui.Visible and gui.Text ~= "" then
 			local txt = gui.Text:lower()
-			if txt:find("kill") or txt:find("defeat") or txt:find("collect") or txt:find("talk") or txt:find("find") or txt:find("0/") or txt:find("1/") then
+			if txt:find("0/") or txt:find("1/") or txt:find("2/") or txt:find("3/") or txt:find("4/") or txt:find("5/") or txt:find("kill") or txt:find("defeat") or txt:find("collect") or txt:find("find") then
 				return txt
 			end
 		end
@@ -106,13 +110,13 @@ local function dapatkanInfoQuestUI()
 	return ""
 end
 
--- 8. EKSEKUSI TOMBOL UTAMA
+-- EKSEKUSI TOMBOL UTAMA
 BtnQuest.MouseButton1Click:Connect(function()
 	isQuestActive = not isQuestActive
 	
 	if isQuestActive then
 		BtnQuest.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-		BtnQuest.Text = "AUTO QUEST MASTER: ON"
+		BtnQuest.Text = "AUTO MISI LANGSUNG: ON"
 		
 		task.spawn(function()
 			while isQuestActive do
@@ -121,63 +125,46 @@ BtnQuest.MouseButton1Click:Connect(function()
 					local hrp = char.HumanoidRootPart
 					local questText = dapatkanInfoQuestUI()
 					
-					-- A. Jika belum ambil misi / misi selesai -> Terbang ke NPC Misi
-					if questText == "" then
-						Status.Text = "Status: Ambil / Klaim Misi ke NPC..."
-						Status.TextColor3 = Color3.fromRGB(200, 200, 100)
-						
-						for _, obj in ipairs(Workspace:GetDescendants()) do
-							if obj:IsA("Model") and (obj.Name:lower():find("quest") or obj.Name:lower():find("npc")) then
-								local npcHrp = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
-								if npcHrp then
-									terbangKe(npcHrp.CFrame * CFrame.new(0, 0, -3))
-									for _, prompt in ipairs(obj:GetDescendants()) do
-										if prompt:IsA("ProximityPrompt") and fireproximityprompt then
-											fireproximityprompt(prompt)
-										end
-									end
-									break
-								end
+					Status.Text = "Status: Eksekusi Misi...\n[" .. (questText ~= "" and questText or "Memindai Target...") .. "]"
+					Status.TextColor3 = Color3.fromRGB(100, 255, 150)
+					
+					-- 1. JIKA MISI BERTARUNG (Pukul Mob/Musuh Terdekat)
+					local musuhDitemukan = false
+					for _, mob in ipairs(Workspace:GetDescendants()) do
+						if mob:IsA("Model") and mob:FindFirstChildOfClass("Humanoid") then
+							local mobHrp = mob:FindFirstChild("HumanoidRootPart") or mob.PrimaryPart
+							local hum = mob:FindFirstChildOfClass("Humanoid")
+							
+							-- Pastikan Musuh Asli (Bukan Karakter Player)
+							if mobHrp and hum and hum.Health > 0 and mob.Name ~= LocalPlayer.Name and not Players:GetPlayerFromCharacter(mob) then
+								musuhDitemukan = true
+								-- Terbang melayang 8 stud di atas musuh
+								terbangKe(mobHrp.CFrame * CFrame.new(0, 8, 0) * CFrame.Angles(math.rad(-90), 0, 0), 200)
+								hitTarget()
+								break
 							end
 						end
-					else
-						Status.Text = "Status: Mengerjakan Misi...\n[" .. questText .. "]"
-						Status.TextColor3 = Color3.fromRGB(100, 255, 150)
-						
-						-- B. Jika Misi Bertarung (Kill / Defeat)
-						if questText:find("kill") or questText:find("defeat") or questText:find("kalahkan") then
-							for _, mob in ipairs(Workspace:GetDescendants()) do
-								if mob:IsA("Model") and mob:FindFirstChildOfClass("Humanoid") then
-									local mobHrp = mob:FindFirstChild("HumanoidRootPart") or mob.PrimaryPart
-									local hum = mob:FindFirstChildOfClass("Humanoid")
-									if mobHrp and hum and hum.Health > 0 and mob.Name ~= LocalPlayer.Name then
-										-- Terbang melayang tepat di atas Mob
-										terbangKe(mobHrp.CFrame * CFrame.new(0, 6, 0) * CFrame.Angles(math.rad(-90), 0, 0), 200)
-										hitTarget()
-										break
-									end
-								end
-							end
-						-- C. Jika Misi Non-Bertarung (Ambil Item / Bicara NPC / Antar Barang)
-						else
-							for _, obj in ipairs(Workspace:GetDescendants()) do
-								if obj:IsA("BasePart") or obj:IsA("Model") then
-									local namaObj = obj.Name:lower()
-									if namaObj:find("item") or namaObj:find("candy") or namaObj:find("chest") or namaObj:find("target") then
-										local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildOfClass("BasePart")) or obj
-										if part then
-											terbangKe(part.CFrame, 200)
-											if firetouchinterest then
-												firetouchinterest(hrp, part, 0)
-												firetouchinterest(hrp, part, 1)
-											end
-											for _, prompt in ipairs(obj:GetDescendants()) do
-												if prompt:IsA("ProximityPrompt") and fireproximityprompt then
-													fireproximityprompt(prompt)
-												end
-											end
-											break
+					end
+					
+					-- 2. JIKA MISI NON-BERTARUNG (Cari Objek/Item Misi)
+					if not musuhDitemukan then
+						for _, obj in ipairs(Workspace:GetDescendants()) do
+							if obj:IsA("BasePart") or obj:IsA("Model") then
+								local namaObj = obj.Name:lower()
+								if namaObj:find("item") or namaObj:find("candy") or namaObj:find("chest") or namaObj:find("target") or namaObj:find("quest") then
+									local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildOfClass("BasePart")) or obj
+									if part then
+										terbangKe(part.CFrame, 200)
+										if firetouchinterest then
+											firetouchinterest(hrp, part, 0)
+											firetouchinterest(hrp, part, 1)
 										end
+										for _, prompt in ipairs(obj:GetDescendants()) do
+											if prompt:IsA("ProximityPrompt") and fireproximityprompt then
+												fireproximityprompt(prompt)
+											end
+										end
+										break
 									end
 								end
 							end
@@ -189,7 +176,7 @@ BtnQuest.MouseButton1Click:Connect(function()
 		end)
 	else
 		BtnQuest.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-		BtnQuest.Text = "AUTO QUEST MASTER: OFF"
+		BtnQuest.Text = "AUTO MISI LANGSUNG: OFF"
 		Status.Text = "Status: Off"
 		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
 	end
