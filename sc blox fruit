@@ -3,20 +3,20 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
 
--- 1. CLEANUP UI LAMA
+-- Pembersihan UI Lama
 if PlayerGui:FindFirstChild("RacketBotUI") then
 	PlayerGui.RacketBotUI:Destroy()
 end
 
--- 2. TAMPILAN MENU (UI)
+-- Bikin Menu Bot
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "RacketBotUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 260, 0, 140)
-Frame.Position = UDim2.new(0.5, -130, 0.4, -70)
+Frame.Size = UDim2.new(0, 250, 0, 130)
+Frame.Position = UDim2.new(0.5, -125, 0.4, -65)
 Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 Frame.Active = true
 Frame.Draggable = true
@@ -24,7 +24,7 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "RACKET RIVALS: SMART BOT"
+Title.Text = "RACKET RIVALS: REAL ZONE BOT"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 13
@@ -41,7 +41,7 @@ Tombol.TextSize = 12
 Instance.new("UICorner", Tombol).CornerRadius = UDim.new(0, 6)
 
 local Status = Instance.new("TextLabel", Frame)
-Status.Size = UDim2.new(1, -20, 0, 45)
+Status.Size = UDim2.new(1, -20, 0, 35)
 Status.Position = UDim2.new(0, 10, 0, 85)
 Status.Text = "Status: Off"
 Status.TextColor3 = Color3.fromRGB(150, 150, 150)
@@ -52,29 +52,7 @@ Status.BackgroundTransparency = 1
 
 local isRunning = false
 
--- 3. DETEKSI BOLA / SHUTTLECOCK (LEBIH PINTAR & LENGKAP)
-local function cariShuttle()
-	for _, obj in ipairs(Workspace:GetDescendants()) do
-		if obj:IsA("BasePart") then
-			local namaObj = obj.Name:lower()
-			local namaParent = obj.Parent and obj.Parent.Name:lower() or ""
-			
-			-- Cek apakah nama Part ATAU nama Model Induknya mengandung kata kunci bola
-			local kataKunci = namaObj:find("shuttle") or namaObj:find("ball") or namaObj:find("kok") or namaObj:find("projectile") or
-				namaParent:find("shuttle") or namaParent:find("ball") or namaParent:find("kok") or namaParent:find("projectile")
-			
-			if kataKunci then
-				-- Abaikan HANYA jika bola jatuh ke void paling dasar (Y < -30)
-				if obj.Position.Y > -30 then
-					return obj
-				end
-			end
-		end
-	end
-	return nil
-end
-
--- 4. DETEKSI NET / JARING LAPANGAN
+-- 1. Deteksi Net / Garis Tengah Lapangan
 local function cariNet()
 	for _, obj in ipairs(Workspace:GetDescendants()) do
 		if obj:IsA("BasePart") then
@@ -87,27 +65,38 @@ local function cariNet()
 	return nil
 end
 
--- 5. PEMERIKSAAN ZONA BERDASARKAN NET / JARAK
+-- 2. Deteksi Shuttle / Bola
+local function cariShuttle()
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local nama = obj.Name:lower()
+			if nama:find("shuttle") or nama:find("ball") or nama:find("kok") then
+				return obj
+			end
+		end
+	end
+	return nil
+end
+
+-- 3. Logika Pemisah Zona
 local function apakahDiZonaKita(hrp, shuttle, net)
 	if not net then
-		-- Jika Net tidak ditemukan di Workspace, pakai toleransi jarak 35 stud
-		return (shuttle.Position - hrp.Position).Magnitude <= 35
+		return (shuttle.Position - hrp.Position).Magnitude <= 30
 	end
 	
-	-- Menghitung posisi relatif terhadap Net
 	local bedaKarakterZ = hrp.Position.Z - net.Position.Z
 	local bedaShuttleZ = shuttle.Position.Z - net.Position.Z
 	
 	local bedaKarakterX = hrp.Position.X - net.Position.X
 	local bedaShuttleX = shuttle.Position.X - net.Position.X
 	
-	local samaDiZ = (bedaKarakterZ * bedaShuttleZ) > 0
-	local samaDiX = (bedaKarakterX * bedaShuttleX) > 0
+	local samadiZ = (bedaKarakterZ * bedaShuttleZ) > 0
+	local samadiX = (bedaKarakterX * bedaShuttleX) > 0
 	
-	return samaDiZ and samaDiX
+	return samadiZ and samadiX
 end
 
--- 6. PERINTAH AYUN RAKET / MUKUL
+-- 4. Perintah Ayun Raket
 local function pukulRaket(char)
 	local tool = char:FindFirstChildOfClass("Tool")
 	if not tool then
@@ -128,38 +117,34 @@ local function pukulRaket(char)
 	end
 end
 
--- 7. EKSEKUSI UTAMA BOT
+-- 5. Eksekusi Utama Bot
 local function eksekusiBot()
 	local char = LocalPlayer.Character
 	if not char then return end
 	local hrp = char:FindFirstChild("HumanoidRootPart")
 	if not hrp then return end
 	
-	if hrp.Position.Y < -20 then return end
-
 	local shuttle = cariShuttle()
 	local net = cariNet()
 	
 	if shuttle then
 		if apakahDiZonaKita(hrp, shuttle, net) then
-			-- Teleport ke bola & Pukul
 			hrp.CFrame = shuttle.CFrame * CFrame.new(0, 2, 2)
 			pukulRaket(char)
 			
-			Status.Text = "Status: Deteksi [" .. shuttle.Name .. "] di Zona KITA! Teleport & Smash!"
+			Status.Text = "Status: BOLA DI ZONA KITA! Teleport & Smash!"
 			Status.TextColor3 = Color3.fromRGB(100, 255, 150)
 		else
-			-- Diam jika di area lawan
-			Status.Text = "Status: Deteksi [" .. shuttle.Name .. "] di Zona Lawan (Diam...)"
+			Status.Text = "Status: Bola di Zona Lawan (Diam...)"
 			Status.TextColor3 = Color3.fromRGB(255, 200, 100)
 		end
 	else
-		Status.Text = "Status: Mencari bola... (Belum terdeteksi di Workspace)"
-		Status.TextColor3 = Color3.fromRGB(255, 120, 120)
+		Status.Text = "Status: Menunggu Bola / Match..."
+		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
 	end
 end
 
--- 8. PENGHUBUNG TOMBOL SAKLAR
+-- Event Tombol ON / OFF
 Tombol.MouseButton1Click:Connect(function()
 	isRunning = not isRunning
 	if isRunning then
