@@ -26,7 +26,7 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "RACKET RIVALS: REAL ZONE BOT"
+Title.Text = "RACKET RIVALS: FIXED HITBOX BOT"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 13
@@ -98,9 +98,8 @@ local function apakahDiZonaKita(hrp, shuttle, net)
 	return samadiZ and samadiX
 end
 
--- 4. PERINTAH AUTO HIT MULTI-METHOD (Pasti Mukul!)
+-- 4. PERINTAH AUTO HIT MULTI-METHOD
 local function pukulRaket(char)
-	-- METODE A: Equip & Activate Tool
 	local tool = char:FindFirstChildOfClass("Tool")
 	if not tool then
 		local backpack = LocalPlayer:FindFirstChild("Backpack")
@@ -113,14 +112,14 @@ local function pukulRaket(char)
 		pcall(function() tool:Activate() end)
 	end
 	
-	-- METODE B: Virtual Input Klik Kiri Mouse (M1 Click)
+	-- Virtual Mouse Click
 	pcall(function()
 		VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
 		task.wait(0.01)
 		VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
 	end)
 
-	-- METODE C: Virtual Input Tombol 'F' & 'Space' (Tombol Hit Game)
+	-- Virtual Keyboard (F & Space)
 	pcall(function()
 		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
 		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
@@ -128,12 +127,11 @@ local function pukulRaket(char)
 		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
 	end)
 
-	-- METODE D: Native Executor Mouse Click
 	if mouse1click then
 		pcall(mouse1click)
 	end
 
-	-- METODE E: Tembak Seluruh RemoteEvent Berbau Swing/Hit
+	-- Fire Remotes
 	for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
 		if remote:IsA("RemoteEvent") then
 			local nama = remote.Name:lower()
@@ -144,7 +142,7 @@ local function pukulRaket(char)
 	end
 end
 
--- 5. Eksekusi Utama Bot
+-- 5. EKSEKUSI BOT ANTI-AMBLES (Kaki Pas di Lantai)
 local function eksekusiBot()
 	local char = LocalPlayer.Character
 	if not char then return end
@@ -156,10 +154,20 @@ local function eksekusiBot()
 	
 	if shuttle then
 		if apakahDiZonaKita(hrp, shuttle, net) then
-			hrp.CFrame = shuttle.CFrame * CFrame.new(0, 2, 2)
+			-- Posisi horizontal mengikuti bola
+			local posX = shuttle.Position.X
+			local posZ = shuttle.Position.Z
+			
+			-- Kunci Y minimum (3.2 stud) agar kaki tidak pernah tenggelam ke bawah lantai
+			local posY = math.max(shuttle.Position.Y, 3.2)
+			
+			-- Posisi berdiri tegak lurus murni tanpa terpengaruh rotasi miring bola
+			hrp.CFrame = CFrame.new(posX, posY, posZ)
+			
+			-- Eksekusi pukulan
 			pukulRaket(char)
 			
-			Status.Text = "Status: BOLA DI ZONA KITA! Teleport & Smash!"
+			Status.Text = "Status: BOLA DI ZONA KITA! Hitbox Pas & Hit!"
 			Status.TextColor3 = Color3.fromRGB(100, 255, 150)
 		else
 			Status.Text = "Status: Bola di Zona Lawan (Diam...)"
@@ -180,7 +188,7 @@ Tombol.MouseButton1Click:Connect(function()
 		task.spawn(function()
 			while isRunning do
 				eksekusiBot()
-				task.wait(0.05)
+				task.wait(0.04)
 			end
 		end)
 	else
