@@ -1,26 +1,27 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- 1. ANTI-AFK (Mencegah kick 20 menit)
+-- 1. ANTI-AFK
 LocalPlayer.Idled:Connect(function()
 	VirtualUser:CaptureController()
 	VirtualUser:ClickButton2(Vector2.new(0, 0))
 end)
 
--- 2. PEMBERSIHAN UI LAMA
-if LocalPlayer.PlayerGui:FindFirstChild("AnimeZeroAutoFarmUI") then
-	LocalPlayer.PlayerGui.AnimeZeroAutoFarmUI:Destroy()
+-- 2. BERSIHKAN UI LAMA
+if LocalPlayer.PlayerGui:FindFirstChild("LembahHussUI") then
+	LocalPlayer.PlayerGui.LembahHussUI:Destroy()
 end
 
--- 3. TAMPILAN MENU (UI)
+-- 3. BIKIN TAMPILAN MENU (UI)
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "AnimeZeroAutoFarmUI"
+ScreenGui.Name = "LembahHussUI"
 
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 240, 0, 150)
-Frame.Position = UDim2.new(0.5, -120, 0.3, 0)
+Frame.Size = UDim2.new(0, 260, 0, 190)
+Frame.Position = UDim2.new(0.5, -130, 0.3, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 Frame.Active = true
 Frame.Draggable = true
@@ -28,25 +29,37 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "ANIME ZERO: AUTO FARM MOBS"
+Title.Text = "LEMBAH HUSS: AUTO MASTER"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
 Title.BackgroundTransparency = 1
 
-local BtnFarm = Instance.new("TextButton", Frame)
-BtnFarm.Size = UDim2.new(1, -20, 0, 40)
-BtnFarm.Position = UDim2.new(0, 10, 0, 35)
-BtnFarm.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-BtnFarm.Text = "AUTO FARM MOBS: OFF"
-BtnFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
-BtnFarm.Font = Enum.Font.SourceSansBold
-BtnFarm.TextSize = 11
-Instance.new("UICorner", BtnFarm).CornerRadius = UDim.new(0, 6)
+-- TOMBOL 1: SURVIVOR
+local BtnSurvivor = Instance.new("TextButton", Frame)
+BtnSurvivor.Size = UDim2.new(1, -20, 0, 40)
+BtnSurvivor.Position = UDim2.new(0, 10, 0, 35)
+BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+BtnSurvivor.Text = "SURVIVOR MODE: OFF"
+BtnSurvivor.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnSurvivor.Font = Enum.Font.SourceSansBold
+BtnSurvivor.TextSize = 11
+Instance.new("UICorner", BtnSurvivor).CornerRadius = UDim.new(0, 6)
+
+-- TOMBOL 2: HUNTER
+local BtnHunter = Instance.new("TextButton", Frame)
+BtnHunter.Size = UDim2.new(1, -20, 0, 40)
+BtnHunter.Position = UDim2.new(0, 10, 0, 85)
+BtnHunter.BackgroundColor3 = Color3.fromRGB(215, 40, 40)
+BtnHunter.Text = "HUNTER MODE: OFF"
+BtnHunter.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnHunter.Font = Enum.Font.SourceSansBold
+BtnHunter.TextSize = 11
+Instance.new("UICorner", BtnHunter).CornerRadius = UDim.new(0, 6)
 
 local Status = Instance.new("TextLabel", Frame)
-Status.Size = UDim2.new(1, -20, 0, 50)
-Status.Position = UDim2.new(0, 10, 0, 85)
+Status.Size = UDim2.new(1, -20, 0, 45)
+Status.Position = UDim2.new(0, 10, 0, 135)
 Status.Text = "Status: Standby"
 Status.TextColor3 = Color3.fromRGB(150, 150, 150)
 Status.Font = Enum.Font.Code
@@ -54,90 +67,163 @@ Status.TextSize = 10
 Status.TextWrapped = true
 Status.BackgroundTransparency = 1
 
-local isFarming = false
+local isSurvivorActive = false
+local isHunterActive = false
 
--- 4. MATIKAN TABRAKAN (Noclip)
-local function setNoclip(char, active)
-	for _, part in ipairs(char:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.CanCollide = not active
-		end
-	end
-end
-
--- 5. SERANG OTOMATIS
-local function autoAttack()
+-- FUNGSI TWEEN FLY / TERBANG AMAN
+local function terbangKe(cframeTujuan, speed)
 	local char = LocalPlayer.Character
-	if not char then return end
-	local tool = char:FindFirstChildOfClass("Tool")
-	if tool then
-		tool:Activate()
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	local hrp = char.HumanoidRootPart
+	
+	for _, p in ipairs(char:GetDescendants()) do
+		if p:IsA("BasePart") then p.CanCollide = false end
 	end
+	
+	local jarak = (hrp.Position - cframeTujuan.Position).Magnitude
+	local durasi = jarak / (speed or 150)
+	local tweenInfo = TweenInfo.new(durasi, Enum.EasingStyle.Linear)
+	local tween = TweenService:Create(hrp, tweenInfo, {CFrame = cframeTujuan})
+	tween:Play()
+	tween.Completed:Wait()
 end
 
--- 6. CARI MOB TERDEKAT (SUPER FILTER KHUSUS MOBS)
-local function cariMobTerdekat(hrp)
-	local target = nil
-	local minJarak = math.huge
+-- CARI GARIS ZONA AMAN / FINISH LINE
+local function cariGarisAman()
+	local localHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not localHrp then return nil end
+	
+	local targetGaris = nil
+	local jarakTerjauh = 0
 
-	-- Prioritas folder khusus musuh
-	local folderMusuh = Workspace:FindFirstChild("Mobs") 
-		or Workspace:FindFirstChild("Enemies") 
-		or Workspace:FindFirstChild("Monsters")
-		or Workspace:FindFirstChild("Live")
-
-	local areaScan = folderMusuh and folderMusuh:GetDescendants() or Workspace:GetDescendants()
-
-	for _, obj in ipairs(areaScan) do
-		if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
-			local hum = obj:FindFirstChildOfClass("Humanoid")
-			local mobHrp = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
-			
-			local parentName = obj.Parent and obj.Parent.Name:lower() or ""
-			local diFolderAman = parentName:find("npc") or parentName:find("shop") or parentName:find("town") or parentName:find("safe") or parentName:find("quest") or parentName:find("vendor") or parentName:find("store") or parentName:find("jual")
-			
-			local isPemain = Players:GetPlayerFromCharacter(obj)
-			local adaTombolBeli = obj:FindFirstChildOfClass("ProximityPrompt", true) or obj:FindFirstChildOfClass("ClickDetector", true)
-			local isAnchored = mobHrp and mobHrp.Anchored
-
-			if mobHrp and hum and hum.Health > 0 and obj.Name ~= LocalPlayer.Name and not isPemain and not diFolderAman and not adaTombolBeli and not isAnchored then
-				local jarak = (mobHrp.Position - hrp.Position).Magnitude
-				if jarak < minJarak then
-					minJarak = jarak
-					target = mobHrp
+	for _, part in ipairs(Workspace:GetDescendants()) do
+		if part:IsA("BasePart") then
+			local nama = part.Name:lower()
+			-- Deteksi via nama atau warna putih di tanah
+			if nama:find("safe") or nama:find("finish") or nama:find("line") or nama:find("checkpoint") or (part.BrickColor.Name == "White" and part.Size.X > 10) then
+				local jarak = (part.Position - localHrp.Position).Magnitude
+				if jarak > jarakTerjauh then
+					jarakTerjauh = jarak
+					targetGaris = part
 				end
 			end
 		end
 	end
-	return target
+	return targetGaris
 end
 
--- 7. EKSEKUSI TOMBOL AUTO FARM
-BtnFarm.MouseButton1Click:Connect(function()
-	isFarming = not isFarming
+-- AMBIL WARNA HIGHLIGHT KARAKTER (UNTUK HUNTER)
+local function isPemainSurvivor(player)
+	if not player.Character then return false end
+	local char = player.Character
 	
-	if isFarming then
-		BtnFarm.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-		BtnFarm.Text = "AUTO FARM MOBS: ON"
+	-- Cek objek Highlight
+	local highlight = char:FindFirstChildOfClass("Highlight") or char:FindFirstChild("Highlight", true)
+	if highlight then
+		-- Jika warna merah = Hunter, selain merah (atau biru) = Survivor
+		local color = highlight.FillColor or highlight.OutlineColor
+		if color and color.R > 0.8 and color.G < 0.3 then
+			return false -- Dia Hunter
+		end
+	end
+	return true -- Asumsi dia Survivor
+end
+
+-- SERANG BASIC ATTACK (KLIK) + TOUCH
+local function eksekusiTangkap(targetChar)
+	local myChar = LocalPlayer.Character
+	if not myChar then return end
+	
+	-- 1. Pukul dengan Tool jika ada
+	local tool = myChar:FindFirstChildOfClass("Tool")
+	if tool then tool:Activate() end
+	
+	-- 2. Tembak pemicu sentuh fisik
+	local myHrp = myChar:FindFirstChild("HumanoidRootPart")
+	local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+	if myHrp and targetHrp and firetouchinterest then
+		firetouchinterest(myHrp, targetHrp, 0)
+		firetouchinterest(myHrp, targetHrp, 1)
+	end
+end
+
+-- EKSEKUSI TOMBOL SURVIVOR
+BtnSurvivor.MouseButton1Click:Connect(function()
+	isSurvivorActive = not isSurvivorActive
+	if isSurvivorActive then
+		isHunterActive = false
+		BtnHunter.Text = "HUNTER MODE: OFF"
+		BtnHunter.BackgroundColor3 = Color3.fromRGB(215, 40, 40)
+		
+		BtnSurvivor.Text = "SURVIVOR MODE: ON"
+		BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
 		
 		task.spawn(function()
-			while isFarming do
-				local char = LocalPlayer.Character
-				if char and char:FindFirstChild("HumanoidRootPart") then
-					local hrp = char.HumanoidRootPart
-					setNoclip(char, true)
+			while isSurvivorActive do
+				local targetGaris = cariGarisAman()
+				if targetGaris then
+					Status.Text = "Status: Otw Kabur ke Zona Aman..."
+					Status.TextColor3 = Color3.fromRGB(100, 255, 150)
 					
-					local targetMobHrp = cariMobTerdekat(hrp)
-					if targetMobHrp and targetMobHrp.Parent then
-						local mobName = targetMobHrp.Parent.Name
-						Status.Text = "Status: Bantai [" .. mobName .. "]"
-						Status.TextColor3 = Color3.fromRGB(100, 255, 150)
-						
-						-- Teleport melayang 6 stud di atas musuh & menghadap ke bawah
-						hrp.CFrame = targetMobHrp.CFrame * CFrame.new(0, 6, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-						autoAttack()
-					else
-						Status.Text = "Status: Mencari musuh di sekitar..."
+					-- Teleport / Terbang melayang ke garis ujung
+					terbangKe(targetGaris.CFrame * CFrame.new(0, 3, 0), 200)
+				else
+					Status.Text = "Status: Mencari Garis Ujung/Zona..."
+					Status.TextColor3 = Color3.fromRGB(200, 200, 100)
+				end
+				task.wait(0.5)
+			end
+		end)
+	else
+		BtnSurvivor.Text = "SURVIVOR MODE: OFF"
+		BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+		Status.Text = "Status: Standby"
+		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+	end
+end)
+
+-- EKSEKUSI TOMBOL HUNTER
+BtnHunter.MouseButton1Click:Connect(function()
+	isHunterActive = not isHunterActive
+	if isHunterActive then
+		isSurvivorActive = false
+		BtnSurvivor.Text = "SURVIVOR MODE: OFF"
+		BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+		
+		BtnHunter.Text = "HUNTER MODE: ON"
+		BtnHunter.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+		
+		task.spawn(function()
+			while isHunterActive do
+				local myChar = LocalPlayer.Character
+				local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+				
+				if myHrp then
+					local survivorDitemukan = false
+					
+					for _, targetPlayer in ipairs(Players:GetPlayers()) do
+						if targetPlayer ~= LocalPlayer and targetPlayer.Character then
+							local targetChar = targetPlayer.Character
+							local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+							local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
+							
+							-- Cek jika target masih hidup & berstatus Survivor
+							if targetHrp and targetHum and targetHum.Health > 0 and isPemainSurvivor(targetPlayer) then
+								survivorDitemukan = true
+								Status.Text = "Status: Memburu [" .. targetPlayer.Name .. "]"
+								Status.TextColor3 = Color3.fromRGB(255, 100, 100)
+								
+								-- Teleport nempel persis di belakang target
+								myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 1.5)
+								eksekusiTangkap(targetChar)
+								task.wait(0.1)
+								break
+							end
+						end
+					end
+					
+					if not survivorDitemukan then
+						Status.Text = "Status: Tidak Ada Survivor Terdeteksi"
 						Status.TextColor3 = Color3.fromRGB(200, 200, 100)
 					end
 				end
@@ -145,13 +231,9 @@ BtnFarm.MouseButton1Click:Connect(function()
 			end
 		end)
 	else
-		BtnFarm.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-		BtnFarm.Text = "AUTO FARM MOBS: OFF"
-		Status.Text = "Status: Off"
+		BtnHunter.Text = "HUNTER MODE: OFF"
+		BtnHunter.BackgroundColor3 = Color3.fromRGB(215, 40, 40)
+		Status.Text = "Status: Standby"
 		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
-		
-		if LocalPlayer.Character then
-			setNoclip(LocalPlayer.Character, false)
-		end
 	end
 end)
