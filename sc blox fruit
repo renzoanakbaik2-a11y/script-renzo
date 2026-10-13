@@ -3,7 +3,7 @@ local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 
--- 1. ANTI-AFK (Biar nggak kena kick 20 menit)
+-- 1. ANTI-AFK (Mencegah kick 20 menit)
 LocalPlayer.Idled:Connect(function()
 	VirtualUser:CaptureController()
 	VirtualUser:ClickButton2(Vector2.new(0, 0))
@@ -75,18 +75,32 @@ local function autoAttack()
 	end
 end
 
--- 6. CARI MOB TERDEKAT
+-- 6. CARI MOB TERDEKAT (SUPER FILTER KHUSUS MOBS)
 local function cariMobTerdekat(hrp)
 	local target = nil
 	local minJarak = math.huge
 
-	for _, obj in ipairs(Workspace:GetDescendants()) do
+	-- Prioritas folder khusus musuh
+	local folderMusuh = Workspace:FindFirstChild("Mobs") 
+		or Workspace:FindFirstChild("Enemies") 
+		or Workspace:FindFirstChild("Monsters")
+		or Workspace:FindFirstChild("Live")
+
+	local areaScan = folderMusuh and folderMusuh:GetDescendants() or Workspace:GetDescendants()
+
+	for _, obj in ipairs(areaScan) do
 		if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
 			local hum = obj:FindFirstChildOfClass("Humanoid")
 			local mobHrp = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
 			
-			-- Filter: Pastikan musuh masih hidup dan bukan pemain lain
-			if mobHrp and hum and hum.Health > 0 and obj.Name ~= LocalPlayer.Name and not Players:GetPlayerFromCharacter(obj) then
+			local parentName = obj.Parent and obj.Parent.Name:lower() or ""
+			local diFolderAman = parentName:find("npc") or parentName:find("shop") or parentName:find("town") or parentName:find("safe") or parentName:find("quest") or parentName:find("vendor") or parentName:find("store") or parentName:find("jual")
+			
+			local isPemain = Players:GetPlayerFromCharacter(obj)
+			local adaTombolBeli = obj:FindFirstChildOfClass("ProximityPrompt", true) or obj:FindFirstChildOfClass("ClickDetector", true)
+			local isAnchored = mobHrp and mobHrp.Anchored
+
+			if mobHrp and hum and hum.Health > 0 and obj.Name ~= LocalPlayer.Name and not isPemain and not diFolderAman and not adaTombolBeli and not isAnchored then
 				local jarak = (mobHrp.Position - hrp.Position).Magnitude
 				if jarak < minJarak then
 					minJarak = jarak
