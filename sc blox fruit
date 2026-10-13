@@ -13,13 +13,13 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 -- 2. BERSIHKAN UI LAMA
-if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV6UI") then
-	LocalPlayer.PlayerGui.LembahHussV6UI:Destroy()
+if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV7UI") then
+	LocalPlayer.PlayerGui.LembahHussV7UI:Destroy()
 end
 
--- 3. TAMPILAN MENU (UI)
+-- 3. MENU UI
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "LembahHussV6UI"
+ScreenGui.Name = "LembahHussV7UI"
 
 local Frame = Instance.new("Frame", ScreenGui)
 Frame.Size = UDim2.new(0, 260, 0, 190)
@@ -31,7 +31,7 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "LEMBAH HUSS: AUTO MASTER V6"
+Title.Text = "LEMBAH HUSS: AUTO MASTER V7"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 11
@@ -70,9 +70,10 @@ Status.BackgroundTransparency = 1
 local isSurvivorActive = false
 local isHunterActive = false
 local activeTween = nil
+local reachedZonePart = nil
 
--- NETRALKAN FISIKA & NOCLIP
-local function aturNoclipDanFisika(char)
+-- UTILITY: FISIKA & NOCLIP
+local function netralkanFisika(char)
 	if not char then return end
 	for _, p in ipairs(char:GetDescendants()) do
 		if p:IsA("BasePart") then
@@ -86,7 +87,7 @@ local function aturNoclipDanFisika(char)
 	end
 end
 
--- TERBANG AMAN
+-- TERBANG SURVIVOR
 local function terbangMulus(cframeTujuan, speed)
 	local char = LocalPlayer.Character
 	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -97,8 +98,7 @@ local function terbangMulus(cframeTujuan, speed)
 		activeTween = nil
 	end
 	
-	aturNoclipDanFisika(char)
-	
+	netralkanFisika(char)
 	local jarak = (hrp.Position - cframeTujuan.Position).Magnitude
 	local durasi = jarak / (speed or 85)
 	local tweenInfo = TweenInfo.new(durasi, Enum.EasingStyle.Linear)
@@ -109,7 +109,7 @@ local function terbangMulus(cframeTujuan, speed)
 	local noclipConn
 	noclipConn = RunService.Stepped:Connect(function()
 		if activeTween and activeTween.PlaybackState == Enum.PlaybackState.Playing then
-			aturNoclipDanFisika(char)
+			netralkanFisika(char)
 		else
 			if noclipConn then noclipConn:Disconnect() end
 		end
@@ -118,70 +118,89 @@ local function terbangMulus(cframeTujuan, speed)
 	activeTween.Completed:Wait()
 	activeTween = nil
 	if noclipConn then noclipConn:Disconnect() end
-	aturNoclipDanFisika(char)
+	netralkanFisika(char)
 end
 
--- CARI GARIS ZONA AMAN YANG JARAKNYA > 25 STUD DARI POSISI SEKARANG
-local function cariGarisAmanSelanjutnya()
+-- DETEKSI ZONA AMAN SURVIVOR (ANTI BOLAK-BALIK)
+local function cariGarisAmanTerdepan()
 	local localHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 	if not localHrp then return nil end
 	
-	local targetGaris = nil
-	local jarakTerjauh = 0
-
+	local kandidatGaris = {}
 	for _, part in ipairs(Workspace:GetDescendants()) do
 		if part:IsA("BasePart") and part:IsDescendantOf(Workspace) then
 			local nama = part.Name:lower()
 			if nama:find("safe") or nama:find("finish") or nama:find("line") or nama:find("checkpoint") or (part.BrickColor.Name == "White" and part.Size.X > 8) then
 				local jarak = (part.Position - localHrp.Position).Magnitude
-				-- Hanya ambil garis yang jaraknya LEBIH DARI 25 STUD dari tempat kita berdiri
-				if jarak > 25 and jarak > jarakTerjauh then
-					jarakTerjauh = jarak
-					targetGaris = part
+				if jarak > 30 then
+					table.insert(kandidatGaris, {part = part, jarak = jarak})
 				end
 			end
 		end
 	end
-	return targetGaris
+	
+	table.sort(kandidatGaris, function(a, b)
+		return a.jarak < b.jarak
+	end)
+	
+	if #kandidatGaris > 0 then
+		return kandidatGaris[1].part
+	end
+	return nil
 end
 
--- DETEKSI SURVIVOR VALID (FILTER VOID & SPECTATE ROOM)
-local function isPemainSurvivorValid(player)
-	if not player.Character then return false end
-	local char = player.Character
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	if not hum or hum.Health <= 0 or not hrp then return false end
+-- DETEKSI TARGET SURVIVOR PRESISI UNTUK HUNTER
+local function cariTargetSurvivorPresisi()
+	local localHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not localHrp then return nil end
 	
-	-- FIX BUG VOID: Abaikan player yang ada di bawah tanah / ruang spectate (Y < -30)
-	if hrp.Position.Y < -30 or hrp.Position.Y > 350 then
-		return false
-	end
+	local targetTerbaik = nil
+	local jarakTerdekat = math.huge
 	
-	-- Abaikan player yang punya ForceField (Kebal / Spawn Room)
-	if char:FindFirstChildOfClass("ForceField") then
-		return false
-	end
-	
-	-- Cek Highlight Hunter
-	local highlight = char:FindFirstChildOfClass("Highlight") or char:FindFirstChild("Highlight", true)
-	if highlight then
-		local fill = highlight.FillColor or highlight.OutlineColor
-		if fill and (fill.R > fill.G and fill.R > fill.B and fill.R > 0.4) then
-			return false
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character then
+			local char = player.Character
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			
+			if hum and hum.Health > 0 and hrp then
+				local posisiY = hrp.Position.Y
+				if posisiY > -100 and posisiY < 400 then
+					if not char:FindFirstChildOfClass("ForceField") then
+						local isHunter = false
+						
+						if player.Team then
+							local tName = player.Team.Name:lower()
+							if tName:find("hunter") or tName:find("tagger") or tName:find("it") then
+								isHunter = true
+							end
+						end
+						
+						local highlight = char:FindFirstChildOfClass("Highlight") or char:FindFirstChild("Highlight", true)
+						if highlight then
+							local fill = highlight.FillColor or highlight.OutlineColor
+							if fill and fill.R > fill.G and fill.R > fill.B and fill.R > 0.4 then
+								isHunter = true
+							end
+						end
+						
+						if not isHunter then
+							local jarak = (hrp.Position - localHrp.Position).Magnitude
+							if jarak < jarakTerdekat then
+								jarakTerdekat = jarak
+								targetTerbaik = player
+							end
+						end
+					end
+				end
+			end
 		end
 	end
-	
-	-- Cek Team Hunter
-	if player.Team and (player.Team.Name:lower():find("hunter") or player.Team.Name:lower():find("tagger")) then
-		return false
-	end
-	
-	return true
+	return targetTerbaik
 end
 
--- EKSEKUSI PUKUL
-local function eksekusiPukulInstan(targetChar)
+-- EKSEKUSI SERANGAN HUNTER
+local function eksekusiPukulHunter(targetChar)
 	local myChar = LocalPlayer.Character
 	if not myChar then return end
 	local myHum = myChar:FindFirstChildOfClass("Humanoid")
@@ -211,7 +230,16 @@ local function eksekusiPukulInstan(targetChar)
 	end
 end
 
--- LOGIKA SURVIVOR MODE (AUTO DETEKSI RONDE)
+-- RESET STATE ON RESPAWN
+LocalPlayer.CharacterAdded:Connect(function()
+	reachedZonePart = nil
+	if activeTween then
+		activeTween:Cancel()
+		activeTween = nil
+	end
+end)
+
+-- LOGIKA SURVIVOR MODE
 BtnSurvivor.MouseButton1Click:Connect(function()
 	isSurvivorActive = not isSurvivorActive
 	if isSurvivorActive then
@@ -228,26 +256,36 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 				local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
 				
 				if myHrp then
-					local targetGaris = cariGarisAmanSelanjutnya()
+					if reachedZonePart then
+						if not reachedZonePart:IsDescendantOf(Workspace) or (reachedZonePart.Position - myHrp.Position).Magnitude > 45 then
+							reachedZonePart = nil
+						end
+					end
 					
-					-- Kalo ada garis aman di depan (> 25 stud), LANGSUNG TERBANG!
-					if targetGaris then
-						Status.Text = "Status: Meluncur ke Safe Zone Depan..."
-						Status.TextColor3 = Color3.fromRGB(100, 255, 150)
-						
-						terbangMulus(targetGaris.CFrame * CFrame.new(0, 2, 0), 85)
-						
-						if firetouchinterest then
-							firetouchinterest(myHrp, targetGaris, 0)
-							firetouchinterest(myHrp, targetGaris, 1)
+					if not reachedZonePart then
+						local targetGaris = cariGarisAmanTerdepan()
+						if targetGaris then
+							Status.Text = "Status: Otw Safe Zone..."
+							Status.TextColor3 = Color3.fromRGB(100, 255, 150)
+							
+							terbangMulus(targetGaris.CFrame * CFrame.new(0, 2, 0), 85)
+							
+							if firetouchinterest then
+								firetouchinterest(myHrp, targetGaris, 0)
+								firetouchinterest(myHrp, targetGaris, 1)
+							end
+							
+							reachedZonePart = targetGaris
+						else
+							Status.Text = "Status: Standby (Garis Aman Tidak Ditemukan)"
+							Status.TextColor3 = Color3.fromRGB(200, 200, 100)
 						end
 					else
-						-- Kalo gak ada garis di depan, berarti udah sampai di ujung
-						Status.Text = "Status: Aman di Zona (Menunggu Ronde Berikut...)"
+						Status.Text = "Status: Diam di Zona Aman (Kunci Posisi)"
 						Status.TextColor3 = Color3.fromRGB(100, 200, 255)
 					end
 				end
-				task.wait(0.4)
+				task.wait(0.3)
 			end
 		end)
 	else
@@ -255,6 +293,7 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 		BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
 		Status.Text = "Status: Standby"
 		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+		reachedZonePart = nil
 		if activeTween then
 			activeTween:Cancel()
 			activeTween = nil
@@ -262,7 +301,7 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 	end
 end)
 
--- LOGIKA HUNTER MODE (ANTI-VOID & PRESI KETAT)
+-- LOGIKA HUNTER MODE (TELEPORT LANGSUNG + STICKY LOCK)
 BtnHunter.MouseButton1Click:Connect(function()
 	isHunterActive = not isHunterActive
 	if isHunterActive then
@@ -279,57 +318,42 @@ BtnHunter.MouseButton1Click:Connect(function()
 				local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
 				
 				if myHrp then
-					local survivorDitemukan = false
+					local targetPlayer = cariTargetSurvivorPresisi()
 					
-					for _, targetPlayer in ipairs(Players:GetPlayers()) do
-						if targetPlayer ~= LocalPlayer and targetPlayer.Character then
-							local targetChar = targetPlayer.Character
-							local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+					if targetPlayer and targetPlayer.Character then
+						local targetChar = targetPlayer.Character
+						local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+						
+						if targetHrp then
+							Status.Text = "Status: Lock On [" .. targetPlayer.Name .. "]"
+							Status.TextColor3 = Color3.fromRGB(255, 100, 100)
 							
-							-- Menggunakan filter ketat (Cek posisi Y arena & status survivor)
-							if targetHrp and isPemainSurvivorValid(targetPlayer) then
-								survivorDitemukan = true
-								Status.Text = "Status: Memburu [" .. targetPlayer.Name .. "]"
-								Status.TextColor3 = Color3.fromRGB(255, 100, 100)
-								
-								local jarak = (targetHrp.Position - myHrp.Position).Magnitude
-								
-								if jarak > 12 then
-									terbangMulus(targetHrp.CFrame * CFrame.new(0, 0, 1.5), 180)
-								end
-								
-								if isHunterActive and targetHrp and targetHrp.Parent then
-									local startTime = tick()
-									local stickyConnection
+							local startTime = tick()
+							local stickyConnection
+							
+							stickyConnection = RunService.Heartbeat:Connect(function()
+								if isHunterActive and targetHrp and targetHrp.Parent and (tick() - startTime < 0.4) then
+									netralkanFisika(myChar)
 									
-									stickyConnection = RunService.Heartbeat:Connect(function()
-										if isHunterActive and targetHrp and targetHrp.Parent and (tick() - startTime < 0.35) then
-											aturNoclipDanFisika(myChar)
-											
-											local targetPos = targetHrp.Position
-											local arahLari = targetHrp.AssemblyLinearVelocity * 0.04
-											local posTujuan = targetPos + arahLari
-											
-											myHrp.CFrame = CFrame.lookAt(posTujuan, targetPos)
-											eksekusiPukulInstan(targetChar)
-										else
-											if stickyConnection then
-												stickyConnection:Disconnect()
-											end
-										end
-									end)
+									local targetPos = targetHrp.Position
+									local arahLari = targetHrp.AssemblyLinearVelocity * 0.03
+									local posTujuan = targetPos + arahLari
 									
-									task.wait(0.35)
-									if stickyConnection then stickyConnection:Disconnect() end
-									aturNoclipDanFisika(myChar)
+									myHrp.CFrame = CFrame.lookAt(posTujuan, targetPos)
+									eksekusiPukulHunter(targetChar)
+								else
+									if stickyConnection then
+										stickyConnection:Disconnect()
+									end
 								end
-								break
-							end
+							end)
+							
+							task.wait(0.4)
+							if stickyConnection then stickyConnection:Disconnect() end
+							netralkanFisika(myChar)
 						end
-					end
-					
-					if not survivorDitemukan then
-						Status.Text = "Status: Mencari Survivor di Arena..."
+					else
+						Status.Text = "Status: Mencari Target Survivor..."
 						Status.TextColor3 = Color3.fromRGB(200, 200, 100)
 					end
 				end
@@ -341,9 +365,5 @@ BtnHunter.MouseButton1Click:Connect(function()
 		BtnHunter.BackgroundColor3 = Color3.fromRGB(215, 40, 40)
 		Status.Text = "Status: Standby"
 		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
-		if activeTween then
-			activeTween:Cancel()
-			activeTween = nil
-		end
 	end
 end)
