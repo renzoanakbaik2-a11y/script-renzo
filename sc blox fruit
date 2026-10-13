@@ -13,13 +13,13 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 -- 2. BERSIHKAN UI LAMA
-if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV7UI") then
-	LocalPlayer.PlayerGui.LembahHussV7UI:Destroy()
+if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV8UI") then
+	LocalPlayer.PlayerGui.LembahHussV8UI:Destroy()
 end
 
 -- 3. MENU UI
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "LembahHussV7UI"
+ScreenGui.Name = "LembahHussV8UI"
 
 local Frame = Instance.new("Frame", ScreenGui)
 Frame.Size = UDim2.new(0, 260, 0, 190)
@@ -31,7 +31,7 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "LEMBAH HUSS: AUTO MASTER V7"
+Title.Text = "LEMBAH HUSS: AUTO MASTER V8"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 11
@@ -72,7 +72,7 @@ local isHunterActive = false
 local activeTween = nil
 local reachedZonePart = nil
 
--- UTILITY: FISIKA & NOCLIP
+-- UTILITY FISIKA & NOCLIP
 local function netralkanFisika(char)
 	if not char then return end
 	for _, p in ipairs(char:GetDescendants()) do
@@ -121,7 +121,7 @@ local function terbangMulus(cframeTujuan, speed)
 	netralkanFisika(char)
 end
 
--- DETEKSI ZONA AMAN SURVIVOR (ANTI BOLAK-BALIK)
+-- CARI GARIS ZONA AMAN TERDEPAN
 local function cariGarisAmanTerdepan()
 	local localHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 	if not localHrp then return nil end
@@ -132,7 +132,7 @@ local function cariGarisAmanTerdepan()
 			local nama = part.Name:lower()
 			if nama:find("safe") or nama:find("finish") or nama:find("line") or nama:find("checkpoint") or (part.BrickColor.Name == "White" and part.Size.X > 8) then
 				local jarak = (part.Position - localHrp.Position).Magnitude
-				if jarak > 30 then
+				if jarak > 25 then
 					table.insert(kandidatGaris, {part = part, jarak = jarak})
 				end
 			end
@@ -149,7 +149,7 @@ local function cariGarisAmanTerdepan()
 	return nil
 end
 
--- DETEKSI TARGET SURVIVOR PRESISI UNTUK HUNTER
+-- CARI TARGET SURVIVOR KETAT UNTUK HUNTER
 local function cariTargetSurvivorPresisi()
 	local localHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 	if not localHrp then return nil end
@@ -199,7 +199,7 @@ local function cariTargetSurvivorPresisi()
 	return targetTerbaik
 end
 
--- EKSEKUSI SERANGAN HUNTER
+-- EKSEKUSI PUKUL HUNTER
 local function eksekusiPukulHunter(targetChar)
 	local myChar = LocalPlayer.Character
 	if not myChar then return end
@@ -230,7 +230,7 @@ local function eksekusiPukulHunter(targetChar)
 	end
 end
 
--- RESET STATE ON RESPAWN
+-- RESET STATE SAAT RESPAWN
 LocalPlayer.CharacterAdded:Connect(function()
 	reachedZonePart = nil
 	if activeTween then
@@ -239,7 +239,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 	end
 end)
 
--- LOGIKA SURVIVOR MODE
+-- LOGIKA SURVIVOR MODE (MASUK DALAM ZONA AMAN)
 BtnSurvivor.MouseButton1Click:Connect(function()
 	isSurvivorActive = not isSurvivorActive
 	if isSurvivorActive then
@@ -265,11 +265,16 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 					if not reachedZonePart then
 						local targetGaris = cariGarisAmanTerdepan()
 						if targetGaris then
-							Status.Text = "Status: Otw Safe Zone..."
+							Status.Text = "Status: Terbang Masuk dalam Zona Aman..."
 							Status.TextColor3 = Color3.fromRGB(100, 255, 150)
 							
-							terbangMulus(targetGaris.CFrame * CFrame.new(0, 2, 0), 85)
+							-- Mendorong titik pendaratan 8 stud MELEWATI garis ke dalam zona aman
+							local arahTerbang = (targetGaris.Position - myHrp.Position).Unit
+							local cframeDalamZona = CFrame.new(targetGaris.Position + (arahTerbang * 8) + Vector3.new(0, 2, 0), targetGaris.Position + (arahTerbang * 15))
 							
+							terbangMulus(cframeDalamZona, 85)
+							
+							-- Trigger fisik ke garis dan area sekitar
 							if firetouchinterest then
 								firetouchinterest(myHrp, targetGaris, 0)
 								firetouchinterest(myHrp, targetGaris, 1)
@@ -277,11 +282,11 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 							
 							reachedZonePart = targetGaris
 						else
-							Status.Text = "Status: Standby (Garis Aman Tidak Ditemukan)"
+							Status.Text = "Status: Standby (Menunggu Zona Depan)"
 							Status.TextColor3 = Color3.fromRGB(200, 200, 100)
 						end
 					else
-						Status.Text = "Status: Diam di Zona Aman (Kunci Posisi)"
+						Status.Text = "Status: Aman Dalam Zona (Terkunci)"
 						Status.TextColor3 = Color3.fromRGB(100, 200, 255)
 					end
 				end
@@ -301,7 +306,7 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 	end
 end)
 
--- LOGIKA HUNTER MODE (TELEPORT LANGSUNG + STICKY LOCK)
+-- LOGIKA HUNTER MODE
 BtnHunter.MouseButton1Click:Connect(function()
 	isHunterActive = not isHunterActive
 	if isHunterActive then
