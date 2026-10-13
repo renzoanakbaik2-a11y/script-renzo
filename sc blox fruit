@@ -1,27 +1,26 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- 1. ANTI-AFK
+-- 1. ANTI-AFK (Biar nggak kena kick 20 menit)
 LocalPlayer.Idled:Connect(function()
 	VirtualUser:CaptureController()
 	VirtualUser:ClickButton2(Vector2.new(0, 0))
 end)
 
 -- 2. PEMBERSIHAN UI LAMA
-if LocalPlayer.PlayerGui:FindFirstChild("AnimeZeroDirectQuestUI") then
-	LocalPlayer.PlayerGui.AnimeZeroDirectQuestUI:Destroy()
+if LocalPlayer.PlayerGui:FindFirstChild("AnimeZeroAutoFarmUI") then
+	LocalPlayer.PlayerGui.AnimeZeroAutoFarmUI:Destroy()
 end
 
 -- 3. TAMPILAN MENU (UI)
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "AnimeZeroDirectQuestUI"
+ScreenGui.Name = "AnimeZeroAutoFarmUI"
 
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 250, 0, 160)
-Frame.Position = UDim2.new(0.5, -125, 0.3, 0)
+Frame.Size = UDim2.new(0, 240, 0, 150)
+Frame.Position = UDim2.new(0.5, -120, 0.3, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 Frame.Active = true
 Frame.Draggable = true
@@ -29,25 +28,25 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "ANIME ZERO: AUTO DIRECT QUEST"
+Title.Text = "ANIME ZERO: AUTO FARM MOBS"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
 Title.BackgroundTransparency = 1
 
-local BtnQuest = Instance.new("TextButton", Frame)
-BtnQuest.Size = UDim2.new(1, -20, 0, 45)
-BtnQuest.Position = UDim2.new(0, 10, 0, 40)
-BtnQuest.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-BtnQuest.Text = "AUTO MISI LANGSUNG: OFF"
-BtnQuest.TextColor3 = Color3.fromRGB(255, 255, 255)
-BtnQuest.Font = Enum.Font.SourceSansBold
-BtnQuest.TextSize = 11
-Instance.new("UICorner", BtnQuest).CornerRadius = UDim.new(0, 6)
+local BtnFarm = Instance.new("TextButton", Frame)
+BtnFarm.Size = UDim2.new(1, -20, 0, 40)
+BtnFarm.Position = UDim2.new(0, 10, 0, 35)
+BtnFarm.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+BtnFarm.Text = "AUTO FARM MOBS: OFF"
+BtnFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnFarm.Font = Enum.Font.SourceSansBold
+BtnFarm.TextSize = 11
+Instance.new("UICorner", BtnFarm).CornerRadius = UDim.new(0, 6)
 
 local Status = Instance.new("TextLabel", Frame)
-Status.Size = UDim2.new(1, -20, 0, 55)
-Status.Position = UDim2.new(0, 10, 0, 95)
+Status.Size = UDim2.new(1, -20, 0, 50)
+Status.Position = UDim2.new(0, 10, 0, 85)
 Status.Text = "Status: Standby"
 Status.TextColor3 = Color3.fromRGB(150, 150, 150)
 Status.Font = Enum.Font.Code
@@ -55,40 +54,19 @@ Status.TextSize = 10
 Status.TextWrapped = true
 Status.BackgroundTransparency = 1
 
-local isQuestActive = false
+local isFarming = false
 
--- AMANKAN KARAKTER (Biar Nggak Mati Kena Anti-Cheat / Jatuh)
-local function amankanKarakter(char)
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum:ChangeState(Enum.HumanoidStateType.Swimming)
-	end
+-- 4. MATIKAN TABRAKAN (Noclip)
+local function setNoclip(char, active)
 	for _, part in ipairs(char:GetDescendants()) do
 		if part:IsA("BasePart") then
-			part.CanCollide = false
+			part.CanCollide = not active
 		end
 	end
 end
 
--- FUNGSI TERBANG MELAYANG (TWEEN FLY)
-local function terbangKe(cframeTujuan, speed)
-	local char = LocalPlayer.Character
-	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-	local hrp = char.HumanoidRootPart
-	
-	amankanKarakter(char)
-	
-	local jarak = (hrp.Position - cframeTujuan.Position).Magnitude
-	local durasi = jarak / (speed or 180)
-	
-	local tweenInfo = TweenInfo.new(durasi, Enum.EasingStyle.Linear)
-	local tween = TweenService:Create(hrp, tweenInfo, {CFrame = cframeTujuan})
-	tween:Play()
-	tween.Completed:Wait()
-end
-
--- PUKUL OTOMATIS
-local function hitTarget()
+-- 5. SERANG OTOMATIS
+local function autoAttack()
 	local char = LocalPlayer.Character
 	if not char then return end
 	local tool = char:FindFirstChildOfClass("Tool")
@@ -97,87 +75,69 @@ local function hitTarget()
 	end
 end
 
--- DETEKSI TEKS MISI AKTIF DI UI
-local function dapatkanInfoQuestUI()
-	for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-		if gui:IsA("TextLabel") and gui.Visible and gui.Text ~= "" then
-			local txt = gui.Text:lower()
-			if txt:find("0/") or txt:find("1/") or txt:find("2/") or txt:find("3/") or txt:find("4/") or txt:find("5/") or txt:find("kill") or txt:find("defeat") or txt:find("collect") or txt:find("find") then
-				return txt
+-- 6. CARI MOB TERDEKAT
+local function cariMobTerdekat(hrp)
+	local target = nil
+	local minJarak = math.huge
+
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+			local hum = obj:FindFirstChildOfClass("Humanoid")
+			local mobHrp = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
+			
+			-- Filter: Pastikan musuh masih hidup dan bukan pemain lain
+			if mobHrp and hum and hum.Health > 0 and obj.Name ~= LocalPlayer.Name and not Players:GetPlayerFromCharacter(obj) then
+				local jarak = (mobHrp.Position - hrp.Position).Magnitude
+				if jarak < minJarak then
+					minJarak = jarak
+					target = mobHrp
+				end
 			end
 		end
 	end
-	return ""
+	return target
 end
 
--- EKSEKUSI TOMBOL UTAMA
-BtnQuest.MouseButton1Click:Connect(function()
-	isQuestActive = not isQuestActive
+-- 7. EKSEKUSI TOMBOL AUTO FARM
+BtnFarm.MouseButton1Click:Connect(function()
+	isFarming = not isFarming
 	
-	if isQuestActive then
-		BtnQuest.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-		BtnQuest.Text = "AUTO MISI LANGSUNG: ON"
+	if isFarming then
+		BtnFarm.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
+		BtnFarm.Text = "AUTO FARM MOBS: ON"
 		
 		task.spawn(function()
-			while isQuestActive do
+			while isFarming do
 				local char = LocalPlayer.Character
 				if char and char:FindFirstChild("HumanoidRootPart") then
 					local hrp = char.HumanoidRootPart
-					local questText = dapatkanInfoQuestUI()
+					setNoclip(char, true)
 					
-					Status.Text = "Status: Eksekusi Misi...\n[" .. (questText ~= "" and questText or "Memindai Target...") .. "]"
-					Status.TextColor3 = Color3.fromRGB(100, 255, 150)
-					
-					-- 1. JIKA MISI BERTARUNG (Pukul Mob/Musuh Terdekat)
-					local musuhDitemukan = false
-					for _, mob in ipairs(Workspace:GetDescendants()) do
-						if mob:IsA("Model") and mob:FindFirstChildOfClass("Humanoid") then
-							local mobHrp = mob:FindFirstChild("HumanoidRootPart") or mob.PrimaryPart
-							local hum = mob:FindFirstChildOfClass("Humanoid")
-							
-							-- Pastikan Musuh Asli (Bukan Karakter Player)
-							if mobHrp and hum and hum.Health > 0 and mob.Name ~= LocalPlayer.Name and not Players:GetPlayerFromCharacter(mob) then
-								musuhDitemukan = true
-								-- Terbang melayang 8 stud di atas musuh
-								terbangKe(mobHrp.CFrame * CFrame.new(0, 8, 0) * CFrame.Angles(math.rad(-90), 0, 0), 200)
-								hitTarget()
-								break
-							end
-						end
-					end
-					
-					-- 2. JIKA MISI NON-BERTARUNG (Cari Objek/Item Misi)
-					if not musuhDitemukan then
-						for _, obj in ipairs(Workspace:GetDescendants()) do
-							if obj:IsA("BasePart") or obj:IsA("Model") then
-								local namaObj = obj.Name:lower()
-								if namaObj:find("item") or namaObj:find("candy") or namaObj:find("chest") or namaObj:find("target") or namaObj:find("quest") then
-									local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildOfClass("BasePart")) or obj
-									if part then
-										terbangKe(part.CFrame, 200)
-										if firetouchinterest then
-											firetouchinterest(hrp, part, 0)
-											firetouchinterest(hrp, part, 1)
-										end
-										for _, prompt in ipairs(obj:GetDescendants()) do
-											if prompt:IsA("ProximityPrompt") and fireproximityprompt then
-												fireproximityprompt(prompt)
-											end
-										end
-										break
-									end
-								end
-							end
-						end
+					local targetMobHrp = cariMobTerdekat(hrp)
+					if targetMobHrp and targetMobHrp.Parent then
+						local mobName = targetMobHrp.Parent.Name
+						Status.Text = "Status: Bantai [" .. mobName .. "]"
+						Status.TextColor3 = Color3.fromRGB(100, 255, 150)
+						
+						-- Teleport melayang 6 stud di atas musuh & menghadap ke bawah
+						hrp.CFrame = targetMobHrp.CFrame * CFrame.new(0, 6, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+						autoAttack()
+					else
+						Status.Text = "Status: Mencari musuh di sekitar..."
+						Status.TextColor3 = Color3.fromRGB(200, 200, 100)
 					end
 				end
-				task.wait(0.1)
+				task.wait(0.05)
 			end
 		end)
 	else
-		BtnQuest.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-		BtnQuest.Text = "AUTO MISI LANGSUNG: OFF"
+		BtnFarm.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+		BtnFarm.Text = "AUTO FARM MOBS: OFF"
 		Status.Text = "Status: Off"
 		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+		
+		if LocalPlayer.Character then
+			setNoclip(LocalPlayer.Character, false)
+		end
 	end
 end)
