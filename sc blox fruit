@@ -4,6 +4,7 @@ local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 -- 1. 🛡️ ANTI-AFK
@@ -13,13 +14,13 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 -- 2. 🧹 BERSIHKAN UI LAMA
-if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV4UI") then
-	LocalPlayer.PlayerGui.LembahHussV4UI:Destroy()
+if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV6UI") then
+	LocalPlayer.PlayerGui.LembahHussV6UI:Destroy()
 end
 
 -- 3. 🖥️ TAMPILAN MENU (UI)
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "LembahHussV4UI"
+ScreenGui.Name = "LembahHussV6UI"
 
 local Frame = Instance.new("Frame", ScreenGui)
 Frame.Size = UDim2.new(0, 260, 0, 190)
@@ -31,7 +32,7 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "LEMBAH HUSS: AUTO MASTER V5"
+Title.Text = "LEMBAH HUSS: AUTO MASTER V6"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 11
@@ -71,7 +72,7 @@ local isSurvivorActive = false
 local isHunterActive = false
 local sudahSampaiZona = false
 local activeTween = nil
-local targetZonaAktif = nil
+local posisiMendaratLast = nil
 
 -- 🚀 FUNGSI TERBANG MULUS (TWEEN CONTINUOUS)
 local function terbangMulus(cframeTujuan, speed)
@@ -89,7 +90,7 @@ local function terbangMulus(cframeTujuan, speed)
 	end
 	
 	local jarak = (hrp.Position - cframeTujuan.Position).Magnitude
-	local durasi = jarak / (speed or 90)
+	local durasi = jarak / (speed or 95)
 	local tweenInfo = TweenInfo.new(durasi, Enum.EasingStyle.Linear)
 	
 	activeTween = TweenService:Create(hrp, tweenInfo, {CFrame = cframeTujuan})
@@ -98,7 +99,7 @@ local function terbangMulus(cframeTujuan, speed)
 	activeTween = nil
 end
 
--- 🎯 CARI ZONA AMAN SEBERANG (DENGAN LOGIKA JARAK TERJAUH)
+-- 🎯 CARI ZONA AMAN SEBERANG (VALIDASI DESCENTANT + JARAK TERJAUH)
 local function cariZonaSeberang()
 	local localHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 	if not localHrp then return nil end
@@ -143,8 +144,49 @@ local function isPemainSurvivor(player)
 	return true
 end
 
--- ⚔️ SERANG HUNTER DENGAN HANDLE TOUCH & DELAY SYNC
-local function eksekusiPukulInstan(targetChar)
+-- 🎈 HUNTER FIX 1: HITBOX EXPANSION (PEMBESARAN HITBOX SURVIVOR)
+local function perbesarHitbox(targetChar)
+	local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+	if targetHrp then
+		targetHrp.Size = Vector3.new(14, 14, 14)
+		targetHrp.Transparency = 0.7
+		targetHrp.CanCollide = false
+		targetHrp.Color = Color3.fromRGB(255, 0, 0)
+	end
+end
+
+-- 📡 HUNTER FIX 2: DIRECT REMOTE EVENT SCANNER & FIRING
+local function tembakRemoteEksekusi(tool, targetChar)
+	local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+	
+	-- Scan RemoteEvent di dalam Tool
+	if tool then
+		for _, obj in ipairs(tool:GetDescendants()) do
+			if obj:IsA("RemoteEvent") then
+				pcall(function()
+					obj:FireServer(targetChar)
+					obj:FireServer(targetHrp)
+				end)
+			end
+		end
+	end
+	
+	-- Scan RemoteEvent umum di ReplicatedStorage
+	for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+		if obj:IsA("RemoteEvent") then
+			local nama = obj.Name:lower()
+			if nama:find("hit") or nama:find("attack") or nama:find("tag") or nama:find("damage") or nama:find("swing") or nama:find("touch") then
+				pcall(function()
+					obj:FireServer(targetChar)
+					obj:FireServer(targetHrp)
+				end)
+			end
+		end
+	end
+end
+
+-- ⚔️ SERANG HUNTER (COMBINED EKSEKUSI)
+local function eksekusiPukulHunter(targetChar)
 	local myChar = LocalPlayer.Character
 	if not myChar then return end
 	local myHum = myChar:FindFirstChildOfClass("Humanoid")
@@ -152,45 +194,43 @@ local function eksekusiPukulInstan(targetChar)
 	local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
 	if not myHum or not myHrp or not targetHrp then return end
 	
+	-- 1. Terapkan Hitbox Expansion
+	perbesarHitbox(targetChar)
+	
+	-- 2. Equip Tool
 	local tool = myChar:FindFirstChildOfClass("Tool") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChildOfClass("Tool"))
 	if tool and tool.Parent ~= myChar then
 		myHum:EquipTool(tool)
-		task.wait(0.05) -- Delay buffer sync server
+		task.wait(0.05)
 	end
 	
+	-- 3. Trigger Tebasan Fisik & Click
 	if tool then tool:Activate() end
 	VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
 	VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
 	
+	-- 4. Touch Interest pada Hitbox Raksasa
 	if firetouchinterest then
-		local handle = tool and tool:FindFirstChild("Handle")
-		local targetTorso = targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetHrp
-		
-		if handle then
-			firetouchinterest(handle, targetHrp, 0)
-			firetouchinterest(handle, targetHrp, 1)
-			if targetTorso then
-				firetouchinterest(handle, targetTorso, 0)
-				firetouchinterest(handle, targetTorso, 1)
-			end
-		else
-			firetouchinterest(myHrp, targetHrp, 0)
-			firetouchinterest(myHrp, targetHrp, 1)
-		end
+		local handle = tool and tool:FindFirstChild("Handle") or myHrp
+		firetouchinterest(handle, targetHrp, 0)
+		firetouchinterest(handle, targetHrp, 1)
 	end
+	
+	-- 5. Tembak Direct RemoteEvent
+	tembakRemoteEksekusi(tool, targetChar)
 end
 
--- 🔄 RESET STATE
+-- 🔄 RESET STATE RESPAWN
 LocalPlayer.CharacterAdded:Connect(function(char)
 	sudahSampaiZona = false
-	targetZonaAktif = nil
+	posisiMendaratLast = nil
 	if activeTween then
 		activeTween:Cancel()
 		activeTween = nil
 	end
 end)
 
--- 🏃 LOGIKA SURVIVOR MODE (PING-PONG MECHANIC)
+-- 🏃 LOGIKA SURVIVOR MODE (STATE-LOCK PING-PONG)
 BtnSurvivor.MouseButton1Click:Connect(function()
 	isSurvivorActive = not isSurvivorActive
 	if isSurvivorActive then
@@ -207,31 +247,36 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 				local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
 				
 				if myHrp then
-					-- DETEKSI PERPINDAHAN RONDE (DETEKSI JIKALAU DIPINDAHKAN SERVER SURVIVOR KE ZONA AWAL)
-					if sudahSampaiZona and targetZonaAktif then
-						local jarakKeZonaAman = (myHrp.Position - targetZonaAktif.Position).Magnitude
-						if jarakKeZonaAman > 25 then
+					-- DETEKSI TELEPORT SERVER (RONDE BARU)
+					if sudahSampaiZona and posisiMendaratLast then
+						local jarakPerpindahan = (myHrp.Position - posisiMendaratLast).Magnitude
+						if jarakPerpindahan > 30 then
+							-- Server memindahkan kita ke zona awal ronde baru!
 							sudahSampaiZona = false
-							targetZonaAktif = nil
+							posisiMendaratLast = nil
 						end
 					end
 					
 					if not sudahSampaiZona then
 						local zonaTujuan = cariZonaSeberang()
 						if zonaTujuan then
-							targetZonaAktif = zonaTujuan
 							Status.Text = "Status: Meluncur ke Zona Seberang..."
 							Status.TextColor3 = Color3.fromRGB(100, 255, 150)
 							
-							terbangMulus(zonaTujuan.CFrame * CFrame.new(0, 2, 0), 95)
+							local cframeTarget = zonaTujuan.CFrame * CFrame.new(0, 2, 0)
+							terbangMulus(cframeTarget, 95)
 							
+							-- Mendarat dan Kunci Status
 							sudahSampaiZona = true
+							if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+								posisiMendaratLast = myChar.HumanoidRootPart.Position
+							end
 						else
 							Status.Text = "Status: Mencari Safe Zone..."
 							Status.TextColor3 = Color3.fromRGB(200, 200, 100)
 						end
 					else
-						Status.Text = "Status: Safe di Zona (Menunggu Ronde Baru)"
+						Status.Text = "Status: Standby di Safe Zone (Terkunci)"
 						Status.TextColor3 = Color3.fromRGB(100, 200, 255)
 					end
 				end
@@ -250,7 +295,7 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 	end
 end)
 
--- 🗡️ LOGIKA HUNTER MODE (TWEENING + VELOCITY PREDICTION)
+-- 🗡️ LOGIKA HUNTER MODE (HITBOX EXPANSION + REMOTE FIRING)
 BtnHunter.MouseButton1Click:Connect(function()
 	isHunterActive = not isHunterActive
 	if isHunterActive then
@@ -280,12 +325,15 @@ BtnHunter.MouseButton1Click:Connect(function()
 								Status.Text = "Status: Memburu [" .. targetPlayer.Name .. "]"
 								Status.TextColor3 = Color3.fromRGB(255, 100, 100)
 								
-								-- Terbang mendekat dengan Tween cepat agar lintasan pisau tercatat server
-								local posDepanTarget = targetHrp.CFrame * CFrame.new(0, 0, -1)
-								terbangMulus(posDepanTarget, 150)
+								-- Perbesar Hitbox Musuh
+								perbesarHitbox(targetChar)
 								
-								-- Eksekusi serangan pisau saat sudah menempel
-								eksekusiPukulInstan(targetChar)
+								-- Terbang Cepat mendekati Hitbox Musuh
+								local posDepanTarget = targetHrp.CFrame * CFrame.new(0, 0, -2)
+								terbangMulus(posDepanTarget, 160)
+								
+								-- Eksekusi Serangan Pisau (Fisik + Touch + Remote)
+								eksekusiPukulHunter(targetChar)
 								break
 							end
 						end
@@ -296,7 +344,7 @@ BtnHunter.MouseButton1Click:Connect(function()
 						Status.TextColor3 = Color3.fromRGB(200, 200, 100)
 					end
 				end
-				task.wait(0.1)
+				task.wait(0.08)
 			end
 		end)
 	else
