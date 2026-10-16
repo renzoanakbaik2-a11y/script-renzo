@@ -13,13 +13,13 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 -- 2. 🧹 BERSIHKAN UI LAMA
-if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV11UI") then
-	LocalPlayer.PlayerGui.LembahHussV11UI:Destroy()
+if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV12UI") then
+	LocalPlayer.PlayerGui.LembahHussV12UI:Destroy()
 end
 
 -- 3. 🖥️ TAMPILAN MENU (UI)
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "LembahHussV11UI"
+ScreenGui.Name = "LembahHussV12UI"
 
 local Frame = Instance.new("Frame", ScreenGui)
 Frame.Size = UDim2.new(0, 260, 0, 190)
@@ -31,7 +31,7 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "LEMBAH HUSS: AUTO MASTER V11"
+Title.Text = "LEMBAH HUSS: AUTO MASTER V12"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 11
@@ -71,9 +71,8 @@ local isSurvivorActive = false
 local isHunterActive = false
 local sudahSampaiZona = false
 local activeTween = nil
-local nomorPutaranTerakhir = -1
-local teksStatusTerakhir = ""
-local zonaTujuanTerakhir = nil
+local lastRoundNum = -1
+local lastPos = nil
 
 -- 🚀 FUNGSI TERBANG MULUS
 local function terbangMulus(cframeTujuan, speed)
@@ -100,7 +99,7 @@ local function terbangMulus(cframeTujuan, speed)
 	activeTween = nil
 end
 
--- 🎯 CARI ZONA SEBERANG (DARI POSISI HRP SAAT INI)
+-- 🎯 CARI ZONA SEBERANG
 local function cariZonaSeberang()
 	local localHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 	if not localHrp then return nil end
@@ -123,35 +122,23 @@ local function cariZonaSeberang()
 	return targetGaris
 end
 
--- 🔍 DETEKSI PERGANTIAN RONDE / FASE DARI UI TEXT
-local function cekPergantianRondeUI()
+-- 🔍 DETEKSI MURNI ANGKA PUTARAN DARI UI
+local function getNomorPutaran()
 	local coreGui = LocalPlayer:FindFirstChild("PlayerGui")
-	if not coreGui then return false end
+	if not coreGui then return nil end
 	
 	for _, gui in ipairs(coreGui:GetDescendants()) do
 		if gui:IsA("TextLabel") and gui.Visible then
 			local teks = gui.Text:lower()
-			
 			if teks:find("putaran") then
 				local nomor = gui.Text:match("%d+")
 				if nomor then
-					local numVal = tonumber(nomor)
-					if numVal and numVal ~= nomorPutaranTerakhir then
-						nomorPutaranTerakhir = numVal
-						return true
-					end
-				end
-			end
-			
-			if teks:find("menyeberang") or teks:find("pelari") or teks:find("siaplah") or teks:find("pahlawan") then
-				if gui.Text ~= teksStatusTerakhir then
-					teksStatusTerakhir = gui.Text
-					return true
+					return tonumber(nomor)
 				end
 			end
 		end
 	end
-	return false
+	return nil
 end
 
 -- 🕵️ DETEKSI SURVIVOR
@@ -204,7 +191,7 @@ local function serangSurvivorPivotLock(targetChar)
 	end
 end
 
--- 🏃 TOGGLE AUTO SURVIVOR (UI + AUTO RESET TELEPORT PAHLAWAN)
+-- 🏃 TOGGLE AUTO SURVIVOR (V12: SMART ROUND & INSTANT TELEPORT DETECTOR)
 BtnSurvivor.MouseButton1Click:Connect(function()
 	isSurvivorActive = not isSurvivorActive
 	if isSurvivorActive then
@@ -221,27 +208,27 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 				local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
 				
 				if myHrp then
-					-- 1. Reset jika UI Putaran / Teks Fase berganti
-					if cekPergantianRondeUI() then
+					-- 1. CEK PERGANTIAN ANGKA PUTARAN UI (misal: 1 -> 2 -> 3)
+					local currentRound = getNomorPutaran()
+					if currentRound and currentRound ~= lastRoundNum then
+						lastRoundNum = currentRound
 						sudahSampaiZona = false
-						zonaTujuanTerakhir = nil
 					end
 					
-					-- 2. DETEKSI TELEPORT PASCA PAHLAWAN
-					-- Jika ngaku udah sampai tapi jarak ke safe zone tujuan mendadak > 45 stud (karena ditarik server)
-					if sudahSampaiZona and zonaTujuanTerakhir then
-						local jarakKeZona = (myHrp.Position - zonaTujuanTerakhir.Position).Magnitude
-						if jarakKeZona > 45 then
+					-- 2. DETEKSI INSTAN TELEPORT SERVER (Frame-by-Frame)
+					-- Jika posisi karakter melompat > 35 stud dalam 0.12 detik, itu pasti teleport server!
+					if lastPos then
+						local perpindahanFrame = (myHrp.Position - lastPos).Magnitude
+						if perpindahanFrame > 35 then
 							sudahSampaiZona = false
-							zonaTujuanTerakhir = nil
 						end
 					end
+					lastPos = myHrp.Position
 					
-					-- 3. Eksekusi Terbang
+					-- 3. EKSEKUSI TERBANG
 					if not sudahSampaiZona then
 						local zonaTujuan = cariZonaSeberang()
 						if zonaTujuan then
-							zonaTujuanTerakhir = zonaTujuan
 							Status.Text = "Status: Meluncur ke Safe Zone..."
 							Status.TextColor3 = Color3.fromRGB(100, 255, 150)
 							
@@ -257,7 +244,7 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 						Status.TextColor3 = Color3.fromRGB(100, 200, 255)
 					end
 				end
-				task.wait(0.15)
+				task.wait(0.12)
 			end
 		end)
 	else
@@ -265,9 +252,8 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 		BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
 		Status.Text = "Status: Standby"
 		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
-		nomorPutaranTerakhir = -1
-		teksStatusTerakhir = ""
-		zonaTujuanTerakhir = nil
+		lastRoundNum = -1
+		lastPos = nil
 		if activeTween then activeTween:Cancel() activeTween = nil end
 	end
 end)
