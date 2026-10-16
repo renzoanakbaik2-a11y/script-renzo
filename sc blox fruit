@@ -13,13 +13,13 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 -- 2. 🧹 BERSIHKAN UI LAMA
-if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV8UI") then
-	LocalPlayer.PlayerGui.LembahHussV8UI:Destroy()
+if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV9UI") then
+	LocalPlayer.PlayerGui.LembahHussV9UI:Destroy()
 end
 
 -- 3. 🖥️ TAMPILAN MENU (UI)
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "LembahHussV8UI"
+ScreenGui.Name = "LembahHussV9UI"
 
 local Frame = Instance.new("Frame", ScreenGui)
 Frame.Size = UDim2.new(0, 260, 0, 190)
@@ -31,7 +31,7 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "LEMBAH HUSS: DUAL MASTER V8"
+Title.Text = "LEMBAH HUSS: DUAL MASTER V9"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 11
@@ -72,6 +72,7 @@ local isHunterActive = false
 local sudahSampaiZona = false
 local activeTween = nil
 local putaranTerakhir = ""
+local targetZonaSaatIni = nil
 
 -- 🚀 FUNGSI TERBANG MULUS
 local function terbangMulus(cframeTujuan, speed)
@@ -190,7 +191,7 @@ local function serangSurvivorPivotLock(targetChar)
 	end
 end
 
--- 🏃 TOGGLE AUTO SURVIVOR
+-- 🏃 TOGGLE AUTO SURVIVOR (UI TEXT + AUTO RESET PASCA FASE PAHLAWAN)
 BtnSurvivor.MouseButton1Click:Connect(function()
 	isSurvivorActive = not isSurvivorActive
 	if isSurvivorActive then
@@ -203,28 +204,45 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 		
 		task.spawn(function()
 			while isSurvivorActive do
-				if cekPergantianRondeUI() then
-					sudahSampaiZona = false
-				end
+				local myChar = LocalPlayer.Character
+				local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
 				
-				if not sudahSampaiZona then
-					local zonaTujuan = cariZonaSeberang()
-					if zonaTujuan then
-						Status.Text = "Status: Meluncur ke Safe Zone..."
-						Status.TextColor3 = Color3.fromRGB(100, 255, 150)
-						
-						local cframeTarget = zonaTujuan.CFrame * CFrame.new(0, 2, 0)
-						terbangMulus(cframeTarget, 110)
-						sudahSampaiZona = true
-					else
-						Status.Text = "Status: Mencari Safe Zone..."
-						Status.TextColor3 = Color3.fromRGB(200, 200, 100)
+				if myHrp then
+					-- 1. Deteksi pergantian ronde resmi dari UI
+					if cekPergantianRondeUI() then
+						sudahSampaiZona = false
+						targetZonaSaatIni = nil
 					end
-				else
-					Status.Text = "Status: Standby (Menunggu UI Ronde)..."
-					Status.TextColor3 = Color3.fromRGB(100, 200, 255)
+					
+					-- 2. Deteksi Teleportasi Pasca-Fase Pahlawan (Ditarik Balik ke Start Line)
+					if sudahSampaiZona and targetZonaSaatIni then
+						local jarakKeZona = (myHrp.Position - targetZonaSaatIni.Position).Magnitude
+						if jarakKeZona > 40 then
+							sudahSampaiZona = false -- Paksa reset karena posisi ditarik server!
+						end
+					end
+					
+					-- 3. Eksekusi Terbang
+					if not sudahSampaiZona then
+						local zonaTujuan = cariZonaSeberang()
+						if zonaTujuan then
+							targetZonaSaatIni = zonaTujuan
+							Status.Text = "Status: Meluncur ke Safe Zone..."
+							Status.TextColor3 = Color3.fromRGB(100, 255, 150)
+							
+							local cframeTarget = zonaTujuan.CFrame * CFrame.new(0, 2, 0)
+							terbangMulus(cframeTarget, 110)
+							sudahSampaiZona = true
+						else
+							Status.Text = "Status: Mencari Safe Zone..."
+							Status.TextColor3 = Color3.fromRGB(200, 200, 100)
+						end
+					else
+						Status.Text = "Status: Standby di Safe Zone..."
+						Status.TextColor3 = Color3.fromRGB(100, 200, 255)
+					end
 				end
-				task.wait(0.2)
+				task.wait(0.15)
 			end
 		end)
 	else
@@ -232,6 +250,7 @@ BtnSurvivor.MouseButton1Click:Connect(function()
 		BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
 		Status.Text = "Status: Standby"
 		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+		targetZonaSaatIni = nil
 		if activeTween then activeTween:Cancel() activeTween = nil end
 	end
 end)
