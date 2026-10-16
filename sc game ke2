@@ -1,237 +1,185 @@
--- ==========================================================
--- SPEED HUB X - STANDALONE REMOTE & ARGUMENT LOGGER
--- ==========================================================
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
 
-if PlayerGui:FindFirstChild("SpeedHubLoggerUI") then
-    PlayerGui.SpeedHubLoggerUI:Destroy()
+-- 1. 🧹 BERSIHKAN UI LAMA
+if LocalPlayer.PlayerGui:FindFirstChild("RollAFishermanV2UI") then
+	LocalPlayer.PlayerGui.RollAFishermanV2UI:Destroy()
 end
 
--- 1. SCREEN GUI UTAMA
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpeedHubLoggerUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
+-- 2. 🖥️ TAMPILAN MENU (UI)
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+ScreenGui.Name = "RollAFishermanV2UI"
 
--- 2. SISTEM NOTIFIKASI POP-UP
-local NotificationContainer = Instance.new("Frame")
-NotificationContainer.Name = "NotificationContainer"
-NotificationContainer.Size = UDim2.new(0, 220, 1, 0)
-NotificationContainer.Position = UDim2.new(1, -230, 0, 10)
-NotificationContainer.BackgroundTransparency = 1
-NotificationContainer.Parent = ScreenGui
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 260, 0, 170)
+Frame.Position = UDim2.new(0.5, -130, 0.3, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Frame.Active = true
+Frame.Draggable = true
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
-local NotifList = Instance.new("UIListLayout")
-NotifList.Padding = UDim.new(0, 6)
-NotifList.VerticalAlignment = Enum.VerticalAlignment.Top
-NotifList.Parent = NotificationContainer
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "ROLL A FISHERMAN V2"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 12
+Title.BackgroundTransparency = 1
 
-local function ShowNotification(titleText, msgText)
-    local NotifFrame = Instance.new("Frame")
-    NotifFrame.Size = UDim2.new(1, 0, 0, 50)
-    NotifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-    NotifFrame.BorderSizePixel = 0
-    NotifFrame.Parent = NotificationContainer
+local BtnPlayerFish = Instance.new("TextButton", Frame)
+BtnPlayerFish.Size = UDim2.new(1, -20, 0, 38)
+BtnPlayerFish.Position = UDim2.new(0, 10, 0, 35)
+BtnPlayerFish.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+BtnPlayerFish.Text = "1. AUTO MANCING PLAYER: OFF"
+BtnPlayerFish.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnPlayerFish.Font = Enum.Font.SourceSansBold
+BtnPlayerFish.TextSize = 10
+Instance.new("UICorner", BtnPlayerFish).CornerRadius = UDim.new(0, 6)
 
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 6)
-    Corner.Parent = NotifFrame
+local BtnFishermanReel = Instance.new("TextButton", Frame)
+BtnFishermanReel.Size = UDim2.new(1, -20, 0, 38)
+BtnFishermanReel.Position = UDim2.new(0, 10, 0, 78)
+BtnFishermanReel.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+BtnFishermanReel.Text = "2. AUTO REEL FISHERMAN: OFF"
+BtnFishermanReel.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnFishermanReel.Font = Enum.Font.SourceSansBold
+BtnFishermanReel.TextSize = 10
+Instance.new("UICorner", BtnFishermanReel).CornerRadius = UDim.new(0, 6)
 
-    local Stroke = Instance.new("UIStroke")
-    Stroke.Color = Color3.fromRGB(255, 30, 60)
-    Stroke.Thickness = 1.5
-    Stroke.Parent = NotifFrame
+local Status = Instance.new("TextLabel", Frame)
+Status.Size = UDim2.new(1, -20, 0, 35)
+Status.Position = UDim2.new(0, 10, 0, 120)
+Status.Text = "Status: Standby"
+Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+Status.Font = Enum.Font.Code
+Status.TextSize = 10
+Status.BackgroundTransparency = 1
 
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, -10, 0, 20)
-    Title.Position = UDim2.new(0, 8, 0, 2)
-    Title.BackgroundTransparency = 1
-    Title.Text = titleText
-    Title.TextColor3 = Color3.fromRGB(255, 80, 100)
-    Title.Font = Enum.Font.SourceSansBold
-    Title.TextSize = 11
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Parent = NotifFrame
+local autoPlayer = false
+local autoFisherman = false
 
-    local Message = Instance.new("TextLabel")
-    Message.Size = UDim2.new(1, -10, 0, 24)
-    Message.Position = UDim2.new(0, 8, 0, 20)
-    Message.BackgroundTransparency = 1
-    Message.Text = msgText
-    Message.TextColor3 = Color3.fromRGB(220, 220, 230)
-    Message.Font = Enum.Font.SourceSans
-    Message.TextSize = 10
-    Message.TextXAlignment = Enum.TextXAlignment.Left
-    Message.TextWrapped = true
-    Message.Parent = NotifFrame
-
-    task.delay(4, function()
-        if NotifFrame then NotifFrame:Destroy() end
-    end)
+-- 🛠️ FUNGSI AUTO-EQUIP PANCINGAN
+local function equipRod()
+	local char = LocalPlayer.Character
+	if not char then return nil end
+	local tool = char:FindFirstChildOfClass("Tool")
+	if not tool then
+		local backpack = LocalPlayer:FindFirstChild("Backpack")
+		if backpack then
+			for _, item in ipairs(backpack:GetChildren()) do
+				if item:IsA("Tool") and (item.Name:lower():find("rod") or item.Name:lower():find("pancing")) then
+					char.Humanoid:EquipTool(item)
+					task.wait(0.1)
+					return item
+				end
+			end
+		end
+	end
+	return tool
 end
 
--- 3. CONTAINER MENU UTAMA (Pemeriksa Isi Remote)
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 360, 0, 220)
-MainFrame.Position = UDim2.new(0.5, -180, 0.5, -110)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 8)
-MainCorner.Parent = MainFrame
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(255, 30, 60)
-MainStroke.Thickness = 2
-MainStroke.Parent = MainFrame
-
--- Topbar Menu
-local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(1, 0, 0, 30)
-TopBar.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
-TopBar.Parent = MainFrame
-
-local TopBarCorner = Instance.new("UICorner")
-TopBarCorner.CornerRadius = UDim.new(0, 8)
-TopBarCorner.Parent = TopBar
-
-local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(1, -40, 1, 0)
-TitleText.Position = UDim2.new(0, 10, 0, 0)
-TitleText.BackgroundTransparency = 1
-TitleText.Text = "Speed Hub X | Remote & Arg Inspector"
-TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleText.Font = Enum.Font.SourceSansBold
-TitleText.TextSize = 11
-TitleText.TextXAlignment = Enum.TextXAlignment.Left
-TitleText.Parent = TopBar
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(1, -25, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 60)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 10
-CloseBtn.Parent = TopBar
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 4)
-CloseCorner.Parent = CloseBtn
-
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
+-- 🎣 FITUR 1: AUTO MANCING PLAYER (PERFECT CAST + INSTANT BUBBLE)
+BtnPlayerFish.MouseButton1Click:Connect(function()
+	autoPlayer = not autoPlayer
+	BtnPlayerFish.Text = autoPlayer and "1. AUTO MANCING PLAYER: ON" or "1. AUTO MANCING PLAYER: OFF"
+	BtnPlayerFish.BackgroundColor3 = autoPlayer and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(0, 120, 215)
+	
+	if autoPlayer then
+		task.spawn(function()
+			while autoPlayer do
+				local rod = equipRod()
+				local pGui = LocalPlayer.PlayerGui
+				local bubbleFound = false
+				
+				-- A. Deteksi & Klik Gelembung Instan (Pop Bubbles)
+				for _, v in ipairs(pGui:GetDescendants()) do
+					if v:IsA("GuiObject") and v.Visible then
+						local nameLower = v.Name:lower()
+						if nameLower:find("bubble") or (v:IsA("TextButton") or v:IsA("ImageButton")) and v.Parent and v.Parent.Name:lower():find("bubble") then
+							bubbleFound = true
+							if firesignal then
+								firesignal(v.MouseButton1Click)
+								firesignal(v.Activated)
+							else
+								local pos = v.AbsolutePosition + (v.AbsoluteSize / 2)
+								VirtualInputManager:SendMouseButtonEvent(pos.X, pos.Y + 36, 0, true, game, 1)
+								VirtualInputManager:SendMouseButtonEvent(pos.X, pos.Y + 36, 0, false, game, 1)
+							end
+						end
+					end
+				end
+				
+				-- B. Jika Tidak Ada Gelembung = Lempar Kail Paling Jauh (Perfect Cast)
+				if not bubbleFound then
+					if rod then
+						rod:Activate()
+						
+						-- Otomatis mencari meteran lemparan untuk diklik di zona Perfect / Max
+						for _, v in ipairs(pGui:GetDescendants()) do
+							if v:IsA("GuiObject") and v.Visible then
+								local nameLower = v.Name:lower()
+								if nameLower:find("cast") or nameLower:find("power") or nameLower:find("bar") then
+									if firesignal and (v:IsA("TextButton") or v:IsA("ImageButton")) then
+										firesignal(v.MouseButton1Click)
+									end
+								end
+							end
+						end
+					end
+					Status.Text = "Status: Lempar Kail (Perfect Cast)..."
+					Status.TextColor3 = Color3.fromRGB(255, 200, 100)
+				else
+					Status.Text = "Status: Memecahkan Gelembung Instan!"
+					Status.TextColor3 = Color3.fromRGB(100, 255, 150)
+				end
+				
+				task.wait(0.02)
+			end
+		end)
+	else
+		Status.Text = "Status: Standby"
+		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+	end
 end)
 
--- Scroll Area Log
-local LogScroll = Instance.new("ScrollingFrame")
-LogScroll.Size = UDim2.new(1, -16, 1, -40)
-LogScroll.Position = UDim2.new(0, 8, 0, 34)
-LogScroll.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-LogScroll.BorderSizePixel = 0
-LogScroll.ScrollBarThickness = 3
-LogScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 30, 60)
-LogScroll.Parent = MainFrame
-
-local LogScrollCorner = Instance.new("UICorner")
-LogScrollCorner.CornerRadius = UDim.new(0, 6)
-LogScrollCorner.Parent = LogScroll
-
-local LogList = Instance.new("UIListLayout")
-LogList.Padding = UDim.new(0, 4)
-LogList.SortOrder = Enum.SortOrder.LayoutOrder
-LogList.Parent = LogScroll
-
--- 4. LOGIKA HOOK & PEMERIKSA ISI
-local function FormatArgs(args)
-    local str = "{"
-    for i, v in ipairs(args) do
-        str = str .. tostring(v) .. (i < #args and ", " or "")
-    end
-    return str .. "}"
-end
-
-local function AddLogEntry(remoteName, argsTable)
-    local LogCard = Instance.new("Frame")
-    LogCard.Size = UDim2.new(1, -8, 0, 42)
-    LogCard.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
-    LogCard.Parent = LogScroll
-
-    local CardCorner = Instance.new("UICorner")
-    CardCorner.CornerRadius = UDim.new(0, 4)
-    CardCorner.Parent = LogCard
-
-    local RemoteLabel = Instance.new("TextLabel")
-    RemoteLabel.Size = UDim2.new(1, -10, 0, 18)
-    RemoteLabel.Position = UDim2.new(0, 6, 0, 2)
-    RemoteLabel.BackgroundTransparency = 1
-    RemoteLabel.Text = "Event: " .. remoteName
-    RemoteLabel.TextColor3 = Color3.fromRGB(255, 80, 100)
-    RemoteLabel.Font = Enum.Font.SourceSansBold
-    RemoteLabel.TextSize = 10
-    RemoteLabel.TextXAlignment = Enum.TextXAlignment.Left
-    RemoteLabel.Parent = LogCard
-
-    local ArgText = FormatArgs(argsTable)
-    local ArgLabel = Instance.new("TextLabel")
-    ArgLabel.Size = UDim2.new(1, -10, 0, 18)
-    ArgLabel.Position = UDim2.new(0, 6, 0, 20)
-    ArgLabel.BackgroundTransparency = 1
-    ArgLabel.Text = "Argumen: " .. ArgText
-    ArgLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
-    ArgLabel.Font = Enum.Font.SourceSansSemibold
-    ArgLabel.TextSize = 10
-    ArgLabel.TextXAlignment = Enum.TextXAlignment.Left
-    ArgLabel.Parent = LogCard
-
-    LogScroll.CanvasSize = UDim2.new(0, 0, 0, LogList.AbsoluteContentSize.Y + 10)
-    ShowNotification("Remote Terdeteksi!", remoteName .. "\n" .. ArgText)
-end
-
--- HOOK REMOTEEVENT DARI NET FOLDER
-local NetFolder = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Util"):WaitForChild("Net")
-
-for _, obj in ipairs(NetFolder:GetChildren()) do
-    if obj:IsA("RemoteEvent") then
-        obj.OnClientEvent:Connect(function(...)
-            AddLogEntry(obj.Name, {...})
-        end)
-    end
-end
-
--- Tombol Buka Menu Log
-local OpenLogBtn = Instance.new("TextButton")
-OpenLogBtn.Size = UDim2.new(0, 80, 0, 28)
-OpenLogBtn.Position = UDim2.new(0, 10, 0.4, 0)
-OpenLogBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-OpenLogBtn.Text = "Log Menu"
-OpenLogBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenLogBtn.Font = Enum.Font.SourceSansBold
-OpenLogBtn.TextSize = 10
-OpenLogBtn.Active = true
-OpenLogBtn.Draggable = true
-OpenLogBtn.Parent = ScreenGui
-
-local OpenCorner = Instance.new("UICorner")
-OpenCorner.CornerRadius = UDim.new(0, 6)
-OpenCorner.Parent = OpenLogBtn
-
-local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Color = Color3.fromRGB(255, 30, 60)
-OpenStroke.Thickness = 1.5
-OpenStroke.Parent = OpenLogBtn
-
-OpenLogBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
-ShowNotification("Logger Ready!", "Tekan tombol Roll di game untuk merekam isinya.")
+-- 🤖 FITUR 2: AUTO REEL FISHERMAN (KHUSUS MINIGAME IKAN BAGUS)
+BtnFishermanReel.MouseButton1Click:Connect(function()
+	autoFisherman = not autoFisherman
+	BtnFishermanReel.Text = autoFisherman and "2. AUTO REEL FISHERMAN: ON" or "2. AUTO REEL FISHERMAN: OFF"
+	BtnFishermanReel.BackgroundColor3 = autoFisherman and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(0, 120, 215)
+	
+	if autoFisherman then
+		task.spawn(function()
+			while autoFisherman do
+				local pGui = LocalPlayer.PlayerGui
+				local fishIcon, sliderBar = nil, nil
+				
+				-- Memindai elemen minigame reel dari Fisherman
+				for _, v in ipairs(pGui:GetDescendants()) do
+					if v:IsA("GuiObject") and v.Visible then
+						local nameLower = v.Name:lower()
+						if nameLower:find("fish") or nameLower:find("ikan") then
+							fishIcon = v
+						elseif nameLower:find("bar") or nameLower:find("slider") or nameLower:find("box") then
+							sliderBar = v
+						end
+					end
+				end
+				
+				-- Jika minigame ikan bagus muncul dari Fisherman NPC
+				if fishIcon and sliderBar then
+					sliderBar.Position = UDim2.new(fishIcon.Position.X.Scale, sliderBar.Position.X.Offset, sliderBar.Position.Y.Scale, sliderBar.Position.Y.Offset)
+					VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+					Status.Text = "Status: Menyelesaikan Minigame Fisherman!"
+					Status.TextColor3 = Color3.fromRGB(100, 255, 150)
+				else
+					VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+					Status.Text = "Status: Standby (Menunggu Ikan Bagus NPC)..."
+					Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+				end
+				
+				RunService.RenderStepped:Wait()
+			end
+			VirtualInputManager:SendMouseButtonEvent(0,
