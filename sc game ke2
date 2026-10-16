@@ -1,19 +1,25 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
 
--- 1. 🧹 BERSIHKAN UI LAMA
-if LocalPlayer.PlayerGui:FindFirstChild("RollAFishermanV2UI") then
-	LocalPlayer.PlayerGui.RollAFishermanV2UI:Destroy()
+-- 1. 🛡️ ANTI-AFK (MENCEGAH KICK AFK 20 MENIT)
+LocalPlayer.Idled:Connect(function()
+	VirtualUser:CaptureController()
+	VirtualUser:ClickButton2(Vector2.new(0, 0))
+end)
+
+-- 2. 🧹 BERSIHKAN UI LAMA
+if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("RollAFishermanFullUI") then
+	LocalPlayer.PlayerGui.RollAFishermanFullUI:Destroy()
 end
 
--- 2. 🖥️ TAMPILAN MENU (UI)
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "RollAFishermanV2UI"
+-- 3. 🖥️ TAMPILAN MENU (UI)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RollAFishermanFullUI"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 260, 0, 170)
+Frame.Size = UDim2.new(0, 260, 0, 180)
 Frame.Position = UDim2.new(0.5, -130, 0.3, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 Frame.Active = true
@@ -22,10 +28,10 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "ROLL A FISHERMAN V2"
+Title.Text = "ROLL A FISHERMAN V6 (FULL)"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 12
+Title.TextSize = 11
 Title.BackgroundTransparency = 1
 
 local BtnPlayerFish = Instance.new("TextButton", Frame)
@@ -40,9 +46,9 @@ Instance.new("UICorner", BtnPlayerFish).CornerRadius = UDim.new(0, 6)
 
 local BtnFishermanReel = Instance.new("TextButton", Frame)
 BtnFishermanReel.Size = UDim2.new(1, -20, 0, 38)
-BtnFishermanReel.Position = UDim2.new(0, 10, 0, 78)
+BtnFishermanReel.Position = UDim2.new(0, 10, 0, 80)
 BtnFishermanReel.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-BtnFishermanReel.Text = "2. AUTO REEL FISHERMAN: OFF"
+BtnFishermanReel.Text = "2. INSTANT REEL FISHERMAN: OFF"
 BtnFishermanReel.TextColor3 = Color3.fromRGB(255, 255, 255)
 BtnFishermanReel.Font = Enum.Font.SourceSansBold
 BtnFishermanReel.TextSize = 10
@@ -50,7 +56,7 @@ Instance.new("UICorner", BtnFishermanReel).CornerRadius = UDim.new(0, 6)
 
 local Status = Instance.new("TextLabel", Frame)
 Status.Size = UDim2.new(1, -20, 0, 35)
-Status.Position = UDim2.new(0, 10, 0, 120)
+Status.Position = UDim2.new(0, 10, 0, 125)
 Status.Text = "Status: Standby"
 Status.TextColor3 = Color3.fromRGB(150, 150, 150)
 Status.Font = Enum.Font.Code
@@ -60,7 +66,25 @@ Status.BackgroundTransparency = 1
 local autoPlayer = false
 local autoFisherman = false
 
--- 🛠️ FUNGSI AUTO-EQUIP PANCINGAN
+-- 🛠️ FUNGSI KLIK APLIKASI UNTUK SEMUA EXECUTOR
+local function clickGui(guiObj)
+	if not guiObj then return end
+	pcall(function()
+		if firesignal then
+			firesignal(guiObj.MouseButton1Click)
+			firesignal(guiObj.Activated)
+		elseif getconnections then
+			for _, conn in ipairs(getconnections(guiObj.MouseButton1Click)) do
+				conn:Fire()
+			end
+			for _, conn in ipairs(getconnections(guiObj.Activated)) do
+				conn:Fire()
+			end
+		end
+	end)
+end
+
+-- 🛠️ AUTO EQUIP PANCINGAN
 local function equipRod()
 	local char = LocalPlayer.Character
 	if not char then return nil end
@@ -69,8 +93,9 @@ local function equipRod()
 		local backpack = LocalPlayer:FindFirstChild("Backpack")
 		if backpack then
 			for _, item in ipairs(backpack:GetChildren()) do
-				if item:IsA("Tool") and (item.Name:lower():find("rod") or item.Name:lower():find("pancing")) then
-					char.Humanoid:EquipTool(item)
+				if item:IsA("Tool") and (item.Name:lower():find("rod") or item.Name:lower():find("pancing") or item.Name:lower():find("fish")) then
+					local hum = char:FindFirstChildOfClass("Humanoid")
+					if hum then hum:EquipTool(item) end
 					task.wait(0.1)
 					return item
 				end
@@ -80,7 +105,7 @@ local function equipRod()
 	return tool
 end
 
--- 🎣 FITUR 1: AUTO MANCING PLAYER (PERFECT CAST + INSTANT BUBBLE)
+-- 🎣 FITUR 1: AUTO MANCING PLAYER (PERFECT CAST + POP BUBBLES INSTAN)
 BtnPlayerFish.MouseButton1Click:Connect(function()
 	autoPlayer = not autoPlayer
 	BtnPlayerFish.Text = autoPlayer and "1. AUTO MANCING PLAYER: ON" or "1. AUTO MANCING PLAYER: OFF"
@@ -89,53 +114,45 @@ BtnPlayerFish.MouseButton1Click:Connect(function()
 	if autoPlayer then
 		task.spawn(function()
 			while autoPlayer do
-				local rod = equipRod()
-				local pGui = LocalPlayer.PlayerGui
-				local bubbleFound = false
-				
-				-- A. Deteksi & Klik Gelembung Instan (Pop Bubbles)
-				for _, v in ipairs(pGui:GetDescendants()) do
-					if v:IsA("GuiObject") and v.Visible then
-						local nameLower = v.Name:lower()
-						if nameLower:find("bubble") or (v:IsA("TextButton") or v:IsA("ImageButton")) and v.Parent and v.Parent.Name:lower():find("bubble") then
-							bubbleFound = true
-							if firesignal then
-								firesignal(v.MouseButton1Click)
-								firesignal(v.Activated)
-							else
-								local pos = v.AbsolutePosition + (v.AbsoluteSize / 2)
-								VirtualInputManager:SendMouseButtonEvent(pos.X, pos.Y + 36, 0, true, game, 1)
-								VirtualInputManager:SendMouseButtonEvent(pos.X, pos.Y + 36, 0, false, game, 1)
-							end
-						end
-					end
-				end
-				
-				-- B. Jika Tidak Ada Gelembung = Lempar Kail Paling Jauh (Perfect Cast)
-				if not bubbleFound then
-					if rod then
-						rod:Activate()
-						
-						-- Otomatis mencari meteran lemparan untuk diklik di zona Perfect / Max
+				pcall(function()
+					local rod = equipRod()
+					local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+					local bubbleFound = false
+					
+					if pGui then
+						-- Cari & Pop Gelembung Secara Instan
 						for _, v in ipairs(pGui:GetDescendants()) do
 							if v:IsA("GuiObject") and v.Visible then
 								local nameLower = v.Name:lower()
-								if nameLower:find("cast") or nameLower:find("power") or nameLower:find("bar") then
-									if firesignal and (v:IsA("TextButton") or v:IsA("ImageButton")) then
-										firesignal(v.MouseButton1Click)
-									end
+								if nameLower:find("bubble") or (v.Parent and v.Parent.Name:lower():find("bubble")) then
+									bubbleFound = true
+									clickGui(v)
 								end
 							end
 						end
+						
+						-- Jika Gelembung Belum Ada = Lempar Kail (Perfect Cast)
+						if not bubbleFound then
+							if rod then
+								rod:Activate()
+								for _, v in ipairs(pGui:GetDescendants()) do
+									if v:IsA("GuiObject") and v.Visible then
+										local nameLower = v.Name:lower()
+										if nameLower:find("cast") or nameLower:find("power") or nameLower:find("bar") then
+											clickGui(v)
+										end
+									end
+								end
+							end
+							Status.Text = "Status: Lempar Kail (Perfect Cast)..."
+							Status.TextColor3 = Color3.fromRGB(255, 200, 100)
+						else
+							Status.Text = "Status: Pop Gelembung Instan!"
+							Status.TextColor3 = Color3.fromRGB(100, 255, 150)
+						end
 					end
-					Status.Text = "Status: Lempar Kail (Perfect Cast)..."
-					Status.TextColor3 = Color3.fromRGB(255, 200, 100)
-				else
-					Status.Text = "Status: Memecahkan Gelembung Instan!"
-					Status.TextColor3 = Color3.fromRGB(100, 255, 150)
-				end
-				
-				task.wait(0.02)
+				end)
+				task.wait(0.04)
 			end
 		end)
 	else
@@ -144,42 +161,57 @@ BtnPlayerFish.MouseButton1Click:Connect(function()
 	end
 end)
 
--- 🤖 FITUR 2: AUTO REEL FISHERMAN (KHUSUS MINIGAME IKAN BAGUS)
+-- 🤖 FITUR 2: INSTANT REEL FISHERMAN (AUTO-WIN KHUSUS IKAN BAGUS FISHERMAN)
 BtnFishermanReel.MouseButton1Click:Connect(function()
 	autoFisherman = not autoFisherman
-	BtnFishermanReel.Text = autoFisherman and "2. AUTO REEL FISHERMAN: ON" or "2. AUTO REEL FISHERMAN: OFF"
+	BtnFishermanReel.Text = autoFisherman and "2. INSTANT REEL FISHERMAN: ON" or "2. INSTANT REEL FISHERMAN: OFF"
 	BtnFishermanReel.BackgroundColor3 = autoFisherman and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(0, 120, 215)
 	
 	if autoFisherman then
 		task.spawn(function()
 			while autoFisherman do
-				local pGui = LocalPlayer.PlayerGui
-				local fishIcon, sliderBar = nil, nil
-				
-				-- Memindai elemen minigame reel dari Fisherman
-				for _, v in ipairs(pGui:GetDescendants()) do
-					if v:IsA("GuiObject") and v.Visible then
-						local nameLower = v.Name:lower()
-						if nameLower:find("fish") or nameLower:find("ikan") then
-							fishIcon = v
-						elseif nameLower:find("bar") or nameLower:find("slider") or nameLower:find("box") then
-							sliderBar = v
+				pcall(function()
+					local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+					if pGui then
+						local fishIcon, sliderBar, progressBar = nil, nil, nil
+						
+						-- Cari Elemen UI Minigame Reel
+						for _, v in ipairs(pGui:GetDescendants()) do
+							if v:IsA("GuiObject") and v.Visible then
+								local nameLower = v.Name:lower()
+								if nameLower:find("fish") or nameLower:find("ikan") then
+									fishIcon = v
+								elseif nameLower:find("slider") or nameLower:find("box") or (nameLower:find("bar") and not nameLower:find("progress")) then
+									sliderBar = v
+								elseif nameLower:find("progress") or nameLower:find("fill") then
+									progressBar = v
+								end
+							end
+						end
+						
+						-- Eksekusi Instan Begitu Minigame Muncul
+						if fishIcon or sliderBar then
+							if sliderBar and fishIcon then
+								sliderBar.Position = UDim2.new(fishIcon.Position.X.Scale, sliderBar.Position.X.Offset, sliderBar.Position.Y.Scale, sliderBar.Position.Y.Offset)
+							end
+							
+							if progressBar then
+								progressBar.Size = UDim2.new(1, 0, progressBar.Size.Y.Scale, progressBar.Size.Y.Offset)
+							end
+							
+							Status.Text = "Status: INSTANT WIN IKAN BAGUS!"
+							Status.TextColor3 = Color3.fromRGB(100, 255, 150)
+						else
+							Status.Text = "Status: Standby (Menunggu Fisherman)..."
+							Status.TextColor3 = Color3.fromRGB(150, 150, 150)
 						end
 					end
-				end
-				
-				-- Jika minigame ikan bagus muncul dari Fisherman NPC
-				if fishIcon and sliderBar then
-					sliderBar.Position = UDim2.new(fishIcon.Position.X.Scale, sliderBar.Position.X.Offset, sliderBar.Position.Y.Scale, sliderBar.Position.Y.Offset)
-					VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-					Status.Text = "Status: Menyelesaikan Minigame Fisherman!"
-					Status.TextColor3 = Color3.fromRGB(100, 255, 150)
-				else
-					VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-					Status.Text = "Status: Standby (Menunggu Ikan Bagus NPC)..."
-					Status.TextColor3 = Color3.fromRGB(150, 150, 150)
-				end
-				
-				RunService.RenderStepped:Wait()
+				end)
+				task.wait(0.02)
 			end
-			VirtualInputManager:SendMouseButtonEvent(0,
+		end)
+	else
+		Status.Text = "Status: Standby"
+		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+	end
+end)
