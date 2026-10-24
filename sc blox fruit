@@ -1,311 +1,280 @@
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
-local VirtualUser = game:GetService("VirtualUser")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local RunService = game:GetService("RunService")
+-- ==============================================================================
+-- DEWA CODING: SURVIVE OVERNIGHT IN A MEGA STORE - AUTO COLLECT & MAGNET HUD
+-- Kompatibel untuk Executor Eksternal (Delta Mobile / PC)
+-- ==============================================================================
 
--- 1. 🛡️ ANTI-AFK
-LocalPlayer.Idled:Connect(function()
-	VirtualUser:CaptureController()
-	VirtualUser:ClickButton2(Vector2.new(0, 0))
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Pastikan GUI lama dibersihkan agar tidak terjadi duplikasi koneksi/loop
+pcall(function()
+    if CoreGui:FindFirstChild("MegaStoreAutoCollectHUD") then
+        CoreGui.MegaStoreAutoCollectHUD:Destroy()
+    end
 end)
 
--- 2. 🧹 BERSIHKAN UI LAMA
-if LocalPlayer.PlayerGui:FindFirstChild("LembahHussV12UI") then
-	LocalPlayer.PlayerGui.LembahHussV12UI:Destroy()
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MegaStoreAutoCollectHUD"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not ScreenGui.Parent then
+    ScreenGui.Parent = player:WaitForChild("PlayerGui")
 end
 
--- 3. 🖥️ TAMPILAN MENU (UI)
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "LembahHussV12UI"
+-- ==============================================================================
+-- 1. PEMBUATAN ANTARMUKA (GUI) MODERN & RESPONSIF
+-- ==============================================================================
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 340, 0, 360)
+MainFrame.Position = UDim2.new(0.5, -170, 0.4, -180)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
-local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 260, 0, 190)
-Frame.Position = UDim2.new(0.5, -130, 0.3, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-Frame.Active = true
-Frame.Draggable = true
-Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Color = Color3.fromRGB(255, 140, 0) -- Nuansa tema Halloween / Mega Store
+UIStroke.Thickness = 2
 
-local Title = Instance.new("TextLabel", Frame)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "LEMBAH HUSS: AUTO MASTER V12"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
+-- Header Bar
+local TopBar = Instance.new("Frame", MainFrame)
+TopBar.Size = UDim2.new(1, 0, 0, 36)
+TopBar.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+TopBar.BorderSizePixel = 0
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(1, -70, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "🛒 MEGA STORE: AUTO COLLECT"
+Title.TextColor3 = Color3.fromRGB(255, 200, 0)
+Title.Font = Enum.Font.GothamBold
 Title.TextSize = 11
+Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
-local BtnSurvivor = Instance.new("TextButton", Frame)
-BtnSurvivor.Size = UDim2.new(1, -20, 0, 40)
-BtnSurvivor.Position = UDim2.new(0, 10, 0, 35)
-BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-BtnSurvivor.Text = "SURVIVOR MODE: OFF"
-BtnSurvivor.TextColor3 = Color3.fromRGB(255, 255, 255)
-BtnSurvivor.Font = Enum.Font.SourceSansBold
-BtnSurvivor.TextSize = 11
-Instance.new("UICorner", BtnSurvivor).CornerRadius = UDim.new(0, 6)
+local MinimizeBtn = Instance.new("TextButton", TopBar)
+MinimizeBtn.Size = UDim2.new(0, 26, 0, 26)
+MinimizeBtn.Position = UDim2.new(1, -62, 0.5, -13)
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 12
+Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 6)
 
-local BtnHunter = Instance.new("TextButton", Frame)
-BtnHunter.Size = UDim2.new(1, -20, 0, 40)
-BtnHunter.Position = UDim2.new(0, 10, 0, 85)
-BtnHunter.BackgroundColor3 = Color3.fromRGB(215, 40, 40)
-BtnHunter.Text = "HUNTER MODE: OFF"
-BtnHunter.TextColor3 = Color3.fromRGB(255, 255, 255)
-BtnHunter.Font = Enum.Font.SourceSansBold
-BtnHunter.TextSize = 11
-Instance.new("UICorner", BtnHunter).CornerRadius = UDim.new(0, 6)
+local CloseBtn = Instance.new("TextButton", TopBar)
+CloseBtn.Size = UDim2.new(0, 26, 0, 26)
+CloseBtn.Position = UDim2.new(1, -30, 0.5, -13)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+MinimizeBtn.Font = Enum.Font.GothamBold
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 11
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
-local Status = Instance.new("TextLabel", Frame)
-Status.Size = UDim2.new(1, -20, 0, 45)
-Status.Position = UDim2.new(0, 10, 0, 135)
-Status.Text = "Status: Standby"
-Status.TextColor3 = Color3.fromRGB(150, 150, 150)
-Status.Font = Enum.Font.Code
-Status.TextSize = 10
-Status.TextWrapped = true
-Status.BackgroundTransparency = 1
+-- Content Container
+local ContentFrame = Instance.new("Frame", MainFrame)
+ContentFrame.Size = UDim2.new(1, -20, 1, -46)
+ContentFrame.Position = UDim2.new(0, 10, 0, 42)
+ContentFrame.BackgroundTransparency = native
 
-local isSurvivorActive = false
-local isHunterActive = false
-local sudahSampaiZona = false
-local activeTween = nil
-local lastRoundNum = -1
-local lastPos = nil
+-- Status Label
+local StatusLabel = Instance.new("TextLabel", ContentFrame)
+StatusLabel.Size = UDim2.new(1, 0, 0, 28)
+StatusLabel.Position = UDim2.new(0, 0, 0, 0)
+StatusLabel.Text = "Status: Idle (Siap Memindai)"
+StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextSize = 10
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.BackgroundTransparency = 1
 
--- 🚀 FUNGSI TERBANG MULUS
-local function terbangMulus(cframeTujuan, speed)
-	local char = LocalPlayer.Character
-	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-	local hrp = char.HumanoidRootPart
-	
-	if activeTween then
-		activeTween:Cancel()
-		activeTween = nil
-	end
-	
-	for _, p in ipairs(char:GetDescendants()) do
-		if p:IsA("BasePart") then p.CanCollide = false end
-	end
-	
-	local jarak = (hrp.Position - cframeTujuan.Position).Magnitude
-	local durasi = jarak / (speed or 110)
-	local tweenInfo = TweenInfo.new(durasi, Enum.EasingStyle.Linear)
-	
-	activeTween = TweenService:Create(hrp, tweenInfo, {CFrame = cframeTujuan})
-	activeTween:Play()
-	activeTween.Completed:Wait()
-	activeTween = nil
-end
+-- Tombol Toggle Auto Collect
+local AutoCollectBtn = Instance.new("TextButton", ContentFrame)
+AutoCollectBtn.Size = UDim2.new(1, 0, 0, 35)
+AutoCollectBtn.Position = UDim2.new(0, 0, 0, 32)
+AutoCollectBtn.Text = "Auto Collect: OFF"
+AutoCollectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoCollectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+AutoCollectBtn.Font = Enum.Font.GothamBold
+AutoCollectBtn.TextSize = 11
+Instance.new("UICorner", AutoCollectBtn).CornerRadius = UDim.new(0, 6)
 
--- 🎯 CARI ZONA SEBERANG
-local function cariZonaSeberang()
-	local localHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-	if not localHrp then return nil end
-	
-	local targetGaris = nil
-	local jarakTerjauh = 0
+-- Tombol Toggle Item Magnet
+local MagnetBtn = Instance.new("TextButton", ContentFrame)
+MagnetBtn.Size = UDim2.new(1, 0, 0, 35)
+MagnetBtn.Position = UDim2.new(0, 0, 0, 75)
+MagnetBtn.Text = "Item Magnet Visual: OFF"
+MagnetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MagnetBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+MagnetBtn.Font = Enum.Font.GothamBold
+MagnetBtn.TextSize = 11
+Instance.new("UICorner", MagnetBtn).CornerRadius = UDim.new(0, 6)
 
-	for _, part in ipairs(Workspace:GetDescendants()) do
-		if part:IsA("BasePart") and part:IsDescendantOf(Workspace) then
-			local nama = part.Name:lower()
-			if nama:find("safe") or nama:find("finish") or nama:find("line") or nama:find("checkpoint") or (part.BrickColor.Name == "White" and part.Size.X > 8) then
-				local jarak = (part.Position - localHrp.Position).Magnitude
-				if jarak > 30 and jarak > jarakTerjauh then
-					jarakTerjauh = jarak
-					targetGaris = part
-				end
-			end
-		end
-	end
-	return targetGaris
-end
+-- Radius Info & Display
+local RadiusLabel = Instance.new("TextLabel", ContentFrame)
+RadiusLabel.Size = UDim2.new(1, 0, 0, 20)
+RadiusLabel.Position = UDim2.new(0, 0, 0, 115)
+RadiusLabel.Text = "Radius Pencarian: 25 Studs"
+RadiusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+RadiusLabel.Font = Enum.Font.Gotham
+RadiusLabel.TextSize = 10
+RadiusLabel.TextXAlignment = Enum.TextXAlignment.Left
+RadiusLabel.BackgroundTransparency = 1
 
--- 🔍 DETEKSI MURNI ANGKA PUTARAN DARI UI
-local function getNomorPutaran()
-	local coreGui = LocalPlayer:FindFirstChild("PlayerGui")
-	if not coreGui then return nil end
-	
-	for _, gui in ipairs(coreGui:GetDescendants()) do
-		if gui:IsA("TextLabel") and gui.Visible then
-			local teks = gui.Text:lower()
-			if teks:find("putaran") then
-				local nomor = gui.Text:match("%d+")
-				if nomor then
-					return tonumber(nomor)
-				end
-			end
-		end
-	end
-	return nil
-end
+-- Counter / Statistik Berhasil Dikumpulkan
+local CounterLabel = Instance.new("TextLabel", ContentFrame)
+CounterLabel.Size = UDim2.new(1, 0, 0, 24)
+CounterLabel.Position = UDim2.new(0, 0, 0, 138)
+CounterLabel.Text = "Item Terkumpul: 0 | Terdeteksi: 0"
+CounterLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+CounterLabel.Font = Enum.Font.Code
+CounterLabel.TextSize = 10
+CounterLabel.TextXAlignment = Enum.TextXAlignment.Left
+CounterLabel.BackgroundTransparency = 1
 
--- 🕵️ DETEKSI SURVIVOR
-local function isPemainSurvivor(player)
-	if not player.Character then return false end
-	local char = player.Character
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if not hum or hum.Health <= 0 then return false end
-	
-	if player.Team and (player.Team.Name:lower():find("hunter") or player.Team.Name:lower():find("tagger")) then
-		return false
-	end
-	return true
-end
+-- Log / Daftar Material Terdeteksi (ScrollingFrame)
+local LogScroll = Instance.new("ScrollingFrame", ContentFrame)
+LogScroll.Size = UDim2.new(1, 0, 0, 130)
+LogScroll.Position = UDim2.new(0, 0, 0, 166)
+LogScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+LogScroll.BorderSizePixel = 0
+LogScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+LogScroll.ScrollBarThickness = 3
+Instance.new("UICorner", LogScroll).CornerRadius = UDim.new(0, 6)
 
--- ⚔️ LOGIKA ATTACK HUNTER
-local function serangSurvivorPivotLock(targetChar)
-	local myChar = LocalPlayer.Character
-	if not myChar then return end
-	local myHrp = myChar:FindFirstChild("HumanoidRootPart")
-	local myHum = myChar:FindFirstChildOfClass("Humanoid")
-	local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
-	if not myHrp or not myHum or not targetHrp then return end
-	
-	local tool = myChar:FindFirstChildOfClass("Tool") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChildOfClass("Tool"))
-	if tool and tool.Parent ~= myChar then
-		myHum:EquipTool(tool)
-		task.wait(0.02)
-	end
-	
-	local startTime = tick()
-	while tick() - startTime < 0.3 do
-		if not targetHrp or not targetHrp.Parent or not myHrp then break end
-		
-		myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 0.5)
-		myHrp.Velocity = targetHrp.Velocity
-		
-		if tool then
-			tool:Activate()
-			local handle = tool:FindFirstChild("Handle") or tool:FindFirstChildOfClass("BasePart")
-			if handle and firetouchinterest then
-				firetouchinterest(handle, targetHrp, 0)
-				firetouchinterest(handle, targetHrp, 1)
-			end
-		end
-		
-		VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-		VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-		RunService.RenderStepped:Wait()
-	end
-end
+local UIListLayout = Instance.new("UIListLayout", LogScroll)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 2)
 
--- 🏃 TOGGLE AUTO SURVIVOR (V12: SMART ROUND & INSTANT TELEPORT DETECTOR)
-BtnSurvivor.MouseButton1Click:Connect(function()
-	isSurvivorActive = not isSurvivorActive
-	if isSurvivorActive then
-		isHunterActive = false
-		BtnHunter.Text = "HUNTER MODE: OFF"
-		BtnHunter.BackgroundColor3 = Color3.fromRGB(215, 40, 40)
-		
-		BtnSurvivor.Text = "SURVIVOR MODE: ON"
-		BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-		
-		task.spawn(function()
-			while isSurvivorActive do
-				local myChar = LocalPlayer.Character
-				local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-				
-				if myHrp then
-					-- 1. CEK PERGANTIAN ANGKA PUTARAN UI (misal: 1 -> 2 -> 3)
-					local currentRound = getNomorPutaran()
-					if currentRound and currentRound ~= lastRoundNum then
-						lastRoundNum = currentRound
-						sudahSampaiZona = false
-					end
-					
-					-- 2. DETEKSI INSTAN TELEPORT SERVER (Frame-by-Frame)
-					-- Jika posisi karakter melompat > 35 stud dalam 0.12 detik, itu pasti teleport server!
-					if lastPos then
-						local perpindahanFrame = (myHrp.Position - lastPos).Magnitude
-						if perpindahanFrame > 35 then
-							sudahSampaiZona = false
-						end
-					end
-					lastPos = myHrp.Position
-					
-					-- 3. EKSEKUSI TERBANG
-					if not sudahSampaiZona then
-						local zonaTujuan = cariZonaSeberang()
-						if zonaTujuan then
-							Status.Text = "Status: Meluncur ke Safe Zone..."
-							Status.TextColor3 = Color3.fromRGB(100, 255, 150)
-							
-							local cframeTarget = zonaTujuan.CFrame * CFrame.new(0, 2, 0)
-							terbangMulus(cframeTarget, 110)
-							sudahSampaiZona = true
-						else
-							Status.Text = "Status: Mencari Safe Zone..."
-							Status.TextColor3 = Color3.fromRGB(200, 200, 100)
-						end
-					else
-						Status.Text = "Status: Standby di Safe Zone..."
-						Status.TextColor3 = Color3.fromRGB(100, 200, 255)
-					end
-				end
-				task.wait(0.12)
-			end
-		end)
-	else
-		BtnSurvivor.Text = "SURVIVOR MODE: OFF"
-		BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-		Status.Text = "Status: Standby"
-		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
-		lastRoundNum = -1
-		lastPos = nil
-		if activeTween then activeTween:Cancel() activeTween = nil end
-	end
+-- Fungsi Minimize GUI
+local minimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    ContentFrame.Visible = not minimized
+    MainFrame.Size = minimized and UDim2.new(0, 340, 0, 36) or UDim2.new(0, 340, 0, 360)
+    MinimizeBtn.Text = minimized and "+" : "-"
 end)
 
--- 🗡️ TOGGLE AUTO HUNTER
-BtnHunter.MouseButton1Click:Connect(function()
-	isHunterActive = not isHunterActive
-	if isHunterActive then
-		isSurvivorActive = false
-		BtnSurvivor.Text = "SURVIVOR MODE: OFF"
-		BtnSurvivor.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-		
-		BtnHunter.Text = "HUNTER MODE: ON"
-		BtnHunter.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-		
-		task.spawn(function()
-			while isHunterActive do
-				local myChar = LocalPlayer.Character
-				local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-				
-				if myHrp then
-					local targetFound = false
-					for _, targetPlayer in ipairs(Players:GetPlayers()) do
-						if targetPlayer ~= LocalPlayer and targetPlayer.Character then
-							local targetChar = targetPlayer.Character
-							local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
-							local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
-							
-							if targetHrp and targetHum and targetHum.Health > 0 and isPemainSurvivor(targetPlayer) then
-								targetFound = true
-								Status.Text = "Status: Memburu [" .. targetPlayer.Name .. "]"
-								Status.TextColor3 = Color3.fromRGB(255, 100, 100)
-								
-								terbangMulus(targetHrp.CFrame * CFrame.new(0, 0, 1), 180)
-								serangSurvivorPivotLock(targetChar)
-								break
-							end
-						end
-					end
-					
-					if not targetFound then
-						Status.Text = "Status: Mencari Survivor..."
-						Status.TextColor3 = Color3.fromRGB(200, 200, 100)
-					end
-				end
-				task.wait(0.05)
-			end
-		end)
-	else
-		BtnHunter.Text = "HUNTER MODE: OFF"
-		BtnHunter.BackgroundColor3 = Color3.fromRGB(215, 40, 40)
-		Status.Text = "Status: Standby"
-		Status.TextColor3 = Color3.fromRGB(150, 150, 150)
-	end
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
 end)
+
+-- ==============================================================================
+-- 2. VARIABEL KONFIGURASI & FILTER ITEM
+-- ==============================================================================
+local CONFIG = {
+    ScanRadius = 25,          -- Radius maksimal pencarian item dalam studs
+    ScanInterval = 0.5,       -- Jeda waktu antar pemindaian (detik)
+    AutoCollectActive = false,
+    MagnetActive = false,
+    CollectedCount = 0,
+    DetectedCount = 0
+}
+
+local function addLog(text)
+    pcall(function()
+        local itemText = Instance.new("TextLabel", LogScroll)
+        itemText.Size = UDim2.new(1, -6, 0, 20)
+        itemText.BackgroundTransparency = 1
+        itemText.TextColor3 = Color3.fromRGB(0, 255, 200)
+        itemText.Font = Enum.Font.Code
+        itemText.TextSize = 9
+        itemText.TextXAlignment = Enum.TextXAlignment.Left
+        itemText.Text = "• " .. text
+        
+        -- Batasi jumlah log agar tidak membebani memori memori HP
+        local children = LogScroll:GetChildren()
+        if #children > 30 then
+            children[2]:Destroy()
+        end
+        LogScroll.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
+    end)
+end
+
+-- ==============================================================================
+-- 3. LOGIKA UTAMA: AUTO COLLECT & PROXIMITY PROMPT HANDLER
+-- ==============================================================================
+AutoCollectBtn.MouseButton1Click:Connect(function()
+    CONFIG.AutoCollectActive = not CONFIG.AutoCollectActive
+    AutoCollectBtn.Text = "Auto Collect: " .. (CONFIG.AutoCollectActive and "ON" or "OFF")
+    AutoCollectBtn.BackgroundColor3 = CONFIG.AutoCollectActive and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+    StatusLabel.Text = CONFIG.AutoCollectActive and "Status: Scanning & Collecting..." or "Status: Idle"
+end)
+
+MagnetBtn.MouseButton1Click:Connect(function()
+    CONFIG.MagnetActive = not CONFIG.MagnetActive
+    MagnetBtn.Text = "Item Magnet Visual: " .. (CONFIG.MagnetActive and "ON" or "OFF")
+    MagnetBtn.BackgroundColor3 = CONFIG.MagnetActive and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+end)
+
+-- Sinkronisasi Karakter Respawn
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoidRootPart = newChar:WaitForChild("HumanoidRootPart")
+end)
+
+-- Loop Utama Pemindaian & Pengumpulan Material
+task.spawn(function()
+    while true do
+        task.wait(CONFIG.ScanInterval)
+        
+        if (CONFIG.AutoCollectActive or CONFIG.MagnetActive) and humanoidRootPart and humanoidRootPart.Parent then
+            local activeDetected = 0
+            
+            pcall(function()
+                -- Memindai workspace untuk mencari ProximityPrompt atau objek material toko
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if not CONFIG.AutoCollectActive and not CONFIG.MagnetActive then break end
+                    
+                    -- Deteksi berbasis ProximityPrompt (Standar interaksi item/makanan/amunisi)
+                    if obj:IsA("ProximityPrompt") then
+                        local parentPart = obj.Parent
+                        if parentPart and (parentPart:IsA("BasePart") or parentPart:IsA("Model")) then
+                            local partPos = parentPart:IsA("BasePart") and parentPart.Position or parentPart:GetPivot().Position
+                            local distance = (humanoidRootPart.Position - partPos).Magnitude
+                            
+                            if distance <= CONFIG.ScanRadius then
+                                activeDetected = activeDetected + 1
+                                
+                                -- Eksekusi Auto Collect jika fitur aktif (Memicu fire prompt secara aman)
+                                if CONFIG.AutoCollectActive then
+                                    pcall(function()
+                                        fireproximityprompt(obj, 0) -- Memicu instan prompt jika didukung executor
+                                        CONFIG.CollectedCount = CONFIG.CollectedCount + 1
+                                        addLog("Diambil: " .. parentPart.Name)
+                                    end)
+                                end
+                                
+                                -- Simulasi visual magnet (Menarik part secara lokal jika tidak di-anchor)
+                                if CONFIG.MagnetActive and parentPart:IsA("BasePart") and not parentPart.Anchored then
+                                    pcall(function()
+                                        parentPart.CFrame = humanoidRootPart.CFrame + Vector3.new(0, 1, 0)
+                                    end)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+            
+            CONFIG.DetectedCount = activeDetected
+            CounterLabel.Text = string.format("Item Terkumpul: %d | Terdeteksi: %d", CONFIG.CollectedCount, CONFIG.DetectedCount)
+        end
+    end
+end)
+
+print("🛒 MEGA STORE AUTO COLLECT SCRIPT SUCCESSFULLY LOADED!")
